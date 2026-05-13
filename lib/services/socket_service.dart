@@ -84,8 +84,11 @@ class SocketService {
       try {
         final convId = int.tryParse(data['conversationID'].toString()) ?? 0;
         final status = data['status'] as int? ?? 1;
-        // readBy peut être int ou String selon le backend
-        final readBy = int.tryParse(data['readBy'].toString()) ?? 0;
+        // Le backend peut envoyer "readBy" (status=3) ou "deliveredTo" (status=2)
+        final rawActor = data['readBy'] ?? data['deliveredTo'];
+        final readBy = rawActor != null
+            ? (int.tryParse(rawActor.toString()) ?? 0)
+            : 0;
         onMessageStatusUpdated?.call(convId, status, readBy);
       } catch (e) {
         print('[Socket] Erreur parsing message:status_updated : $e');

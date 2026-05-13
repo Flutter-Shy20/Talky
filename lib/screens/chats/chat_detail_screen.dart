@@ -1,7 +1,9 @@
-import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../config/app_config.dart';
@@ -10,6 +12,7 @@ import '../../services/socket_service.dart';
 import '../../services/upload_service.dart';
 import '../../models/message.dart';
 import '../calls/ongoing_call_screen.dart';
+import '../../utils/audio_blob_reader.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final int conversationId;
@@ -53,10 +56,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   // Enregistrement vocal
   bool _isRecording = false;
   int _recordSeconds = 0;
-  // startStream() capture les bytes en direct — fonctionne web + mobile,
-  // sans blob URL ni accès filesystem.
-  final List<int> _audioChunks = [];
-  StreamSubscription<Uint8List>? _recordSub;
+  // Web    : start() → stop() retourne une blob URL → fetchBlobUrl()
+  // Mobile : start(path:) → stop() retourne le chemin → File.readAsBytes()
+  String? _tempAudioPath;
 
   @override
   void initState() {
@@ -222,28 +224,50 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       return;
     }
 
-    // Vide le buffer de l'enregistrement précédent
-    _audioChunks.clear();
-    setState(() { _isRecording = true; _recordSeconds = 0; });
+    _tempAudioPath = null;
 
-    // startStream() donne un Stream<Uint8List> de chunks audio.
-    // Fonctionne identiquement sur web et mobile — pas de blob URL,
-    // pas de fichier temporaire à gérer.
-    final stream = await _recorder.startStream(
-      const RecordConfig(
-        encoder: AudioEncoder.opus,   // opus/webm : compatible web + mobile
-        sampleRate: 16000,            // 16 kHz suffit pour la voix
-        numChannels: 1,               // mono
-      ),
-    );
+    try {
+      if (kIsWeb) {
+        // ── WEB : start() enregistre en mémoire, stop() retourne une blob URL.
+        // On évite startStream() car Chrome ne supporte pas audio/ogg;codecs=opus
+        // (format que record v5 utilise pour AudioEncoder.opus sur web).
+        // start() laisse le navigateur choisir le meilleur codec (webm/opus sur Chrome).
+        await _recorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.opus,
+            sampleRate: 16000,
+            numChannels: 1,
+          ),
+          path: 'voice_temp', // ignoré sur web, sert juste de hint pour le nom
+        );
+      } else {
+        // ── MOBILE : start(path:) enregistre dans un fichier temporaire ─
+        final dir = await getTemporaryDirectory();
+        _tempAudioPath =
+            '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        await _recorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            sampleRate: 16000,
+            numChannels: 1,
+          ),
+          path: _tempAudioPath!,
+        );
+      }
 
-    // On écoute le stream et on accumule les chunks
-    _recordSub = stream.listen(
-      (chunk) => _audioChunks.addAll(chunk),
-      onError: (e) => print('[Record] Erreur stream : $e'),
-    );
-
-    _tickDuration();
+      // setState et timer SEULEMENT après succès
+      setState(() { _isRecording = true; _recordSeconds = 0; });
+      _tickDuration();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Impossible de démarrer l'enregistrement : $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _stopAndSendRecording() async {
@@ -252,26 +276,42 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final duration = _recordSeconds;
     setState(() => _isRecording = false);
 
-    // Stoppe l'enregistrement et le stream
-    await _recorder.stop();
-    await _recordSub?.cancel();
-    _recordSub = null;
+    // stop() retourne la blob URL (web) ou le chemin du fichier (mobile)
+    final blobUrlOrPath = await _recorder.stop();
 
-    if (_audioChunks.isEmpty) return;
+    Uint8List bytes;
+    String filename;
+    String mime;
 
-    final bytes = Uint8List.fromList(_audioChunks);
-    final filename = 'voice_${DateTime.now().millisecondsSinceEpoch}.ogg';
+    if (kIsWeb) {
+      // ── WEB : stop() retourne une blob URL, on la lit avec dart:html XHR ─
+      if (blobUrlOrPath == null) return;
+      bytes    = await fetchBlobUrl(blobUrlOrPath);
+      filename = 'voice_${DateTime.now().millisecondsSinceEpoch}.webm';
+      mime     = 'audio/webm';
+    } else {
+      // ── MOBILE : lire le fichier temporaire écrit par start(path:) ──
+      final path = _tempAudioPath;
+      if (path == null) return;
+
+      final file = File(path);
+      if (!await file.exists()) return;
+
+      bytes    = await file.readAsBytes();
+      filename = 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      mime     = 'audio/mp4';
+
+      // Nettoyage du fichier temporaire
+      try { await file.delete(); } catch (_) {}
+      _tempAudioPath = null;
+    }
+
+    if (bytes.isEmpty) return;
 
     setState(() => _isSending = true);
     try {
-      // Upload du fichier audio
-      final mediaUrl = await _upload.uploadBytes(
-        bytes,
-        filename,
-        'audio/ogg',
-      );
+      final mediaUrl = await _upload.uploadBytes(bytes, filename, mime);
 
-      // Envoi du message vocal via socket
       _socket.sendMessage(
         conversationId: widget.conversationId,
         content: '🎤 Message vocal',
@@ -296,9 +336,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   void _cancelRecording() async {
     await _recorder.stop();
-    await _recordSub?.cancel();
-    _recordSub = null;
-    _audioChunks.clear();
+    // Supprimer le fichier temp mobile si présent
+    if (_tempAudioPath != null) {
+      try { File(_tempAudioPath!).deleteSync(); } catch (_) {}
+      _tempAudioPath = null;
+    }
     setState(() => _isRecording = false);
   }
 

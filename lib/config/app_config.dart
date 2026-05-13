@@ -8,12 +8,12 @@ class AppConfig {
   // ─── À REMPLIR AVANT DE TESTER ────────────────────────────────────────────
 
   /// Le JWT que tu récupères après le login.
-  static String token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGFueWFJRCI6MTgsImVtYWlsIjoia2F6aXRpc3BAZ21haWwuY29tIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc3ODQ4NjMxOCwiZXhwIjoxNzc4NDg3MjE4fQ.M-kML3eYlKHBTDV7f_AZ8gplkg1r6uYqa0lGIjV4srs';
+  static String token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGFueWFJRCI6MTgsImVtYWlsIjoia2F6aXRpc3BAZ21haWwuY29tIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc3ODY2OTkxNSwiZXhwIjoxNzc4NjcwODE1fQ.nz4G8xzsW0HQNLW-kMaeVwYXAIM8kuBzmtaJnZrRHdI';
  
   /// L'adresse de ton serveur backend (sans slash final).
   /// Sur émulateur Android : "http://10.0.2.2:3000"
   /// Sur appareil physique  : "http://192.168.X.X:3000"
-  static String serverUrl = 'http://192.168.43.246:3000';
+  static String serverUrl = 'http://10.2.3.62:3000';
 
   // ─── REMPLI AUTOMATIQUEMENT ───────────────────────────────────────────────
 
