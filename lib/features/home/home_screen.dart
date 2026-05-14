@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../chats/chats_screen.dart';
+import '../chats/screens/chats_screen.dart';
 import '../calls/calls_screen.dart';
 import '../meetings/meets_screen.dart';
 import '../profile/profile_screen.dart';

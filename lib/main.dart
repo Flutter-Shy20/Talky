@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
-import 'screens/authentification/login_screen.dart';
+import 'features/authentification/login_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
-  runApp(const TalkyApp());
+  runApp(
+    const ProviderScope(
+      child: TalkyApp(),
+    ),
+  );
 }
 
 class TalkyApp extends StatelessWidget {
