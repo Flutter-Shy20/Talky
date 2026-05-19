@@ -13,6 +13,9 @@ import 'features/authentification/login_screen.dart';
 import 'features/home/home_screen.dart';
 import 'talky_api_client.dart';
 
+/// Clé globale exposée à PushService pour naviguer depuis les notifications.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[Main] 🚀 Application démarrée');
@@ -47,6 +50,7 @@ class TalkyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MeetingService(apiClient: apiClient)),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'Talky',
         theme: ThemeData(
@@ -83,6 +87,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void initState() {
     super.initState();
     debugPrint('[AuthWrapper] initState - Lancement de init()');
+<<<<<<< HEAD
     Future.microtask(() async {
       try {
         final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
@@ -91,6 +96,64 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         try {
           await PushService.init(apiClient);
+=======
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    Future.microtask(
+      () async {
+        try {
+          await authProvider.init();
+          debugPrint('[AuthWrapper] ✅ init() complété');
+
+          // Démarre PushService une fois l'auth initialisée pour pouvoir
+          // pousser le FCM token au backend si l'utilisateur est connecté.
+          try {
+            await PushService.init(apiClient, navKey: navigatorKey);
+          } catch (e) {
+            debugPrint('[AuthWrapper] PushService init failed: $e');
+          }
+
+          // Relaie les actions CallKit (Accept/Decline depuis l'écran système)
+          // vers CallService.
+          void dispatch(IncomingCallAction action) {
+            if (!mounted) return;
+            final callService = Provider.of<CallService>(context, listen: false);
+            switch (action.action) {
+              case IncomingCallActionType.accept:
+                callService.acceptIncomingCallFromPush(
+                  callId:      action.callId,
+                  callerId:    action.callerId,
+                  callerName:  action.callerName,
+                  callerPhoto: action.callerPhoto,
+                  isVideo:     action.isVideo,
+                  roomId:      action.roomId,
+                );
+                break;
+              case IncomingCallActionType.decline:
+              case IncomingCallActionType.timeout:
+              case IncomingCallActionType.ended:
+                callService.rejectIncomingCallFromPush(
+                  callerId: action.callerId,
+                );
+                break;
+            }
+          }
+
+          CallKitService.instance.actions.listen(dispatch);
+
+          // Cas app tuée → user tape "Accepter" → l'event est arrivé AVANT
+          // que ce listener ne soit prêt. On consomme la dernière action
+          // bufferisée par CallKitService.
+          final pending = CallKitService.instance.consumePendingAction();
+          if (pending != null) {
+            debugPrint('[AuthWrapper] 🎯 Pending CallKit action trouvée: ${pending.action}');
+            debugPrint('[AuthWrapper] Dispatcher l\'action...');
+            dispatch(pending);
+            debugPrint('[AuthWrapper] ✅ Action dispatchée');
+          } else {
+            debugPrint('[AuthWrapper] ℹ️ Aucune action pending au démarrage');
+          }
+>>>>>>> origin/chris-branch
         } catch (e) {
           debugPrint('[AuthWrapper] PushService init failed: $e');
         }

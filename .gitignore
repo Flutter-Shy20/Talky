@@ -11,7 +11,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-
+.claude/
 # IntelliJ related
 *.iml
 *.ipr
@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+DIAGNOSTIC_APPELS_ANDROID.md
+PLAN_ACTION_ANDROID_CALLS.md
+lib.zip

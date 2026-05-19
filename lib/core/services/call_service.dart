@@ -43,6 +43,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import 'audio_helper.dart' as audio;
 import 'callkit_service.dart';
 import 'ringtone_service.dart';
 import 'webrtc_service.dart';
@@ -158,11 +159,6 @@ class CallService extends ChangeNotifier {
   }) async {
     debugPrint('[CallService] 📲 acceptIncomingCallFromPush callId=$callId caller=$callerId');
 
-    if (_pendingOffer != null && _status == CallStatus.incoming) {
-      await answerCall();
-      return;
-    }
-
     _remoteUserId = int.tryParse(callerId);
     _remoteUserName = callerName;
     _remoteUserPhoto = callerPhoto;
@@ -170,8 +166,19 @@ class CallService extends ChangeNotifier {
     _currentCallId = callId.isNotEmpty ? callId : null;
     _autoAnswerOnNextIncoming = true;
     _autoAnswerCallerId = callerId;
+    
+    // ✅ Fixer le statut à incoming IMMÉDIATEMENT pour que HomeScreen navigue
+    // vers IncomingCallScreen, même avant que l'offer socket ne soit reçue.
     _status = CallStatus.incoming;
     notifyListeners();
+    
+    debugPrint('[CallService] ✅ Status = incoming, auto-answer armé');
+
+    // Si l'offer est déjà arrivée, répondre immédiatement (rare mais possible)
+    if (_pendingOffer != null) {
+      debugPrint('[CallService] ⚡ Offer déjà présente → réponse immédiate');
+      await answerCall();
+    }
   }
 
   /// Appelée depuis main.dart quand l'utilisateur refuse un appel via CallKit.
@@ -220,6 +227,7 @@ class CallService extends ChangeNotifier {
       _remoteUserPhoto = data['callerPhoto'] as String?;
       _isVideo = data['isVideo'] == true;
       _pendingOffer = data['offer'] as Map<String, dynamic>?;
+      _currentCallId = data['callId']?.toString();
       _status = CallStatus.incoming;
       debugPrint('[CallService] ✅ Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
 
@@ -228,9 +236,13 @@ class CallService extends ChangeNotifier {
       // Si l'utilisateur a déjà accepté via CallKit pour ce caller, on répond
       // automatiquement maintenant que l'offer est arrivée.
       if (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId) {
-        debugPrint('[CallService] ⚡ Auto-answer (CallKit pré-accepté)');
+        debugPrint('[CallService] ⚡ Auto-answer en 500ms (CallKit pré-accepté)');
         _autoAnswerOnNextIncoming = false;
         _autoAnswerCallerId = null;
+        
+        // ✅ Attendre 500ms pour que l'app soit bien initialisée avant d'auto-répondre
+        await Future.delayed(const Duration(milliseconds: 500));
+        
         try {
           await answerCall();
         } catch (e) {
@@ -238,8 +250,6 @@ class CallService extends ChangeNotifier {
         }
         return;
       }
-
-      _currentCallId = data['callId']?.toString();
 
       // Sonnerie système (téléphone par défaut de l'utilisateur).
       _ringtone.startIncomingRingtone().catchError((e) {
@@ -412,11 +422,13 @@ class CallService extends ChangeNotifier {
     try {
       final iceServers = await _apiClient.fetchIceServers(force: true);
       await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
+      _webrtc.onLocalStream  = (_) { notifyListeners(); };
+      _webrtc.onRemoteStream = (_) { notifyListeners(); };
 
       // ✅ Initialiser le routage audio (mobile uniquement)
       if (!kIsWeb) {
         _isSpeakerOn = true;
-        await Helper.setSpeakerphoneOn(true);
+        await audio.AudioHelper.setSpeakerphoneOn(true);
         debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
       }
 
@@ -430,6 +442,12 @@ class CallService extends ChangeNotifier {
             'sdpMLineIndex': candidate.sdpMLineIndex,
           },
         });
+      };
+
+      // Connection failure handler
+      _webrtc.onConnectionFailure = () {
+        debugPrint('[CallService] ⚠️ Peer connection failed, ending call');
+        _terminateCall();
       };
 
       final offer = await _webrtc.createOffer();
@@ -512,16 +530,34 @@ class CallService extends ChangeNotifier {
     await _ringtone.stop();
     _errorMessage = null;
 
+    // ✅ Attendre que le socket soit connecté/authentifié avant d'envoyer l'answer
+    // (important après app redémarrage depuis push CallKit)
+    int retries = 0;
+    while (!_apiClient.isSocketConnected && retries < 20) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      retries++;
+    }
+    if (!_apiClient.isSocketConnected) {
+      debugPrint('[CallService] ❌ Socket not connected après 2s');
+      _errorMessage = 'Socket non connecté';
+      _status = CallStatus.idle;
+      notifyListeners();
+      return;
+    }
+    debugPrint('[CallService] ✅ Socket connecté, envoi answer');
+
     final offer = _pendingOffer!;
     _pendingOffer = null;
 
     try {
       final iceServers = await _apiClient.fetchIceServers(force: true);
       await _webrtc.init(_isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
+      _webrtc.onLocalStream  = (_) { notifyListeners(); };
+      _webrtc.onRemoteStream = (_) { notifyListeners(); };
 
       if (!kIsWeb) {
         _isSpeakerOn = true;
-        await Helper.setSpeakerphoneOn(true);
+        await audio.AudioHelper.setSpeakerphoneOn(true);
       }
 
       _webrtc.onIceCandidate = (candidate) {
@@ -533,6 +569,12 @@ class CallService extends ChangeNotifier {
             'sdpMLineIndex': candidate.sdpMLineIndex,
           },
         });
+      };
+
+      // Connection failure handler
+      _webrtc.onConnectionFailure = () {
+        debugPrint('[CallService] ⚠️ Peer connection failed, ending call');
+        _terminateCall();
       };
 
       await _webrtc.handleOffer(
@@ -622,6 +664,8 @@ class CallService extends ChangeNotifier {
     _status = CallStatus.ended;
     notifyListeners();
     _status = CallStatus.idle;
+    await Future.microtask(() {});
+    notifyListeners();
   }
 
   void _resetCallState() {
@@ -752,7 +796,7 @@ class CallService extends ChangeNotifier {
     // ✅ Initialiser le routage audio pour les appels de groupe aussi (mobile uniquement)
     if (!kIsWeb) {
       _isSpeakerOn = true;
-      await Helper.setSpeakerphoneOn(true);
+      await audio.AudioHelper.setSpeakerphoneOn(true);
       debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
     }
   }
@@ -830,6 +874,15 @@ class CallService extends ChangeNotifier {
       });
     };
 
+    pc.onConnectionState = (state) {
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+        debugPrint('[CallService] ⚠️ Group peer $userId connection failed: $state');
+        _removeGroupPeer(userId);
+      }
+    };
+
     _groupPeerConnections[userId] = pc;
     return pc;
   }
@@ -862,7 +915,7 @@ class CallService extends ChangeNotifier {
 
   Future<void> toggleSpeaker() async {
     _isSpeakerOn = !_isSpeakerOn;
-    await Helper.setSpeakerphoneOn(_isSpeakerOn);
+    await audio.AudioHelper.setSpeakerphoneOn(_isSpeakerOn);
     debugPrint('[CallService] Haut-parleur: ${_isSpeakerOn ? "ON" : "OFF"}');
     notifyListeners();
   }
