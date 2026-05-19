@@ -1,9 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../chats/screens/chats_screen.dart';
+import 'package:provider/provider.dart';
+import '../../core/services/call_service.dart';
 import '../calls/calls_screen.dart';
 import '../meetings/meets_screen.dart';
 import '../profile/profile_screen.dart';
+import '../calls/incoming_call_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +25,48 @@ class _HomeScreenState extends State<HomeScreen> {
     const ProfileScreen(),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    // Écouter les rappels entrants
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final callService = Provider.of<CallService>(context, listen: false);
+      callService.addListener(_onCallStatusChanged);
+      // Si l'app vient d'être lancée depuis CallKit (push d'appel reçu app
+      // tuée → user accepte), le status est déjà `incoming` au moment où
+      // ce listener s'enregistre. On déclenche manuellement la navigation.
+      if (callService.status == CallStatus.incoming) {
+        debugPrint('[HomeScreen] 🚀 Appel entrant déjà actif au mount → navigation');
+        _onCallStatusChanged();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    final callService = Provider.of<CallService>(context, listen: false);
+    callService.removeListener(_onCallStatusChanged);
+    super.dispose();
+  }
+
+  void _onCallStatusChanged() {
+    if (!mounted) return;
+    final callService = Provider.of<CallService>(context, listen: false);
+    
+    debugPrint('[HomeScreen] 🎯 CallService status changed: ${callService.status}');
+    
+    // ✅ NE naviguer que si UNIQUEMENT appel entrant (pas pendant un appel en cours)
+    // Si status == connecting/outgoing/connected, l'appareil est déjà en appel
+    if (callService.status == CallStatus.incoming) {
+      debugPrint('[HomeScreen] 📱 Navigation vers IncomingCallScreen...');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const IncomingCallScreen(),
+        ),
+      );
+    }
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -39,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withAlpha(13),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),

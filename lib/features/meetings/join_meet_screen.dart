@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../talky_api_client.dart';
+import '../../core/services/meeting_service.dart';
+import 'ongoing_meet_screen.dart';
 
 class JoinMeetScreen extends StatefulWidget {
   const JoinMeetScreen({super.key});
@@ -10,6 +14,7 @@ class JoinMeetScreen extends StatefulWidget {
 class _JoinMeetScreenState extends State<JoinMeetScreen> {
   final TextEditingController _codeController = TextEditingController();
   bool _isCodeValid = false;
+  bool _isJoining = false;
 
   @override
   void initState() {
@@ -25,6 +30,39 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
   void dispose() {
     _codeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _joinMeeting() async {
+    setState(() => _isJoining = true);
+
+    try {
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final userData = await apiClient.getMe();
+      final myId = userData['alanyaID'] ?? 0;
+      final myName = userData['nom'] ?? userData['pseudo'] ?? '';
+
+      final meetingService = Provider.of<MeetingService>(context, listen: false);
+      await meetingService.joinByRoom(
+        roomCode: _codeController.text.trim(),
+        myId: myId,
+        myName: myName,
+      );
+
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const OngoingMeetScreen()),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to join meeting: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isJoining = false);
+    }
   }
 
   @override
@@ -44,15 +82,21 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: _isCodeValid ? () {} : null,
-            child: Text(
-              'Join',
-              style: TextStyle(
-                color: _isCodeValid ? Colors.indigo : Colors.grey,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
+            onPressed: _isCodeValid && !_isJoining ? _joinMeeting : null,
+            child: _isJoining
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    'Join',
+                    style: TextStyle(
+                      color: _isCodeValid ? Colors.indigo : Colors.grey,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
           ),
           const SizedBox(width: 8),
         ],

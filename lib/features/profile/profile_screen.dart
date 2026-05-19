@@ -1,11 +1,42 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../talky_api_client.dart';
+import '../../talky_models.dart';
 import '../authentification/login_screen.dart';
+import '../../providers/auth_provider.dart';
 import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  User? _user;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    try {
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final data = await apiClient.getMe();
+      setState(() {
+        _user = User.fromJson(data);
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,14 +64,16 @@ class ProfileScreen extends StatelessWidget {
                   CircleAvatar(
                     radius: 60,
                     backgroundColor: Colors.indigo.shade100,
-                    child: const Text(
-                      'SM',
-                      style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo,
-                      ),
-                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator()
+                        : Text(
+                            _user?.nom.substring(0, 1).toUpperCase() ?? 'U',
+                            style: const TextStyle(
+                              fontSize: 40,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.indigo,
+                            ),
+                          ),
                   ),
                   Positioned(
                     bottom: 0,
@@ -60,21 +93,25 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'SMART User',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            _isLoading
+                ? const CircularProgressIndicator()
+                : Text(
+                    _user?.nom ?? 'User',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
             const SizedBox(height: 4),
-            const Text(
-              '+1 234 567 8900',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
+            _isLoading
+                ? const SizedBox()
+                : Text(
+                    _user?.alanyaPhone ?? '',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
             const SizedBox(height: 32),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -83,7 +120,7 @@ class ProfileScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withAlpha(13),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -103,12 +140,16 @@ class ProfileScreen extends StatelessWidget {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
                   }),
                   const Divider(height: 1),
-                  _buildProfileItem(Icons.logout, 'Log Out', () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
-                      (route) => false,
-                    );
+                  _buildProfileItem(Icons.logout, 'Log Out', () async {
+                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                    await authProvider.logout();
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    }
                   }, isDestructive: true),
                 ],
               ),

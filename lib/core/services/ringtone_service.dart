@@ -1,0 +1,138 @@
+import 'dart:async';
+import 'dart:io' show Platform;
+
+import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:vibration/vibration.dart';
+
+/// Centralise les sons d'appel.
+///
+/// - **Appelé** : sonnerie système du téléphone (paramétrée par l'utilisateur),
+///   gérée par `flutter_ringtone_player`. Looping natif, vibration séparée.
+/// - **Appelant** : ringback custom (assets/sounds/ringback.wav) joué en boucle.
+///   Configure une session audio "voiceCall" pour rester audible quand WebRTC
+///   met le système en `MODE_IN_COMMUNICATION`.
+///
+/// Singleton — un seul lecteur audio pour tout le cycle de vie de l'app.
+class RingtoneService {
+  RingtoneService._();
+  static final RingtoneService instance = RingtoneService._();
+
+  static const _ringbackAsset = 'assets/sounds/ringback.wav';
+
+  final FlutterRingtonePlayer _systemRingtone = FlutterRingtonePlayer();
+  AudioPlayer? _ringbackPlayer;
+  AudioSession? _audioSession;
+
+  _ActiveSound _active = _ActiveSound.none;
+  Timer? _vibrationTimer;
+
+  Future<void> init() async {
+    if (kIsWeb) return;
+    _ringbackPlayer ??= AudioPlayer();
+    _audioSession ??= await AudioSession.instance;
+  }
+
+  // ─── Appelé : sonnerie système du téléphone ────────────────────────────
+
+  Future<void> startIncomingRingtone() async {
+    if (kIsWeb || _active != _ActiveSound.none) return;
+    _active = _ActiveSound.incoming;
+    debugPrint('[RingtoneService] 🔔 Sonnerie système (appelé)');
+
+    try {
+      await _systemRingtone.playRingtone(looping: true, volume: 1.0, asAlarm: false);
+      _startVibrationLoop();
+    } catch (e) {
+      debugPrint('[RingtoneService] ⚠️ Sonnerie système échouée: $e');
+      _active = _ActiveSound.none;
+    }
+  }
+
+  // ─── Appelant : ringback custom ────────────────────────────────────────
+
+  Future<void> startOutgoingRingback() async {
+    if (kIsWeb || _active != _ActiveSound.none) return;
+    _active = _ActiveSound.outgoing;
+    debugPrint('[RingtoneService] 📞 Ringback (appelant)');
+
+    try {
+      await _configureCallAudioSession();
+      final player = _ringbackPlayer!;
+      await player.setAsset(_ringbackAsset);
+      await player.setLoopMode(LoopMode.one);
+      await player.setVolume(0.7);
+      await player.play();
+    } catch (e) {
+      debugPrint('[RingtoneService] ⚠️ Ringback échoué: $e');
+      _active = _ActiveSound.none;
+    }
+  }
+
+  // ─── Stop générique ────────────────────────────────────────────────────
+
+  Future<void> stop() async {
+    if (kIsWeb) return;
+    final wasActive = _active;
+    _active = _ActiveSound.none;
+
+    _vibrationTimer?.cancel();
+    _vibrationTimer = null;
+
+    try {
+      if (wasActive == _ActiveSound.incoming) {
+        await _systemRingtone.stop();
+        try { await Vibration.cancel(); } catch (_) {}
+      } else if (wasActive == _ActiveSound.outgoing) {
+        await _ringbackPlayer?.stop();
+      }
+    } catch (e) {
+      debugPrint('[RingtoneService] ⚠️ Stop: $e');
+    }
+  }
+
+  Future<void> dispose() async {
+    await stop();
+    await _ringbackPlayer?.dispose();
+    _ringbackPlayer = null;
+  }
+
+  // ─── Internes ──────────────────────────────────────────────────────────
+
+  /// Configure la session audio pour que le ringback s'entende en mode call.
+  /// WebRTC met le système en MODE_IN_COMMUNICATION via `getUserMedia`, ce qui
+  /// rend STREAM_MUSIC quasi inaudible. On utilise USAGE_VOICE_COMMUNICATION_SIGNALLING
+  /// (Android) ou playAndRecord (iOS) pour rester audible.
+  Future<void> _configureCallAudioSession() async {
+    final session = _audioSession;
+    if (session == null) return;
+    await session.configure(const AudioSessionConfiguration(
+      avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth,
+      avAudioSessionMode: AVAudioSessionMode.voiceChat,
+      androidAudioAttributes: AndroidAudioAttributes(
+        contentType: AndroidAudioContentType.sonification,
+        usage: AndroidAudioUsage.voiceCommunicationSignalling,
+      ),
+      androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransient,
+      androidWillPauseWhenDucked: false,
+    ));
+    await session.setActive(true);
+  }
+
+  void _startVibrationLoop() {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+    try { Vibration.vibrate(duration: 700); } catch (_) {}
+    _vibrationTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+      if (_active != _ActiveSound.incoming) {
+        _vibrationTimer?.cancel();
+        return;
+      }
+      try { Vibration.vibrate(duration: 700); } catch (_) {}
+    });
+  }
+}
+
+enum _ActiveSound { none, incoming, outgoing }

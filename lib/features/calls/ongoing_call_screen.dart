@@ -1,164 +1,442 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:provider/provider.dart';
 
+import '../../core/services/call_service.dart';
+
+/// Écran d'appel en cours (1-à-1, audio ou vidéo).
+///
+/// Trois sous-états gérés par le même widget :
+/// - `connecting`  : "Connexion..." + spinner + ringback (déjà géré par CallService)
+/// - `connected`   : timer + flux audio/vidéo
+/// - `ended`/`idle`: pop automatique
 class OngoingCallScreen extends StatefulWidget {
-  final String callerName;
-  final bool isVideoCall;
-
-  const OngoingCallScreen({
-    super.key,
-    required this.callerName,
-    this.isVideoCall = false,
-  });
+  const OngoingCallScreen({super.key});
 
   @override
   State<OngoingCallScreen> createState() => _OngoingCallScreenState();
 }
 
 class _OngoingCallScreenState extends State<OngoingCallScreen> {
-  bool isMuted = false;
-  bool isSpeakerOn = false;
-  bool isVideoOn = true;
+  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  bool _renderersReady = false;
+  bool _closing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+    _initRenderers();
+  }
+
+  Future<void> _initRenderers() async {
+    await _localRenderer.initialize();
+    await _remoteRenderer.initialize();
+    if (!mounted) return;
+
+    final cs = Provider.of<CallService>(context, listen: false);
+    _localRenderer.srcObject = cs.localStream;
+    _remoteRenderer.srcObject = cs.remoteStream;
+    cs.addListener(_onCallChanged);
+
+    setState(() => _renderersReady = true);
+  }
+
+  void _onCallChanged() {
+    if (_closing || !mounted) return;
+    final cs = Provider.of<CallService>(context, listen: false);
+
+    if (cs.status == CallStatus.ended && !cs.callEndedByUs) {
+      _closeAndPop();
+      return;
+    }
+    if (cs.status == CallStatus.idle) {
+      _closeAndPop();
+      return;
+    }
+
+    setState(() {
+      _localRenderer.srcObject = cs.localStream;
+      _remoteRenderer.srcObject = cs.remoteStream;
+    });
+  }
+
+  void _closeAndPop() {
+    if (_closing) return;
+    _closing = true;
+    final cs = Provider.of<CallService>(context, listen: false);
+    cs.removeListener(_onCallChanged);
+    if (_renderersReady) {
+      _localRenderer.srcObject = null;
+      _remoteRenderer.srcObject = null;
+    }
+    if (mounted) Navigator.of(context).maybePop();
+  }
+
+  Future<void> _hangUp() async {
+    if (_closing) return;
+    _closing = true;
+    final cs = Provider.of<CallService>(context, listen: false);
+    cs.removeListener(_onCallChanged);
+    if (_renderersReady) {
+      _localRenderer.srcObject = null;
+      _remoteRenderer.srcObject = null;
+    }
+    await cs.endCall();
+    if (mounted) Navigator.of(context).maybePop();
+  }
+
+  @override
+  void dispose() {
+    try {
+      Provider.of<CallService>(context, listen: false).removeListener(_onCallChanged);
+    } catch (_) {}
+    if (_renderersReady) {
+      _localRenderer.srcObject = null;
+      _remoteRenderer.srcObject = null;
+      _localRenderer.dispose();
+      _remoteRenderer.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black87,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 32),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Text(
-                    'End-to-end Encrypted',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
-                  ),
-                  const SizedBox(width: 32), // Balance the flex
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-            // Call Info
-            if (!widget.isVideoCall || !isVideoOn) ...[
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: Colors.indigo.shade100,
-                child: Text(
-                  widget.callerName[0],
-                  style: const TextStyle(
-                    fontSize: 48,
-                    color: Colors.indigo,
-                    fontWeight: FontWeight.bold,
-                  ),
+    return Consumer<CallService>(
+      builder: (_, cs, __) {
+        final isVideo = cs.isVideo;
+        final hasRemoteVideo = isVideo && _remoteRenderer.srcObject != null;
+        return Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background : remote video plein écran si vidéo, sinon gradient + avatar
+              if (hasRemoteVideo)
+                RTCVideoView(
+                  _remoteRenderer,
+                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                )
+              else
+                _AudioBackdrop(
+                  name: cs.remoteUserName ?? 'Inconnu',
+                  photoUrl: cs.remoteUserPhoto,
+                ),
+
+              // Local video PiP (vidéo uniquement)
+              if (isVideo && _renderersReady && _localRenderer.srcObject != null)
+                Positioned(
+                  right: 16,
+                  top: MediaQuery.of(context).padding.top + 12,
+                  child: _LocalPiP(renderer: _localRenderer),
+                ),
+
+              // Top bar : nom + statut + chronomètre
+              Positioned(
+                left: 0,
+                right: 0,
+                top: MediaQuery.of(context).padding.top,
+                child: _TopBar(
+                  name: cs.remoteUserName ?? 'Appel',
+                  status: _statusLabel(cs),
+                  duration: cs.status == CallStatus.connected
+                      ? cs.formattedDuration
+                      : null,
+                  onMinimize: () => Navigator.of(context).maybePop(),
                 ),
               ),
-              const SizedBox(height: 24),
+
+              // Bottom controls
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _BottomControls(
+                  isVideo: isVideo,
+                  isMuted: cs.isMuted,
+                  isVideoOn: cs.isVideoOn,
+                  isSpeakerOn: cs.isSpeakerOn,
+                  onMute: () => cs.toggleMute(),
+                  onSpeaker: () => cs.toggleSpeaker(),
+                  onCamera: () => cs.toggleCamera(),
+                  onSwitchCam: () => cs.switchCamera(),
+                  onHangUp: _hangUp,
+                ),
+              ),
             ],
-            Text(
-              widget.callerName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '02:45', // Mock duration
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 18,
-              ),
-            ),
-            if (widget.isVideoCall && isVideoOn)
-              const Expanded(
-                child: Center(
-                  child: Icon(CupertinoIcons.video_camera, color: Colors.white24, size: 100),
+          ),
+        );
+      },
+    );
+  }
+
+  String _statusLabel(CallService cs) {
+    switch (cs.status) {
+      case CallStatus.outgoing:
+      case CallStatus.connecting:
+        return 'Connexion…';
+      case CallStatus.connected:
+        return 'En cours';
+      case CallStatus.ended:
+        return 'Terminé';
+      default:
+        return '';
+    }
+  }
+}
+
+// ─── Sous-widgets ──────────────────────────────────────────────────────
+
+class _AudioBackdrop extends StatelessWidget {
+  const _AudioBackdrop({required this.name, required this.photoUrl});
+
+  final String name;
+  final String? photoUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = photoUrl;
+    final hasPhoto = url != null &&
+        url.isNotEmpty &&
+        url.toUpperCase() != 'NON DEFINI' &&
+        (url.startsWith('http://') || url.startsWith('https://'));
+    final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1A237E), Color(0xFF000000)],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: CircleAvatar(
+        radius: 90,
+        backgroundColor: const Color(0xFF3949AB),
+        backgroundImage: hasPhoto ? NetworkImage(url) : null,
+        child: hasPhoto
+            ? null
+            : Text(
+                initial,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 64,
+                  fontWeight: FontWeight.w600,
                 ),
-              )
-            else
-              const Spacer(),
-            // Controls
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-              decoration: const BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(30),
-                  topRight: Radius.circular(30),
+              ),
+      ),
+    );
+  }
+}
+
+class _LocalPiP extends StatelessWidget {
+  const _LocalPiP({required this.renderer});
+
+  final RTCVideoRenderer renderer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 110,
+      height: 160,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(color: Colors.black54, blurRadius: 12, offset: Offset(0, 4)),
+        ],
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: RTCVideoView(
+        renderer,
+        mirror: true,
+        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+      ),
+    );
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.name,
+    required this.status,
+    required this.duration,
+    required this.onMinimize,
+  });
+
+  final String name;
+  final String status;
+  final String? duration;
+  final VoidCallback onMinimize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.black54, Colors.transparent],
+        ),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(CupertinoIcons.chevron_down, color: Colors.white, size: 28),
+            onPressed: onMinimize,
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildControlButton(
-                    icon: isMuted ? CupertinoIcons.mic_off : CupertinoIcons.mic,
-                    isActive: isMuted,
-                    onTap: () => setState(() => isMuted = !isMuted),
-                  ),
-                  if (widget.isVideoCall)
-                    _buildControlButton(
-                      icon: isVideoOn ? CupertinoIcons.video_camera_solid : CupertinoIcons.video_camera,
-                      isActive: !isVideoOn,
-                      onTap: () => setState(() => isVideoOn = !isVideoOn),
-                    )
-                  else
-                    _buildControlButton(
-                      icon: isSpeakerOn ? CupertinoIcons.speaker_3_fill : CupertinoIcons.speaker_2,
-                      isActive: isSpeakerOn,
-                      onTap: () => setState(() => isSpeakerOn = !isSpeakerOn),
-                    ),
-                  // End Call Button
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        CupertinoIcons.phone_down_fill,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  duration ?? status,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
             ),
-          ],
+          ),
+          const SizedBox(width: 48),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomControls extends StatelessWidget {
+  const _BottomControls({
+    required this.isVideo,
+    required this.isMuted,
+    required this.isVideoOn,
+    required this.isSpeakerOn,
+    required this.onMute,
+    required this.onSpeaker,
+    required this.onCamera,
+    required this.onSwitchCam,
+    required this.onHangUp,
+  });
+
+  final bool isVideo;
+  final bool isMuted;
+  final bool isVideoOn;
+  final bool isSpeakerOn;
+  final VoidCallback onMute;
+  final VoidCallback onSpeaker;
+  final VoidCallback onCamera;
+  final VoidCallback onSwitchCam;
+  final VoidCallback onHangUp;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 24, 20, 24 + MediaQuery.of(context).padding.bottom),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [Colors.black87, Colors.transparent],
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _RoundButton(
+            icon: isMuted ? CupertinoIcons.mic_off : CupertinoIcons.mic_solid,
+            active: isMuted,
+            onTap: onMute,
+          ),
+          if (isVideo)
+            _RoundButton(
+              icon: isVideoOn ? Icons.videocam : Icons.videocam_off,
+              active: !isVideoOn,
+              onTap: onCamera,
+            )
+          else
+            _RoundButton(
+              icon: isSpeakerOn
+                  ? CupertinoIcons.speaker_3_fill
+                  : CupertinoIcons.speaker_2,
+              active: isSpeakerOn,
+              onTap: onSpeaker,
+            ),
+          if (isVideo)
+            _RoundButton(
+              icon: CupertinoIcons.switch_camera,
+              active: false,
+              onTap: onSwitchCam,
+            ),
+          _HangUpButton(onTap: onHangUp),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({
+    required this.icon,
+    required this.active,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: active ? Colors.white : Colors.white.withValues(alpha: 0.18),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+        ),
+        child: Icon(
+          icon,
+          color: active ? Colors.black : Colors.white,
+          size: 26,
         ),
       ),
     );
   }
+}
 
-  Widget _buildControlButton({
-    required IconData icon,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
+class _HangUpButton extends StatelessWidget {
+  const _HangUpButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.white24,
+        width: 68,
+        height: 68,
+        decoration: const BoxDecoration(
+          color: Color(0xFFE53935),
           shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: Colors.black54, blurRadius: 12, offset: Offset(0, 4)),
+          ],
         ),
-        child: Icon(
-          icon,
-          color: isActive ? Colors.black : Colors.white,
-          size: 28,
-        ),
+        child: const Icon(CupertinoIcons.phone_down_fill, color: Colors.white, size: 30),
       ),
     );
   }

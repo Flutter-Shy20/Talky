@@ -25,11 +25,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      ref.read(chatListProvider.notifier).markAsRead(widget.chat.id);
+    Future.microtask(() =>
+      ref.read(chatListProvider.notifier).markAsRead(widget.chat.id)
       // Scroll automatique à l'ouverture
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
-    });
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     _messageController.addListener(_onTypingChanged);
   }
 
@@ -272,10 +272,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => OngoingCallScreen(
-                  callerName: chat.userName,
-                  isVideoCall: true,
-                ),
+                builder: (context) => const OngoingCallScreen(),
               ),
             ),
           ),
@@ -284,10 +281,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => OngoingCallScreen(
-                  callerName: chat.userName,
-                  isVideoCall: false,
-                ),
+                builder: (context) => const OngoingCallScreen(),
               ),
             ),
           ),
