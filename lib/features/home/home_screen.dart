@@ -5,11 +5,9 @@ import 'package:flutter/material.dart';
 import '../chats/screens/chats_screen.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/call_service.dart';
-<<<<<<< HEAD:lib/features/home/home_screen.dart
-=======
+
 import '../../core/services/push_service.dart';
-import '../chats/chats_screen.dart';
->>>>>>> origin/chris-branch:lib/screens/home/home_screen.dart
+//import '../chats/chats_screen.dart';
 import '../calls/calls_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
 import '../meetings/meets_screen.dart';

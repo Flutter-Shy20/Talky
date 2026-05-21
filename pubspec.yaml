@@ -57,6 +57,7 @@ dependencies:
   flutter_callkit_incoming: ^2.5.0    # ConnectionService Android (CallKit-like)
   flutter_local_notifications: ^17.2.3
   wakelock_plus: ^1.2.8               # Garder l'écran allumé pendant l'appel
+  dio: ^5.0.0
 
 dev_dependencies:
   flutter_test:

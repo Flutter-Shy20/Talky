@@ -1,12 +1,36 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/chat_provider.dart';
+import '../providers/real_chat_provider.dart';
 import '../widgets/chat_avatar.dart';
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
 
-class ChatsScreen extends ConsumerWidget {
+class ChatsScreen extends ConsumerStatefulWidget {
   const ChatsScreen({super.key});
+
+  @override
+  ConsumerState<ChatsScreen> createState() => _ChatDetailScreenState();
+}
+
+class _ChatDetailScreenState extends ConsumerState<ChatsScreen> {
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      final api = ref.read(apiClientProvider);
+      ref.read(realChatProvider.notifier).refresh(api);
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
 
   String _formatTime(DateTime time) {
     final now = DateTime.now();
@@ -20,8 +44,8 @@ class ChatsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final chats = ref.watch(filteredChatsProvider);
+  Widget build(BuildContext context) {
+    final chatsAsync = ref.watch(realFilteredChatsProvider);
     final query = ref.watch(searchQueryProvider);
 
     return Scaffold(
@@ -73,233 +97,284 @@ class ChatsScreen extends ConsumerWidget {
               ),
             ),
           ),
-          if (chats.isEmpty)
-            Expanded(
+
+          // ← modifié : gestion loading/error/data
+          chatsAsync.when(
+            loading: () => const Expanded(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, _) => Expanded(
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.search_off, size: 64, color: Colors.grey.shade300),
+                    Icon(Icons.wifi_off, size: 64, color: Colors.grey.shade300),
                     const SizedBox(height: 12),
                     Text(
-                      'No chat found for "$query"',
+                      'Impossible de charger les chats',
                       style: TextStyle(color: Colors.grey.shade400),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () {
+                        final api = ref.read(apiClientProvider);
+                        ref.read(realChatProvider.notifier).refresh(api);
+                      },
+                      child: const Text('Réessayer'),
                     ),
                   ],
                 ),
               ),
-            )
-          else
-            Expanded(
-              child: ListView.builder(
-                itemCount: chats.length,
-                itemBuilder: (context, index) {
-                  final chat = chats[index];
-                  final last = chat.lastMessage;
-                  final unread = chat.unreadCount;
-                  final hasUnread = unread > 0;
-
-                  return Dismissible(
-                    key: Key(chat.id),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 24),
-                      color: Colors.red,
-                      child: const Icon(Icons.delete, color: Colors.white),
+            ),
+            data: (chats) {
+              if (chats.isEmpty) {
+                return Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          query.isNotEmpty
+                              ? Icons.search_off
+                              : Icons.chat_bubble_outline,
+                          size: 64,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          query.isNotEmpty
+                              ? 'No chat found for "$query"'
+                              : 'Aucune conversation',
+                          style: TextStyle(color: Colors.grey.shade400),
+                        ),
+                      ],
                     ),
-                    confirmDismiss: (_) async {
-                      return await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Delete chat'),
-                          content: Text(
-                              'Delete conversation with ${chat.userName}?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: const Text('Delete',
-                                  style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
+                  ),
+                );
+              }
+              return Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    final api = ref.read(apiClientProvider);
+                    await ref.read(realChatProvider.notifier).refresh(api);
+                  },
+                  child: ListView.builder(
+                    itemCount: chats.length,
+                    itemBuilder: (context, index) {
+                      final chat = chats[index];
+                      final last = chat.lastMessage;
+                      final unread = chat.unreadCount;
+                      final hasUnread = unread > 0;
+
+                      return Dismissible(
+                        key: Key(chat.id),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 24),
+                          color: Colors.red,
+                          child: const Icon(Icons.delete, color: Colors.white),
                         ),
-                      );
-                    },
-                    onDismissed: (_) {
-                      ref
-                          .read(chatListProvider.notifier)
-                          .deleteChat(chat.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${chat.userName} deleted'),
-                          action: SnackBarAction(
-                            label: 'OK',
-                            onPressed: () {},
-                          ),
-                        ),
-                      );
-                    },
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 8),
-                      leading: Stack(
-                        children: [
-                          ChatAvatar(
-                            userName: chat.userName,
-                            avatarPath: chat.avatarPath,
-                            radius: 28,
-                            isGroup: chat.isGroup,
-                            isBroadcast: chat.isBroadcast,
-                          ),
-                          if (chat.isOnline && !chat.isGroup)
-                            Positioned(
-                              right: 0,
-                              bottom: 0,
-                              child: Container(
-                                width: 14,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  color: Colors.green,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: Colors.white, width: 2),
+                        confirmDismiss: (_) async {
+                          return await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Delete chat'),
+                              content: Text(
+                                  'Delete conversation with ${chat.userName}?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Cancel'),
                                 ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      title: Row(
-                        children: [
-                          if (chat.isGroup)
-                            const Padding(
-                              padding: EdgeInsets.only(right: 4),
-                              child: Icon(Icons.group,
-                                  size: 14, color: Colors.grey),
-                            ),
-                          if (chat.isBroadcast)
-                            const Padding(
-                              padding: EdgeInsets.only(right: 4),
-                              child: Icon(Icons.campaign,
-                                  size: 14, color: Colors.grey),
-                            ),
-                          Expanded(
-                            child: Text(
-                              chat.userName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      subtitle: Builder(
-                        builder: (context) {
-                          final q = query.toLowerCase().trim();
-                          if (q.isNotEmpty) {
-                            final matchedMessage = chat.messages
-                                .where((m) =>
-                                    m.text.toLowerCase().contains(q))
-                                .lastOrNull;
-                            if (matchedMessage != null) {
-                              final text = matchedMessage.text;
-                              final idx = text.toLowerCase().indexOf(q);
-                              return RichText(
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                text: TextSpan(
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 14,
-                                  ),
-                                  children: [
-                                    TextSpan(text: text.substring(0, idx)),
-                                    TextSpan(
-                                      text: text.substring(
-                                          idx, idx + q.length),
-                                      style: const TextStyle(
-                                        color: Colors.indigo,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                        text: text
-                                            .substring(idx + q.length)),
-                                  ],
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Delete',
+                                      style: TextStyle(color: Colors.red)),
                                 ),
-                              );
-                            }
-                          }
-                          return Text(
-                            last?.text ?? '',
-                            style: TextStyle(
-                              color: hasUnread
-                                  ? Colors.black87
-                                  : Colors.grey.shade600,
-                              fontWeight: hasUnread
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
+                              ],
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           );
                         },
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            last != null ? _formatTime(last.time) : '',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: hasUnread ? Colors.indigo : Colors.grey,
-                              fontWeight: hasUnread
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          if (hasUnread)
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: Colors.indigo,
-                                shape: BoxShape.circle,
+                        onDismissed: (_) {
+                          // ← pour l'instant on rafraîchit juste la liste
+                          // la suppression côté backend sera à brancher plus tard
+                          ref.read(realChatProvider.notifier).refresh(
+                                ref.read(apiClientProvider),
+                              );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${chat.userName} deleted'),
+                              action: SnackBarAction(
+                                label: 'OK',
+                                onPressed: () {},
                               ),
-                              child: Text(
-                                '$unread',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        },
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 8),
+                          leading: Stack(
+                            children: [
+                              ChatAvatar(
+                                userName: chat.userName,
+                                avatarPath: chat.avatarPath,
+                                radius: 28,
+                                isGroup: chat.isGroup,
+                                isBroadcast: chat.isBroadcast,
+                              ),
+                              if (chat.isOnline && !chat.isGroup)
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: Colors.white, width: 2),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          title: Row(
+                            children: [
+                              if (chat.isGroup)
+                                const Padding(
+                                  padding: EdgeInsets.only(right: 4),
+                                  child: Icon(Icons.group,
+                                      size: 14, color: Colors.grey),
+                                ),
+                              if (chat.isBroadcast)
+                                const Padding(
+                                  padding: EdgeInsets.only(right: 4),
+                                  child: Icon(Icons.campaign,
+                                      size: 14, color: Colors.grey),
+                                ),
+                              Expanded(
+                                child: Text(
+                                  chat.userName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                ChatDetailScreen(chat: chat),
+                            ],
                           ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
+                          subtitle: Builder(
+                            builder: (context) {
+                              final q = query.toLowerCase().trim();
+                              if (q.isNotEmpty) {
+                                final matchedMessage = chat.messages
+                                    .where((m) =>
+                                        m.text.toLowerCase().contains(q))
+                                    .lastOrNull;
+                                if (matchedMessage != null) {
+                                  final text = matchedMessage.text;
+                                  final idx = text.toLowerCase().indexOf(q);
+                                  return RichText(
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    text: TextSpan(
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 14,
+                                      ),
+                                      children: [
+                                        TextSpan(text: text.substring(0, idx)),
+                                        TextSpan(
+                                          text: text.substring(
+                                              idx, idx + q.length),
+                                          style: const TextStyle(
+                                            color: Colors.indigo,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                            text: text
+                                                .substring(idx + q.length)),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              }
+                              return Text(
+                                last?.text ?? '',
+                                style: TextStyle(
+                                  color: hasUnread
+                                      ? Colors.black87
+                                      : Colors.grey.shade600,
+                                  fontWeight: hasUnread
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              );
+                            },
+                          ),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                last != null ? _formatTime(last.time) : '',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: hasUnread
+                                      ? Colors.indigo
+                                      : Colors.grey,
+                                  fontWeight: hasUnread
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              if (hasUnread)
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.indigo,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    '$unread',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ChatDetailScreen(chat: chat),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
         onPressed: () {
           Navigator.push(
             context,
@@ -311,4 +386,6 @@ class ChatsScreen extends ConsumerWidget {
       ),
     );
   }
+  
 }
+
