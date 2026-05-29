@@ -166,35 +166,53 @@ class _NewChatScreenState extends State<NewChatScreen> {
                               context,
                               listen: false,
                             );
+
                             try {
                               final conv = await apiClient.createConversation(
                                 participantID: user.alanyaID,
                               );
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ChatDetailScreen(
-                                      userName: user.nom,
-                                      conversationId: conv['conversID'],
-                                      userId: user.alanyaID,
-                                    ),
-                                  ),
-                                );
+
+                              if (!mounted) return;
+
+                              final conversationId =
+                                  conv['conversID'] ??
+                                      conv['conversationID'] ??
+                                      conv['conversationId'];
+
+                              if (conversationId == null) {
+                                throw Exception('Conversation ID not found');
                               }
+
+                              // ✅ Close NewChatScreen first
+                              Navigator.of(context).pop();
+
+                              // ✅ Wait for pop animation to finish
+                              await Future.delayed(const Duration(milliseconds: 150));
+
+                              if (!mounted) return;
+
+                              // ✅ Open chat screen from root navigator
+                              Navigator.of(context, rootNavigator: true).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ChatDetailScreen(
+                                    userName: user.nom,
+                                    conversationId: conversationId,
+                                    userId: user.alanyaID,
+                                  ),
+                                ),
+                              );
                             } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      context.l10n.genericErrorWithMessage(
-                                        e.toString(),
-                                      ),
+                              if (!mounted) return;
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    context.l10n.genericErrorWithMessage(
+                                      e.toString(),
                                     ),
                                   ),
-                                );
-                              }
+                                ),
+                              );
                             }
                           },
                         );
