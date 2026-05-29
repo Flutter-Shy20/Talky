@@ -2,7 +2,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'l10n/app_localizations.dart';
 import 'providers/auth_provider.dart';
+import 'providers/locale_provider.dart';
 import 'providers/chat_provider.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
@@ -48,9 +50,15 @@ class TalkyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MeetingService(apiClient: apiClient)),
         //  ChatProvider : chats offline-first (drift) + présence temps réel
         ChangeNotifierProvider(create: (_) => ChatProvider(api: apiClient)),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
       ],
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
+      child: Consumer<LocaleProvider>(
+        builder: (context, localeProvider, child) {
+          return MaterialApp(
+            locale: localeProvider.locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'Talky',
         theme: ThemeData(
@@ -70,7 +78,8 @@ class TalkyApp extends StatelessWidget {
           useMaterial3: true,
         ),
         home: const AuthWrapper(),
-      ),
+      );
+    }),
     );
   }
 }

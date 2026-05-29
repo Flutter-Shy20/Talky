@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/meeting_service.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
 
@@ -127,7 +128,12 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     return Consumer<MeetingService>(
       builder: (context, meetingService, _) {
         final meeting = meetingService.currentMeeting;
-        final myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID ?? 0;
+        final myId =
+            Provider.of<AuthProvider>(
+              context,
+              listen: false,
+            ).currentUser?.alanyaID ??
+            0;
         final isOrganiser = meeting?.idOrganiser == myId;
 
         return PopScope(
@@ -138,178 +144,224 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
             if (context.mounted) Navigator.of(context).pop();
           },
           child: Scaffold(
-          backgroundColor: const Color(0xFF202124),
-          body: SafeArea(
-            child: Column(
-              children: [
-                // ── Top Bar ───────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Colors.white),
-                              onPressed: () async {
-                                await meetingService.leaveMeeting();
-                                if (context.mounted) Navigator.pop(context);
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                meeting?.objet ?? 'Meeting',
-                                style: const TextStyle(
+            backgroundColor: const Color(0xFF202124),
+            body: SafeArea(
+              child: Column(
+                children: [
+                  // ── Top Bar ───────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.arrow_back,
                                   color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                                onPressed: () async {
+                                  await meetingService.leaveMeeting();
+                                  if (context.mounted) Navigator.pop(context);
+                                },
                               ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  meeting?.objet ?? 'Meeting',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Text(
+                              meetingService.formattedDuration,
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(
+                                CupertinoIcons.switch_camera,
+                                color: Colors.white,
+                              ),
+                              onPressed: () => meetingService.switchCamera(),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.people_outline,
+                                color: Colors.white,
+                              ),
+                              onPressed: () =>
+                                  _showParticipantsPanel(meetingService),
                             ),
                           ],
                         ),
-                      ),
-                      Row(
-                        children: [
-                          Text(
-                            meetingService.formattedDuration,
-                            style: const TextStyle(color: Colors.white54, fontSize: 13),
-                          ),
-                          const SizedBox(width: 4),
-                          IconButton(
-                            icon: const Icon(CupertinoIcons.switch_camera, color: Colors.white),
-                            onPressed: () => meetingService.switchCamera(),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.people_outline, color: Colors.white),
-                            onPressed: () => _showParticipantsPanel(meetingService),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-                // ── Grille vidéo ─────────────────────────────────────
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: _remoteRenderers.isEmpty
-                        ? _buildVideoTile(
-                            label: 'Vous',
-                            renderer: _localRenderer,
-                            isVideoOff: meetingService.isVideoOff || !_localRendererReady,
-                            isMuted: meetingService.isMuted,
-                            mirror: true,
-                          )
-                        : GridView.count(
-                            crossAxisCount: _remoteRenderers.length < 2 ? 1 : 2,
-                            mainAxisSpacing: 8,
-                            crossAxisSpacing: 8,
-                            childAspectRatio: 0.8,
-                            children: [
-                              _buildVideoTile(
-                                label: 'Vous',
-                                renderer: _localRenderer,
-                                isVideoOff: meetingService.isVideoOff || !_localRendererReady,
-                                isMuted: meetingService.isMuted,
-                                mirror: true,
-                              ),
-                              ..._remoteRenderers.entries.map((entry) {
-                                final participant = meeting?.participants
-                                    .where((p) => p.participantID.toString() == entry.key)
-                                    .firstOrNull;
-                                final label = participant?.nom ??
-                                    participant?.pseudo ??
-                                    'User ${entry.key}';
-                                return _buildVideoTile(
-                                  label: label,
-                                  renderer: entry.value,
-                                  isVideoOff: false,
-                                  isMuted: false,
-                                );
-                              }),
-                            ],
-                          ),
+                  // ── Grille vidéo ─────────────────────────────────────
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: _remoteRenderers.isEmpty
+                          ? _buildVideoTile(
+                              label: 'Vous',
+                              renderer: _localRenderer,
+                              isVideoOff:
+                                  meetingService.isVideoOff ||
+                                  !_localRendererReady,
+                              isMuted: meetingService.isMuted,
+                              mirror: true,
+                            )
+                          : GridView.count(
+                              crossAxisCount: _remoteRenderers.length < 2
+                                  ? 1
+                                  : 2,
+                              mainAxisSpacing: 8,
+                              crossAxisSpacing: 8,
+                              childAspectRatio: 0.8,
+                              children: [
+                                _buildVideoTile(
+                                  label: 'Vous',
+                                  renderer: _localRenderer,
+                                  isVideoOff:
+                                      meetingService.isVideoOff ||
+                                      !_localRendererReady,
+                                  isMuted: meetingService.isMuted,
+                                  mirror: true,
+                                ),
+                                ..._remoteRenderers.entries.map((entry) {
+                                  final participant = meeting?.participants
+                                      .where(
+                                        (p) =>
+                                            p.participantID.toString() ==
+                                            entry.key,
+                                      )
+                                      .firstOrNull;
+                                  final label =
+                                      participant?.nom ??
+                                      participant?.pseudo ??
+                                      'User ${entry.key}';
+                                  return _buildVideoTile(
+                                    label: label,
+                                    renderer: entry.value,
+                                    isVideoOff: false,
+                                    isMuted: false,
+                                  );
+                                }),
+                              ],
+                            ),
+                    ),
                   ),
-                ),
 
-                // ── Contrôles bas ─────────────────────────────────────
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                  color: const Color(0xFF202124),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildControlBtn(
-                        icon: Icons.call_end,
-                        color: Colors.red,
-                        iconColor: Colors.white,
-                        onTap: () async {
-                          await meetingService.leaveMeeting();
-                          if (context.mounted) Navigator.pop(context);
-                        },
-                        isLarge: true,
-                      ),
-                      _buildControlBtn(
-                        icon: meetingService.isVideoOff
-                            ? CupertinoIcons.video_camera
-                            : CupertinoIcons.video_camera_solid,
-                        color: meetingService.isVideoOff ? Colors.white : Colors.white24,
-                        iconColor: meetingService.isVideoOff ? Colors.black : Colors.white,
-                        onTap: () => meetingService.toggleVideo(),
-                      ),
-                      _buildControlBtn(
-                        icon: meetingService.isMuted
-                            ? CupertinoIcons.mic_off
-                            : CupertinoIcons.mic,
-                        color: meetingService.isMuted ? Colors.white : Colors.white24,
-                        iconColor: meetingService.isMuted ? Colors.black : Colors.white,
-                        onTap: () => meetingService.toggleMute(),
-                      ),
-                      _buildControlBtn(
-                        icon: Icons.chat_bubble_outline,
-                        color: Colors.white24,
-                        iconColor: Colors.white,
-                        onTap: () => _showMeetingChat(context, meetingService),
-                      ),
-                      if (isOrganiser)
+                  // ── Contrôles bas ─────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 24,
+                    ),
+                    color: const Color(0xFF202124),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
                         _buildControlBtn(
-                          icon: Icons.stop_circle_outlined,
-                          color: Colors.red.shade900,
+                          icon: Icons.call_end,
+                          color: Colors.red,
                           iconColor: Colors.white,
-                          onTap: () => _confirmEndForAll(context, meetingService),
-                        )
-                      else
+                          onTap: () async {
+                            await meetingService.leaveMeeting();
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                          isLarge: true,
+                        ),
                         _buildControlBtn(
-                          icon: Icons.more_vert,
+                          icon: meetingService.isVideoOff
+                              ? CupertinoIcons.video_camera
+                              : CupertinoIcons.video_camera_solid,
+                          color: meetingService.isVideoOff
+                              ? Colors.white
+                              : Colors.white24,
+                          iconColor: meetingService.isVideoOff
+                              ? Colors.black
+                              : Colors.white,
+                          onTap: () => meetingService.toggleVideo(),
+                        ),
+                        _buildControlBtn(
+                          icon: meetingService.isMuted
+                              ? CupertinoIcons.mic_off
+                              : CupertinoIcons.mic,
+                          color: meetingService.isMuted
+                              ? Colors.white
+                              : Colors.white24,
+                          iconColor: meetingService.isMuted
+                              ? Colors.black
+                              : Colors.white,
+                          onTap: () => meetingService.toggleMute(),
+                        ),
+                        _buildControlBtn(
+                          icon: Icons.chat_bubble_outline,
                           color: Colors.white24,
                           iconColor: Colors.white,
-                          onTap: () => _showParticipantsPanel(meetingService),
+                          onTap: () =>
+                              _showMeetingChat(context, meetingService),
                         ),
-                    ],
+                        if (isOrganiser)
+                          _buildControlBtn(
+                            icon: Icons.stop_circle_outlined,
+                            color: Colors.red.shade900,
+                            iconColor: Colors.white,
+                            onTap: () =>
+                                _confirmEndForAll(context, meetingService),
+                          )
+                        else
+                          _buildControlBtn(
+                            icon: Icons.more_vert,
+                            color: Colors.white24,
+                            iconColor: Colors.white,
+                            onTap: () => _showParticipantsPanel(meetingService),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           ),
         );
       },
     );
   }
 
-  Future<void> _confirmEndForAll(BuildContext context, MeetingService meetingService) async {
+  Future<void> _confirmEndForAll(
+    BuildContext context,
+    MeetingService meetingService,
+  ) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF2D2D2D),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Terminer pour tous', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Terminer pour tous',
+          style: TextStyle(color: Colors.white),
+        ),
         content: const Text(
           'Voulez-vous mettre fin à la réunion pour tous les participants ?',
           style: TextStyle(color: Colors.white70),
@@ -317,7 +369,10 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler', style: TextStyle(color: Colors.white54)),
+            child: const Text(
+              'Annuler',
+              style: TextStyle(color: Colors.white54),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -375,7 +430,10 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                 color: Colors.black54,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+              child: Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
             ),
           ),
           Positioned(
@@ -383,7 +441,10 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
             right: 12,
             child: Container(
               padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
               child: Icon(
                 isMuted ? Icons.mic_off : Icons.mic,
                 color: isMuted ? Colors.red : Colors.white,
@@ -433,7 +494,12 @@ class _ParticipantsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID ?? 0;
+    final myId =
+        Provider.of<AuthProvider>(
+          context,
+          listen: false,
+        ).currentUser?.alanyaID ??
+        0;
     final meeting = meetingService.currentMeeting;
     final connectedIds = Set<String>.from(meetingService.remoteStreams.keys);
     final participants = meeting?.participants ?? [];
@@ -460,7 +526,10 @@ class _ParticipantsSheet extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 4,
+                  ),
                   child: Row(
                     children: [
                       const Text(
@@ -473,14 +542,20 @@ class _ParticipantsSheet extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white12,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           '${participants.length}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],
@@ -502,11 +577,15 @@ class _ParticipantsSheet extends StatelessWidget {
                           itemCount: participants.length,
                           itemBuilder: (_, i) {
                             final p = participants[i];
-                            final isConnected = p.connecte ||
-                                connectedIds.contains(p.participantID.toString());
+                            final isConnected =
+                                p.connecte ||
+                                connectedIds.contains(
+                                  p.participantID.toString(),
+                                );
                             final name = p.nom ?? p.pseudo ?? 'Participant';
                             final isMe = p.participantID == myId;
-                            final isHost = meeting?.idOrganiser == p.participantID;
+                            final isHost =
+                                meeting?.idOrganiser == p.participantID;
                             return _ParticipantRow(
                               name: isMe ? '$name (vous)' : name,
                               avatarUrl: p.avatarUrl,
@@ -552,7 +631,10 @@ class _ParticipantRow extends StatelessWidget {
                 backgroundImage: avatarImage(avatarUrl),
                 child: hasValidAvatarUrl(avatarUrl)
                     ? null
-                    : Text(initial, style: const TextStyle(color: Colors.white)),
+                    : Text(
+                        initial,
+                        style: const TextStyle(color: Colors.white),
+                      ),
               ),
               if (isConnected)
                 Positioned(
@@ -564,7 +646,10 @@ class _ParticipantRow extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.green,
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF2D2D2D), width: 1.5),
+                      border: Border.all(
+                        color: const Color(0xFF2D2D2D),
+                        width: 1.5,
+                      ),
                     ),
                   ),
                 ),
@@ -572,7 +657,10 @@ class _ParticipantRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            child: Text(
+              name,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
           ),
           if (isHost)
             Container(
@@ -583,7 +671,11 @@ class _ParticipantRow extends StatelessWidget {
               ),
               child: const Text(
                 'Hôte',
-                style: TextStyle(color: Colors.indigo, fontSize: 11, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.indigo,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           if (!isConnected)
@@ -625,7 +717,12 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID ?? 0;
+    final myId =
+        Provider.of<AuthProvider>(
+          context,
+          listen: false,
+        ).currentUser?.alanyaID ??
+        0;
     return ChangeNotifierProvider.value(
       value: widget.meetingService,
       child: Consumer<MeetingService>(
@@ -644,7 +741,11 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
               padding: EdgeInsets.all(16),
               child: Text(
                 'Chat',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             Expanded(
@@ -663,11 +764,15 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                         final isMe = msg.userId == myId.toString();
                         final meeting = svc.currentMeeting;
                         final participant = meeting?.participants
-                            .where((p) => p.participantID.toString() == msg.userId)
+                            .where(
+                              (p) => p.participantID.toString() == msg.userId,
+                            )
                             .firstOrNull;
                         final senderName = isMe
                             ? 'Vous'
-                            : (participant?.nom ?? participant?.pseudo ?? 'User ${msg.userId}');
+                            : (participant?.nom ??
+                                  participant?.pseudo ??
+                                  'User ${msg.userId}');
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Column(
@@ -677,13 +782,21 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                             children: [
                               Text(
                                 senderName,
-                                style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 11,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isMe ? Colors.indigo.shade700 : Colors.white12,
+                                  color: isMe
+                                      ? Colors.indigo.shade700
+                                      : Colors.white12,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -710,7 +823,7 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                       controller: _ctrl,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'Message...',
+                        hintText: context.l10n.messageHint,
                         hintStyle: const TextStyle(color: Colors.white38),
                         filled: true,
                         fillColor: Colors.white12,
@@ -718,7 +831,10 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                   ),

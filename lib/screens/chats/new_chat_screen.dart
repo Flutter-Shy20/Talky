@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'chat_detail_screen.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class NewChatScreen extends StatefulWidget {
   const NewChatScreen({super.key});
@@ -48,9 +49,12 @@ class _NewChatScreenState extends State<NewChatScreen> {
     final query = _searchController.text.toLowerCase();
     setState(() {
       _filteredUsers = _users.where((user) {
-        return user.nom.toLowerCase().contains(query) ||
-            user.pseudo.toLowerCase().contains(query) ||
-            user.alanyaPhone.toLowerCase().contains(query);
+        final nom = user.nom.toLowerCase();
+        final pseudo = user.pseudo.toLowerCase();
+        final phone = user.alanyaPhone.toLowerCase();
+        return nom.contains(query) ||
+            pseudo.contains(query) ||
+            phone.contains(query);
       }).toList();
     });
   }
@@ -66,9 +70,13 @@ class _NewChatScreenState extends State<NewChatScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'New Chat',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.newChat,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: Column(
@@ -79,7 +87,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search names or numbers...',
+                hintText: context.l10n.searchNamesOrNumbers,
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 filled: true,
                 fillColor: Colors.white,
@@ -96,14 +104,24 @@ class _NewChatScreenState extends State<NewChatScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : ListView(
                     children: [
-                      _buildActionTile(Icons.group_add, 'New Group'),
-                      _buildActionTile(Icons.campaign, 'New Broadcast'),
-                      _buildActionTile(Icons.person_add, 'New Contact'),
-                      const Padding(
-                        padding: EdgeInsets.only(left: 20, top: 16, bottom: 8),
+                      _buildActionTile(Icons.group_add, context.l10n.newGroup),
+                      _buildActionTile(
+                        Icons.campaign,
+                        context.l10n.newBroadcast,
+                      ),
+                      _buildActionTile(
+                        Icons.person_add,
+                        context.l10n.newContact,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 20,
+                          top: 16,
+                          bottom: 8,
+                        ),
                         child: Text(
-                          'Contacts on Talky',
-                          style: TextStyle(
+                          context.l10n.contactsOnTalky,
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.grey,
                           ),
@@ -111,27 +129,43 @@ class _NewChatScreenState extends State<NewChatScreen> {
                       ),
                       ..._filteredUsers.map((user) {
                         return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
                           leading: CircleAvatar(
                             radius: 24,
                             backgroundColor: Colors.indigo.shade50,
                             child: Text(
-                              user.nom[0].toUpperCase(),
-                              style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+                              (user.nom.isNotEmpty
+                                  ? user.nom[0].toUpperCase()
+                                  : '?'),
+                              style: const TextStyle(
+                                color: Colors.indigo,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           title: Text(
                             user.nom,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                           subtitle: Text(
-                            user.isOnline ? 'Online' : 'Offline',
+                            user.isOnline
+                                ? context.l10n.online
+                                : context.l10n.offline,
                             style: TextStyle(
                               color: user.isOnline ? Colors.green : Colors.grey,
                             ),
                           ),
                           onTap: () async {
-                            final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+                            final apiClient = Provider.of<TalkyApiClient>(
+                              context,
+                              listen: false,
+                            );
                             try {
                               final conv = await apiClient.createConversation(
                                 participantID: user.alanyaID,
@@ -152,7 +186,13 @@ class _NewChatScreenState extends State<NewChatScreen> {
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e')),
+                                  SnackBar(
+                                    content: Text(
+                                      context.l10n.genericErrorWithMessage(
+                                        e.toString(),
+                                      ),
+                                    ),
+                                  ),
                                 );
                               }
                             }

@@ -33,16 +33,23 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.95, end: 1.10).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
-    Provider.of<CallService>(context, listen: false).addListener(_onStatusChanged);
+    _pulse = Tween<double>(
+      begin: 0.95,
+      end: 1.10,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    Provider.of<CallService>(
+      context,
+      listen: false,
+    ).addListener(_onStatusChanged);
   }
 
   @override
   void dispose() {
     _pulseCtrl.dispose();
-    Provider.of<CallService>(context, listen: false).removeListener(_onStatusChanged);
+    Provider.of<CallService>(
+      context,
+      listen: false,
+    ).removeListener(_onStatusChanged);
     super.dispose();
   }
 
@@ -52,7 +59,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
     // Décrochage via CallKit pendant qu'on est sur cet écran → bascule vers
     // l'écran d'appel en cours.
-    if (cs.status == CallStatus.connecting || cs.status == CallStatus.connected) {
+    if (cs.status == CallStatus.connecting ||
+        cs.status == CallStatus.connected) {
       _navigated = true;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
@@ -77,20 +85,22 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   Future<void> _accept() async {
     if (_navigated) return;
     _navigated = true;
-    
+
     final cs = Provider.of<CallService>(context, listen: false);
     await cs.answerCall();
-    
+
     // Widget may be deactivated during await, check mounted before using context
     if (!mounted) return;
 
     if (cs.errorMessage != null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(cs.errorMessage!),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 4),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(cs.errorMessage!),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
       if (mounted) Navigator.of(context).maybePop();
       return;
     }
@@ -108,7 +118,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       builder: (_, cs, __) {
         final caller = cs.currentCall?.caller;
         final isVideo = cs.isVideo;
-        final name = caller?.nom.trim().isNotEmpty == true ? caller!.nom : 'Inconnu';
+        final name = caller?.nom.trim().isNotEmpty == true
+            ? caller!.nom
+            : 'Inconnu';
         final initial = name.substring(0, 1).toUpperCase();
 
         return Scaffold(
@@ -133,7 +145,11 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                     ),
                   ),
                   const Spacer(),
-                  _AvatarPulse(animation: _pulse, initial: initial, photoUrl: caller?.avatarUrl),
+                  _AvatarPulse(
+                    animation: _pulse,
+                    initial: initial,
+                    photoUrl: caller?.avatarUrl,
+                  ),
                   const SizedBox(height: 28),
                   Text(
                     name,
@@ -151,7 +167,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                   ),
                   const Spacer(flex: 2),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 48,
+                      vertical: 32,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -196,7 +215,8 @@ class _AvatarPulse extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = photoUrl;
-    final hasPhoto = url != null &&
+    final hasPhoto =
+        url != null &&
         url.isNotEmpty &&
         url.toUpperCase() != 'NON DEFINI' &&
         (url.startsWith('http://') || url.startsWith('https://'));

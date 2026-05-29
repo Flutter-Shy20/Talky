@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/avatar_utils.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 
@@ -18,7 +19,8 @@ class ParticipantPickerScreen extends StatefulWidget {
   });
 
   @override
-  State<ParticipantPickerScreen> createState() => _ParticipantPickerScreenState();
+  State<ParticipantPickerScreen> createState() =>
+      _ParticipantPickerScreenState();
 }
 
 class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
@@ -54,7 +56,9 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
       if (!mounted) return;
       setState(() {
         _results = data
-            .map((e) => e is User ? e : User.fromJson(e as Map<String, dynamic>))
+            .map(
+              (e) => e is User ? e : User.fromJson(e as Map<String, dynamic>),
+            )
             .toList();
         _isLoading = false;
         _showingContacts = true;
@@ -90,7 +94,9 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
       if (!mounted) return;
       setState(() {
         _results = data
-            .map((e) => e is User ? e : User.fromJson(e as Map<String, dynamic>))
+            .map(
+              (e) => e is User ? e : User.fromJson(e as Map<String, dynamic>),
+            )
             .toList();
         _isLoading = false;
       });
@@ -99,7 +105,8 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
     }
   }
 
-  bool _isSelected(User user) => _selected.any((u) => u.alanyaID == user.alanyaID);
+  bool _isSelected(User user) =>
+      _selected.any((u) => u.alanyaID == user.alanyaID);
 
   bool get _atLimit => _selected.length >= widget.maxSelectable;
 
@@ -143,7 +150,11 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
           children: [
             const Text(
               'Ajouter des participants',
-              style: TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             Text(
               '${_selected.length}/${widget.maxSelectable} sélectionné${_selected.length > 1 ? 's' : ''}',
@@ -174,7 +185,8 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
       body: Column(
         children: [
           // Chips des sélectionnés
-          if (_selected.isNotEmpty) _SelectedChips(selected: _selected, onRemove: _toggle),
+          if (_selected.isNotEmpty)
+            _SelectedChips(selected: _selected, onRemove: _toggle),
 
           // Banner limite atteinte
           if (_atLimit)
@@ -184,12 +196,19 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
               color: Colors.orange.shade50,
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Colors.orange.shade700,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Limite de ${widget.maxSelectable} participants atteinte (10 avec l\'organisateur). Retirez un participant pour en ajouter un autre.',
-                      style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange.shade800,
+                      ),
                     ),
                   ),
                 ],
@@ -203,11 +222,15 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
               controller: _searchController,
               autofocus: false,
               decoration: InputDecoration(
-                hintText: 'Rechercher par nom, pseudo…',
+                hintText: context.l10n.searchByNamePseudo,
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                        icon: const Icon(
+                          Icons.clear,
+                          size: 18,
+                          color: Colors.grey,
+                        ),
                         onPressed: () {
                           _searchController.clear();
                         },
@@ -244,27 +267,29 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
           // Liste
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.indigo),
+                  )
                 : _results.isEmpty
-                    ? _EmptyState(
-                        isSearching: !_showingContacts,
-                        query: _searchController.text,
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.only(bottom: 16),
-                        itemCount: _results.length,
-                        itemBuilder: (context, index) {
-                          final user = _results[index];
-                          final selected = _isSelected(user);
-                          return _UserTile(
-                            user: user,
-                            selected: selected,
-                            disabled: _atLimit && !selected,
-                            onTap: () => _toggle(user),
-                          );
-                        },
-                      ),
+                ? _EmptyState(
+                    isSearching: !_showingContacts,
+                    query: _searchController.text,
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.only(bottom: 16),
+                    itemCount: _results.length,
+                    itemBuilder: (context, index) {
+                      final user = _results[index];
+                      final selected = _isSelected(user);
+                      return _UserTile(
+                        user: user,
+                        selected: selected,
+                        disabled: _atLimit && !selected,
+                        onTap: () => _toggle(user),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -279,12 +304,17 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
                     backgroundColor: Colors.indigo,
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     elevation: 0,
                   ),
                   child: Text(
                     '${widget.confirmLabel} · ${_selected.length} participant${_selected.length > 1 ? 's' : ''}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
@@ -315,7 +345,10 @@ class _SelectedChips extends StatelessWidget {
           return Chip(
             avatar: CircleAvatar(
               backgroundColor: Colors.indigo.shade300,
-              child: Text(initial, style: const TextStyle(color: Colors.white, fontSize: 11)),
+              child: Text(
+                initial,
+                style: const TextStyle(color: Colors.white, fontSize: 11),
+              ),
             ),
             label: Text(
               user.nom.isNotEmpty ? user.nom : user.pseudo,
@@ -358,76 +391,87 @@ class _UserTile extends StatelessWidget {
       child: Opacity(
         opacity: disabled ? 0.4 : 1.0,
         child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            // Avatar
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: Colors.indigo.shade50,
-                  backgroundImage: avatarImage(user.avatarUrl),
-                  child: hasValidAvatarUrl(user.avatarUrl)
-                      ? null
-                      : Text(initial,
-                          style: const TextStyle(
-                              color: Colors.indigo, fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-                if (user.isOnline)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 14),
-            // Nom + pseudo
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              // Avatar
+              Stack(
                 children: [
-                  Text(
-                    user.nom.isNotEmpty ? user.nom : user.pseudo,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Colors.indigo.shade50,
+                    backgroundImage: avatarImage(user.avatarUrl),
+                    child: hasValidAvatarUrl(user.avatarUrl)
+                        ? null
+                        : Text(
+                            initial,
+                            style: const TextStyle(
+                              color: Colors.indigo,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                   ),
-                  if (user.pseudo.isNotEmpty)
-                    Text(
-                      '@${user.pseudo}',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                  if (user.isOnline)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                      ),
                     ),
                 ],
               ),
-            ),
-            // Checkbox
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: selected ? Colors.indigo : Colors.transparent,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? Colors.indigo : Colors.grey.shade400,
-                  width: 2,
+              const SizedBox(width: 14),
+              // Nom + pseudo
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.nom.isNotEmpty ? user.nom : user.pseudo,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                    if (user.pseudo.isNotEmpty)
+                      Text(
+                        '@${user.pseudo}',
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 13,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              child: selected
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : null,
-            ),
-          ],
+              // Checkbox
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: selected ? Colors.indigo : Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected ? Colors.indigo : Colors.grey.shade400,
+                    width: 2,
+                  ),
+                ),
+                child: selected
+                    ? const Icon(Icons.check, color: Colors.white, size: 16)
+                    : null,
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

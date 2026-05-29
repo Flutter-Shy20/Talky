@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -28,38 +29,40 @@ class _SignupScreenState extends State<SignupScreen> {
 
     if (authProvider.isLoggedIn && mounted) {
       final alanyaPhone = authProvider.currentUser?.alanyaPhone ?? '';
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => AlertDialog(
-          title: const Text('Votre identifiant Talky'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Notez ce numéro — il vous servira à vous connecter :',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                alanyaPhone,
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 8,
-                  color: Colors.indigo,
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            title: Text(context.l10n.yourTalkyId),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  context.l10n.saveTalkyIdInstructions,
+                  textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 20),
+                Text(
+                  alanyaPhone,
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 8,
+                    color: Colors.indigo,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(context.l10n.iSavedIt),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('J\'ai noté'),
-            ),
-          ],
-        ),
-      );
+        );
+      }
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
@@ -89,29 +92,26 @@ class _SignupScreenState extends State<SignupScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 16),
-              const Text(
-                'Create Account',
+              Text(
+                context.l10n.registerTitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Connect with your friends today!',
+              Text(
+                context.l10n.registerSubtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                ),
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
               ),
               const SizedBox(height: 48),
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  hintText: 'Full Name',
+                  hintText: context.l10n.fullName,
                   prefixIcon: const Icon(Icons.person_outline),
                   filled: true,
                   fillColor: Colors.grey.shade100,
@@ -125,7 +125,7 @@ class _SignupScreenState extends State<SignupScreen> {
               TextField(
                 controller: _pseudoController,
                 decoration: InputDecoration(
-                  hintText: 'Pseudo',
+                  hintText: context.l10n.pseudo,
                   prefixIcon: const Icon(Icons.alternate_email),
                   filled: true,
                   fillColor: Colors.grey.shade100,
@@ -140,7 +140,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  hintText: 'Email address',
+                  hintText: context.l10n.emailLabel,
                   prefixIcon: const Icon(Icons.email_outlined),
                   filled: true,
                   fillColor: Colors.grey.shade100,
@@ -155,11 +155,13 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  hintText: 'Password',
+                  hintText: context.l10n.passwordLabel,
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                     ),
                     onPressed: () {
                       setState(() {
@@ -214,9 +216,12 @@ class _SignupScreenState extends State<SignupScreen> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
-                          'Sign Up',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      : Text(
+                          context.l10n.registerTitle,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                 ),
               ),

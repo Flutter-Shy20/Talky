@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -30,7 +31,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() {
         _user = User.fromJson(data);
         _nameController.text = _user?.nom ?? '';
-        _aboutController.text = ''; // À remplir si tu as un champ 'about' dans le modèle
+        _aboutController.text =
+            ''; // À remplir si tu as un champ 'about' dans le modèle
         _isLoading = false;
       });
     } catch (e) {
@@ -49,16 +51,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           icon: const Icon(Icons.close, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.editProfile,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Save',
-              style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold, fontSize: 16),
+            child: Text(
+              context.l10n.save,
+              style: const TextStyle(
+                color: Colors.indigo,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -95,7 +104,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 3),
                             ),
-                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                         ),
                       ],
@@ -104,7 +117,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 40),
                   TextField(
                     decoration: InputDecoration(
-                      labelText: 'Name',
+                      labelText: context.l10n.name,
                       prefixIcon: const Icon(Icons.person_outline),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -116,7 +129,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   TextField(
                     maxLines: 3,
                     decoration: InputDecoration(
-                      labelText: 'About',
+                      labelText: context.l10n.about,
                       prefixIcon: const Icon(Icons.info_outline),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -128,13 +141,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   TextField(
                     readOnly: true,
                     decoration: InputDecoration(
-                      labelText: 'Phone (Alanya Phone)',
+                      labelText: context.l10n.phoneAlanyaPhone,
                       prefixIcon: const Icon(Icons.phone_outlined),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    controller: TextEditingController(text: _user?.alanyaPhone ?? ''),
+                    controller: TextEditingController(
+                      text: _user?.alanyaPhone ?? '',
+                    ),
                   ),
                 ],
               ),

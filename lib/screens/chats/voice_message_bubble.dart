@@ -31,7 +31,8 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   Future<void> _ensureLoaded() async {
     if (_ready) return;
-    final hasLocal = widget.localPath != null && File(widget.localPath!).existsSync();
+    final hasLocal =
+        widget.localPath != null && File(widget.localPath!).existsSync();
     if (hasLocal) {
       await _player.setFilePath(widget.localPath!);
     } else if (widget.networkUrl != null) {
@@ -89,10 +90,20 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                 constraints: const BoxConstraints(),
                 icon: _loading
                     ? SizedBox(
-                        width: 22, height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: _fg),
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _fg,
+                        ),
                       )
-                    : Icon(playing ? Icons.pause_circle_filled : Icons.play_circle_fill, color: _fg, size: 34),
+                    : Icon(
+                        playing
+                            ? Icons.pause_circle_filled
+                            : Icons.play_circle_fill,
+                        color: _fg,
+                        size: 34,
+                      ),
                 onPressed: _toggle,
               );
             },
@@ -102,11 +113,16 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
             child: StreamBuilder<Duration>(
               stream: _player.positionStream,
               builder: (context, snap) {
-                final total = _player.duration ?? Duration(seconds: widget.durationSeconds);
+                final total =
+                    _player.duration ??
+                    Duration(seconds: widget.durationSeconds);
                 final pos = snap.data ?? Duration.zero;
                 final ratio = total.inMilliseconds == 0
                     ? 0.0
-                    : (pos.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
+                    : (pos.inMilliseconds / total.inMilliseconds).clamp(
+                        0.0,
+                        1.0,
+                      );
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,

@@ -7,6 +7,7 @@ import '../authentification/login_screen.dart';
 import '../../providers/auth_provider.dart';
 import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -50,7 +51,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() {
         _contacts = data
-            .map((e) => e is User ? e : User.fromJson(e as Map<String, dynamic>))
+            .map(
+              (e) => e is User ? e : User.fromJson(e as Map<String, dynamic>),
+            )
             .toList();
         _loadingContacts = false;
       });
@@ -79,7 +82,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la suppression : $e')),
+        SnackBar(
+          content: Text(
+            Localizations.localeOf(context).languageCode == 'fr'
+                ? 'Erreur lors de la suppression : $e'
+                : 'Error during removal: $e',
+          ),
+        ),
       );
     }
   }
@@ -120,9 +129,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 16),
             ListTile(
-              leading: const Icon(Icons.person_remove_outlined, color: Colors.red),
+              leading: const Icon(
+                Icons.person_remove_outlined,
+                color: Colors.red,
+              ),
               title: Text(
-                'Retirer ${user.nom.isNotEmpty ? user.nom : user.pseudo} des contacts préférés',
+                Localizations.localeOf(context).languageCode == 'fr'
+                    ? 'Retirer ${user.nom.isNotEmpty ? user.nom : user.pseudo} des contacts préférés'
+                    : 'Remove ${user.nom.isNotEmpty ? user.nom : user.pseudo} from favorite contacts',
                 style: const TextStyle(color: Colors.red),
               ),
               onTap: () {
@@ -144,9 +158,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Profil',
-          style: TextStyle(color: Colors.black, fontSize: 28, fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.profileTitle,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -176,9 +194,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     bottom: 0,
                     right: 0,
                     child: Container(
-                      decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
+                      decoration: const BoxDecoration(
+                        color: Colors.indigo,
+                        shape: BoxShape.circle,
+                      ),
                       child: IconButton(
-                        icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                        icon: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         onPressed: () {},
                       ),
                     ),
@@ -191,7 +216,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ? const CircularProgressIndicator()
                 : Text(
                     _user?.nom ?? 'User',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
             const SizedBox(height: 4),
             if (!_isLoading)
@@ -217,25 +245,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  _buildMenuItem(CupertinoIcons.person, 'Compte', () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-                    );
-                  }),
+                  _buildMenuItem(
+                    CupertinoIcons.person,
+                    context.l10n.account,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen(),
+                        ),
+                      );
+                    },
+                  ),
                   const Divider(height: 1),
-                  _buildMenuItem(CupertinoIcons.chat_bubble, 'Discussions', () {}),
+                  _buildMenuItem(
+                    CupertinoIcons.chat_bubble,
+                    context.l10n.tabChats,
+                    () {},
+                  ),
                   const Divider(height: 1),
-                  _buildMenuItem(CupertinoIcons.bell, 'Notifications', () {}),
+                  _buildMenuItem(
+                    CupertinoIcons.bell,
+                    context.l10n.notifications,
+                    () {},
+                  ),
                   const Divider(height: 1),
-                  _buildMenuItem(CupertinoIcons.settings, 'Paramètres', () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                    );
-                  }),
+                  _buildMenuItem(
+                    CupertinoIcons.settings,
+                    context.l10n.settingsTitle,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
                   const Divider(height: 1),
-                  _buildMenuItem(Icons.logout, 'Déconnexion', _logout, isDestructive: true),
+                  _buildMenuItem(
+                    Icons.logout,
+                    context.l10n.logout,
+                    _logout,
+                    isDestructive: true,
+                  ),
                 ],
               ),
             ),
@@ -247,19 +300,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Contacts préférés',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  Text(
+                    Localizations.localeOf(context).languageCode == 'fr'
+                        ? 'Contacts préférés'
+                        : 'Favorite contacts',
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   TextButton.icon(
                     onPressed: _openAddContact,
                     icon: const Icon(Icons.add, size: 18, color: Colors.indigo),
-                    label: const Text(
-                      'Ajouter',
-                      style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600),
+                    label: Text(
+                      Localizations.localeOf(context).languageCode == 'fr'
+                          ? 'Ajouter'
+                          : 'Add',
+                      style: const TextStyle(
+                        color: Colors.indigo,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                     ),
                   ),
                 ],
@@ -273,11 +339,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: CircularProgressIndicator(color: Colors.indigo),
                   )
                 : _contacts.isEmpty
-                    ? _EmptyContacts(onAdd: _openAddContact)
-                    : _ContactGrid(
-                        contacts: _contacts,
-                        onLongPress: _showContactOptions,
-                      ),
+                ? _EmptyContacts(onAdd: _openAddContact)
+                : _ContactGrid(
+                    contacts: _contacts,
+                    onLongPress: _showContactOptions,
+                  ),
 
             const SizedBox(height: 40),
           ],
@@ -312,7 +378,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: isDestructive ? Colors.red : Colors.black87,
         ),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: Colors.grey,
+      ),
       onTap: onTap,
     );
   }
@@ -345,7 +415,9 @@ class _ContactGrid extends StatelessWidget {
       child: Wrap(
         spacing: 16,
         runSpacing: 20,
-        children: contacts.map((user) => _ContactChip(user: user, onLongPress: onLongPress)).toList(),
+        children: contacts
+            .map((user) => _ContactChip(user: user, onLongPress: onLongPress))
+            .toList(),
       ),
     );
   }
@@ -361,7 +433,9 @@ class _ContactChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final initial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
     final displayName = user.nom.isNotEmpty ? user.nom : user.pseudo;
-    final shortName = displayName.length > 8 ? '${displayName.substring(0, 7)}…' : displayName;
+    final shortName = displayName.length > 8
+        ? '${displayName.substring(0, 7)}…'
+        : displayName;
 
     return GestureDetector(
       onLongPress: () => onLongPress(user),
@@ -374,7 +448,9 @@ class _ContactChip extends StatelessWidget {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: Colors.indigo.shade50,
-                  backgroundImage: user.avatarUrl.isNotEmpty ? NetworkImage(user.avatarUrl) : null,
+                  backgroundImage: user.avatarUrl.isNotEmpty
+                      ? NetworkImage(user.avatarUrl)
+                      : null,
                   child: user.avatarUrl.isEmpty
                       ? Text(
                           initial,
@@ -439,7 +515,9 @@ class _EmptyContacts extends StatelessWidget {
           Icon(CupertinoIcons.person_2, size: 44, color: Colors.grey.shade300),
           const SizedBox(height: 12),
           Text(
-            'Aucun contact préféré',
+            Localizations.localeOf(context).languageCode == 'fr'
+                ? 'Aucun contact préféré'
+                : 'No favorite contacts',
             style: TextStyle(
               color: Colors.grey.shade500,
               fontSize: 15,
@@ -448,7 +526,9 @@ class _EmptyContacts extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Ajoutez des contacts pour les retrouver\nrapidement lors de vos réunions',
+            Localizations.localeOf(context).languageCode == 'fr'
+                ? 'Ajoutez des contacts pour les retrouver\nrapidement lors de vos réunions'
+                : 'Add contacts to find them quickly\nduring your meetings',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
           ),
@@ -456,9 +536,14 @@ class _EmptyContacts extends StatelessWidget {
           TextButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add_circle_outline, color: Colors.indigo),
-            label: const Text(
-              'Ajouter un contact',
-              style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+            label: Text(
+              Localizations.localeOf(context).languageCode == 'fr'
+                  ? 'Ajouter un contact'
+                  : 'Add a contact',
+              style: const TextStyle(
+                color: Colors.indigo,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -520,7 +605,9 @@ class _AddContactSheetState extends State<_AddContactSheet> {
       if (!mounted) return;
       setState(() {
         _results = data
-            .map((e) => e is User ? e : User.fromJson(e as Map<String, dynamic>))
+            .map(
+              (e) => e is User ? e : User.fromJson(e as Map<String, dynamic>),
+            )
             .toList();
         _isLoading = false;
       });
@@ -539,7 +626,11 @@ class _AddContactSheetState extends State<_AddContactSheet> {
       setState(() => _adding.remove(user.alanyaID));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${user.nom.isNotEmpty ? user.nom : user.pseudo} ajouté aux contacts préférés'),
+          content: Text(
+            Localizations.localeOf(context).languageCode == 'fr'
+                ? '${user.nom.isNotEmpty ? user.nom : user.pseudo} ajouté aux contacts préférés'
+                : '${user.nom.isNotEmpty ? user.nom : user.pseudo} added to favorite contacts',
+          ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.green.shade700,
           duration: const Duration(seconds: 2),
@@ -549,7 +640,13 @@ class _AddContactSheetState extends State<_AddContactSheet> {
       if (!mounted) return;
       setState(() => _adding.remove(user.alanyaID));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(
+          content: Text(
+            Localizations.localeOf(context).languageCode == 'fr'
+                ? 'Erreur : $e'
+                : 'Error: $e',
+          ),
+        ),
       );
     }
   }
@@ -581,9 +678,11 @@ class _AddContactSheetState extends State<_AddContactSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Ajouter un contact préféré',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            Text(
+              Localizations.localeOf(context).languageCode == 'fr'
+                  ? 'Ajouter un contact préféré'
+                  : 'Add a favorite contact',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             // Champ de recherche
@@ -593,11 +692,17 @@ class _AddContactSheetState extends State<_AddContactSheet> {
                 controller: _searchController,
                 autofocus: true,
                 decoration: InputDecoration(
-                  hintText: 'Rechercher par nom ou pseudo…',
+                  hintText: Localizations.localeOf(context).languageCode == 'fr'
+                      ? 'Rechercher par nom ou pseudo…'
+                      : 'Search by name or username…',
                   prefixIcon: const Icon(Icons.search, color: Colors.grey),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                          icon: const Icon(
+                            Icons.clear,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _results = []);
@@ -619,97 +724,117 @@ class _AddContactSheetState extends State<_AddContactSheet> {
             // Résultats
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.indigo),
+                    )
                   : _results.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _searchController.text.length >= 2
-                                    ? Icons.person_search
-                                    : CupertinoIcons.search,
-                                size: 44,
-                                color: Colors.grey.shade300,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _searchController.text.length < 2
-                                    ? 'Tapez au moins 2 caractères'
-                                    : 'Aucun résultat',
-                                style: TextStyle(color: Colors.grey.shade500),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _searchController.text.length >= 2
+                                ? Icons.person_search
+                                : CupertinoIcons.search,
+                            size: 44,
+                            color: Colors.grey.shade300,
                           ),
-                        )
-                      : ListView.builder(
-                          controller: scrollController,
-                          padding: const EdgeInsets.only(bottom: 16),
-                          itemCount: _results.length,
-                          itemBuilder: (_, index) {
-                            final user = _results[index];
-                            final alreadyContact = _isAlreadyContact(user);
-                            final isAdding = _adding.contains(user.alanyaID);
-                            final initial =
-                                user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
+                          const SizedBox(height: 12),
+                          Text(
+                            _searchController.text.length < 2
+                                ? (Localizations.localeOf(
+                                            context,
+                                          ).languageCode ==
+                                          'fr'
+                                      ? 'Tapez au moins 2 caractères'
+                                      : 'Type at least 2 characters')
+                                : (Localizations.localeOf(
+                                            context,
+                                          ).languageCode ==
+                                          'fr'
+                                      ? 'Aucun résultat'
+                                      : 'No results'),
+                            style: TextStyle(color: Colors.grey.shade500),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.only(bottom: 16),
+                      itemCount: _results.length,
+                      itemBuilder: (_, index) {
+                        final user = _results[index];
+                        final alreadyContact = _isAlreadyContact(user);
+                        final isAdding = _adding.contains(user.alanyaID);
+                        final initial = user.nom.isNotEmpty
+                            ? user.nom[0].toUpperCase()
+                            : '?';
 
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 4,
-                              ),
-                              leading: CircleAvatar(
-                                radius: 24,
-                                backgroundColor: Colors.indigo.shade50,
-                                backgroundImage: user.avatarUrl.isNotEmpty
-                                    ? NetworkImage(user.avatarUrl)
-                                    : null,
-                                child: user.avatarUrl.isEmpty
-                                    ? Text(
-                                        initial,
-                                        style: const TextStyle(
-                                          color: Colors.indigo,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      )
-                                    : null,
-                              ),
-                              title: Text(
-                                user.nom.isNotEmpty ? user.nom : user.pseudo,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              subtitle: user.pseudo.isNotEmpty
-                                  ? Text('@${user.pseudo}',
-                                      style: TextStyle(color: Colors.grey.shade500))
-                                  : null,
-                              trailing: alreadyContact
-                                  ? Chip(
-                                      label: const Text(
-                                        'Déjà ajouté',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                      backgroundColor: Colors.grey.shade100,
-                                      padding: EdgeInsets.zero,
-                                    )
-                                  : isAdding
-                                      ? const SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.indigo,
-                                          ),
-                                        )
-                                      : IconButton(
-                                          icon: const Icon(
-                                            Icons.person_add_outlined,
-                                            color: Colors.indigo,
-                                          ),
-                                          onPressed: () => _addContact(user),
-                                        ),
-                            );
-                          },
-                        ),
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 4,
+                          ),
+                          leading: CircleAvatar(
+                            radius: 24,
+                            backgroundColor: Colors.indigo.shade50,
+                            backgroundImage: user.avatarUrl.isNotEmpty
+                                ? NetworkImage(user.avatarUrl)
+                                : null,
+                            child: user.avatarUrl.isEmpty
+                                ? Text(
+                                    initial,
+                                    style: const TextStyle(
+                                      color: Colors.indigo,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          title: Text(
+                            user.nom.isNotEmpty ? user.nom : user.pseudo,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: user.pseudo.isNotEmpty
+                              ? Text(
+                                  '@${user.pseudo}',
+                                  style: TextStyle(color: Colors.grey.shade500),
+                                )
+                              : null,
+                          trailing: alreadyContact
+                              ? Chip(
+                                  label: Text(
+                                    Localizations.localeOf(
+                                              context,
+                                            ).languageCode ==
+                                            'fr'
+                                        ? 'Déjà ajouté'
+                                        : 'Already added',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  backgroundColor: Colors.grey.shade100,
+                                  padding: EdgeInsets.zero,
+                                )
+                              : isAdding
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.indigo,
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: const Icon(
+                                    Icons.person_add_outlined,
+                                    color: Colors.indigo,
+                                  ),
+                                  onPressed: () => _addContact(user),
+                                ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

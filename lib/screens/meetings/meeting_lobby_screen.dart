@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/meeting_service.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'ongoing_meet_screen.dart';
@@ -120,7 +121,7 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
       if (!mounted) return;
       setState(() => _joining = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de rejoindre : $e')),
+        SnackBar(content: Text(context.l10n.failedToJoinMeeting(e.toString()))),
       );
     }
   }
@@ -137,10 +138,12 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          _loadingMeeting
-              ? 'Réunion'
-              : (_meeting?.objet ?? 'Réunion'),
-          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600),
+          _loadingMeeting ? 'Réunion' : (_meeting?.objet ?? 'Réunion'),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: Column(
@@ -162,7 +165,8 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                       RTCVideoView(
                         _previewRenderer,
                         mirror: true,
-                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        objectFit:
+                            RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                       )
                     else
                       Center(
@@ -176,14 +180,20 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                                 widget.myName.isNotEmpty
                                     ? widget.myName[0].toUpperCase()
                                     : '?',
-                                style: const TextStyle(fontSize: 36, color: Colors.white),
+                                style: const TextStyle(
+                                  fontSize: 36,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                             if (!_isCamOn) ...[
                               const SizedBox(height: 12),
                               Text(
                                 'Caméra désactivée',
-                                style: TextStyle(color: Colors.white54, fontSize: 13),
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ],
@@ -248,7 +258,8 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                         foregroundColor: Colors.white,
                         minimumSize: const Size.fromHeight(54),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         elevation: 0,
                       ),
                       child: _joining
@@ -256,12 +267,16 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                               width: 22,
                               height: 22,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : const Text(
                               'Rejoindre',
                               style: TextStyle(
-                                  fontSize: 17, fontWeight: FontWeight.bold),
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                     ),
                   ),
@@ -305,7 +320,10 @@ class _LobbyToggle extends StatelessWidget {
             child: Icon(icon, color: Colors.white, size: 26),
           ),
           const SizedBox(height: 6),
-          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white60, fontSize: 11),
+          ),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
+import '../../core/extensions/context_extensions.dart';
 import 'ongoing_call_screen.dart';
 
 class KeypadScreen extends StatefulWidget {
@@ -40,9 +41,11 @@ class _KeypadScreenState extends State<KeypadScreen> {
     if (_phoneNumber.isEmpty) return;
 
     setState(() => _isSearching = true);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final userData = await apiClient.getUserByPhone(_phoneNumber);
+      if (!mounted) return;
       setState(() {
         _foundUser = userData.isNotEmpty
             ? User.fromJson(userData[0] as Map<String, dynamic>)
@@ -50,29 +53,33 @@ class _KeypadScreenState extends State<KeypadScreen> {
         _isSearching = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _foundUser = null;
         _isSearching = false;
       });
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User not found')),
-        );
-      }
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.l10n.userNotFound)),
+      );
     }
   }
 
   Future<void> _onCall({bool isVideo = false}) async {
     if (_foundUser == null) {
       await _searchUser();
+      if (!mounted) return;
       if (_foundUser == null) return;
     }
 
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final callService = Provider.of<CallService>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     final userData = await apiClient.getMe();
+    if (!mounted) return;
     final myId = userData['alanyaID'] ?? 0;
 
-    final callService = Provider.of<CallService>(context, listen: false);
     await callService.initiateCall(
       targetUserId: _foundUser!.alanyaID,
       myId: myId,
@@ -82,25 +89,21 @@ class _KeypadScreenState extends State<KeypadScreen> {
       targetUserPhoto: _foundUser!.avatarUrl,
       isVideo: isVideo,
     );
-    if (context.mounted) {
-      // Vérifier s'il y a eu une erreur (ex: permissions refusées)
-      if (callService.errorMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(callService.errorMessage!),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-        return;
-      }
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const OngoingCallScreen(),
+    if (!mounted) return;
+    // Vérifier s'il y a eu une erreur (ex: permissions refusées)
+    if (callService.errorMessage != null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(callService.errorMessage!),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
         ),
       );
+      return;
     }
+    navigator.push(
+      MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
+    );
   }
 
   @override
@@ -126,35 +129,35 @@ class _KeypadScreenState extends State<KeypadScreen> {
             child: _isSearching
                 ? const CircularProgressIndicator()
                 : _foundUser != null
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _foundUser!.nom,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '@${_foundUser!.pseudo}',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Text(
-                        _phoneNumber,
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _foundUser!.nom,
                         style: const TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 2,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
+                      Text(
+                        '@${_foundUser!.pseudo}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    _phoneNumber,
+                    style: const TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
           ),
           const SizedBox(height: 20),
           // Keypad
@@ -221,7 +224,9 @@ class _KeypadScreenState extends State<KeypadScreen> {
                   child: IconButton(
                     onPressed: _onDelete,
                     icon: Icon(
-                      _foundUser != null ? Icons.clear : CupertinoIcons.delete_left,
+                      _foundUser != null
+                          ? Icons.clear
+                          : CupertinoIcons.delete_left,
                       size: 28,
                       color: Colors.grey,
                     ),
@@ -254,12 +259,19 @@ class _KeypadScreenState extends State<KeypadScreen> {
               children: [
                 Text(
                   numbers[index],
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 if (letters[index].isNotEmpty)
                   Text(
                     letters[index],
-                    style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
               ],
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/avatar_utils.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'meeting_lobby_screen.dart';
@@ -54,7 +55,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de charger la réunion : $e')),
+        SnackBar(content: Text(context.l10n.loadMeetingError(e.toString()))),
       );
     }
   }
@@ -63,15 +64,12 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     final meeting = _meeting;
     if (meeting == null) return;
 
-    final existing = meeting.participants
-        .map((p) => p.participantID)
-        .toSet();
-
+    final existing = meeting.participants.map((p) => p.participantID).toSet();
     final result = await Navigator.push<List<User>>(
       context,
       MaterialPageRoute(
         builder: (_) => ParticipantPickerScreen(
-          confirmLabel: 'Inviter',
+          confirmLabel: context.l10n.invite,
           maxSelectable: 9 - meeting.participants.length.clamp(0, 9),
         ),
       ),
@@ -92,7 +90,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${newIds.length} participant(s) invité(s)'),
+          content: Text(context.l10n.participantsInvited(newIds.length)),
           backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
         ),
@@ -101,7 +99,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(
+          content: Text(context.l10n.genericErrorWithMessage(e.toString())),
+        ),
       );
     }
   }
@@ -114,18 +114,19 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Annuler la réunion'),
-        content: const Text(
-          'Cette action est irréversible. La réunion sera supprimée pour tous les participants.',
-        ),
+        title: Text(context.l10n.cancelMeeting),
+        content: Text(context.l10n.cancelMeetingIrreversible),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Retour'),
+            child: Text(context.l10n.back),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Annuler la réunion', style: TextStyle(color: Colors.red)),
+            child: Text(
+              context.l10n.cancelMeeting,
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -141,7 +142,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(
+          content: Text(context.l10n.genericErrorWithMessage(e.toString())),
+        ),
       );
     }
   }
@@ -169,26 +172,31 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: const BackButton(color: Colors.black),
-        title: const Text(
-          'Détail de la réunion',
-          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600),
+        title: Text(
+          context.l10n.meetingDetail,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         actions: [
           if (_isOrganiser && _meeting != null && !_meeting!.isEnd)
             IconButton(
               icon: const Icon(Icons.person_add_outlined, color: Colors.indigo),
-              tooltip: 'Inviter',
+              tooltip: context.l10n.invite,
               onPressed: _inviteMore,
             ),
           if (_isOrganiser && _meeting != null && !_meeting!.isEnd)
             IconButton(
               icon: const Icon(Icons.cancel_outlined, color: Colors.red),
-              tooltip: 'Annuler',
+              tooltip: context.l10n.cancel,
               onPressed: _cancelMeeting,
             ),
         ],
       ),
-      floatingActionButton: _meeting != null &&
+      floatingActionButton:
+          _meeting != null &&
               !_meeting!.isEnd &&
               _meeting!.endDateTime.isAfter(DateTime.now())
           ? FloatingActionButton.extended(
@@ -199,28 +207,30 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               icon: Icon(
                 _meeting!.typeMedia == 0 ? Icons.videocam : Icons.phone,
               ),
-              label: const Text('Rejoindre',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              label: Text(
+                context.l10n.join,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
           : _meeting == null
-              ? const Center(child: Text('Réunion introuvable'))
-              : _MeetingDetailBody(
-                  meeting: _meeting!,
-                  myId: _myId,
-                  isOrganiser: _isOrganiser,
-                  onJoin: _openLobby,
-                  onInvite: _inviteMore,
-                  onCancel: _cancelMeeting,
-                ),
+          ? Center(child: Text(context.l10n.meetingNotFound))
+          : _MeetingDetailBody(
+              meeting: _meeting!,
+              myId: _myId,
+              isOrganiser: _isOrganiser,
+              onJoin: _openLobby,
+              onInvite: _inviteMore,
+              onCancel: _cancelMeeting,
+            ),
     );
   }
 }
 
-// ─── Corps du détail ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Corps du dÃ©tail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _MeetingDetailBody extends StatelessWidget {
   const _MeetingDetailBody({
@@ -242,7 +252,8 @@ class _MeetingDetailBody extends StatelessWidget {
   _MeetingStatus _computeStatus() {
     if (meeting.isEnd) return _MeetingStatus.ended;
     final now = DateTime.now();
-    if (meeting.startDateTime.isBefore(now) && meeting.endDateTime.isAfter(now)) {
+    if (meeting.startDateTime.isBefore(now) &&
+        meeting.endDateTime.isAfter(now)) {
       return _MeetingStatus.inProgress;
     }
     final diff = meeting.startDateTime.difference(now);
@@ -262,13 +273,24 @@ class _MeetingDetailBody extends StatelessWidget {
     final d = meeting.startDateTime;
     final e = meeting.endDateTime;
     const months = [
-      '', 'jan', 'fév', 'mar', 'avr', 'mai', 'jun',
-      'jul', 'aoû', 'sep', 'oct', 'nov', 'déc',
+      '',
+      'jan',
+      'fÃ©v',
+      'mar',
+      'avr',
+      'mai',
+      'jun',
+      'jul',
+      'aoÃ»',
+      'sep',
+      'oct',
+      'nov',
+      'dÃ©c',
     ];
     final date = '${d.day} ${months[d.month]} ${d.year}';
     String hm(DateTime dt) =>
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    return '$date · ${hm(d)} — ${hm(e)}';
+    return '$date Â· ${hm(d)} â€” ${hm(e)}';
   }
 
   @override
@@ -278,14 +300,17 @@ class _MeetingDetailBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
       children: [
-        // ── Header ───────────────────────────────────────────────────
+        // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
               child: Text(
                 meeting.objet,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -296,13 +321,15 @@ class _MeetingDetailBody extends StatelessWidget {
         Row(
           children: [
             Icon(
-              meeting.typeMedia == 0 ? Icons.videocam_outlined : Icons.phone_outlined,
+              meeting.typeMedia == 0
+                  ? Icons.videocam_outlined
+                  : Icons.phone_outlined,
               size: 16,
               color: Colors.grey.shade500,
             ),
             const SizedBox(width: 6),
             Text(
-              meeting.typeMedia == 0 ? 'Réunion vidéo' : 'Appel audio',
+              meeting.typeMedia == 0 ? 'RÃ©union vidÃ©o' : 'Appel audio',
               style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
             ),
           ],
@@ -311,20 +338,24 @@ class _MeetingDetailBody extends StatelessWidget {
         const Divider(),
         const SizedBox(height: 16),
 
-        // ── Infos date/heure ─────────────────────────────────────────
+        // â”€â”€ Infos date/heure â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         _InfoRow(icon: Icons.access_time, text: _formatDateTime()),
         const SizedBox(height: 12),
-        _InfoRow(icon: Icons.timelapse, text: 'Durée : ${_formatDuration(meeting.duree)}'),
+        _InfoRow(
+          icon: Icons.timelapse,
+          text: 'DurÃ©e : ${_formatDuration(meeting.duree)}',
+        ),
         const SizedBox(height: 12),
         _InfoRow(
           icon: Icons.person_outline,
-          text: 'Organisé par ${meeting.organiserNom ?? meeting.organiserPseudo ?? 'Inconnu'}',
+          text:
+              'OrganisÃ© par ${meeting.organiserNom ?? meeting.organiserPseudo ?? 'Inconnu'}',
         ),
         const SizedBox(height: 24),
         const Divider(),
         const SizedBox(height: 16),
 
-        // ── Participants ─────────────────────────────────────────────
+        // â”€â”€ Participants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -339,7 +370,13 @@ class _MeetingDetailBody extends StatelessWidget {
                   children: [
                     Icon(Icons.add, size: 16, color: Colors.indigo),
                     SizedBox(width: 4),
-                    Text('Inviter', style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Inviter',
+                      style: TextStyle(
+                        color: Colors.indigo,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -357,10 +394,10 @@ class _MeetingDetailBody extends StatelessWidget {
             ),
           )
         else
-          ...meeting.participants.map((p) => _ParticipantTile(
-                participant: p,
-                isMe: p.participantID == myId,
-              )),
+          ...meeting.participants.map(
+            (p) =>
+                _ParticipantTile(participant: p, isMe: p.participantID == myId),
+          ),
 
         const SizedBox(height: 32),
       ],
@@ -368,7 +405,7 @@ class _MeetingDetailBody extends StatelessWidget {
   }
 }
 
-// ─── Badge de statut ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Badge de statut â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 enum _MeetingStatus { scheduled, soon, inProgress, ended }
 
@@ -389,22 +426,25 @@ class _StatusBadge extends StatelessWidget {
         bg = Colors.green.shade50;
         fg = Colors.green.shade700;
       case _MeetingStatus.soon:
-        label = 'Bientôt';
+        label = 'BientÃ´t';
         bg = Colors.orange.shade50;
         fg = Colors.orange.shade700;
       case _MeetingStatus.scheduled:
-        label = 'Planifiée';
+        label = 'PlanifiÃ©e';
         bg = Colors.indigo.shade50;
         fg = Colors.indigo;
       case _MeetingStatus.ended:
-        label = 'Terminée';
+        label = 'TerminÃ©e';
         bg = Colors.grey.shade100;
         fg = Colors.grey;
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -415,14 +455,21 @@ class _StatusBadge extends StatelessWidget {
               margin: const EdgeInsets.only(right: 5),
               decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
             ),
-          Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.bold, fontSize: 12)),
+          Text(
+            label,
+            style: TextStyle(
+              color: fg,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// ─── Ligne d'info ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Ligne d'info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _InfoRow extends StatelessWidget {
   const _InfoRow({required this.icon, required this.text});
@@ -437,14 +484,17 @@ class _InfoRow extends StatelessWidget {
         Icon(icon, size: 18, color: Colors.indigo.shade300),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(text, style: TextStyle(color: Colors.grey.shade800, fontSize: 14)),
+          child: Text(
+            text,
+            style: TextStyle(color: Colors.grey.shade800, fontSize: 14),
+          ),
         ),
       ],
     );
   }
 }
 
-// ─── Tuile participant ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Tuile participant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ParticipantTile extends StatelessWidget {
   const _ParticipantTile({required this.participant, required this.isMe});
@@ -470,9 +520,13 @@ class _ParticipantTile extends StatelessWidget {
                 backgroundImage: avatarImage(participant.avatarUrl),
                 child: hasValidAvatarUrl(participant.avatarUrl)
                     ? null
-                    : Text(initial,
+                    : Text(
+                        initial,
                         style: const TextStyle(
-                            color: Colors.indigo, fontWeight: FontWeight.bold)),
+                          color: Colors.indigo,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
               if (participant.connecte)
                 Positioned(
@@ -497,9 +551,13 @@ class _ParticipantTile extends StatelessWidget {
               children: [
                 Text(
                   isMe ? '$name (vous)' : name,
-                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
                 ),
-                if (participant.pseudo != null && participant.pseudo!.isNotEmpty)
+                if (participant.pseudo != null &&
+                    participant.pseudo!.isNotEmpty)
                   Text(
                     '@${participant.pseudo}',
                     style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
@@ -515,9 +573,11 @@ class _ParticipantTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              accepted ? 'Accepté' : 'En attente',
+              accepted ? 'AcceptÃ©' : 'En attente',
               style: TextStyle(
-                color: accepted ? Colors.green.shade700 : Colors.orange.shade700,
+                color: accepted
+                    ? Colors.green.shade700
+                    : Colors.orange.shade700,
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
@@ -528,4 +588,3 @@ class _ParticipantTile extends StatelessWidget {
     );
   }
 }
-

@@ -67,6 +67,9 @@ dependencies:
   chewie: ^1.8.5                      # Contrôles vidéo prêts à l'emploi
   record: ^5.1.2                      # Enregistrement messages vocaux
   emoji_picker_flutter: ^3.1.0        # Sélecteur d'émojis
+  intl: ^0.20.2
+  flutter_localizations:
+    sdk: flutter
 
 # record_linux 0.7.2 (dernière du range <1.0.0 exigé par record) n'implémente
 # pas record_platform_interface 1.5.0 → casse la compilation. On force la
@@ -75,6 +78,7 @@ dependency_overrides:
   record_linux: ^1.0.0
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.13.0
   flutter_test:
     sdk: flutter
 
@@ -94,6 +98,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/locale_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -46,9 +48,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Settings',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.settingsTitle,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: ListView(
@@ -83,7 +88,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _user?.nom ?? 'User',
+                                  _user?.nom ?? context.l10n.user,
                                   style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -91,7 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '@${_user?.pseudo ?? 'pseudo'}',
+                                  '@${_user?.pseudo ?? context.l10n.pseudo.toLowerCase()}',
                                   style: TextStyle(
                                     color: Colors.grey.shade600,
                                     fontSize: 14,
@@ -111,20 +116,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.phone, color: Colors.indigo, size: 20),
+                            const Icon(
+                              Icons.phone,
+                              color: Colors.indigo,
+                              size: 20,
+                            ),
                             const SizedBox(width: 12),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Alanya Phone',
-                                  style: TextStyle(
+                                Text(
+                                  context.l10n.alanyaPhone,
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey,
                                   ),
                                 ),
                                 Text(
-                                  _user?.alanyaPhone ?? 'Not set',
+                                  _user?.alanyaPhone ?? context.l10n.notSet,
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
@@ -140,20 +149,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 24),
           _buildSettingsGroup(
-            title: 'General',
+            title: context.l10n.general,
             items: [
-              _buildSettingsItem(Icons.chat, 'Chats', 'Theme, wallpapers, chat history'),
-              _buildSettingsItem(Icons.notifications, 'Notifications', 'Message, group & call tones'),
-              _buildSettingsItem(Icons.data_usage, 'Storage and Data', 'Network usage, auto-download'),
+              _buildLanguageSettingsItem(context),
+              _buildSettingsItem(
+                Icons.chat,
+                context.l10n.tabChats,
+                context.l10n.chatSettingsSubtitle,
+              ),
+              _buildSettingsItem(
+                Icons.notifications,
+                context.l10n.notifications,
+                context.l10n.notificationSettingsSubtitle,
+              ),
+              _buildSettingsItem(
+                Icons.data_usage,
+                context.l10n.storageAndData,
+                context.l10n.storageAndDataSubtitle,
+              ),
             ],
           ),
           const SizedBox(height: 24),
           _buildSettingsGroup(
-            title: 'Account',
+            title: context.l10n.account,
             items: [
-              _buildSettingsItem(Icons.security, 'Security', 'Two-step verification'),
-              _buildSettingsItem(Icons.lock, 'Privacy', 'Block contacts, disappearing messages'),
-              _buildSettingsItem(Icons.delete_outline, 'Delete My Account', '', isDestructive: true),
+              _buildSettingsItem(
+                Icons.security,
+                context.l10n.security,
+                context.l10n.twoStepVerification,
+              ),
+              _buildSettingsItem(
+                Icons.lock,
+                context.l10n.privacy,
+                context.l10n.privacySubtitle,
+              ),
+              _buildSettingsItem(
+                Icons.delete_outline,
+                context.l10n.deleteMyAccount,
+                '',
+                isDestructive: true,
+              ),
             ],
           ),
         ],
@@ -161,7 +196,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSettingsGroup({required String title, required List<Widget> items}) {
+  Widget _buildSettingsGroup({
+    required String title,
+    required List<Widget> items,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -184,7 +222,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSettingsItem(IconData icon, String title, String subtitle, {bool isDestructive = false}) {
+  Widget _buildLanguageSettingsItem(BuildContext context) {
+    return Consumer<LocaleProvider>(
+      builder: (context, localeProvider, child) {
+        final currentLocale = localeProvider.locale?.languageCode ?? 'en';
+        return ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 8,
+          ),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.language, color: Colors.grey.shade700, size: 24),
+          ),
+          title: Text(
+            context.l10n.language,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          subtitle: Text(
+            currentLocale == 'fr' ? 'Français' : 'English',
+            style: const TextStyle(
+              color: Colors.indigo,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          trailing: DropdownButton<String>(
+            value: currentLocale,
+            underline: const SizedBox(),
+            icon: const Icon(Icons.arrow_drop_down, color: Colors.indigo),
+            items: const [
+              DropdownMenuItem(value: 'en', child: Text('English')),
+              DropdownMenuItem(value: 'fr', child: Text('Français')),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                localeProvider.setLocale(Locale(value));
+              }
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSettingsItem(
+    IconData icon,
+    String title,
+    String subtitle, {
+    bool isDestructive = false,
+  }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       leading: Container(
@@ -208,10 +302,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
       subtitle: subtitle.isNotEmpty
-          ? Text(
-              subtitle,
-              style: const TextStyle(color: Colors.grey),
-            )
+          ? Text(subtitle, style: const TextStyle(color: Colors.grey))
           : null,
       onTap: () {},
     );

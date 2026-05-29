@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -66,30 +67,27 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              const Text(
-                'Welcome Back',
+              Text(
+                context.l10n.loginTitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Sign in to continue to Talky',
+              Text(
+                context.l10n.loginSubtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                ),
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
               ),
               const SizedBox(height: 48),
               TextField(
                 controller: _alanyaPhoneController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  hintText: 'Alanya Phone Ex : 340364',
+                  hintText: context.l10n.alanyaPhoneHint,
                   prefixIcon: const Icon(Icons.phone_outlined),
                   filled: true,
                   fillColor: Colors.grey.shade100,
@@ -104,18 +102,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  hintText: 'Password',
+                  hintText: context.l10n.passwordLabel,
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                     ),
                     onPressed: () {
                       setState(() {
                         _obscurePassword = !_obscurePassword;
                       });
                     },
-                  ), 
+                  ),
                   filled: true,
                   fillColor: Colors.grey.shade100,
                   border: OutlineInputBorder(
@@ -131,12 +131,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const ForgotPasswordScreen(),
+                      ),
                     );
                   },
-                  child: const Text(
-                    'Forgot Password?',
-                    style: TextStyle(color: Colors.indigo),
+                  child: Text(
+                    context.l10n.forgotPassword,
+                    style: const TextStyle(color: Colors.indigo),
                   ),
                 ),
               ),
@@ -179,35 +181,34 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
-                          'Sign In',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      : Text(
+                          context.l10n.loginTitle,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                 ),
               ),
               const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Don't have an account?"),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SignupScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'Sign Up',
-                      style: TextStyle(
-                        color: Colors.indigo,
-                        fontWeight: FontWeight.bold,
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SignupScreen(),
                       ),
+                    );
+                  },
+                  child: Text(
+                    context.l10n.dontHaveAccount,
+                    style: const TextStyle(
+                      color: Colors.indigo,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
+                ),
               ),
             ],
           ),

@@ -11,6 +11,7 @@ import '../meetings/meeting_detail_screen.dart';
 import '../meetings/meets_screen.dart';
 import '../profile/profile_screen.dart';
 import '../calls/incoming_call_screen.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -47,14 +48,18 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       // Notifications meeting via PushService
-      _meetingNotifSub = PushService.meetingNotifications.listen(_onMeetingNotif);
+      _meetingNotifSub = PushService.meetingNotifications.listen(
+        _onMeetingNotif,
+      );
     });
   }
 
   @override
   void dispose() {
-    Provider.of<CallService>(context, listen: false)
-        .removeListener(_onCallStatusChanged);
+    Provider.of<CallService>(
+      context,
+      listen: false,
+    ).removeListener(_onCallStatusChanged);
     _meetingNotifSub?.cancel();
     super.dispose();
   }
@@ -73,14 +78,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showIncomingCall() {
     _incomingCallShown = true;
     if (!mounted) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => const IncomingCallScreen(),
-      ),
-    ).then((_) {
-      if (mounted) _incomingCallShown = false;
-    });
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (_) => const IncomingCallScreen(),
+          ),
+        )
+        .then((_) {
+          if (mounted) _incomingCallShown = false;
+        });
   }
 
   // ── Notifications meeting ────────────────────────────────────────────
@@ -132,7 +139,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => MeetingDetailScreen(meetingId: notif.meetingId),
+                    builder: (_) =>
+                        MeetingDetailScreen(meetingId: notif.meetingId),
                   ),
                 ),
               )
@@ -160,10 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -183,26 +188,26 @@ class _HomeScreenState extends State<HomeScreen> {
           showUnselectedLabels: true,
           type: BottomNavigationBarType.fixed,
           elevation: 0,
-          items: const [
+          items: [
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.chat_bubble_2),
-              activeIcon: Icon(CupertinoIcons.chat_bubble_2_fill),
-              label: 'Chats',
+              icon: const Icon(CupertinoIcons.chat_bubble_2),
+              activeIcon: const Icon(CupertinoIcons.chat_bubble_2_fill),
+              label: context.l10n.tabChats,
             ),
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.phone),
-              activeIcon: Icon(CupertinoIcons.phone_fill),
-              label: 'Calls',
+              icon: const Icon(CupertinoIcons.phone),
+              activeIcon: const Icon(CupertinoIcons.phone_fill),
+              label: context.l10n.tabCalls,
             ),
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.video_camera),
-              activeIcon: Icon(CupertinoIcons.video_camera_solid),
-              label: 'Meets',
+              icon: const Icon(CupertinoIcons.video_camera),
+              activeIcon: const Icon(CupertinoIcons.video_camera_solid),
+              label: context.l10n.tabMeetings,
             ),
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.person),
-              activeIcon: Icon(CupertinoIcons.person_fill),
-              label: 'Profile',
+              icon: const Icon(CupertinoIcons.person),
+              activeIcon: const Icon(CupertinoIcons.person_fill),
+              label: context.l10n.tabProfile,
             ),
           ],
         ),
@@ -248,7 +253,11 @@ class _ReminderDialogState extends State<_ReminderDialog> {
               color: Colors.indigo.shade50,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.videocam_rounded, color: Colors.indigo, size: 32),
+            child: const Icon(
+              Icons.videocam_rounded,
+              color: Colors.indigo,
+              size: 32,
+            ),
           ),
           const SizedBox(height: 16),
           const Text(
@@ -282,10 +291,11 @@ class _ReminderDialogState extends State<_ReminderDialog> {
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: const Text('Plus tard'),
+                child: Text(context.l10n.cancel),
               ),
             ),
             const SizedBox(width: 12),
@@ -296,14 +306,15 @@ class _ReminderDialogState extends State<_ReminderDialog> {
                   backgroundColor: Colors.indigo,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   elevation: 0,
                 ),
-                child: const Text(
-                        'Rejoindre',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                child: Text(
+                  context.l10n.join,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],

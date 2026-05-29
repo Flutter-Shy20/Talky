@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../core/services/meeting_service.dart';
+import '../../core/extensions/context_extensions.dart';
 import 'ongoing_meet_screen.dart';
 
 class JoinMeetScreen extends StatefulWidget {
@@ -35,31 +36,35 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
   Future<void> _joinMeeting() async {
     setState(() => _isJoining = true);
 
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final meetingService = Provider.of<MeetingService>(
+        context,
+        listen: false,
+      );
+
       final userData = await apiClient.getMe();
+      if (!mounted) return;
       final myId = userData['alanyaID'] ?? 0;
       final myName = userData['nom'] ?? userData['pseudo'] ?? '';
 
-      final meetingService = Provider.of<MeetingService>(context, listen: false);
       await meetingService.joinByRoom(
         roomCode: _codeController.text.trim(),
         myId: myId,
         myName: myName,
       );
 
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const OngoingMeetScreen()),
-        );
-      }
+      if (!mounted) return;
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => const OngoingMeetScreen()),
+      );
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to join meeting: $e')),
-        );
-      }
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.l10n.failedToJoinMeeting(e.toString()))),
+      );
     } finally {
       if (mounted) setState(() => _isJoining = false);
     }
@@ -76,9 +81,9 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
           icon: const Icon(Icons.close, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Join a meeting',
-          style: TextStyle(color: Colors.black, fontSize: 18),
+        title: Text(
+          context.l10n.joinAMeeting,
+          style: const TextStyle(color: Colors.black, fontSize: 18),
         ),
         actions: [
           TextButton(
@@ -90,7 +95,7 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(
-                    'Join',
+                    context.l10n.join,
                     style: TextStyle(
                       color: _isCodeValid ? Colors.indigo : Colors.grey,
                       fontWeight: FontWeight.bold,
@@ -106,18 +111,15 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Enter the meeting code provided by the organizer',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black87,
-              ),
+            Text(
+              context.l10n.enterMeetingCodeProvided,
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
             ),
             const SizedBox(height: 24),
             TextField(
               controller: _codeController,
               decoration: InputDecoration(
-                hintText: 'Example: abc-defg-hij',
+                hintText: context.l10n.joinMeetingExample,
                 filled: true,
                 fillColor: Colors.grey.shade100,
                 border: OutlineInputBorder(
@@ -132,9 +134,9 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
               style: const TextStyle(fontSize: 18, letterSpacing: 1.2),
             ),
             const SizedBox(height: 32),
-            const Text(
-              'To join a meeting, you need a code like abc-defg-hij. If you received a meeting link, you can click on the link instead.',
-              style: TextStyle(
+            Text(
+              context.l10n.joinMeetingHelp,
+              style: const TextStyle(
                 color: Colors.grey,
                 fontSize: 14,
                 height: 1.5,

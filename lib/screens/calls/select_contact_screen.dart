@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/call_service.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'ongoing_call_screen.dart';
@@ -61,11 +62,15 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
 
   Future<void> _initiateCall(User user, bool isVideo) async {
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final callService = Provider.of<CallService>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     final userData = await apiClient.getMe();
+    if (!mounted) return;
     final myId = userData['alanyaID'] ?? 0;
     final myPhoto = userData['avatar_url'];
 
-    final callService = Provider.of<CallService>(context, listen: false);
     await callService.initiateCall(
       targetUserId: user.alanyaID,
       myId: myId,
@@ -75,24 +80,21 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
       targetUserPhoto: user.avatarUrl,
       isVideo: isVideo,
     );
-    if (context.mounted) {
-      // Vérifier s'il y a eu une erreur (ex: permissions refusées)
-      if (callService.errorMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(callService.errorMessage!),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-        return;
-      }
-      
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const OngoingCallScreen()),
+    if (!mounted) return;
+    // Vérifier s'il y a eu une erreur (ex: permissions refusées)
+    if (callService.errorMessage != null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(callService.errorMessage!),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
       );
+      return;
     }
+    navigator.push(
+      MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
+    );
   }
 
   @override
@@ -106,9 +108,13 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'New Call',
-          style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.newCall,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: Column(
@@ -118,7 +124,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by name, pseudo or phone...',
+                hintText: context.l10n.searchByNamePseudoOrPhone,
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: Colors.grey.shade100,
@@ -133,51 +139,63 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _contacts.isEmpty && _searchController.text.length < 2
-                    ? Center(
-                        child: Text(
-                          'Type at least 2 characters to search...',
+                ? Center(
+                    child: Text(
+                      context.l10n.typeAtLeastTwoCharacters,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _contacts.length,
+                    itemBuilder: (context, index) {
+                      final user = _contacts[index];
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        leading: CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Colors.indigo.shade50,
+                          child: Text(
+                            user.nom[0].toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.indigo,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          user.nom,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '@${user.pseudo} • ${user.alanyaPhone}',
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
-                      )
-                    : ListView.builder(
-                        itemCount: _contacts.length,
-                        itemBuilder: (context, index) {
-                          final user = _contacts[index];
-
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            leading: CircleAvatar(
-                              radius: 28,
-                              backgroundColor: Colors.indigo.shade50,
-                              child: Text(
-                                user.nom[0].toUpperCase(),
-                                style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.videocam,
+                                color: Colors.indigo,
                               ),
+                              onPressed: () => _initiateCall(user, true),
                             ),
-                            title: Text(
-                              user.nom,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            IconButton(
+                              icon: const Icon(Icons.call, color: Colors.green),
+                              onPressed: () => _initiateCall(user, false),
                             ),
-                            subtitle: Text(
-                              '@${user.pseudo} • ${user.alanyaPhone}',
-                              style: TextStyle(color: Colors.grey.shade600),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.videocam, color: Colors.indigo),
-                                  onPressed: () => _initiateCall(user, true),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.call, color: Colors.green),
-                                  onPressed: () => _initiateCall(user, false),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

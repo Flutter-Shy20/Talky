@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../meetings/participant_picker_screen.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
   int _selectedDuration = 60;
-  int _typeMedia = 0; // 0 = vidéo+audio, 1 = audio seulement
+  int _typeMedia = 0; // 0 = vidÃ©o+audio, 1 = audio seulement
   bool _isLoading = false;
   List<User> _selectedParticipants = [];
 
@@ -66,7 +67,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       MaterialPageRoute(
         builder: (_) => ParticipantPickerScreen(
           initialSelected: _selectedParticipants,
-          confirmLabel: 'Confirmer',
+          confirmLabel: context.l10n.confirm,
         ),
       ),
     );
@@ -77,7 +78,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez saisir un titre pour la réunion')),
+        SnackBar(content: Text(context.l10n.meetingTitleRequired)),
       );
       return;
     }
@@ -91,9 +92,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
 
     if (startDateTime.isBefore(DateTime.now())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La date doit être dans le futur')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.dateMustBeFuture)));
       return;
     }
 
@@ -105,7 +106,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
       final data = await apiClient.createMeeting(
         objet: title,
-        // UTC explicite : évite tout décalage selon le fuseau serveur/client.
+        // UTC explicite : Ã©vite tout dÃ©calage selon le fuseau serveur/client.
         startTime: startDateTime.toUtc().toIso8601String(),
         room: roomCode,
         duree: _selectedDuration,
@@ -125,7 +126,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la création : $e')),
+          SnackBar(content: Text(context.l10n.creationError(e.toString()))),
         );
       }
     }
@@ -137,16 +138,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     if (_selectedDate.year == now.year &&
         _selectedDate.month == now.month &&
         _selectedDate.day == now.day) {
-      return "Aujourd'hui";
+      return context.l10n.today;
     }
     if (_selectedDate.year == tomorrow.year &&
         _selectedDate.month == tomorrow.month &&
         _selectedDate.day == tomorrow.day) {
-      return 'Demain';
+      return context.l10n.tomorrow;
     }
     const months = [
-      '', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun',
-      'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc',
+      '',
+      'Jan',
+      'FÃ©v',
+      'Mar',
+      'Avr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'AoÃ»',
+      'Sep',
+      'Oct',
+      'Nov',
+      'DÃ©c',
     ];
     return '${_selectedDate.day} ${months[_selectedDate.month]} ${_selectedDate.year}';
   }
@@ -162,9 +174,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           icon: const Icon(Icons.close, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Planifier une réunion',
-          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600),
+        title: Text(
+          context.l10n.scheduleMeeting,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         actions: [
           _isLoading
@@ -173,14 +189,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   child: SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.indigo),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.indigo,
+                    ),
                   ),
                 )
               : TextButton(
                   onPressed: _save,
-                  child: const Text(
-                    'Créer',
-                    style: TextStyle(
+                  child: Text(
+                    context.l10n.create,
+                    style: const TextStyle(
                       color: Colors.indigo,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -201,9 +220,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
-              decoration: const InputDecoration(
-                hintText: 'Titre de la réunion',
-                hintStyle: TextStyle(
+              decoration: InputDecoration(
+                hintText: context.l10n.meetingTitle,
+                hintStyle: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w400,
                   color: Colors.grey,
@@ -213,13 +232,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
             const Divider(height: 32),
 
-            // Type de réunion
+            // Type de rÃ©union
             _SectionLabel(label: 'Type'),
             const SizedBox(height: 10),
             Row(
               children: [
                 _TypeChip(
-                  label: 'Vidéo',
+                  label: 'VidÃ©o',
                   icon: CupertinoIcons.videocam_fill,
                   selected: _typeMedia == 0,
                   onTap: () => setState(() => _typeMedia = 0),
@@ -259,8 +278,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
             const SizedBox(height: 28),
 
-            // Durée
-            _SectionLabel(label: 'Durée'),
+            // DurÃ©e
+            _SectionLabel(label: 'DurÃ©e'),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -268,10 +287,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               children: List.generate(_durations.length, (i) {
                 final selected = _selectedDuration == _durations[i];
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedDuration = _durations[i]),
+                  onTap: () =>
+                      setState(() => _selectedDuration = _durations[i]),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: selected ? Colors.indigo : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(12),
@@ -280,7 +303,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       _durationLabels[i],
                       style: TextStyle(
                         color: selected ? Colors.white : Colors.black87,
-                        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: selected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         fontSize: 14,
                       ),
                     ),
@@ -296,24 +321,35 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             GestureDetector(
               onTap: _openParticipantPicker,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.person_add_outlined, color: Colors.indigo, size: 20),
+                    Icon(
+                      Icons.person_add_outlined,
+                      color: Colors.indigo,
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         _selectedParticipants.isEmpty
                             ? 'Ajouter des participants'
-                            : '${_selectedParticipants.length} participant${_selectedParticipants.length > 1 ? 's' : ''} sélectionné${_selectedParticipants.length > 1 ? 's' : ''}',
+                            : '${_selectedParticipants.length} participant${_selectedParticipants.length > 1 ? 's' : ''} sÃ©lectionnÃ©${_selectedParticipants.length > 1 ? 's' : ''}',
                         style: TextStyle(
                           fontSize: 15,
-                          color: _selectedParticipants.isEmpty ? Colors.grey : Colors.black87,
-                          fontWeight: _selectedParticipants.isEmpty ? FontWeight.normal : FontWeight.w500,
+                          color: _selectedParticipants.isEmpty
+                              ? Colors.grey
+                              : Colors.black87,
+                          fontWeight: _selectedParticipants.isEmpty
+                              ? FontWeight.normal
+                              : FontWeight.w500,
                         ),
                       ),
                     ),
@@ -328,11 +364,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 spacing: 8,
                 runSpacing: 6,
                 children: _selectedParticipants.map((user) {
-                  final initial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
+                  final initial = user.nom.isNotEmpty
+                      ? user.nom[0].toUpperCase()
+                      : '?';
                   return Chip(
                     avatar: CircleAvatar(
                       backgroundColor: Colors.indigo.shade300,
-                      child: Text(initial, style: const TextStyle(color: Colors.white, fontSize: 11)),
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                        ),
+                      ),
                     ),
                     label: Text(
                       user.nom.isNotEmpty ? user.nom : user.pseudo,
@@ -340,7 +384,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ),
                     deleteIcon: const Icon(Icons.close, size: 16),
                     onDeleted: () => setState(
-                      () => _selectedParticipants.removeWhere((u) => u.alanyaID == user.alanyaID),
+                      () => _selectedParticipants.removeWhere(
+                        (u) => u.alanyaID == user.alanyaID,
+                      ),
                     ),
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
@@ -353,7 +399,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ],
             const SizedBox(height: 28),
 
-            // Résumé
+            // RÃ©sumÃ©
             _SummaryCard(
               date: _formatDate(),
               time: _selectedTime.format(context),
@@ -413,7 +459,11 @@ class _TypeChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: selected ? Colors.white : Colors.grey.shade600),
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? Colors.white : Colors.grey.shade600,
+            ),
             const SizedBox(width: 8),
             Text(
               label,
@@ -430,7 +480,11 @@ class _TypeChip extends StatelessWidget {
 }
 
 class _PickerTile extends StatelessWidget {
-  const _PickerTile({required this.icon, required this.label, required this.onTap});
+  const _PickerTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -453,7 +507,10 @@ class _PickerTile extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -490,23 +547,26 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Résumé',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo, fontSize: 13),
+            'RÃ©sumÃ©',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.indigo,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 10),
           _SummaryRow(
             icon: Icons.calendar_today_outlined,
-            text: '$date à $time',
+            text: '$date Ã  $time',
           ),
           const SizedBox(height: 6),
-          _SummaryRow(
-            icon: Icons.timelapse,
-            text: 'Durée : $duration',
-          ),
+          _SummaryRow(icon: Icons.timelapse, text: 'DurÃ©e : $duration'),
           const SizedBox(height: 6),
           _SummaryRow(
-            icon: typeMedia == 0 ? Icons.videocam_outlined : Icons.phone_outlined,
-            text: typeMedia == 0 ? 'Réunion vidéo' : 'Appel audio',
+            icon: typeMedia == 0
+                ? Icons.videocam_outlined
+                : Icons.phone_outlined,
+            text: typeMedia == 0 ? 'RÃ©union vidÃ©o' : 'Appel audio',
           ),
         ],
       ),
@@ -525,7 +585,10 @@ class _SummaryRow extends StatelessWidget {
       children: [
         Icon(icon, size: 15, color: Colors.indigo.shade400),
         const SizedBox(width: 8),
-        Text(text, style: TextStyle(color: Colors.indigo.shade700, fontSize: 13)),
+        Text(
+          text,
+          style: TextStyle(color: Colors.indigo.shade700, fontSize: 13),
+        ),
       ],
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class ContactsScreen extends StatelessWidget {
   const ContactsScreen({super.key});
@@ -14,16 +15,20 @@ class ContactsScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Select Contact',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              context.l10n.selectContact,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
-              '254 contacts',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              context.l10n.contactsCount(254),
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ],
         ),
@@ -42,33 +47,41 @@ class ContactsScreen extends StatelessWidget {
         itemCount: 20,
         itemBuilder: (context, index) {
           if (index == 0) {
-            return _buildActionTile(Icons.group_add, 'New Group');
+            return _buildActionTile(Icons.group_add, context.l10n.newGroup);
           }
           if (index == 1) {
-            return _buildActionTile(Icons.person_add, 'New Contact');
+            return _buildActionTile(Icons.person_add, context.l10n.newContact);
           }
-          
+
           final contactIndex = index - 2;
           return ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 8,
+            ),
             leading: CircleAvatar(
               radius: 24,
               backgroundColor: Colors.indigo.shade50,
               child: Text(
                 'C$contactIndex',
-                style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.indigo,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             title: Text(
-              'Contact $contactIndex',
+              '${context.l10n.contactsTitle} $contactIndex',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            subtitle: const Text(
-              'Hey there! I am using Talky.',
-              style: TextStyle(color: Colors.grey),
+            subtitle: Text(
+              context.l10n.defaultStatus,
+              style: const TextStyle(color: Colors.grey),
             ),
             onTap: () {
-              Navigator.pop(context); // Would navigate to chat detail with this user
+              Navigator.pop(
+                context,
+              ); // Would navigate to chat detail with this user
             },
           );
         },

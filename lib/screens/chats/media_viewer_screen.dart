@@ -35,7 +35,8 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   }
 
   Future<void> _initVideo() async {
-    final hasLocal = widget.localPath != null && File(widget.localPath!).existsSync();
+    final hasLocal =
+        widget.localPath != null && File(widget.localPath!).existsSync();
     _video = hasLocal
         ? VideoPlayerController.file(File(widget.localPath!))
         : VideoPlayerController.networkUrl(Uri.parse(widget.networkUrl ?? ''));
@@ -65,27 +66,34 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(widget.title ?? '', style: const TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text(
+          widget.title ?? '',
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+        ),
       ),
       body: Center(child: widget.isVideo ? _buildVideo() : _buildImage()),
     );
   }
 
   Widget _buildVideo() {
-    if (_chewie == null) return const CircularProgressIndicator(color: Colors.white);
+    if (_chewie == null)
+      return const CircularProgressIndicator(color: Colors.white);
     return Chewie(controller: _chewie!);
   }
 
   Widget _buildImage() {
-    final hasLocal = widget.localPath != null && File(widget.localPath!).existsSync();
+    final hasLocal =
+        widget.localPath != null && File(widget.localPath!).existsSync();
     if (hasLocal) {
       return InteractiveViewer(child: Image.file(File(widget.localPath!)));
     }
     return InteractiveViewer(
       child: CachedNetworkImage(
         imageUrl: widget.networkUrl ?? '',
-        placeholder: (_, __) => const CircularProgressIndicator(color: Colors.white),
-        errorWidget: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white54, size: 64),
+        placeholder: (_, __) =>
+            const CircularProgressIndicator(color: Colors.white),
+        errorWidget: (_, __, ___) =>
+            const Icon(Icons.broken_image, color: Colors.white54, size: 64),
       ),
     );
   }

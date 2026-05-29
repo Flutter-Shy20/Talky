@@ -12,6 +12,7 @@ import 'meeting_detail_screen.dart';
 import 'ongoing_meet_screen.dart';
 import 'participant_picker_screen.dart';
 import '../shared/schedule_screen.dart';
+import '../../core/extensions/context_extensions.dart';
 
 class MeetsScreen extends StatefulWidget {
   const MeetsScreen({super.key});
@@ -20,7 +21,8 @@ class MeetsScreen extends StatefulWidget {
   State<MeetsScreen> createState() => _MeetsScreenState();
 }
 
-class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStateMixin {
+class _MeetsScreenState extends State<MeetsScreen>
+    with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   List<Meeting> _meetings = [];
   bool _isLoading = true;
@@ -37,8 +39,9 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
     _tabController = TabController(length: 3, vsync: this);
     _loadCurrentUser();
     _loadMeetings();
-    _meetingNotifSub =
-        PushService.meetingNotifications.listen((_) => _loadMeetings());
+    _meetingNotifSub = PushService.meetingNotifications.listen(
+      (_) => _loadMeetings(),
+    );
   }
 
   @override
@@ -66,7 +69,10 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
   Future<void> _loadMeetings() async {
     setState(() => _isLoading = true);
     try {
-      final meetingService = Provider.of<MeetingService>(context, listen: false);
+      final meetingService = Provider.of<MeetingService>(
+        context,
+        listen: false,
+      );
       final data = await meetingService.getMeetings();
       if (!mounted) return;
       setState(() {
@@ -83,24 +89,21 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
     final now = DateTime.now();
     return _meetings.where((m) {
       return m.isToday && !m.isEnd && m.endDateTime.isAfter(now);
-    }).toList()
-      ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+    }).toList()..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
   }
 
   List<Meeting> get _upcomingMeetings {
     final now = DateTime.now();
     return _meetings.where((m) {
       return !m.isToday && m.startDateTime.isAfter(now) && !m.isEnd;
-    }).toList()
-      ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+    }).toList()..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
   }
 
   List<Meeting> get _pastMeetings {
     final now = DateTime.now();
     return _meetings.where((m) {
       return m.isEnd || m.endDateTime.isBefore(now);
-    }).toList()
-      ..sort((a, b) => b.startDateTime.compareTo(a.startDateTime));
+    }).toList()..sort((a, b) => b.startDateTime.compareTo(a.startDateTime));
   }
 
   Future<void> _createNewMeeting() async {
@@ -146,7 +149,13 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de créer la réunion : $e')),
+        SnackBar(
+          content: Text(
+            Localizations.localeOf(context).languageCode == 'fr'
+                ? 'Impossible de créer la réunion : $e'
+                : 'Failed to create meeting: $e',
+          ),
+        ),
       );
     }
   }
@@ -175,14 +184,23 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Réunions',
-          style: TextStyle(color: Colors.black, fontSize: 28, fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.meetingsTitle,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month_outlined, color: Colors.black),
-            tooltip: 'Planifier',
+            icon: const Icon(
+              Icons.calendar_month_outlined,
+              color: Colors.black,
+            ),
+            tooltip: Localizations.localeOf(context).languageCode == 'fr'
+                ? 'Planifier'
+                : 'Schedule',
             onPressed: _openSchedule,
           ),
           const SizedBox(width: 4),
@@ -193,7 +211,11 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
               backgroundColor: Colors.indigo.shade100,
               child: Text(
                 _userInitial,
-                style: const TextStyle(color: Colors.indigo, fontSize: 12, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.indigo,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -205,11 +227,26 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
           unselectedLabelColor: Colors.grey,
           indicatorColor: Colors.indigo,
           indicatorSize: TabBarIndicatorSize.label,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          tabs: const [
-            Tab(text: "Aujourd'hui"),
-            Tab(text: 'À venir'),
-            Tab(text: 'Passés'),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+          tabs: [
+            Tab(
+              text: Localizations.localeOf(context).languageCode == 'fr'
+                  ? "Aujourd'hui"
+                  : 'Today',
+            ),
+            Tab(
+              text: Localizations.localeOf(context).languageCode == 'fr'
+                  ? 'À venir'
+                  : 'Upcoming',
+            ),
+            Tab(
+              text: Localizations.localeOf(context).languageCode == 'fr'
+                  ? 'Passés'
+                  : 'Past',
+            ),
           ],
         ),
       ),
@@ -222,7 +259,7 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
               children: [
                 Expanded(
                   child: _ActionCard(
-                    title: 'Nouvelle réunion',
+                    title: context.l10n.newMeeting,
                     icon: CupertinoIcons.video_camera_solid,
                     color: Colors.indigo,
                     onTap: _createNewMeeting,
@@ -231,7 +268,7 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
                 const SizedBox(width: 14),
                 Expanded(
                   child: _ActionCard(
-                    title: 'Rejoindre',
+                    title: context.l10n.joinMeeting,
                     icon: CupertinoIcons.keyboard,
                     color: Colors.black87,
                     isOutline: true,
@@ -247,13 +284,18 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
           // Onglets
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.indigo),
+                  )
                 : TabBarView(
                     controller: _tabController,
                     children: [
                       _MeetingList(
                         meetings: _todayMeetings,
-                        emptyMessage: "Aucune réunion aujourd'hui",
+                        emptyMessage:
+                            Localizations.localeOf(context).languageCode == 'fr'
+                            ? "Aucune réunion aujourd'hui"
+                            : "No meetings today",
                         emptyIcon: CupertinoIcons.calendar_badge_plus,
                         onRefresh: _loadMeetings,
                         showScheduleButton: true,
@@ -262,7 +304,10 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
                       ),
                       _MeetingList(
                         meetings: _upcomingMeetings,
-                        emptyMessage: 'Aucune réunion à venir',
+                        emptyMessage:
+                            Localizations.localeOf(context).languageCode == 'fr'
+                            ? 'Aucune réunion à venir'
+                            : 'No upcoming meetings',
                         emptyIcon: CupertinoIcons.calendar,
                         onRefresh: _loadMeetings,
                         showScheduleButton: true,
@@ -271,7 +316,10 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
                       ),
                       _MeetingList(
                         meetings: _pastMeetings,
-                        emptyMessage: 'Aucune réunion passée',
+                        emptyMessage:
+                            Localizations.localeOf(context).languageCode == 'fr'
+                            ? 'Aucune réunion passée'
+                            : 'No past meetings',
                         emptyIcon: CupertinoIcons.clock,
                         onRefresh: _loadMeetings,
                         showScheduleButton: false,
@@ -288,7 +336,9 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
         onPressed: _openSchedule,
         backgroundColor: Colors.indigo,
         elevation: 4,
-        tooltip: 'Planifier une réunion',
+        tooltip: Localizations.localeOf(context).languageCode == 'fr'
+            ? 'Planifier une réunion'
+            : 'Schedule a meeting',
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -341,9 +391,14 @@ class _MeetingList extends StatelessWidget {
                     TextButton.icon(
                       onPressed: onSchedule,
                       icon: const Icon(Icons.add, color: Colors.indigo),
-                      label: const Text(
-                        'Planifier une réunion',
-                        style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+                      label: Text(
+                        Localizations.localeOf(context).languageCode == 'fr'
+                            ? 'Planifier une réunion'
+                            : 'Schedule a meeting',
+                        style: const TextStyle(
+                          color: Colors.indigo,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -379,30 +434,71 @@ class _MeetingCard extends StatelessWidget {
   final Meeting meeting;
   final VoidCallback onTap;
 
-  String _formatDateTime(Meeting m) {
+  String _formatDateTime(BuildContext context, Meeting m) {
     final now = DateTime.now();
     final d = m.startDateTime;
     final e = m.endDateTime;
     String hm(DateTime dt) =>
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     final timeStr = '${hm(d)} — ${hm(e)}';
-    if (m.isToday) return "Aujourd'hui · $timeStr";
-    final tomorrow = now.add(const Duration(days: 1));
-    if (d.year == tomorrow.year && d.month == tomorrow.month && d.day == tomorrow.day) {
-      return 'Demain · $timeStr';
+    if (m.isToday) {
+      return Localizations.localeOf(context).languageCode == 'fr'
+          ? "Aujourd'hui · $timeStr"
+          : "Today · $timeStr";
     }
-    const months = ['', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    final tomorrow = now.add(const Duration(days: 1));
+    if (d.year == tomorrow.year &&
+        d.month == tomorrow.month &&
+        d.day == tomorrow.day) {
+      return Localizations.localeOf(context).languageCode == 'fr'
+          ? 'Demain · $timeStr'
+          : 'Tomorrow · $timeStr';
+    }
+    final months = Localizations.localeOf(context).languageCode == 'fr'
+        ? [
+            '',
+            'Jan',
+            'Fév',
+            'Mar',
+            'Avr',
+            'Mai',
+            'Jun',
+            'Jul',
+            'Aoû',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Déc',
+          ]
+        : [
+            '',
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'May',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Dec',
+          ];
     return '${d.day} ${months[d.month]} · $timeStr';
   }
 
   bool _isInProgress(Meeting m) {
     final now = DateTime.now();
-    return m.startDateTime.isBefore(now) && m.endDateTime.isAfter(now) && !m.isEnd;
+    return m.startDateTime.isBefore(now) &&
+        m.endDateTime.isAfter(now) &&
+        !m.isEnd;
   }
 
   int? _minutesUntilStart(Meeting m) {
     final diff = m.startDateTime.difference(DateTime.now());
-    if (!diff.isNegative && diff.inMinutes <= 15 && !m.isEnd) return diff.inMinutes;
+    if (!diff.isNegative && diff.inMinutes <= 15 && !m.isEnd)
+      return diff.inMinutes;
     return null;
   }
 
@@ -411,7 +507,12 @@ class _MeetingCard extends StatelessWidget {
     final color = Colors.primaries[meeting.idMeeting % Colors.primaries.length];
     final inProgress = _isInProgress(meeting);
     final minsUntil = _minutesUntilStart(meeting);
-    final organiser = meeting.organiserNom ?? meeting.organiserPseudo ?? 'Organisateur';
+    final organiser =
+        meeting.organiserNom ??
+        meeting.organiserPseudo ??
+        (Localizations.localeOf(context).languageCode == 'fr'
+            ? 'Organisateur'
+            : 'Organiser');
 
     return InkWell(
       onTap: onTap,
@@ -427,7 +528,9 @@ class _MeetingCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: inProgress ? Colors.indigo.withAlpha(20) : Colors.black.withAlpha(6),
+              color: inProgress
+                  ? Colors.indigo.withAlpha(20)
+                  : Colors.black.withAlpha(6),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -455,42 +558,85 @@ class _MeetingCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             meeting.objet,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (inProgress)
-                          _StatusChip(label: 'En cours', color: Colors.green)
+                          _StatusChip(
+                            label:
+                                Localizations.localeOf(context).languageCode ==
+                                    'fr'
+                                ? 'En cours'
+                                : 'In progress',
+                            color: Colors.green,
+                          )
                         else if (minsUntil != null)
                           _StatusChip(
-                            label: minsUntil == 0 ? 'Maintenant' : 'Dans ${minsUntil}min',
+                            label: minsUntil == 0
+                                ? (Localizations.localeOf(
+                                            context,
+                                          ).languageCode ==
+                                          'fr'
+                                      ? 'Maintenant'
+                                      : 'Now')
+                                : (Localizations.localeOf(
+                                            context,
+                                          ).languageCode ==
+                                          'fr'
+                                      ? 'Dans ${minsUntil}min'
+                                      : 'In ${minsUntil}min'),
                             color: Colors.orange,
                           ),
                         if (meeting.typeMedia == 1)
                           Padding(
                             padding: const EdgeInsets.only(left: 6),
-                            child: Icon(CupertinoIcons.phone_fill, size: 14, color: Colors.grey.shade400),
+                            child: Icon(
+                              CupertinoIcons.phone_fill,
+                              size: 14,
+                              color: Colors.grey.shade400,
+                            ),
                           ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.access_time, size: 13, color: Colors.grey.shade500),
+                        Icon(
+                          Icons.access_time,
+                          size: 13,
+                          color: Colors.grey.shade500,
+                        ),
                         const SizedBox(width: 4),
-                        Text(_formatDateTime(meeting), style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                        Text(
+                          _formatDateTime(context, meeting),
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                        Icon(Icons.person_outline, size: 13, color: Colors.grey.shade500),
+                        Icon(
+                          Icons.person_outline,
+                          size: 13,
+                          color: Colors.grey.shade500,
+                        ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             organiser,
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -498,7 +644,10 @@ class _MeetingCard extends StatelessWidget {
                         if (meeting.participants.isNotEmpty)
                           Text(
                             '· ${meeting.participants.length} participant${meeting.participants.length > 1 ? 's' : ''}',
-                            style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey.shade400,
+                              fontSize: 12,
+                            ),
                           ),
                       ],
                     ),
@@ -531,9 +680,20 @@ class _StatusChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -567,7 +727,9 @@ class _ActionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isOutline ? Colors.white : color,
           borderRadius: BorderRadius.circular(20),
-          border: isOutline ? Border.all(color: Colors.grey.shade300, width: 1.5) : null,
+          border: isOutline
+              ? Border.all(color: Colors.grey.shade300, width: 1.5)
+              : null,
           boxShadow: isOutline
               ? []
               : [
@@ -585,7 +747,9 @@ class _ActionCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: isOutline ? Colors.grey.shade100 : Colors.white.withAlpha(51),
+                color: isOutline
+                    ? Colors.grey.shade100
+                    : Colors.white.withAlpha(51),
                 shape: BoxShape.circle,
               ),
               child: Icon(
