@@ -163,6 +163,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         builder: (context, conn, _) {
           final online = conn.isOnline;
           return FloatingActionButton(
+            heroTag: 'chats_new_fab',
             onPressed: online
                 ? () async {
                     final result = await Navigator.push<User>(

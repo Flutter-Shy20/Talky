@@ -11,6 +11,7 @@ import '../../core/utils/app_log.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/status_provider.dart';
+import 'in_app_camera_screen.dart';
 
 enum _StatusType { text, photo, video, audio }
 
@@ -106,6 +107,14 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
         : await picker.pickImage(
             source: source, imageQuality: 80, maxWidth: 1920);
     if (file != null) setState(() => _mediaFile = File(file.path));
+  }
+
+  Future<void> _openInAppCamera() async {
+    final file = await Navigator.push<File>(
+      context,
+      MaterialPageRoute(builder: (_) => const InAppCameraScreen()),
+    );
+    if (file != null && mounted) setState(() => _mediaFile = file);
   }
 
   // ── Audio : enregistrement vocal ─────────────────────────────────
@@ -524,8 +533,9 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                 _ChoiceButton(
                   icon: Icons.camera_alt_outlined,
                   label: isVideo ? 'Caméra' : 'Appareil',
-                  onTap: () =>
-                      _pickMedia(ImageSource.camera, video: isVideo),
+                  onTap: () => isVideo
+                      ? _pickMedia(ImageSource.camera, video: true)
+                      : _openInAppCamera(),
                 ),
               ],
             ),

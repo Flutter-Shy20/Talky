@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/utils/avatar_utils.dart';
+import '../../core/utils/tls_image_cache.dart';
 
 /// Forme de l'avatar.
 enum AppAvatarShape { circle, squircle }
@@ -91,7 +92,8 @@ class AppAvatar extends StatelessWidget {
     }
     if (_hasNetwork) {
       return CachedNetworkImage(
-        imageUrl: imageUrl!.trim(),
+        imageUrl: normalizeMediaUrl(imageUrl!.trim()),
+        cacheManager: TlsCacheManager(),
         width: size,
         height: size,
         fit: BoxFit.cover,

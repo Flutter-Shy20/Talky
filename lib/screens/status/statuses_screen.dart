@@ -150,6 +150,7 @@ class _StatusesScreenState extends State<StatusesScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'statuses_create_fab',
         onPressed: () => _openCreate(context),
         child: const Icon(Icons.add),
       ),

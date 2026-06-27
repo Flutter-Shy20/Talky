@@ -28,6 +28,8 @@ part 'api/socket_api.dart';
 part 'api/status_api.dart';
 part 'api/admin_api.dart';
 part 'api/misc_api.dart';
+part 'api/keys_api.dart';
+part 'api/vault_api.dart';
 
 class TalkyApiClient {
   // ** Remplace par ton IP/domaine de production

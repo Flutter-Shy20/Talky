@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/widgets.dart';
 
+import 'tls_image_cache.dart';
+
 bool hasValidAvatarUrl(String? url) {
   if (url == null) return false;
   final u = url.trim();
@@ -9,5 +11,9 @@ bool hasValidAvatarUrl(String? url) {
   return u.startsWith('http://') || u.startsWith('https://');
 }
 
-ImageProvider? avatarImage(String? url) =>
-    hasValidAvatarUrl(url) ? CachedNetworkImageProvider(url!.trim()) : null;
+ImageProvider? avatarImage(String? url) => hasValidAvatarUrl(url)
+    ? CachedNetworkImageProvider(
+        normalizeMediaUrl(url!.trim()),
+        cacheManager: TlsCacheManager(),
+      )
+    : null;

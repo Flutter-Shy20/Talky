@@ -147,6 +147,40 @@ class LocalMeetings extends Table {
   Set<Column> get primaryKey => {idMeeting};
 }
 
+/// Sessions Double Ratchet persistées par paire (ownerUserId, peerId).
+class E2eeSessions extends Table {
+  IntColumn get ownerUserId => integer()();
+  IntColumn get peerId      => integer()();
+
+  BlobColumn get rkBytes  => blob()();          // root key 32 bytes
+  BlobColumn get cksBytes => blob().nullable()(); // sending chain key
+  BlobColumn get ckrBytes => blob().nullable()(); // receiving chain key
+  BlobColumn get dhSPriv  => blob()();          // seed X25519 keypair sortant
+  BlobColumn get dhRPub   => blob().nullable()(); // clé publique X25519 entrant
+
+  IntColumn get ns => integer().withDefault(const Constant(0))();
+  IntColumn get nr => integer().withDefault(const Constant(0))();
+  IntColumn get pn => integer().withDefault(const Constant(0))();
+
+  /// Map<"$dhPubB64:$n", base64(mk)> sérialisée en JSON.
+  TextColumn get skippedJson    => text().withDefault(const Constant('{}'))();
+  /// Header X3DH en attente (premier message pas encore confirmé), ou null.
+  TextColumn get x3dhHeaderJson => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {ownerUserId, peerId};
+}
+
+/// One-time prekeys uploadées et non encore consommées.
+class E2eeOtpks extends Table {
+  IntColumn get ownerUserId => integer()();
+  IntColumn get otpkId      => integer()();
+  BlobColumn get privBytes  => blob()(); // seed X25519 32 bytes
+
+  @override
+  Set<Column> get primaryKey => {ownerUserId, otpkId};
+}
+
 /// Statuts / stories mis en cache (TTL = expiresAt).
 class LocalStatuses extends Table {
   IntColumn get idStatut => integer()();
@@ -177,6 +211,8 @@ class LocalStatuses extends Table {
     LocalCalls,
     LocalMeetings,
     LocalStatuses,
+    E2eeSessions,
+    E2eeOtpks,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -184,7 +220,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -204,6 +240,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 4) {
             await m.addColumn(localMessages, localMessages.retryCount);
+          }
+          if (from < 5) {
+            await m.createTable(e2eeSessions);
+            await m.createTable(e2eeOtpks);
           }
         },
       );

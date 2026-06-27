@@ -220,6 +220,7 @@ class _CallsScreenState extends State<CallsScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'calls_keypad_fab',
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const KeypadScreen()),

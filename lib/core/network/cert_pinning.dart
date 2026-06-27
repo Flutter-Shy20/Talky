@@ -60,6 +60,7 @@ Uint8List _pemToDer(String pem) {
   final body = pem
       .split('\n')
       .where((l) => !l.startsWith('-----') && l.trim().isNotEmpty)
+      .map((l) => l.trim())
       .join();
   return base64.decode(body);
 }

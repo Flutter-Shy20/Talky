@@ -99,6 +99,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
                         const SizedBox(width: 4),
                         _statusIcon(msg.status, deliveredAt: msg.deliveredAt, readAt: msg.readAt),
                       ],
+                      if (!widget.isGroup && !msg.isDeleted) ...[
+                        const SizedBox(width: 3),
+                        Icon(Icons.lock_rounded, size: 9, color: Colors.green.shade400),
+                      ],
                     ],
                   ),
                 ],

@@ -27,6 +27,7 @@ import '../calls/group_participants_picker_screen.dart';
 import '../calls/ongoing_call_screen.dart';
 import 'contact_detail_screen.dart';
 import 'group_detail_screen.dart';
+import 'key_verification_screen.dart';
 import 'media_viewer_screen.dart';
 import 'voice_message_bubble.dart';
 
@@ -86,6 +87,30 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   /// Pont public vers `setState()` (lui-même `@protected`), afin que les
   /// extensions de cette librairie puissent déclencher un rebuild.
   void rebuild(VoidCallback fn) => setState(fn);
+
+  Future<void> _openKeyVerification() async {
+    final userId = widget.userId;
+    if (userId == null) return;
+    final fp = await _chat.repository.e2ee.getIdentityFingerprint();
+    if (!mounted) return;
+    if (fp == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Clé d\'identité non disponible')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => KeyVerificationScreen(
+          myFingerprint: fp,
+          partnerId: userId,
+          partnerName: widget.userName,
+          api: _apiClient,
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -232,13 +257,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       final label = _partnerIsTyping ? 'en train d\'écrire...' : _presenceLabel();
                       if (label.isEmpty) return const SizedBox.shrink();
                       final online = !_partnerIsTyping && label == 'En ligne';
-                      return Text(
-                        label,
-                        style: context.text.bodySmall?.copyWith(
-                          color: _partnerIsTyping
-                              ? context.colors.primary
-                              : (online ? context.semantic.online : context.colors.onSurfaceVariant),
-                        ),
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!_partnerIsTyping) ...[
+                            Icon(Icons.lock_rounded, size: 10, color: Colors.green.shade500),
+                            const SizedBox(width: 3),
+                          ],
+                          Text(
+                            label,
+                            style: context.text.bodySmall?.copyWith(
+                              color: _partnerIsTyping
+                                  ? context.colors.primary
+                                  : (online ? context.semantic.online : context.colors.onSurfaceVariant),
+                            ),
+                          ),
+                        ],
                       );
                     }),
                   ],
@@ -248,6 +282,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
         ),
         actions: [
+          if (!widget.isGroup && widget.userId != null)
+            IconButton(
+              icon: const Icon(Icons.verified_user_rounded),
+              color: Colors.green.shade500,
+              tooltip: 'Vérifier les clés',
+              onPressed: _openKeyVerification,
+            ),
           IconButton(
             icon: const Icon(Icons.videocam_rounded),
             color: context.colors.primary,

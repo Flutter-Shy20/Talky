@@ -61,6 +61,14 @@ dependencies:
   path_provider: ^2.1.4               # Dossier documents app (DB + cache médias)
   path: ^1.9.0
 
+  # ── Chiffrement E2EE (X25519 + AES-256-GCM + HKDF) ──────────────
+  cryptography: ^2.7.0               # Primitives crypto (X25519, AES-GCM, HKDF)
+
+  # ── Caméra intégrée (évite de quitter l'app) ─────────────────────
+  camera: ^0.11.0                      # Accès caméra natif (InAppCameraScreen)
+  flutter_image_compress: ^2.1.0       # Compression photos avant upload
+  flutter_cache_manager: ^3.4.1        # Cache images avec TLS (TlsCacheManager)
+
   # ── Chat : médias (images, vidéos, fichiers) ──────────────────────
   image_picker: ^1.1.2                # Galerie / caméra (photos & vidéos)
   file_picker: ^8.1.2                 # Sélection de documents

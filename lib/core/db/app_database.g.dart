@@ -5094,6 +5094,983 @@ class LocalStatusesCompanion extends UpdateCompanion<LocalStatuse> {
   }
 }
 
+class $E2eeSessionsTable extends E2eeSessions
+    with TableInfo<$E2eeSessionsTable, E2eeSession> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $E2eeSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerUserIdMeta = const VerificationMeta(
+    'ownerUserId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
+    'owner_user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _peerIdMeta = const VerificationMeta('peerId');
+  @override
+  late final GeneratedColumn<int> peerId = GeneratedColumn<int>(
+    'peer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rkBytesMeta = const VerificationMeta(
+    'rkBytes',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> rkBytes = GeneratedColumn<Uint8List>(
+    'rk_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cksBytesMeta = const VerificationMeta(
+    'cksBytes',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> cksBytes = GeneratedColumn<Uint8List>(
+    'cks_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ckrBytesMeta = const VerificationMeta(
+    'ckrBytes',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> ckrBytes = GeneratedColumn<Uint8List>(
+    'ckr_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dhSPrivMeta = const VerificationMeta(
+    'dhSPriv',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> dhSPriv = GeneratedColumn<Uint8List>(
+    'dh_s_priv',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dhRPubMeta = const VerificationMeta('dhRPub');
+  @override
+  late final GeneratedColumn<Uint8List> dhRPub = GeneratedColumn<Uint8List>(
+    'dh_r_pub',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nsMeta = const VerificationMeta('ns');
+  @override
+  late final GeneratedColumn<int> ns = GeneratedColumn<int>(
+    'ns',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _nrMeta = const VerificationMeta('nr');
+  @override
+  late final GeneratedColumn<int> nr = GeneratedColumn<int>(
+    'nr',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _pnMeta = const VerificationMeta('pn');
+  @override
+  late final GeneratedColumn<int> pn = GeneratedColumn<int>(
+    'pn',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _skippedJsonMeta = const VerificationMeta(
+    'skippedJson',
+  );
+  @override
+  late final GeneratedColumn<String> skippedJson = GeneratedColumn<String>(
+    'skipped_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _x3dhHeaderJsonMeta = const VerificationMeta(
+    'x3dhHeaderJson',
+  );
+  @override
+  late final GeneratedColumn<String> x3dhHeaderJson = GeneratedColumn<String>(
+    'x3dh_header_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerUserId,
+    peerId,
+    rkBytes,
+    cksBytes,
+    ckrBytes,
+    dhSPriv,
+    dhRPub,
+    ns,
+    nr,
+    pn,
+    skippedJson,
+    x3dhHeaderJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'e2ee_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<E2eeSession> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+        _ownerUserIdMeta,
+        ownerUserId.isAcceptableOrUnknown(
+          data['owner_user_id']!,
+          _ownerUserIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerUserIdMeta);
+    }
+    if (data.containsKey('peer_id')) {
+      context.handle(
+        _peerIdMeta,
+        peerId.isAcceptableOrUnknown(data['peer_id']!, _peerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_peerIdMeta);
+    }
+    if (data.containsKey('rk_bytes')) {
+      context.handle(
+        _rkBytesMeta,
+        rkBytes.isAcceptableOrUnknown(data['rk_bytes']!, _rkBytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rkBytesMeta);
+    }
+    if (data.containsKey('cks_bytes')) {
+      context.handle(
+        _cksBytesMeta,
+        cksBytes.isAcceptableOrUnknown(data['cks_bytes']!, _cksBytesMeta),
+      );
+    }
+    if (data.containsKey('ckr_bytes')) {
+      context.handle(
+        _ckrBytesMeta,
+        ckrBytes.isAcceptableOrUnknown(data['ckr_bytes']!, _ckrBytesMeta),
+      );
+    }
+    if (data.containsKey('dh_s_priv')) {
+      context.handle(
+        _dhSPrivMeta,
+        dhSPriv.isAcceptableOrUnknown(data['dh_s_priv']!, _dhSPrivMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dhSPrivMeta);
+    }
+    if (data.containsKey('dh_r_pub')) {
+      context.handle(
+        _dhRPubMeta,
+        dhRPub.isAcceptableOrUnknown(data['dh_r_pub']!, _dhRPubMeta),
+      );
+    }
+    if (data.containsKey('ns')) {
+      context.handle(_nsMeta, ns.isAcceptableOrUnknown(data['ns']!, _nsMeta));
+    }
+    if (data.containsKey('nr')) {
+      context.handle(_nrMeta, nr.isAcceptableOrUnknown(data['nr']!, _nrMeta));
+    }
+    if (data.containsKey('pn')) {
+      context.handle(_pnMeta, pn.isAcceptableOrUnknown(data['pn']!, _pnMeta));
+    }
+    if (data.containsKey('skipped_json')) {
+      context.handle(
+        _skippedJsonMeta,
+        skippedJson.isAcceptableOrUnknown(
+          data['skipped_json']!,
+          _skippedJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('x3dh_header_json')) {
+      context.handle(
+        _x3dhHeaderJsonMeta,
+        x3dhHeaderJson.isAcceptableOrUnknown(
+          data['x3dh_header_json']!,
+          _x3dhHeaderJsonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerUserId, peerId};
+  @override
+  E2eeSession map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return E2eeSession(
+      ownerUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_user_id'],
+      )!,
+      peerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}peer_id'],
+      )!,
+      rkBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}rk_bytes'],
+      )!,
+      cksBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}cks_bytes'],
+      ),
+      ckrBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}ckr_bytes'],
+      ),
+      dhSPriv: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}dh_s_priv'],
+      )!,
+      dhRPub: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}dh_r_pub'],
+      ),
+      ns: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ns'],
+      )!,
+      nr: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}nr'],
+      )!,
+      pn: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pn'],
+      )!,
+      skippedJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}skipped_json'],
+      )!,
+      x3dhHeaderJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}x3dh_header_json'],
+      ),
+    );
+  }
+
+  @override
+  $E2eeSessionsTable createAlias(String alias) {
+    return $E2eeSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class E2eeSession extends DataClass implements Insertable<E2eeSession> {
+  final int ownerUserId;
+  final int peerId;
+  final Uint8List rkBytes;
+  final Uint8List? cksBytes;
+  final Uint8List? ckrBytes;
+  final Uint8List dhSPriv;
+  final Uint8List? dhRPub;
+  final int ns;
+  final int nr;
+  final int pn;
+
+  /// Map<"$dhPubB64:$n", base64(mk)> sérialisée en JSON.
+  final String skippedJson;
+
+  /// Header X3DH en attente (premier message pas encore confirmé), ou null.
+  final String? x3dhHeaderJson;
+  const E2eeSession({
+    required this.ownerUserId,
+    required this.peerId,
+    required this.rkBytes,
+    this.cksBytes,
+    this.ckrBytes,
+    required this.dhSPriv,
+    this.dhRPub,
+    required this.ns,
+    required this.nr,
+    required this.pn,
+    required this.skippedJson,
+    this.x3dhHeaderJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_user_id'] = Variable<int>(ownerUserId);
+    map['peer_id'] = Variable<int>(peerId);
+    map['rk_bytes'] = Variable<Uint8List>(rkBytes);
+    if (!nullToAbsent || cksBytes != null) {
+      map['cks_bytes'] = Variable<Uint8List>(cksBytes);
+    }
+    if (!nullToAbsent || ckrBytes != null) {
+      map['ckr_bytes'] = Variable<Uint8List>(ckrBytes);
+    }
+    map['dh_s_priv'] = Variable<Uint8List>(dhSPriv);
+    if (!nullToAbsent || dhRPub != null) {
+      map['dh_r_pub'] = Variable<Uint8List>(dhRPub);
+    }
+    map['ns'] = Variable<int>(ns);
+    map['nr'] = Variable<int>(nr);
+    map['pn'] = Variable<int>(pn);
+    map['skipped_json'] = Variable<String>(skippedJson);
+    if (!nullToAbsent || x3dhHeaderJson != null) {
+      map['x3dh_header_json'] = Variable<String>(x3dhHeaderJson);
+    }
+    return map;
+  }
+
+  E2eeSessionsCompanion toCompanion(bool nullToAbsent) {
+    return E2eeSessionsCompanion(
+      ownerUserId: Value(ownerUserId),
+      peerId: Value(peerId),
+      rkBytes: Value(rkBytes),
+      cksBytes: cksBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cksBytes),
+      ckrBytes: ckrBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ckrBytes),
+      dhSPriv: Value(dhSPriv),
+      dhRPub: dhRPub == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dhRPub),
+      ns: Value(ns),
+      nr: Value(nr),
+      pn: Value(pn),
+      skippedJson: Value(skippedJson),
+      x3dhHeaderJson: x3dhHeaderJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(x3dhHeaderJson),
+    );
+  }
+
+  factory E2eeSession.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return E2eeSession(
+      ownerUserId: serializer.fromJson<int>(json['ownerUserId']),
+      peerId: serializer.fromJson<int>(json['peerId']),
+      rkBytes: serializer.fromJson<Uint8List>(json['rkBytes']),
+      cksBytes: serializer.fromJson<Uint8List?>(json['cksBytes']),
+      ckrBytes: serializer.fromJson<Uint8List?>(json['ckrBytes']),
+      dhSPriv: serializer.fromJson<Uint8List>(json['dhSPriv']),
+      dhRPub: serializer.fromJson<Uint8List?>(json['dhRPub']),
+      ns: serializer.fromJson<int>(json['ns']),
+      nr: serializer.fromJson<int>(json['nr']),
+      pn: serializer.fromJson<int>(json['pn']),
+      skippedJson: serializer.fromJson<String>(json['skippedJson']),
+      x3dhHeaderJson: serializer.fromJson<String?>(json['x3dhHeaderJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerUserId': serializer.toJson<int>(ownerUserId),
+      'peerId': serializer.toJson<int>(peerId),
+      'rkBytes': serializer.toJson<Uint8List>(rkBytes),
+      'cksBytes': serializer.toJson<Uint8List?>(cksBytes),
+      'ckrBytes': serializer.toJson<Uint8List?>(ckrBytes),
+      'dhSPriv': serializer.toJson<Uint8List>(dhSPriv),
+      'dhRPub': serializer.toJson<Uint8List?>(dhRPub),
+      'ns': serializer.toJson<int>(ns),
+      'nr': serializer.toJson<int>(nr),
+      'pn': serializer.toJson<int>(pn),
+      'skippedJson': serializer.toJson<String>(skippedJson),
+      'x3dhHeaderJson': serializer.toJson<String?>(x3dhHeaderJson),
+    };
+  }
+
+  E2eeSession copyWith({
+    int? ownerUserId,
+    int? peerId,
+    Uint8List? rkBytes,
+    Value<Uint8List?> cksBytes = const Value.absent(),
+    Value<Uint8List?> ckrBytes = const Value.absent(),
+    Uint8List? dhSPriv,
+    Value<Uint8List?> dhRPub = const Value.absent(),
+    int? ns,
+    int? nr,
+    int? pn,
+    String? skippedJson,
+    Value<String?> x3dhHeaderJson = const Value.absent(),
+  }) => E2eeSession(
+    ownerUserId: ownerUserId ?? this.ownerUserId,
+    peerId: peerId ?? this.peerId,
+    rkBytes: rkBytes ?? this.rkBytes,
+    cksBytes: cksBytes.present ? cksBytes.value : this.cksBytes,
+    ckrBytes: ckrBytes.present ? ckrBytes.value : this.ckrBytes,
+    dhSPriv: dhSPriv ?? this.dhSPriv,
+    dhRPub: dhRPub.present ? dhRPub.value : this.dhRPub,
+    ns: ns ?? this.ns,
+    nr: nr ?? this.nr,
+    pn: pn ?? this.pn,
+    skippedJson: skippedJson ?? this.skippedJson,
+    x3dhHeaderJson: x3dhHeaderJson.present
+        ? x3dhHeaderJson.value
+        : this.x3dhHeaderJson,
+  );
+  E2eeSession copyWithCompanion(E2eeSessionsCompanion data) {
+    return E2eeSession(
+      ownerUserId: data.ownerUserId.present
+          ? data.ownerUserId.value
+          : this.ownerUserId,
+      peerId: data.peerId.present ? data.peerId.value : this.peerId,
+      rkBytes: data.rkBytes.present ? data.rkBytes.value : this.rkBytes,
+      cksBytes: data.cksBytes.present ? data.cksBytes.value : this.cksBytes,
+      ckrBytes: data.ckrBytes.present ? data.ckrBytes.value : this.ckrBytes,
+      dhSPriv: data.dhSPriv.present ? data.dhSPriv.value : this.dhSPriv,
+      dhRPub: data.dhRPub.present ? data.dhRPub.value : this.dhRPub,
+      ns: data.ns.present ? data.ns.value : this.ns,
+      nr: data.nr.present ? data.nr.value : this.nr,
+      pn: data.pn.present ? data.pn.value : this.pn,
+      skippedJson: data.skippedJson.present
+          ? data.skippedJson.value
+          : this.skippedJson,
+      x3dhHeaderJson: data.x3dhHeaderJson.present
+          ? data.x3dhHeaderJson.value
+          : this.x3dhHeaderJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('E2eeSession(')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('peerId: $peerId, ')
+          ..write('rkBytes: $rkBytes, ')
+          ..write('cksBytes: $cksBytes, ')
+          ..write('ckrBytes: $ckrBytes, ')
+          ..write('dhSPriv: $dhSPriv, ')
+          ..write('dhRPub: $dhRPub, ')
+          ..write('ns: $ns, ')
+          ..write('nr: $nr, ')
+          ..write('pn: $pn, ')
+          ..write('skippedJson: $skippedJson, ')
+          ..write('x3dhHeaderJson: $x3dhHeaderJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerUserId,
+    peerId,
+    $driftBlobEquality.hash(rkBytes),
+    $driftBlobEquality.hash(cksBytes),
+    $driftBlobEquality.hash(ckrBytes),
+    $driftBlobEquality.hash(dhSPriv),
+    $driftBlobEquality.hash(dhRPub),
+    ns,
+    nr,
+    pn,
+    skippedJson,
+    x3dhHeaderJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is E2eeSession &&
+          other.ownerUserId == this.ownerUserId &&
+          other.peerId == this.peerId &&
+          $driftBlobEquality.equals(other.rkBytes, this.rkBytes) &&
+          $driftBlobEquality.equals(other.cksBytes, this.cksBytes) &&
+          $driftBlobEquality.equals(other.ckrBytes, this.ckrBytes) &&
+          $driftBlobEquality.equals(other.dhSPriv, this.dhSPriv) &&
+          $driftBlobEquality.equals(other.dhRPub, this.dhRPub) &&
+          other.ns == this.ns &&
+          other.nr == this.nr &&
+          other.pn == this.pn &&
+          other.skippedJson == this.skippedJson &&
+          other.x3dhHeaderJson == this.x3dhHeaderJson);
+}
+
+class E2eeSessionsCompanion extends UpdateCompanion<E2eeSession> {
+  final Value<int> ownerUserId;
+  final Value<int> peerId;
+  final Value<Uint8List> rkBytes;
+  final Value<Uint8List?> cksBytes;
+  final Value<Uint8List?> ckrBytes;
+  final Value<Uint8List> dhSPriv;
+  final Value<Uint8List?> dhRPub;
+  final Value<int> ns;
+  final Value<int> nr;
+  final Value<int> pn;
+  final Value<String> skippedJson;
+  final Value<String?> x3dhHeaderJson;
+  final Value<int> rowid;
+  const E2eeSessionsCompanion({
+    this.ownerUserId = const Value.absent(),
+    this.peerId = const Value.absent(),
+    this.rkBytes = const Value.absent(),
+    this.cksBytes = const Value.absent(),
+    this.ckrBytes = const Value.absent(),
+    this.dhSPriv = const Value.absent(),
+    this.dhRPub = const Value.absent(),
+    this.ns = const Value.absent(),
+    this.nr = const Value.absent(),
+    this.pn = const Value.absent(),
+    this.skippedJson = const Value.absent(),
+    this.x3dhHeaderJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  E2eeSessionsCompanion.insert({
+    required int ownerUserId,
+    required int peerId,
+    required Uint8List rkBytes,
+    this.cksBytes = const Value.absent(),
+    this.ckrBytes = const Value.absent(),
+    required Uint8List dhSPriv,
+    this.dhRPub = const Value.absent(),
+    this.ns = const Value.absent(),
+    this.nr = const Value.absent(),
+    this.pn = const Value.absent(),
+    this.skippedJson = const Value.absent(),
+    this.x3dhHeaderJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerUserId = Value(ownerUserId),
+       peerId = Value(peerId),
+       rkBytes = Value(rkBytes),
+       dhSPriv = Value(dhSPriv);
+  static Insertable<E2eeSession> custom({
+    Expression<int>? ownerUserId,
+    Expression<int>? peerId,
+    Expression<Uint8List>? rkBytes,
+    Expression<Uint8List>? cksBytes,
+    Expression<Uint8List>? ckrBytes,
+    Expression<Uint8List>? dhSPriv,
+    Expression<Uint8List>? dhRPub,
+    Expression<int>? ns,
+    Expression<int>? nr,
+    Expression<int>? pn,
+    Expression<String>? skippedJson,
+    Expression<String>? x3dhHeaderJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (peerId != null) 'peer_id': peerId,
+      if (rkBytes != null) 'rk_bytes': rkBytes,
+      if (cksBytes != null) 'cks_bytes': cksBytes,
+      if (ckrBytes != null) 'ckr_bytes': ckrBytes,
+      if (dhSPriv != null) 'dh_s_priv': dhSPriv,
+      if (dhRPub != null) 'dh_r_pub': dhRPub,
+      if (ns != null) 'ns': ns,
+      if (nr != null) 'nr': nr,
+      if (pn != null) 'pn': pn,
+      if (skippedJson != null) 'skipped_json': skippedJson,
+      if (x3dhHeaderJson != null) 'x3dh_header_json': x3dhHeaderJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  E2eeSessionsCompanion copyWith({
+    Value<int>? ownerUserId,
+    Value<int>? peerId,
+    Value<Uint8List>? rkBytes,
+    Value<Uint8List?>? cksBytes,
+    Value<Uint8List?>? ckrBytes,
+    Value<Uint8List>? dhSPriv,
+    Value<Uint8List?>? dhRPub,
+    Value<int>? ns,
+    Value<int>? nr,
+    Value<int>? pn,
+    Value<String>? skippedJson,
+    Value<String?>? x3dhHeaderJson,
+    Value<int>? rowid,
+  }) {
+    return E2eeSessionsCompanion(
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      peerId: peerId ?? this.peerId,
+      rkBytes: rkBytes ?? this.rkBytes,
+      cksBytes: cksBytes ?? this.cksBytes,
+      ckrBytes: ckrBytes ?? this.ckrBytes,
+      dhSPriv: dhSPriv ?? this.dhSPriv,
+      dhRPub: dhRPub ?? this.dhRPub,
+      ns: ns ?? this.ns,
+      nr: nr ?? this.nr,
+      pn: pn ?? this.pn,
+      skippedJson: skippedJson ?? this.skippedJson,
+      x3dhHeaderJson: x3dhHeaderJson ?? this.x3dhHeaderJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<int>(ownerUserId.value);
+    }
+    if (peerId.present) {
+      map['peer_id'] = Variable<int>(peerId.value);
+    }
+    if (rkBytes.present) {
+      map['rk_bytes'] = Variable<Uint8List>(rkBytes.value);
+    }
+    if (cksBytes.present) {
+      map['cks_bytes'] = Variable<Uint8List>(cksBytes.value);
+    }
+    if (ckrBytes.present) {
+      map['ckr_bytes'] = Variable<Uint8List>(ckrBytes.value);
+    }
+    if (dhSPriv.present) {
+      map['dh_s_priv'] = Variable<Uint8List>(dhSPriv.value);
+    }
+    if (dhRPub.present) {
+      map['dh_r_pub'] = Variable<Uint8List>(dhRPub.value);
+    }
+    if (ns.present) {
+      map['ns'] = Variable<int>(ns.value);
+    }
+    if (nr.present) {
+      map['nr'] = Variable<int>(nr.value);
+    }
+    if (pn.present) {
+      map['pn'] = Variable<int>(pn.value);
+    }
+    if (skippedJson.present) {
+      map['skipped_json'] = Variable<String>(skippedJson.value);
+    }
+    if (x3dhHeaderJson.present) {
+      map['x3dh_header_json'] = Variable<String>(x3dhHeaderJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('E2eeSessionsCompanion(')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('peerId: $peerId, ')
+          ..write('rkBytes: $rkBytes, ')
+          ..write('cksBytes: $cksBytes, ')
+          ..write('ckrBytes: $ckrBytes, ')
+          ..write('dhSPriv: $dhSPriv, ')
+          ..write('dhRPub: $dhRPub, ')
+          ..write('ns: $ns, ')
+          ..write('nr: $nr, ')
+          ..write('pn: $pn, ')
+          ..write('skippedJson: $skippedJson, ')
+          ..write('x3dhHeaderJson: $x3dhHeaderJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $E2eeOtpksTable extends E2eeOtpks
+    with TableInfo<$E2eeOtpksTable, E2eeOtpk> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $E2eeOtpksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerUserIdMeta = const VerificationMeta(
+    'ownerUserId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
+    'owner_user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _otpkIdMeta = const VerificationMeta('otpkId');
+  @override
+  late final GeneratedColumn<int> otpkId = GeneratedColumn<int>(
+    'otpk_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _privBytesMeta = const VerificationMeta(
+    'privBytes',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> privBytes = GeneratedColumn<Uint8List>(
+    'priv_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [ownerUserId, otpkId, privBytes];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'e2ee_otpks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<E2eeOtpk> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+        _ownerUserIdMeta,
+        ownerUserId.isAcceptableOrUnknown(
+          data['owner_user_id']!,
+          _ownerUserIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerUserIdMeta);
+    }
+    if (data.containsKey('otpk_id')) {
+      context.handle(
+        _otpkIdMeta,
+        otpkId.isAcceptableOrUnknown(data['otpk_id']!, _otpkIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_otpkIdMeta);
+    }
+    if (data.containsKey('priv_bytes')) {
+      context.handle(
+        _privBytesMeta,
+        privBytes.isAcceptableOrUnknown(data['priv_bytes']!, _privBytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_privBytesMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerUserId, otpkId};
+  @override
+  E2eeOtpk map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return E2eeOtpk(
+      ownerUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_user_id'],
+      )!,
+      otpkId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}otpk_id'],
+      )!,
+      privBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}priv_bytes'],
+      )!,
+    );
+  }
+
+  @override
+  $E2eeOtpksTable createAlias(String alias) {
+    return $E2eeOtpksTable(attachedDatabase, alias);
+  }
+}
+
+class E2eeOtpk extends DataClass implements Insertable<E2eeOtpk> {
+  final int ownerUserId;
+  final int otpkId;
+  final Uint8List privBytes;
+  const E2eeOtpk({
+    required this.ownerUserId,
+    required this.otpkId,
+    required this.privBytes,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_user_id'] = Variable<int>(ownerUserId);
+    map['otpk_id'] = Variable<int>(otpkId);
+    map['priv_bytes'] = Variable<Uint8List>(privBytes);
+    return map;
+  }
+
+  E2eeOtpksCompanion toCompanion(bool nullToAbsent) {
+    return E2eeOtpksCompanion(
+      ownerUserId: Value(ownerUserId),
+      otpkId: Value(otpkId),
+      privBytes: Value(privBytes),
+    );
+  }
+
+  factory E2eeOtpk.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return E2eeOtpk(
+      ownerUserId: serializer.fromJson<int>(json['ownerUserId']),
+      otpkId: serializer.fromJson<int>(json['otpkId']),
+      privBytes: serializer.fromJson<Uint8List>(json['privBytes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerUserId': serializer.toJson<int>(ownerUserId),
+      'otpkId': serializer.toJson<int>(otpkId),
+      'privBytes': serializer.toJson<Uint8List>(privBytes),
+    };
+  }
+
+  E2eeOtpk copyWith({int? ownerUserId, int? otpkId, Uint8List? privBytes}) =>
+      E2eeOtpk(
+        ownerUserId: ownerUserId ?? this.ownerUserId,
+        otpkId: otpkId ?? this.otpkId,
+        privBytes: privBytes ?? this.privBytes,
+      );
+  E2eeOtpk copyWithCompanion(E2eeOtpksCompanion data) {
+    return E2eeOtpk(
+      ownerUserId: data.ownerUserId.present
+          ? data.ownerUserId.value
+          : this.ownerUserId,
+      otpkId: data.otpkId.present ? data.otpkId.value : this.otpkId,
+      privBytes: data.privBytes.present ? data.privBytes.value : this.privBytes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('E2eeOtpk(')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('otpkId: $otpkId, ')
+          ..write('privBytes: $privBytes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(ownerUserId, otpkId, $driftBlobEquality.hash(privBytes));
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is E2eeOtpk &&
+          other.ownerUserId == this.ownerUserId &&
+          other.otpkId == this.otpkId &&
+          $driftBlobEquality.equals(other.privBytes, this.privBytes));
+}
+
+class E2eeOtpksCompanion extends UpdateCompanion<E2eeOtpk> {
+  final Value<int> ownerUserId;
+  final Value<int> otpkId;
+  final Value<Uint8List> privBytes;
+  final Value<int> rowid;
+  const E2eeOtpksCompanion({
+    this.ownerUserId = const Value.absent(),
+    this.otpkId = const Value.absent(),
+    this.privBytes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  E2eeOtpksCompanion.insert({
+    required int ownerUserId,
+    required int otpkId,
+    required Uint8List privBytes,
+    this.rowid = const Value.absent(),
+  }) : ownerUserId = Value(ownerUserId),
+       otpkId = Value(otpkId),
+       privBytes = Value(privBytes);
+  static Insertable<E2eeOtpk> custom({
+    Expression<int>? ownerUserId,
+    Expression<int>? otpkId,
+    Expression<Uint8List>? privBytes,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (otpkId != null) 'otpk_id': otpkId,
+      if (privBytes != null) 'priv_bytes': privBytes,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  E2eeOtpksCompanion copyWith({
+    Value<int>? ownerUserId,
+    Value<int>? otpkId,
+    Value<Uint8List>? privBytes,
+    Value<int>? rowid,
+  }) {
+    return E2eeOtpksCompanion(
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      otpkId: otpkId ?? this.otpkId,
+      privBytes: privBytes ?? this.privBytes,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<int>(ownerUserId.value);
+    }
+    if (otpkId.present) {
+      map['otpk_id'] = Variable<int>(otpkId.value);
+    }
+    if (privBytes.present) {
+      map['priv_bytes'] = Variable<Uint8List>(privBytes.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('E2eeOtpksCompanion(')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('otpkId: $otpkId, ')
+          ..write('privBytes: $privBytes, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5104,6 +6081,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LocalCallsTable localCalls = $LocalCallsTable(this);
   late final $LocalMeetingsTable localMeetings = $LocalMeetingsTable(this);
   late final $LocalStatusesTable localStatuses = $LocalStatusesTable(this);
+  late final $E2eeSessionsTable e2eeSessions = $E2eeSessionsTable(this);
+  late final $E2eeOtpksTable e2eeOtpks = $E2eeOtpksTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5115,6 +6094,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localCalls,
     localMeetings,
     localStatuses,
+    e2eeSessions,
+    e2eeOtpks,
   ];
 }
 
@@ -7450,6 +8431,503 @@ typedef $$LocalStatusesTableProcessedTableManager =
       LocalStatuse,
       PrefetchHooks Function()
     >;
+typedef $$E2eeSessionsTableCreateCompanionBuilder =
+    E2eeSessionsCompanion Function({
+      required int ownerUserId,
+      required int peerId,
+      required Uint8List rkBytes,
+      Value<Uint8List?> cksBytes,
+      Value<Uint8List?> ckrBytes,
+      required Uint8List dhSPriv,
+      Value<Uint8List?> dhRPub,
+      Value<int> ns,
+      Value<int> nr,
+      Value<int> pn,
+      Value<String> skippedJson,
+      Value<String?> x3dhHeaderJson,
+      Value<int> rowid,
+    });
+typedef $$E2eeSessionsTableUpdateCompanionBuilder =
+    E2eeSessionsCompanion Function({
+      Value<int> ownerUserId,
+      Value<int> peerId,
+      Value<Uint8List> rkBytes,
+      Value<Uint8List?> cksBytes,
+      Value<Uint8List?> ckrBytes,
+      Value<Uint8List> dhSPriv,
+      Value<Uint8List?> dhRPub,
+      Value<int> ns,
+      Value<int> nr,
+      Value<int> pn,
+      Value<String> skippedJson,
+      Value<String?> x3dhHeaderJson,
+      Value<int> rowid,
+    });
+
+class $$E2eeSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $E2eeSessionsTable> {
+  $$E2eeSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get peerId => $composableBuilder(
+    column: $table.peerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get rkBytes => $composableBuilder(
+    column: $table.rkBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get cksBytes => $composableBuilder(
+    column: $table.cksBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get ckrBytes => $composableBuilder(
+    column: $table.ckrBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get dhSPriv => $composableBuilder(
+    column: $table.dhSPriv,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get dhRPub => $composableBuilder(
+    column: $table.dhRPub,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ns => $composableBuilder(
+    column: $table.ns,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nr => $composableBuilder(
+    column: $table.nr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pn => $composableBuilder(
+    column: $table.pn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get skippedJson => $composableBuilder(
+    column: $table.skippedJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get x3dhHeaderJson => $composableBuilder(
+    column: $table.x3dhHeaderJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$E2eeSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $E2eeSessionsTable> {
+  $$E2eeSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get peerId => $composableBuilder(
+    column: $table.peerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get rkBytes => $composableBuilder(
+    column: $table.rkBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get cksBytes => $composableBuilder(
+    column: $table.cksBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get ckrBytes => $composableBuilder(
+    column: $table.ckrBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get dhSPriv => $composableBuilder(
+    column: $table.dhSPriv,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get dhRPub => $composableBuilder(
+    column: $table.dhRPub,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ns => $composableBuilder(
+    column: $table.ns,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get nr => $composableBuilder(
+    column: $table.nr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pn => $composableBuilder(
+    column: $table.pn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get skippedJson => $composableBuilder(
+    column: $table.skippedJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get x3dhHeaderJson => $composableBuilder(
+    column: $table.x3dhHeaderJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$E2eeSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $E2eeSessionsTable> {
+  $$E2eeSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get peerId =>
+      $composableBuilder(column: $table.peerId, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get rkBytes =>
+      $composableBuilder(column: $table.rkBytes, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get cksBytes =>
+      $composableBuilder(column: $table.cksBytes, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get ckrBytes =>
+      $composableBuilder(column: $table.ckrBytes, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get dhSPriv =>
+      $composableBuilder(column: $table.dhSPriv, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get dhRPub =>
+      $composableBuilder(column: $table.dhRPub, builder: (column) => column);
+
+  GeneratedColumn<int> get ns =>
+      $composableBuilder(column: $table.ns, builder: (column) => column);
+
+  GeneratedColumn<int> get nr =>
+      $composableBuilder(column: $table.nr, builder: (column) => column);
+
+  GeneratedColumn<int> get pn =>
+      $composableBuilder(column: $table.pn, builder: (column) => column);
+
+  GeneratedColumn<String> get skippedJson => $composableBuilder(
+    column: $table.skippedJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get x3dhHeaderJson => $composableBuilder(
+    column: $table.x3dhHeaderJson,
+    builder: (column) => column,
+  );
+}
+
+class $$E2eeSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $E2eeSessionsTable,
+          E2eeSession,
+          $$E2eeSessionsTableFilterComposer,
+          $$E2eeSessionsTableOrderingComposer,
+          $$E2eeSessionsTableAnnotationComposer,
+          $$E2eeSessionsTableCreateCompanionBuilder,
+          $$E2eeSessionsTableUpdateCompanionBuilder,
+          (
+            E2eeSession,
+            BaseReferences<_$AppDatabase, $E2eeSessionsTable, E2eeSession>,
+          ),
+          E2eeSession,
+          PrefetchHooks Function()
+        > {
+  $$E2eeSessionsTableTableManager(_$AppDatabase db, $E2eeSessionsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$E2eeSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$E2eeSessionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$E2eeSessionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> ownerUserId = const Value.absent(),
+                Value<int> peerId = const Value.absent(),
+                Value<Uint8List> rkBytes = const Value.absent(),
+                Value<Uint8List?> cksBytes = const Value.absent(),
+                Value<Uint8List?> ckrBytes = const Value.absent(),
+                Value<Uint8List> dhSPriv = const Value.absent(),
+                Value<Uint8List?> dhRPub = const Value.absent(),
+                Value<int> ns = const Value.absent(),
+                Value<int> nr = const Value.absent(),
+                Value<int> pn = const Value.absent(),
+                Value<String> skippedJson = const Value.absent(),
+                Value<String?> x3dhHeaderJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => E2eeSessionsCompanion(
+                ownerUserId: ownerUserId,
+                peerId: peerId,
+                rkBytes: rkBytes,
+                cksBytes: cksBytes,
+                ckrBytes: ckrBytes,
+                dhSPriv: dhSPriv,
+                dhRPub: dhRPub,
+                ns: ns,
+                nr: nr,
+                pn: pn,
+                skippedJson: skippedJson,
+                x3dhHeaderJson: x3dhHeaderJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int ownerUserId,
+                required int peerId,
+                required Uint8List rkBytes,
+                Value<Uint8List?> cksBytes = const Value.absent(),
+                Value<Uint8List?> ckrBytes = const Value.absent(),
+                required Uint8List dhSPriv,
+                Value<Uint8List?> dhRPub = const Value.absent(),
+                Value<int> ns = const Value.absent(),
+                Value<int> nr = const Value.absent(),
+                Value<int> pn = const Value.absent(),
+                Value<String> skippedJson = const Value.absent(),
+                Value<String?> x3dhHeaderJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => E2eeSessionsCompanion.insert(
+                ownerUserId: ownerUserId,
+                peerId: peerId,
+                rkBytes: rkBytes,
+                cksBytes: cksBytes,
+                ckrBytes: ckrBytes,
+                dhSPriv: dhSPriv,
+                dhRPub: dhRPub,
+                ns: ns,
+                nr: nr,
+                pn: pn,
+                skippedJson: skippedJson,
+                x3dhHeaderJson: x3dhHeaderJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$E2eeSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $E2eeSessionsTable,
+      E2eeSession,
+      $$E2eeSessionsTableFilterComposer,
+      $$E2eeSessionsTableOrderingComposer,
+      $$E2eeSessionsTableAnnotationComposer,
+      $$E2eeSessionsTableCreateCompanionBuilder,
+      $$E2eeSessionsTableUpdateCompanionBuilder,
+      (
+        E2eeSession,
+        BaseReferences<_$AppDatabase, $E2eeSessionsTable, E2eeSession>,
+      ),
+      E2eeSession,
+      PrefetchHooks Function()
+    >;
+typedef $$E2eeOtpksTableCreateCompanionBuilder =
+    E2eeOtpksCompanion Function({
+      required int ownerUserId,
+      required int otpkId,
+      required Uint8List privBytes,
+      Value<int> rowid,
+    });
+typedef $$E2eeOtpksTableUpdateCompanionBuilder =
+    E2eeOtpksCompanion Function({
+      Value<int> ownerUserId,
+      Value<int> otpkId,
+      Value<Uint8List> privBytes,
+      Value<int> rowid,
+    });
+
+class $$E2eeOtpksTableFilterComposer
+    extends Composer<_$AppDatabase, $E2eeOtpksTable> {
+  $$E2eeOtpksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get otpkId => $composableBuilder(
+    column: $table.otpkId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get privBytes => $composableBuilder(
+    column: $table.privBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$E2eeOtpksTableOrderingComposer
+    extends Composer<_$AppDatabase, $E2eeOtpksTable> {
+  $$E2eeOtpksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get otpkId => $composableBuilder(
+    column: $table.otpkId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get privBytes => $composableBuilder(
+    column: $table.privBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$E2eeOtpksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $E2eeOtpksTable> {
+  $$E2eeOtpksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get otpkId =>
+      $composableBuilder(column: $table.otpkId, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get privBytes =>
+      $composableBuilder(column: $table.privBytes, builder: (column) => column);
+}
+
+class $$E2eeOtpksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $E2eeOtpksTable,
+          E2eeOtpk,
+          $$E2eeOtpksTableFilterComposer,
+          $$E2eeOtpksTableOrderingComposer,
+          $$E2eeOtpksTableAnnotationComposer,
+          $$E2eeOtpksTableCreateCompanionBuilder,
+          $$E2eeOtpksTableUpdateCompanionBuilder,
+          (E2eeOtpk, BaseReferences<_$AppDatabase, $E2eeOtpksTable, E2eeOtpk>),
+          E2eeOtpk,
+          PrefetchHooks Function()
+        > {
+  $$E2eeOtpksTableTableManager(_$AppDatabase db, $E2eeOtpksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$E2eeOtpksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$E2eeOtpksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$E2eeOtpksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> ownerUserId = const Value.absent(),
+                Value<int> otpkId = const Value.absent(),
+                Value<Uint8List> privBytes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => E2eeOtpksCompanion(
+                ownerUserId: ownerUserId,
+                otpkId: otpkId,
+                privBytes: privBytes,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int ownerUserId,
+                required int otpkId,
+                required Uint8List privBytes,
+                Value<int> rowid = const Value.absent(),
+              }) => E2eeOtpksCompanion.insert(
+                ownerUserId: ownerUserId,
+                otpkId: otpkId,
+                privBytes: privBytes,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$E2eeOtpksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $E2eeOtpksTable,
+      E2eeOtpk,
+      $$E2eeOtpksTableFilterComposer,
+      $$E2eeOtpksTableOrderingComposer,
+      $$E2eeOtpksTableAnnotationComposer,
+      $$E2eeOtpksTableCreateCompanionBuilder,
+      $$E2eeOtpksTableUpdateCompanionBuilder,
+      (E2eeOtpk, BaseReferences<_$AppDatabase, $E2eeOtpksTable, E2eeOtpk>),
+      E2eeOtpk,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7466,4 +8944,8 @@ class $AppDatabaseManager {
       $$LocalMeetingsTableTableManager(_db, _db.localMeetings);
   $$LocalStatusesTableTableManager get localStatuses =>
       $$LocalStatusesTableTableManager(_db, _db.localStatuses);
+  $$E2eeSessionsTableTableManager get e2eeSessions =>
+      $$E2eeSessionsTableTableManager(_db, _db.e2eeSessions);
+  $$E2eeOtpksTableTableManager get e2eeOtpks =>
+      $$E2eeOtpksTableTableManager(_db, _db.e2eeOtpks);
 }

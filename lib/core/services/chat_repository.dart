@@ -1,18 +1,23 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
+import '../crypto/e2ee_service.dart';
+import '../crypto/vault_service.dart';
 import '../db/app_database.dart';
 import '../db/chat_dao.dart';
 import 'media_cache_service.dart';
 import '../../talky_api_client.dart';
-import '../../talky_models.dart';  
+import '../../talky_models.dart';
 class ChatRepository {
   final AppDatabase _db;
   final ChatDao _dao;
   final TalkyApiClient _api;
+  final E2eeService _e2ee;
+  final VaultService _vault;
   final MediaCacheService _mediaCache = MediaCacheService();
 
   int _myId = 0;
@@ -34,11 +39,25 @@ class ChatRepository {
     if (_activeConversationID == conversationID) _activeConversationID = 0;
   }
 
-  ChatRepository._(this._api, this._db) : _dao = ChatDao(_db);
+  ChatRepository._(this._api, this._db, this._e2ee, this._vault)
+      : _dao = ChatDao(_db);
 
-  MediaCacheService get mediaCache => _mediaCache; 
-  factory ChatRepository({required TalkyApiClient api, AppDatabase? database}) {
-    return ChatRepository._(api, database ?? AppDatabase());
+  MediaCacheService get mediaCache => _mediaCache;
+  E2eeService get e2ee => _e2ee;
+  VaultService get vault => _vault;
+
+  factory ChatRepository({
+    required TalkyApiClient api,
+    AppDatabase? database,
+    E2eeService? e2ee,
+    VaultService? vault,
+  }) {
+    final db = database ?? AppDatabase();
+    return ChatRepository._(
+      api, db,
+      e2ee ?? E2eeService(api, db: db),
+      vault ?? VaultService(),
+    );
   }
 
   AppDatabase get db => _db;
@@ -72,6 +91,12 @@ class ChatRepository {
     await _dao.purgeDuplicateByMsgId();
     await _mediaCache.evictIfNeeded();
 
+    // Initialise E2EE : charge/génère la paire de clés et uploade la clé publique.
+    await _e2ee.init(myId);
+
+    // Coffre : tenter de restaurer la clé depuis le secure storage.
+    await _vault.tryLoad(myId);
+
     if (_listenersBound) return;
     _listenersBound = true;
 
@@ -102,6 +127,8 @@ class ChatRepository {
     _pendingReads.clear();
     _pendingReadsRetry.clear();
     _myId = 0;
+    _e2ee.clear();
+    _vault.lock();
   }
 
   void _onConversationCreated(dynamic data) {
@@ -136,7 +163,7 @@ class ChatRepository {
         raw = await _api.getMessages(conversationID, limit: 50);
       }
       for (final j in raw.whereType<Map<String, dynamic>>()) {
-        await _upsertServerMsg(j, prefetchMedia: true);
+        await _upsertServerMsg(await _decryptIfNeeded(j), prefetchMedia: true);
       }
     } catch (e) {
       debugPrint('[ChatRepo] syncMessages($conversationID) échouée: $e');
@@ -151,7 +178,7 @@ class ChatRepository {
       final raw = await _api.getMessages(conversationID, limit: limit, before: oldest);
       final list = raw.whereType<Map<String, dynamic>>().toList();
       for (final j in list) {
-        await _upsertServerMsg(j, prefetchMedia: true);
+        await _upsertServerMsg(await _decryptIfNeeded(j), prefetchMedia: true);
       }
       return list.length;
     } catch (e) {
@@ -190,7 +217,7 @@ class ChatRepository {
     _bumpConversationSummary(conversationID, content, 0, now,
         senderID: _myId, status: 0);
 
-    _emitSend(
+    await _emitSend(
       clientId: clientId,
       conversationID: conversationID,
       content: content,
@@ -251,7 +278,7 @@ class ChatRepository {
         conversationID, _previewForMedia(type, content, mediaName), type, now,
         senderID: _myId, status: 0);
 
-    _emitSend(
+    await _emitSend(
       clientId: clientId,
       conversationID: conversationID,
       content: content,
@@ -308,7 +335,7 @@ class ChatRepository {
         status: const Value(1), // envoyé (message:sent affinera ensuite)
       ));
 
-      _emitSend(
+      await _emitSend(
         clientId: clientId,
         conversationID: conversationID,
         content: content,
@@ -367,7 +394,7 @@ class ChatRepository {
             pendingUploadPath: const Value(null),
             status: const Value(1),
           ));
-          _emitSend(
+          await _emitSend(
             clientId: m.clientId,
             conversationID: m.conversationID,
             content: m.content,
@@ -386,7 +413,7 @@ class ChatRepository {
           // On laisse tomber la suite pour ce message, on retentera plus tard.
         }
       } else {
-        _emitSend(
+        await _emitSend(
           clientId: m.clientId,
           conversationID: m.conversationID,
           content: m.content,
@@ -433,7 +460,7 @@ class ChatRepository {
             pendingUploadPath: const Value(null),
             status: const Value(1),
           ));
-          _emitSend(
+          await _emitSend(
             clientId: m.clientId,
             conversationID: m.conversationID,
             content: m.content,
@@ -453,7 +480,7 @@ class ChatRepository {
       } else {
         // Message texte ou média déjà uploadé : remettre en pending et réémettre
         await _dao.retryFailed(m.clientId);
-        _emitSend(
+        await _emitSend(
           clientId: m.clientId,
           conversationID: m.conversationID,
           content: m.content,
@@ -582,6 +609,101 @@ class ChatRepository {
   }
 
 
+  /// Retourne l'ID du destinataire pour une conversation 1-1, null pour un groupe.
+  Future<int?> _getRecipientId(int conversationId) async {
+    final conv = await (_db.select(_db.localConversations)
+          ..where((c) => c.conversID.equals(conversationId)))
+        .getSingleOrNull();
+    if (conv == null || conv.isGroup) return null;
+    try {
+      final List<dynamic> list = jsonDecode(conv.participantsJson);
+      for (final p in list) {
+        if (p is! Map) continue;
+        final id = (p['alanyaID'] ?? p['id'] ?? p['userID']) as int?;
+        if (id != null && id != _myId) return id;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Déchiffre les champs `ciphertext`+`nonce`+`header` d'un message entrant si présents.
+  /// Injecte le plaintext dans `content` et supprime les champs crypto du JSON.
+  /// Pour mes propres messages (écho serveur), retire les champs crypto uniquement :
+  /// `_upsertServerMsg` restaurera le plaintext depuis la copie locale.
+  Future<Map<String, dynamic>> _decryptIfNeeded(Map<String, dynamic> j) async {
+    final ciphertext   = j['ciphertext']?.toString();
+    final nonce        = j['nonce']?.toString();
+    final archiveBlob  = j['archive_blob']?.toString();
+    final archiveNonce = j['archive_nonce']?.toString();
+
+    final result = Map<String, dynamic>.from(j)
+      ..remove('ciphertext')
+      ..remove('nonce')
+      ..remove('header')
+      ..remove('archive_blob')
+      ..remove('archive_nonce');
+
+    final senderId = _toInt(j['senderID']);
+
+    if (senderId == _myId) {
+      // Mon propre message : la copie locale a le plaintext (optimistic upsert).
+      // Sur un nouvel appareil (pas de copie locale) : décrypter via le coffre.
+      if (archiveBlob != null && archiveNonce != null) {
+        final plain = await _vault.open(archiveBlob, archiveNonce);
+        if (plain != null) result['content'] = plain;
+      }
+      return result;
+    }
+
+    // Message d'un autre : déchiffrement Double Ratchet.
+    if (ciphertext == null || nonce == null) return result;
+
+    final headerStr = j['header']?.toString();
+    Map<String, dynamic>? header;
+    if (headerStr != null && headerStr.isNotEmpty) {
+      try {
+        header = jsonDecode(headerStr) as Map<String, dynamic>;
+      } catch (_) {}
+    }
+
+    if (header == null) {
+      result['content'] = '[🔒 Message chiffré]';
+      return result;
+    }
+
+    final plaintext = await _e2ee.decrypt(senderId, ciphertext, nonce, header);
+    result['content'] = plaintext ?? '[🔒 Message chiffré]';
+    return result;
+  }
+
+  /// Récupère l'historique des messages archivés (coffre) pour une conversation.
+  /// Déchiffre chaque `archive_blob` avec la clé de coffre et upsert en local.
+  /// À appeler sur un nouvel appareil après avoir déverrouillé le coffre.
+  Future<void> syncVaultHistory(int conversationId) async {
+    if (!_vault.isUnlocked) {
+      debugPrint('[Vault] syncVaultHistory ignoré : coffre verrouillé');
+      return;
+    }
+    try {
+      final rows = await _api.fetchVaultHistory(conversationId);
+      for (final row in rows) {
+        final blob  = row['archive_blob']?.toString();
+        final bNonce = row['archive_nonce']?.toString();
+        if (blob == null || bNonce == null) continue;
+        final plain = await _vault.open(blob, bNonce);
+        if (plain != null) {
+          final enriched = Map<String, dynamic>.from(row)
+            ..['content'] = plain
+            ..remove('archive_blob')
+            ..remove('archive_nonce');
+          await _upsertServerMsg(enriched);
+        }
+      }
+    } catch (e) {
+      debugPrint('[Vault] syncVaultHistory($conversationId) échouée: $e');
+    }
+  }
+
   Future<void> _upsertServerMsg(
     Map<String, dynamic> json, {
     bool prefetchMedia = false,
@@ -600,9 +722,8 @@ class ChatRepository {
     bool wasNew = false;
     await _db.transaction(() async {
       String? carriedLocalPath;
+      String? carriedContent;
 
-      // Création d'un prédicat optimiste plus strict pour éviter d'associer
-      // par erreur un message d'un autre utilisateur ayant le même contenu.
       final candidates = await (_db.select(_db.localMessages)
             ..where((m) {
               // Ligne déjà confirmée avec le même msgID mais clé différente
@@ -632,6 +753,7 @@ class ChatRepository {
 
       for (final m in candidates) {
         carriedLocalPath ??= m.localMediaPath;
+        if (m.content != null && m.content!.isNotEmpty) carriedContent ??= m.content;
         await (_db.delete(_db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
       }
 
@@ -639,6 +761,11 @@ class ChatRepository {
       var companion = _msgJsonToCompanion(json).copyWith(clientId: Value(srvKey));
       if (carriedLocalPath != null) {
         companion = companion.copyWith(localMediaPath: Value(carriedLocalPath));
+      }
+      // Si le serveur a renvoyé l'écho d'un message chiffré sans content déchiffré
+      // (mes propres messages), on restaure le plaintext depuis la copie locale.
+      if (companion.content.value == null && carriedContent != null) {
+        companion = companion.copyWith(content: Value(carriedContent));
       }
 
       debugPrint('[ChatRepo] _upsertServerMsg msgID=$msgID conv=$convID candidates=${candidates.length} wasNew=$wasNew');
@@ -663,7 +790,7 @@ class ChatRepository {
 
   Future<void> _onMessageReceived(dynamic data) async {
     if (data is! Map) return;
-    final json = Map<String, dynamic>.from(data);
+    final json = await _decryptIfNeeded(Map<String, dynamic>.from(data));
     final senderID0 = _toInt(json['senderID']);
 
     await _upsertServerMsg(json);
@@ -751,7 +878,7 @@ class ChatRepository {
     if (id != 0) _dao.softDeleteByServerId(id);
   }
 
-  void _emitSend({
+  Future<void> _emitSend({
     required String clientId,
     required int conversationID,
     String? content,
@@ -762,18 +889,36 @@ class ChatRepository {
     int? replyToID,
     String? replyToContent,
     int isStatusReply = 0,
-  }) {
-    // Garde stricte : tant que le socket n'est pas authentifié, le serveur
-    // ignore l'emit silencieusement. On laisse la ligne `syncPending=true` ;
-    // `flushOutbox` la rejouera quand `auth:verified` aura déclenché _onSocketReady.
+  }) async {
     if (!_api.isSocketReady) {
       debugPrint('[ChatRepo] _emitSend différé (socket non prêt) clientId=$clientId');
       return;
     }
+
+    // Chiffrement E2EE pour les conversations 1-1 (groupes = plaintext).
+    E2eePayload? payload;
+    if (content != null && content.isNotEmpty) {
+      final recipientId = await _getRecipientId(conversationID);
+      if (recipientId != null) {
+        payload = await _e2ee.encrypt(recipientId, content);
+      }
+    }
+
+    // Coffre F3 : second layer AES-GCM pour l'archivage de l'historique.
+    ({String blob, String nonce})? archive;
+    if (content != null && content.isNotEmpty) {
+      archive = await _vault.seal(content);
+    }
+
     _api.sendSocketEvent(SocketEvents.messageSend, {
       'clientId': clientId,
       'conversationID': conversationID,
-      if (content != null) 'content': content,
+      // E2EE : ciphertext + nonce + header DR. Fallback plaintext si groupe/session absente.
+      if (payload != null) ...payload.toSocketMap()
+      else if (content != null) 'content': content,
+      // Coffre : blob chiffré pour récupération d'historique sur nouvel appareil.
+      if (archive != null) 'archive_blob': archive.blob,
+      if (archive != null) 'archive_nonce': archive.nonce,
       'type': type,
       if (mediaUrl != null) 'mediaUrl': mediaUrl,
       if (mediaName != null) 'mediaName': mediaName,
@@ -782,7 +927,6 @@ class ChatRepository {
       if (replyToContent != null) 'replyToContent': replyToContent,
       if (isStatusReply != 0) 'isStatusReply': isStatusReply,
     });
-    // Marque la ligne comme « tout juste émise » → backoff outbox.
     _dao.touchEmitted(clientId);
   }
 
