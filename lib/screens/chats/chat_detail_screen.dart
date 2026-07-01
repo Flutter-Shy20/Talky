@@ -260,10 +260,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       return Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (!_partnerIsTyping) ...[
-                            Icon(Icons.lock_rounded, size: 10, color: Colors.green.shade500),
-                            const SizedBox(width: 3),
-                          ],
                           Text(
                             label,
                             style: context.text.bodySmall?.copyWith(

@@ -259,7 +259,7 @@ class E2eeService {
         'publicKey': base64Encode(spkPub.bytes),
         'signature': base64Encode(id.spkSig),
       },
-      'prekeys': otpkList,
+      'oneTimePreKeys': otpkList,
     });
 
     // Persistance F2 : sauvegarder les OTPKs dans SQLite

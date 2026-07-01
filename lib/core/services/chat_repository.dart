@@ -140,14 +140,59 @@ class ChatRepository {
   Future<void> syncConversations() async {
     try {
       final raw = await _api.getConversations();
-      final companions = raw
-          .whereType<Map<String, dynamic>>()
-          .map((j) => _convToCompanion(Conversation.fromJson(j), j))
-          .toList();
+      final companions = <LocalConversationsCompanion>[];
+      for (final j in raw.whereType<Map<String, dynamic>>()) {
+        var companion = _convToCompanion(Conversation.fromJson(j), j);
+        companion = await _preserveLocalPreview(companion);
+        companions.add(companion);
+      }
       await _dao.upsertConversations(companions);
     } catch (e) {
       debugPrint('[ChatRepo] syncConversations échouée: $e');
     }
+  }
+
+  /// Le serveur ne connaît jamais le plaintext d'une conversation chiffrée :
+  /// `lastMessage` y vaut toujours le libellé générique `🔒 Message chiffré`
+  /// (voir chat.js). Si on a déjà localement un aperçu déchiffré pour ce même
+  /// dernier message (via socket, en clair), ne pas le régresser vers ce
+  /// libellé générique à chaque resynchronisation REST.
+  ///
+  /// On ne peut pas comparer les timestamps à l'égalité stricte : l'horodatage
+  /// local (capturé avant l'aller-retour réseau) précède toujours de peu celui
+  /// du serveur (`NOW()` à l'insertion) — d'où une tolérance de quelques
+  /// secondes plutôt qu'une comparaison exacte.
+  static const _lastMessageTolerance = Duration(seconds: 15);
+
+  Future<LocalConversationsCompanion> _preserveLocalPreview(
+      LocalConversationsCompanion incoming) async {
+    if (incoming.lastMessage.value != '🔒 Message chiffré') return incoming;
+
+    final conversID = incoming.conversID.value;
+    final existing = await (_db.select(_db.localConversations)
+          ..where((c) => c.conversID.equals(conversID)))
+        .getSingleOrNull();
+    if (existing == null) return incoming;
+
+    final existingAt = existing.lastMessageAt;
+    final incomingAt = incoming.lastMessageAt.value;
+    final closeEnough = existingAt != null &&
+        incomingAt != null &&
+        existingAt.difference(incomingAt).abs() <= _lastMessageTolerance;
+    final localPreviewIsBetter = existing.lastMessage != null &&
+        existing.lastMessage!.isNotEmpty &&
+        existing.lastMessage != '🔒 Message chiffré';
+
+    if (closeEnough && localPreviewIsBetter) {
+      return incoming.copyWith(
+        lastMessage: Value(existing.lastMessage),
+        lastMessageAt: Value(existing.lastMessageAt),
+        lastMessageSenderID: Value(existing.lastMessageSenderID),
+        lastMessageType: Value(existing.lastMessageType),
+        lastMessageStatus: Value(existing.lastMessageStatus),
+      );
+    }
+    return incoming;
   }
 
   /// Charge l'historique d'une conversation.
@@ -723,6 +768,17 @@ class ChatRepository {
     await _db.transaction(() async {
       String? carriedLocalPath;
       String? carriedContent;
+
+      // Un message déjà confirmé (ex: écho E2EE re-synchronisé après coup, ou
+      // ratchet Double Ratchet qui ne peut pas redéchiffrer une 2e fois une
+      // clé de message déjà consommée) ne doit jamais voir son plaintext
+      // local remplacé par un `content` vide venant d'un nouveau fetch.
+      final existing = await (_db.select(_db.localMessages)
+            ..where((m) => m.clientId.equals(srvKey)))
+          .getSingleOrNull();
+      if (existing != null && existing.content != null && existing.content!.isNotEmpty) {
+        carriedContent ??= existing.content;
+      }
 
       final candidates = await (_db.select(_db.localMessages)
             ..where((m) {
