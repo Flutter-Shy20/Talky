@@ -6071,6 +6071,399 @@ class E2eeOtpksCompanion extends UpdateCompanion<E2eeOtpk> {
   }
 }
 
+class $SenderKeyRowsTable extends SenderKeyRows
+    with TableInfo<$SenderKeyRowsTable, SenderKeyRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SenderKeyRowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerUserIdMeta = const VerificationMeta(
+    'ownerUserId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
+    'owner_user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<int> groupId = GeneratedColumn<int>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _senderIdMeta = const VerificationMeta(
+    'senderId',
+  );
+  @override
+  late final GeneratedColumn<int> senderId = GeneratedColumn<int>(
+    'sender_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordBytesMeta = const VerificationMeta(
+    'recordBytes',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> recordBytes =
+      GeneratedColumn<Uint8List>(
+        'record_bytes',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _distributedToJsonMeta = const VerificationMeta(
+    'distributedToJson',
+  );
+  @override
+  late final GeneratedColumn<String> distributedToJson =
+      GeneratedColumn<String>(
+        'distributed_to_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('[]'),
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerUserId,
+    groupId,
+    senderId,
+    recordBytes,
+    distributedToJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sender_key_rows';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SenderKeyRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+        _ownerUserIdMeta,
+        ownerUserId.isAcceptableOrUnknown(
+          data['owner_user_id']!,
+          _ownerUserIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerUserIdMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('sender_id')) {
+      context.handle(
+        _senderIdMeta,
+        senderId.isAcceptableOrUnknown(data['sender_id']!, _senderIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_senderIdMeta);
+    }
+    if (data.containsKey('record_bytes')) {
+      context.handle(
+        _recordBytesMeta,
+        recordBytes.isAcceptableOrUnknown(
+          data['record_bytes']!,
+          _recordBytesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_recordBytesMeta);
+    }
+    if (data.containsKey('distributed_to_json')) {
+      context.handle(
+        _distributedToJsonMeta,
+        distributedToJson.isAcceptableOrUnknown(
+          data['distributed_to_json']!,
+          _distributedToJsonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerUserId, groupId, senderId};
+  @override
+  SenderKeyRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SenderKeyRow(
+      ownerUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_user_id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}group_id'],
+      )!,
+      senderId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sender_id'],
+      )!,
+      recordBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}record_bytes'],
+      )!,
+      distributedToJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}distributed_to_json'],
+      )!,
+    );
+  }
+
+  @override
+  $SenderKeyRowsTable createAlias(String alias) {
+    return $SenderKeyRowsTable(attachedDatabase, alias);
+  }
+}
+
+class SenderKeyRow extends DataClass implements Insertable<SenderKeyRow> {
+  final int ownerUserId;
+  final int groupId;
+  final int senderId;
+  final Uint8List recordBytes;
+
+  /// Liste JSON des `userId` à qui MA clé courante (ligne où
+  /// `senderId == ownerUserId`) a déjà été distribuée — évite de renvoyer la
+  /// distribution à chaque `conversation:created`. Sans objet sur les lignes
+  /// de réception (clé d'un autre membre).
+  final String distributedToJson;
+  const SenderKeyRow({
+    required this.ownerUserId,
+    required this.groupId,
+    required this.senderId,
+    required this.recordBytes,
+    required this.distributedToJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_user_id'] = Variable<int>(ownerUserId);
+    map['group_id'] = Variable<int>(groupId);
+    map['sender_id'] = Variable<int>(senderId);
+    map['record_bytes'] = Variable<Uint8List>(recordBytes);
+    map['distributed_to_json'] = Variable<String>(distributedToJson);
+    return map;
+  }
+
+  SenderKeyRowsCompanion toCompanion(bool nullToAbsent) {
+    return SenderKeyRowsCompanion(
+      ownerUserId: Value(ownerUserId),
+      groupId: Value(groupId),
+      senderId: Value(senderId),
+      recordBytes: Value(recordBytes),
+      distributedToJson: Value(distributedToJson),
+    );
+  }
+
+  factory SenderKeyRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SenderKeyRow(
+      ownerUserId: serializer.fromJson<int>(json['ownerUserId']),
+      groupId: serializer.fromJson<int>(json['groupId']),
+      senderId: serializer.fromJson<int>(json['senderId']),
+      recordBytes: serializer.fromJson<Uint8List>(json['recordBytes']),
+      distributedToJson: serializer.fromJson<String>(json['distributedToJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerUserId': serializer.toJson<int>(ownerUserId),
+      'groupId': serializer.toJson<int>(groupId),
+      'senderId': serializer.toJson<int>(senderId),
+      'recordBytes': serializer.toJson<Uint8List>(recordBytes),
+      'distributedToJson': serializer.toJson<String>(distributedToJson),
+    };
+  }
+
+  SenderKeyRow copyWith({
+    int? ownerUserId,
+    int? groupId,
+    int? senderId,
+    Uint8List? recordBytes,
+    String? distributedToJson,
+  }) => SenderKeyRow(
+    ownerUserId: ownerUserId ?? this.ownerUserId,
+    groupId: groupId ?? this.groupId,
+    senderId: senderId ?? this.senderId,
+    recordBytes: recordBytes ?? this.recordBytes,
+    distributedToJson: distributedToJson ?? this.distributedToJson,
+  );
+  SenderKeyRow copyWithCompanion(SenderKeyRowsCompanion data) {
+    return SenderKeyRow(
+      ownerUserId: data.ownerUserId.present
+          ? data.ownerUserId.value
+          : this.ownerUserId,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      senderId: data.senderId.present ? data.senderId.value : this.senderId,
+      recordBytes: data.recordBytes.present
+          ? data.recordBytes.value
+          : this.recordBytes,
+      distributedToJson: data.distributedToJson.present
+          ? data.distributedToJson.value
+          : this.distributedToJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SenderKeyRow(')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('groupId: $groupId, ')
+          ..write('senderId: $senderId, ')
+          ..write('recordBytes: $recordBytes, ')
+          ..write('distributedToJson: $distributedToJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerUserId,
+    groupId,
+    senderId,
+    $driftBlobEquality.hash(recordBytes),
+    distributedToJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SenderKeyRow &&
+          other.ownerUserId == this.ownerUserId &&
+          other.groupId == this.groupId &&
+          other.senderId == this.senderId &&
+          $driftBlobEquality.equals(other.recordBytes, this.recordBytes) &&
+          other.distributedToJson == this.distributedToJson);
+}
+
+class SenderKeyRowsCompanion extends UpdateCompanion<SenderKeyRow> {
+  final Value<int> ownerUserId;
+  final Value<int> groupId;
+  final Value<int> senderId;
+  final Value<Uint8List> recordBytes;
+  final Value<String> distributedToJson;
+  final Value<int> rowid;
+  const SenderKeyRowsCompanion({
+    this.ownerUserId = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.senderId = const Value.absent(),
+    this.recordBytes = const Value.absent(),
+    this.distributedToJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SenderKeyRowsCompanion.insert({
+    required int ownerUserId,
+    required int groupId,
+    required int senderId,
+    required Uint8List recordBytes,
+    this.distributedToJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerUserId = Value(ownerUserId),
+       groupId = Value(groupId),
+       senderId = Value(senderId),
+       recordBytes = Value(recordBytes);
+  static Insertable<SenderKeyRow> custom({
+    Expression<int>? ownerUserId,
+    Expression<int>? groupId,
+    Expression<int>? senderId,
+    Expression<Uint8List>? recordBytes,
+    Expression<String>? distributedToJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (groupId != null) 'group_id': groupId,
+      if (senderId != null) 'sender_id': senderId,
+      if (recordBytes != null) 'record_bytes': recordBytes,
+      if (distributedToJson != null) 'distributed_to_json': distributedToJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SenderKeyRowsCompanion copyWith({
+    Value<int>? ownerUserId,
+    Value<int>? groupId,
+    Value<int>? senderId,
+    Value<Uint8List>? recordBytes,
+    Value<String>? distributedToJson,
+    Value<int>? rowid,
+  }) {
+    return SenderKeyRowsCompanion(
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      groupId: groupId ?? this.groupId,
+      senderId: senderId ?? this.senderId,
+      recordBytes: recordBytes ?? this.recordBytes,
+      distributedToJson: distributedToJson ?? this.distributedToJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<int>(ownerUserId.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<int>(groupId.value);
+    }
+    if (senderId.present) {
+      map['sender_id'] = Variable<int>(senderId.value);
+    }
+    if (recordBytes.present) {
+      map['record_bytes'] = Variable<Uint8List>(recordBytes.value);
+    }
+    if (distributedToJson.present) {
+      map['distributed_to_json'] = Variable<String>(distributedToJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SenderKeyRowsCompanion(')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('groupId: $groupId, ')
+          ..write('senderId: $senderId, ')
+          ..write('recordBytes: $recordBytes, ')
+          ..write('distributedToJson: $distributedToJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6083,6 +6476,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LocalStatusesTable localStatuses = $LocalStatusesTable(this);
   late final $E2eeSessionsTable e2eeSessions = $E2eeSessionsTable(this);
   late final $E2eeOtpksTable e2eeOtpks = $E2eeOtpksTable(this);
+  late final $SenderKeyRowsTable senderKeyRows = $SenderKeyRowsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6096,6 +6490,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localStatuses,
     e2eeSessions,
     e2eeOtpks,
+    senderKeyRows,
   ];
 }
 
@@ -8928,6 +9323,212 @@ typedef $$E2eeOtpksTableProcessedTableManager =
       E2eeOtpk,
       PrefetchHooks Function()
     >;
+typedef $$SenderKeyRowsTableCreateCompanionBuilder =
+    SenderKeyRowsCompanion Function({
+      required int ownerUserId,
+      required int groupId,
+      required int senderId,
+      required Uint8List recordBytes,
+      Value<String> distributedToJson,
+      Value<int> rowid,
+    });
+typedef $$SenderKeyRowsTableUpdateCompanionBuilder =
+    SenderKeyRowsCompanion Function({
+      Value<int> ownerUserId,
+      Value<int> groupId,
+      Value<int> senderId,
+      Value<Uint8List> recordBytes,
+      Value<String> distributedToJson,
+      Value<int> rowid,
+    });
+
+class $$SenderKeyRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $SenderKeyRowsTable> {
+  $$SenderKeyRowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get senderId => $composableBuilder(
+    column: $table.senderId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get recordBytes => $composableBuilder(
+    column: $table.recordBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get distributedToJson => $composableBuilder(
+    column: $table.distributedToJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SenderKeyRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SenderKeyRowsTable> {
+  $$SenderKeyRowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get senderId => $composableBuilder(
+    column: $table.senderId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get recordBytes => $composableBuilder(
+    column: $table.recordBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get distributedToJson => $composableBuilder(
+    column: $table.distributedToJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SenderKeyRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SenderKeyRowsTable> {
+  $$SenderKeyRowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get groupId =>
+      $composableBuilder(column: $table.groupId, builder: (column) => column);
+
+  GeneratedColumn<int> get senderId =>
+      $composableBuilder(column: $table.senderId, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get recordBytes => $composableBuilder(
+    column: $table.recordBytes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get distributedToJson => $composableBuilder(
+    column: $table.distributedToJson,
+    builder: (column) => column,
+  );
+}
+
+class $$SenderKeyRowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SenderKeyRowsTable,
+          SenderKeyRow,
+          $$SenderKeyRowsTableFilterComposer,
+          $$SenderKeyRowsTableOrderingComposer,
+          $$SenderKeyRowsTableAnnotationComposer,
+          $$SenderKeyRowsTableCreateCompanionBuilder,
+          $$SenderKeyRowsTableUpdateCompanionBuilder,
+          (
+            SenderKeyRow,
+            BaseReferences<_$AppDatabase, $SenderKeyRowsTable, SenderKeyRow>,
+          ),
+          SenderKeyRow,
+          PrefetchHooks Function()
+        > {
+  $$SenderKeyRowsTableTableManager(_$AppDatabase db, $SenderKeyRowsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SenderKeyRowsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SenderKeyRowsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SenderKeyRowsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> ownerUserId = const Value.absent(),
+                Value<int> groupId = const Value.absent(),
+                Value<int> senderId = const Value.absent(),
+                Value<Uint8List> recordBytes = const Value.absent(),
+                Value<String> distributedToJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SenderKeyRowsCompanion(
+                ownerUserId: ownerUserId,
+                groupId: groupId,
+                senderId: senderId,
+                recordBytes: recordBytes,
+                distributedToJson: distributedToJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int ownerUserId,
+                required int groupId,
+                required int senderId,
+                required Uint8List recordBytes,
+                Value<String> distributedToJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SenderKeyRowsCompanion.insert(
+                ownerUserId: ownerUserId,
+                groupId: groupId,
+                senderId: senderId,
+                recordBytes: recordBytes,
+                distributedToJson: distributedToJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SenderKeyRowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SenderKeyRowsTable,
+      SenderKeyRow,
+      $$SenderKeyRowsTableFilterComposer,
+      $$SenderKeyRowsTableOrderingComposer,
+      $$SenderKeyRowsTableAnnotationComposer,
+      $$SenderKeyRowsTableCreateCompanionBuilder,
+      $$SenderKeyRowsTableUpdateCompanionBuilder,
+      (
+        SenderKeyRow,
+        BaseReferences<_$AppDatabase, $SenderKeyRowsTable, SenderKeyRow>,
+      ),
+      SenderKeyRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8948,4 +9549,6 @@ class $AppDatabaseManager {
       $$E2eeSessionsTableTableManager(_db, _db.e2eeSessions);
   $$E2eeOtpksTableTableManager get e2eeOtpks =>
       $$E2eeOtpksTableTableManager(_db, _db.e2eeOtpks);
+  $$SenderKeyRowsTableTableManager get senderKeyRows =>
+      $$SenderKeyRowsTableTableManager(_db, _db.senderKeyRows);
 }

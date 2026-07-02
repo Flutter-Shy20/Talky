@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -72,11 +73,25 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         photoUrl = (res['url'] as String?)?.trim();
       }
 
-      await api.createGroup(
+      final created = await api.createGroup(
         groupName: _nameController.text,
         participantIDs: _members.map((m) => m.alanyaID).toList(),
         groupPhoto: photoUrl,
       );
+
+      // Le créateur ne reçoit pas l'event socket `conversation:created` (seuls
+      // les invités le reçoivent) : générer + distribuer ma sender key est
+      // donc déclenché explicitement ici plutôt que via le handler socket.
+      final conversID = created['conversID'] as int?;
+      final participants = (created['participants'] as List?)
+              ?.whereType<Map>()
+              .map((p) => p['alanyaID'] as int?)
+              .whereType<int>()
+              .toList() ??
+          const <int>[];
+      if (conversID != null) {
+        unawaited(chat.repository.group.createOrDistribute(conversID, participants));
+      }
 
       await chat.refreshConversations();
       if (!mounted) return;

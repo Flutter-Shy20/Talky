@@ -181,6 +181,30 @@ class E2eeOtpks extends Table {
   Set<Column> get primaryKey => {ownerUserId, otpkId};
 }
 
+/// Sender Keys (E2EE groupe) — un `SenderKeyRecord` (libsignal_protocol_dart)
+/// sérialisé par (moi, groupe, expéditeur dont je détiens la clé).
+/// `senderId == ownerUserId` pour ma propre clé d'émission. Le contenu du
+/// blob est géré par la lib (chaîne, itération, clé de signature) : le store
+/// local n'a besoin de connaître que `serialize()`/`fromSerialized()`.
+/// Nommée `SenderKeyRows` (pas `SenderKeyRecords`) pour éviter que Drift ne
+/// génère une classe `SenderKeyRecord` qui entrerait en collision avec la
+/// classe du même nom exposée par `libsignal_protocol_dart`.
+class SenderKeyRows extends Table {
+  IntColumn get ownerUserId => integer()();
+  IntColumn get groupId     => integer()();
+  IntColumn get senderId    => integer()();
+  BlobColumn get recordBytes => blob()();
+
+  /// Liste JSON des `userId` à qui MA clé courante (ligne où
+  /// `senderId == ownerUserId`) a déjà été distribuée — évite de renvoyer la
+  /// distribution à chaque `conversation:created`. Sans objet sur les lignes
+  /// de réception (clé d'un autre membre).
+  TextColumn get distributedToJson => text().withDefault(const Constant('[]'))();
+
+  @override
+  Set<Column> get primaryKey => {ownerUserId, groupId, senderId};
+}
+
 /// Statuts / stories mis en cache (TTL = expiresAt).
 class LocalStatuses extends Table {
   IntColumn get idStatut => integer()();
@@ -213,6 +237,7 @@ class LocalStatuses extends Table {
     LocalStatuses,
     E2eeSessions,
     E2eeOtpks,
+    SenderKeyRows,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -220,7 +245,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -244,6 +269,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 5) {
             await m.createTable(e2eeSessions);
             await m.createTable(e2eeOtpks);
+          }
+          if (from < 6) {
+            await m.createTable(senderKeyRows);
           }
         },
       );

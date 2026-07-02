@@ -64,6 +64,9 @@ dependencies:
   # ── Chiffrement E2EE (X25519 + AES-256-GCM + HKDF) ──────────────
   cryptography: ^2.7.0               # Primitives crypto (X25519, AES-GCM, HKDF)
 
+  # ── Chiffrement E2EE des groupes (Sender Keys) ───────────────────
+  libsignal_protocol_dart: ^0.8.2    # GroupCipher/GroupSessionBuilder/SenderKeyName
+
   # ── Caméra intégrée (évite de quitter l'app) ─────────────────────
   camera: ^0.11.0                      # Accès caméra natif (InAppCameraScreen)
   flutter_image_compress: ^2.1.0       # Compression photos avant upload

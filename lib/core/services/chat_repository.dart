@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -6,6 +7,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
 import '../crypto/e2ee_service.dart';
+import '../crypto/group_cipher_service.dart';
 import '../crypto/vault_service.dart';
 import '../db/app_database.dart';
 import '../db/chat_dao.dart';
@@ -13,10 +15,19 @@ import 'media_cache_service.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 class ChatRepository {
+  /// Repli affiché quand un déchiffrement échoue (message jamais reçu de
+  /// sender key / session, OU tentative de redéchiffrer un message déjà
+  /// consommé — Double Ratchet et Sender Keys sont tous deux à usage
+  /// unique : une resynchronisation ne peut PAS redéchiffrer un message déjà
+  /// vu). Traité comme équivalent à "pas de contenu" dans `_upsertServerMsg`
+  /// pour ne jamais régresser un contenu déjà bien déchiffré une 1ère fois.
+  static const _kEncryptedFallback = '[🔒 Message chiffré]';
+
   final AppDatabase _db;
   final ChatDao _dao;
   final TalkyApiClient _api;
   final E2eeService _e2ee;
+  final GroupCipherService _group;
   final VaultService _vault;
   final MediaCacheService _mediaCache = MediaCacheService();
 
@@ -39,23 +50,27 @@ class ChatRepository {
     if (_activeConversationID == conversationID) _activeConversationID = 0;
   }
 
-  ChatRepository._(this._api, this._db, this._e2ee, this._vault)
+  ChatRepository._(this._api, this._db, this._e2ee, this._group, this._vault)
       : _dao = ChatDao(_db);
 
   MediaCacheService get mediaCache => _mediaCache;
   E2eeService get e2ee => _e2ee;
+  GroupCipherService get group => _group;
   VaultService get vault => _vault;
 
   factory ChatRepository({
     required TalkyApiClient api,
     AppDatabase? database,
     E2eeService? e2ee,
+    GroupCipherService? group,
     VaultService? vault,
   }) {
     final db = database ?? AppDatabase();
+    final resolvedE2ee = e2ee ?? E2eeService(api, db: db);
     return ChatRepository._(
       api, db,
-      e2ee ?? E2eeService(api, db: db),
+      resolvedE2ee,
+      group ?? GroupCipherService(api, resolvedE2ee, db: db),
       vault ?? VaultService(),
     );
   }
@@ -93,6 +108,7 @@ class ChatRepository {
 
     // Initialise E2EE : charge/génère la paire de clés et uploade la clé publique.
     await _e2ee.init(myId);
+    _group.init(myId);
 
     // Coffre : tenter de restaurer la clé depuis le secure storage.
     await _vault.tryLoad(myId);
@@ -106,6 +122,8 @@ class ChatRepository {
     _api.onSocketEvent(SocketEvents.messageDeleted, _onMessageDeleted);
     _api.onSocketEvent(SocketEvents.messageStatus, _onMessageStatus);
     _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
+    _api.onSocketEvent(SocketEvents.groupMemberRemoved, _onGroupMemberRemoved);
+    _api.onSocketEvent(SocketEvents.groupKeyDistribution, _onGroupKeyDistribution);
     _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
   }
 
@@ -122,6 +140,8 @@ class ChatRepository {
     _api.removeSocketListener(SocketEvents.messageDeleted, _onMessageDeleted);
     _api.removeSocketListener(SocketEvents.messageStatus, _onMessageStatus);
     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
+    _api.removeSocketListener(SocketEvents.groupMemberRemoved, _onGroupMemberRemoved);
+    _api.removeSocketListener(SocketEvents.groupKeyDistribution, _onGroupKeyDistribution);
     _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
     _activeConversationID = 0;
     _pendingReads.clear();
@@ -134,7 +154,62 @@ class ChatRepository {
   void _onConversationCreated(dynamic data) {
     if (data is! Map) return;
     final json = Map<String, dynamic>.from(data);
-    _dao.upsertConversation(_convToCompanion(Conversation.fromJson(json), json));
+    final conv = Conversation.fromJson(json);
+    _dao.upsertConversation(_convToCompanion(conv, json));
+
+    // Groupe (création ou nouveau membre ajouté) : (re)génère ma sender key si
+    // besoin et la distribue aux membres pas encore notifiés pour cette
+    // epoch. Idempotent — symétrique pour "je viens de rejoindre" et "un
+    // autre membre vient de rejoindre".
+    if (conv.isGroup) {
+      final memberIds = conv.participants.map((p) => p.alanyaID).toList();
+      _group.createOrDistribute(conv.conversID, memberIds);
+    }
+  }
+
+  /// Un membre a quitté un groupe (départ volontaire, seul déclencheur de
+  /// rotation — l'app n'a pas de notion d'admin/retrait forcé). Les membres
+  /// restants régénèrent + redistribuent leur sender key.
+  Future<void> _onGroupMemberRemoved(dynamic data) async {
+    if (data is! Map) return;
+    final conversationID = _toInt(data['conversationID']);
+    if (conversationID == 0) return;
+    final conv = await (_db.select(_db.localConversations)
+          ..where((c) => c.conversID.equals(conversationID)))
+        .getSingleOrNull();
+    if (conv == null) return;
+    try {
+      final participants = jsonDecode(conv.participantsJson) as List;
+      final remainingIds = participants
+          .whereType<Map>()
+          .map((p) => _toInt(p['alanyaID'] ?? p['id'] ?? p['userID']))
+          .where((id) => id != 0)
+          .toList();
+      await _group.rotate(conversationID, remainingIds);
+    } catch (e) {
+      debugPrint('[ChatRepo] _onGroupMemberRemoved($conversationID) échoué: $e');
+    }
+  }
+
+  Future<void> _onGroupKeyDistribution(dynamic data) async {
+    if (data is! Map) return;
+    final fromUserId = _toInt(data['fromUserId']);
+    final groupId = _toInt(data['groupId']);
+    final payload = data['encryptedPayload'];
+    if (fromUserId == 0 || groupId == 0 || payload is! Map) return;
+    try {
+      final header = payload['header']?.toString();
+      final plainB64 = await _e2ee.decrypt(
+        fromUserId,
+        payload['ciphertext']?.toString() ?? '',
+        payload['nonce']?.toString() ?? '',
+        header != null ? jsonDecode(header) as Map<String, dynamic> : const {},
+      );
+      if (plainB64 == null) return;
+      await _group.processDistribution(fromUserId, groupId, plainB64);
+    } catch (e) {
+      debugPrint('[ChatRepo] _onGroupKeyDistribution($groupId, $fromUserId) échoué: $e');
+    }
   }
  
   Future<void> syncConversations() async {
@@ -142,9 +217,21 @@ class ChatRepository {
       final raw = await _api.getConversations();
       final companions = <LocalConversationsCompanion>[];
       for (final j in raw.whereType<Map<String, dynamic>>()) {
-        var companion = _convToCompanion(Conversation.fromJson(j), j);
+        final conv = Conversation.fromJson(j);
+        var companion = _convToCompanion(conv, j);
         companion = await _preserveLocalPreview(companion);
         companions.add(companion);
+
+        // Filet de sécurité : `conversation:created` (déclencheur normal de
+        // la distribution de sender key) est un event socket ponctuel — s'il
+        // est manqué (socket pas encore prêt à la création/l'ajout), ma clé
+        // de groupe ne serait jamais créée/distribuée. `createOrDistribute`
+        // est idempotent (no-op si déjà fait pour cette epoch), donc sûr à
+        // rappeler à chaque resynchronisation.
+        if (conv.isGroup) {
+          final memberIds = conv.participants.map((p) => p.alanyaID).toList();
+          unawaited(_group.createOrDistribute(conv.conversID, memberIds));
+        }
       }
       await _dao.upsertConversations(companions);
     } catch (e) {
@@ -700,8 +787,23 @@ class ChatRepository {
       return result;
     }
 
-    // Message d'un autre : déchiffrement Double Ratchet.
-    if (ciphertext == null || nonce == null) return result;
+    if (ciphertext == null) return result;
+
+    final conversationID = _toInt(j['conversationID']);
+    final conv = await (_db.select(_db.localConversations)
+          ..where((c) => c.conversID.equals(conversationID)))
+        .getSingleOrNull();
+
+    if (conv != null && conv.isGroup) {
+      // Message de groupe : Sender Key (libsignal_protocol_dart). Pas de
+      // `header` — juste le ciphertext, keyé par (groupe, expéditeur).
+      final plaintext = await _group.decrypt(conversationID, senderId, ciphertext);
+      result['content'] = plaintext ?? _kEncryptedFallback;
+      return result;
+    }
+
+    // Message 1-1 d'un autre : déchiffrement Double Ratchet.
+    if (nonce == null) return result;
 
     final headerStr = j['header']?.toString();
     Map<String, dynamic>? header;
@@ -712,12 +814,12 @@ class ChatRepository {
     }
 
     if (header == null) {
-      result['content'] = '[🔒 Message chiffré]';
+      result['content'] = _kEncryptedFallback;
       return result;
     }
 
     final plaintext = await _e2ee.decrypt(senderId, ciphertext, nonce, header);
-    result['content'] = plaintext ?? '[🔒 Message chiffré]';
+    result['content'] = plaintext ?? _kEncryptedFallback;
     return result;
   }
 
@@ -818,9 +920,15 @@ class ChatRepository {
       if (carriedLocalPath != null) {
         companion = companion.copyWith(localMediaPath: Value(carriedLocalPath));
       }
-      // Si le serveur a renvoyé l'écho d'un message chiffré sans content déchiffré
-      // (mes propres messages), on restaure le plaintext depuis la copie locale.
-      if (companion.content.value == null && carriedContent != null) {
+      // Si l'écho/la resynchronisation n'apporte pas de plaintext réel (soit
+      // `content` absent — mes propres messages —, soit le texte de repli
+      // générique — une resynchronisation qui retente un déchiffrement déjà
+      // consommé, Double Ratchet et Sender Keys étant tous deux à usage
+      // unique), on restaure le plaintext déjà connu depuis la copie locale
+      // plutôt que de régresser vers du vide/repli.
+      final incomingHasNoRealContent = companion.content.value == null ||
+          companion.content.value == _kEncryptedFallback;
+      if (incomingHasNoRealContent && carriedContent != null) {
         companion = companion.copyWith(content: Value(carriedContent));
       }
 
@@ -951,12 +1059,20 @@ class ChatRepository {
       return;
     }
 
-    // Chiffrement E2EE pour les conversations 1-1 (groupes = plaintext).
+    // Chiffrement E2EE : Double Ratchet 1-1, Sender Keys pour les groupes.
     E2eePayload? payload;
+    GroupEncryptResult? groupPayload;
     if (content != null && content.isNotEmpty) {
-      final recipientId = await _getRecipientId(conversationID);
-      if (recipientId != null) {
-        payload = await _e2ee.encrypt(recipientId, content);
+      final conv = await (_db.select(_db.localConversations)
+            ..where((c) => c.conversID.equals(conversationID)))
+          .getSingleOrNull();
+      if (conv != null && conv.isGroup) {
+        groupPayload = await _group.encrypt(conversationID, content);
+      } else {
+        final recipientId = await _getRecipientId(conversationID);
+        if (recipientId != null) {
+          payload = await _e2ee.encrypt(recipientId, content);
+        }
       }
     }
 
@@ -969,8 +1085,10 @@ class ChatRepository {
     _api.sendSocketEvent(SocketEvents.messageSend, {
       'clientId': clientId,
       'conversationID': conversationID,
-      // E2EE : ciphertext + nonce + header DR. Fallback plaintext si groupe/session absente.
+      // E2EE : ciphertext + nonce + header DR (1-1), ou ciphertext Sender Key
+      // (groupe). Fallback plaintext si aucune session/sender key dispo.
       if (payload != null) ...payload.toSocketMap()
+      else if (groupPayload != null) ...groupPayload.toSocketMap()
       else if (content != null) 'content': content,
       // Coffre : blob chiffré pour récupération d'historique sur nouvel appareil.
       if (archive != null) 'archive_blob': archive.blob,

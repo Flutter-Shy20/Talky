@@ -662,6 +662,8 @@ class SocketEvents {
   static const messageRead       = 'message:read';
   static const messageStatus     = 'message:status';
   static const conversationCreated = 'conversation:created';
+  static const groupMemberRemoved = 'group:member_removed';
+  static const groupKeyDistribution = 'group:key_distribution';
   static const typingStart       = 'typing:start';
   static const typingStop        = 'typing:stop';
   static const typingStarted     = 'typing:started';
