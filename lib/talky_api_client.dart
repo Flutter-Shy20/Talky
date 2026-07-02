@@ -33,8 +33,12 @@ part 'api/vault_api.dart';
 
 class TalkyApiClient {
   // ** Remplace par ton IP/domaine de production
-  static const String baseUrl   = 'https://158.220.107.211/api';
-  static const String socketUrl = 'https://158.220.107.211/';
+  // TEMP TEST E2EE — pointe sur le backend local via `adb reverse tcp:3000 tcp:3000`.
+  // À REVERT avant tout commit/merge.
+  static const String baseUrl   = 'http://127.0.0.1:3000/api';
+  static const String socketUrl = 'http://127.0.0.1:3000/';
+  // static const String baseUrl   = 'https://158.220.107.211/api';
+  // static const String socketUrl = 'https://158.220.107.211/';
 
   String? _accessToken;
   String? _refreshToken;

@@ -1,5 +1,12 @@
+import 'dart:io';
+import 'dart:math';
+
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import '../../core/crypto/media_cipher_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -19,6 +26,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   User? _user;
   bool _isLoading = true;
+  bool _mediaTestRunning = false;
 
   @override
   void initState() {
@@ -160,9 +168,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   isDestructive: true),
             ],
           ),
+          if (kDebugMode) ...[
+            AppSpacing.vGapXxl,
+            _buildSettingsGroup(
+              title: 'Debug',
+              items: [
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
+                  leading: const Icon(Icons.science_outlined),
+                  title: const Text('Tester chiffrement média (round-trip)'),
+                  subtitle: const Text(
+                      'Chiffre → upload → download → déchiffre → compare'),
+                  trailing: _mediaTestRunning
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : null,
+                  onTap: _mediaTestRunning ? null : _runMediaCipherRoundTripTest,
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Future<void> _runMediaCipherRoundTripTest() async {
+    setState(() => _mediaTestRunning = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    // Chunk volontairement petit (64 Ko) sur un payload ~1.2 Mo : exerce le
+    // chiffrement par chunks (§4.4 MEDIAS_E2EE.md) sur ~19 chunks, dont un
+    // dernier partiel, sans avoir besoin d'un vrai gros fichier de test.
+    const chunkSize = 64 * 1024;
+    File? tmpFile;
+    try {
+      final original =
+          List<int>.generate(1200 * 1024, (_) => Random.secure().nextInt(256));
+      final tmpDir = await getTemporaryDirectory();
+      tmpFile = File(p.join(tmpDir.path, 'e2ee_test_${DateTime.now().millisecondsSinceEpoch}.bin'));
+      await tmpFile.writeAsBytes(original);
+
+      final cipher = MediaCipherService();
+      final mediaKey = await cipher.newMediaKey();
+      final encryptedLength = MediaCipherService.encryptedLengthFor(original.length, chunkSize);
+      final encryptedStream =
+          cipher.encryptFileStreaming(tmpFile, mediaKey, chunkSize: chunkSize);
+
+      final uploaded = await apiClient.uploadEncryptedStream(encryptedStream, encryptedLength);
+      final downloadedStream = apiClient.downloadMediaBlobStreaming(uploaded['id']);
+
+      final decrypted = <int>[];
+      await for (final chunk in cipher.decryptStreaming(downloadedStream, mediaKey)) {
+        decrypted.addAll(chunk);
+      }
+
+      final bytesMatch = MediaCipherService.bytesEqual(original, decrypted);
+
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(
+        content: Text(bytesMatch
+            ? '✅ Round-trip OK (streaming) — $encryptedLength octets chiffrés, id=${uploaded['id']}'
+            : '❌ Échec : le fichier déchiffré ne correspond pas à l\'original'),
+        backgroundColor: bytesMatch ? Colors.green : Colors.red,
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(
+        content: Text('❌ Erreur round-trip : $e'),
+        backgroundColor: Colors.red,
+      ));
+    } finally {
+      if (tmpFile != null && await tmpFile.exists()) {
+        await tmpFile.delete();
+      }
+      if (mounted) setState(() => _mediaTestRunning = false);
+    }
   }
 
   Widget _buildThemeGroup() {

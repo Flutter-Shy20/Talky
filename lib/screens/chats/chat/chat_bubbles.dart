@@ -253,14 +253,21 @@ extension _ChatBubbles on _ChatDetailScreenState {
               constraints: const BoxConstraints(maxHeight: 220, maxWidth: 240),
               child: _hasLocal(msg)
                   ? Image.file(File(msg.localMediaPath!), fit: BoxFit.cover)
-                  : CachedNetworkImage(
-                      imageUrl: msg.mediaUrl ?? '',
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => const SizedBox(
-                          height: 160, width: 200, child: Center(child: CircularProgressIndicator())),
-                      errorWidget: (_, __, ___) =>
-                          Icon(Icons.broken_image, size: 48, color: context.colors.onSurfaceVariant),
-                    ),
+                  : (msg.mediaUrl != null && msg.mediaUrl!.isNotEmpty)
+                      ? CachedNetworkImage(
+                          imageUrl: msg.mediaUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => const SizedBox(
+                              height: 160, width: 200, child: Center(child: CircularProgressIndicator())),
+                          errorWidget: (_, __, ___) =>
+                              Icon(Icons.broken_image, size: 48, color: context.colors.onSurfaceVariant),
+                        )
+                      // Média E2EE reçu mais pas encore téléchargé+déchiffré
+                      // localement (aucune URL en clair à donner à un loader
+                      // réseau) : affiche la miniature basse résolution déjà
+                      // présente (en clair) dans l'enveloppe déchiffrée, en
+                      // attendant la version complète.
+                      : _buildThumbnailPreview(msg),
             ),
             if (uploading) const CircularProgressIndicator(color: AppColors.white),
           ],
@@ -269,25 +276,71 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
+  /// Miniature basse résolution (voir §4.3 MEDIAS_E2EE.md) : incluse en
+  /// clair DANS l'enveloppe déjà chiffrée par le ratchet/GroupCipher — donc
+  /// disponible dès le déchiffrement du message, avant même le téléchargement
+  /// du blob complet. Pas de clé/upload séparé.
+  Widget _buildThumbnailPreview(LocalMessage msg) {
+    final thumb = _decodeThumbnail(msg.mediaEnvelope);
+    return SizedBox(
+      height: 160,
+      width: 200,
+      child: Stack(
+        alignment: Alignment.center,
+        fit: StackFit.expand,
+        children: [
+          if (thumb != null) Image.memory(thumb, fit: BoxFit.cover),
+          const Center(child: CircularProgressIndicator()),
+        ],
+      ),
+    );
+  }
+
+  Uint8List? _decodeThumbnail(String? envelopeJson) {
+    if (envelopeJson == null) return null;
+    try {
+      final env = jsonDecode(envelopeJson) as Map<String, dynamic>;
+      final b64 = env['thumbnail'] as String?;
+      if (b64 == null) return null;
+      return base64Decode(b64);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Widget _buildVideoMedia(LocalMessage msg) {
     final uploading = msg.status == 0;
+    // Miniature (voir §4.3 MEDIAS_E2EE.md) : frame basse résolution incluse
+    // en clair dans l'enveloppe déjà chiffrée — simple fond décoratif ici, la
+    // lecture réelle se fait dans le viewer plein écran au tap.
+    final thumb = _decodeThumbnail(msg.mediaEnvelope);
     return GestureDetector(
       onTap: () => _openViewer(msg, isVideo: true),
-      child: Container(
-        height: 160,
-        width: 240,
-        decoration: const BoxDecoration(
-          color: AppColors.immersiveBackground,
-          borderRadius: AppRadius.brSm,
-        ),
-        child: Center(
-          child: uploading
-              ? const CircularProgressIndicator(color: AppColors.white)
-              : Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm + 2),
-                  decoration: BoxDecoration(color: AppColors.white.withAlpha(50), shape: BoxShape.circle),
-                  child: const Icon(Icons.play_arrow, color: AppColors.white, size: 36),
-                ),
+      child: ClipRRect(
+        borderRadius: AppRadius.brSm,
+        child: SizedBox(
+          height: 160,
+          width: 240,
+          child: Stack(
+            alignment: Alignment.center,
+            fit: StackFit.expand,
+            children: [
+              Container(color: AppColors.immersiveBackground),
+              if (thumb != null) Image.memory(thumb, fit: BoxFit.cover),
+              // `StackFit.expand` étire tout enfant non-positionné aux
+              // dimensions du Stack (240x160) — sans ce `Center`, le spinner
+              // devient un immense ovale au lieu d'un cercle normal.
+              Center(
+                child: uploading
+                    ? const CircularProgressIndicator(color: AppColors.white)
+                    : Container(
+                        padding: const EdgeInsets.all(AppSpacing.sm + 2),
+                        decoration: BoxDecoration(color: AppColors.white.withAlpha(50), shape: BoxShape.circle),
+                        child: const Icon(Icons.play_arrow, color: AppColors.white, size: 36),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -247,6 +247,16 @@ class ChatDao {
         .write(LocalMessagesCompanion(localMediaPath: Value(path)));
   }
 
+  /// Média E2EE résolu (téléchargé + déchiffré) : fixe le chemin local et,
+  /// si connu, le nom réel — extrait de l'enveloppe, jamais reçu en clair.
+  Future<void> setResolvedMedia(int msgID, {required String localPath, String? mediaName}) {
+    return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
+        .write(LocalMessagesCompanion(
+      localMediaPath: Value(localPath),
+      mediaName: mediaName != null ? Value(mediaName) : const Value.absent(),
+    ));
+  }
+
   Future<void> clearAll() async {
     await db.delete(db.localMessages).go();
     await db.delete(db.localConversations).go();

@@ -969,6 +969,17 @@ class $LocalMessagesTable extends LocalMessages
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _mediaEnvelopeMeta = const VerificationMeta(
+    'mediaEnvelope',
+  );
+  @override
+  late final GeneratedColumn<String> mediaEnvelope = GeneratedColumn<String>(
+    'media_envelope',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _replyToIDMeta = const VerificationMeta(
     'replyToID',
   );
@@ -1144,6 +1155,7 @@ class $LocalMessagesTable extends LocalMessages
     mediaDuration,
     localMediaPath,
     pendingUploadPath,
+    mediaEnvelope,
     replyToID,
     replyToContent,
     isEdited,
@@ -1280,6 +1292,15 @@ class $LocalMessagesTable extends LocalMessages
         pendingUploadPath.isAcceptableOrUnknown(
           data['pending_upload_path']!,
           _pendingUploadPathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('media_envelope')) {
+      context.handle(
+        _mediaEnvelopeMeta,
+        mediaEnvelope.isAcceptableOrUnknown(
+          data['media_envelope']!,
+          _mediaEnvelopeMeta,
         ),
       );
     }
@@ -1451,6 +1472,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.string,
         data['${effectivePrefix}pending_upload_path'],
       ),
+      mediaEnvelope: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}media_envelope'],
+      ),
       replyToID: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}reply_to_i_d'],
@@ -1538,6 +1563,12 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
 
   /// Chemin du fichier local à uploader (envoi offline d'un média).
   final String? pendingUploadPath;
+
+  /// Média E2EE (envelope encryption, voir MEDIAS_E2EE.md) : JSON opaque
+  /// {mediaKey, mediaId, sha256, mime, size, name} tant que le blob n'a pas
+  /// été téléchargé + déchiffré localement. JAMAIS affiché comme légende
+  /// (contrairement à `content`) — uniquement lu par `_resolveEncryptedMedia`.
+  final String? mediaEnvelope;
   final int? replyToID;
   final String? replyToContent;
   final bool isEdited;
@@ -1575,6 +1606,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     this.mediaDuration,
     this.localMediaPath,
     this.pendingUploadPath,
+    this.mediaEnvelope,
     this.replyToID,
     this.replyToContent,
     required this.isEdited,
@@ -1622,6 +1654,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     }
     if (!nullToAbsent || pendingUploadPath != null) {
       map['pending_upload_path'] = Variable<String>(pendingUploadPath);
+    }
+    if (!nullToAbsent || mediaEnvelope != null) {
+      map['media_envelope'] = Variable<String>(mediaEnvelope);
     }
     if (!nullToAbsent || replyToID != null) {
       map['reply_to_i_d'] = Variable<int>(replyToID);
@@ -1688,6 +1723,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       pendingUploadPath: pendingUploadPath == null && nullToAbsent
           ? const Value.absent()
           : Value(pendingUploadPath),
+      mediaEnvelope: mediaEnvelope == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mediaEnvelope),
       replyToID: replyToID == null && nullToAbsent
           ? const Value.absent()
           : Value(replyToID),
@@ -1743,6 +1781,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       pendingUploadPath: serializer.fromJson<String?>(
         json['pendingUploadPath'],
       ),
+      mediaEnvelope: serializer.fromJson<String?>(json['mediaEnvelope']),
       replyToID: serializer.fromJson<int?>(json['replyToID']),
       replyToContent: serializer.fromJson<String?>(json['replyToContent']),
       isEdited: serializer.fromJson<bool>(json['isEdited']),
@@ -1777,6 +1816,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'mediaDuration': serializer.toJson<int?>(mediaDuration),
       'localMediaPath': serializer.toJson<String?>(localMediaPath),
       'pendingUploadPath': serializer.toJson<String?>(pendingUploadPath),
+      'mediaEnvelope': serializer.toJson<String?>(mediaEnvelope),
       'replyToID': serializer.toJson<int?>(replyToID),
       'replyToContent': serializer.toJson<String?>(replyToContent),
       'isEdited': serializer.toJson<bool>(isEdited),
@@ -1809,6 +1849,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     Value<int?> mediaDuration = const Value.absent(),
     Value<String?> localMediaPath = const Value.absent(),
     Value<String?> pendingUploadPath = const Value.absent(),
+    Value<String?> mediaEnvelope = const Value.absent(),
     Value<int?> replyToID = const Value.absent(),
     Value<String?> replyToContent = const Value.absent(),
     bool? isEdited,
@@ -1844,6 +1885,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     pendingUploadPath: pendingUploadPath.present
         ? pendingUploadPath.value
         : this.pendingUploadPath,
+    mediaEnvelope: mediaEnvelope.present
+        ? mediaEnvelope.value
+        : this.mediaEnvelope,
     replyToID: replyToID.present ? replyToID.value : this.replyToID,
     replyToContent: replyToContent.present
         ? replyToContent.value
@@ -1889,6 +1933,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       pendingUploadPath: data.pendingUploadPath.present
           ? data.pendingUploadPath.value
           : this.pendingUploadPath,
+      mediaEnvelope: data.mediaEnvelope.present
+          ? data.mediaEnvelope.value
+          : this.mediaEnvelope,
       replyToID: data.replyToID.present ? data.replyToID.value : this.replyToID,
       replyToContent: data.replyToContent.present
           ? data.replyToContent.value
@@ -1939,6 +1986,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('mediaDuration: $mediaDuration, ')
           ..write('localMediaPath: $localMediaPath, ')
           ..write('pendingUploadPath: $pendingUploadPath, ')
+          ..write('mediaEnvelope: $mediaEnvelope, ')
           ..write('replyToID: $replyToID, ')
           ..write('replyToContent: $replyToContent, ')
           ..write('isEdited: $isEdited, ')
@@ -1973,6 +2021,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     mediaDuration,
     localMediaPath,
     pendingUploadPath,
+    mediaEnvelope,
     replyToID,
     replyToContent,
     isEdited,
@@ -2006,6 +2055,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.mediaDuration == this.mediaDuration &&
           other.localMediaPath == this.localMediaPath &&
           other.pendingUploadPath == this.pendingUploadPath &&
+          other.mediaEnvelope == this.mediaEnvelope &&
           other.replyToID == this.replyToID &&
           other.replyToContent == this.replyToContent &&
           other.isEdited == this.isEdited &&
@@ -2037,6 +2087,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<int?> mediaDuration;
   final Value<String?> localMediaPath;
   final Value<String?> pendingUploadPath;
+  final Value<String?> mediaEnvelope;
   final Value<int?> replyToID;
   final Value<String?> replyToContent;
   final Value<bool> isEdited;
@@ -2067,6 +2118,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.mediaDuration = const Value.absent(),
     this.localMediaPath = const Value.absent(),
     this.pendingUploadPath = const Value.absent(),
+    this.mediaEnvelope = const Value.absent(),
     this.replyToID = const Value.absent(),
     this.replyToContent = const Value.absent(),
     this.isEdited = const Value.absent(),
@@ -2098,6 +2150,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.mediaDuration = const Value.absent(),
     this.localMediaPath = const Value.absent(),
     this.pendingUploadPath = const Value.absent(),
+    this.mediaEnvelope = const Value.absent(),
     this.replyToID = const Value.absent(),
     this.replyToContent = const Value.absent(),
     this.isEdited = const Value.absent(),
@@ -2132,6 +2185,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<int>? mediaDuration,
     Expression<String>? localMediaPath,
     Expression<String>? pendingUploadPath,
+    Expression<String>? mediaEnvelope,
     Expression<int>? replyToID,
     Expression<String>? replyToContent,
     Expression<bool>? isEdited,
@@ -2163,6 +2217,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (mediaDuration != null) 'media_duration': mediaDuration,
       if (localMediaPath != null) 'local_media_path': localMediaPath,
       if (pendingUploadPath != null) 'pending_upload_path': pendingUploadPath,
+      if (mediaEnvelope != null) 'media_envelope': mediaEnvelope,
       if (replyToID != null) 'reply_to_i_d': replyToID,
       if (replyToContent != null) 'reply_to_content': replyToContent,
       if (isEdited != null) 'is_edited': isEdited,
@@ -2196,6 +2251,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<int?>? mediaDuration,
     Value<String?>? localMediaPath,
     Value<String?>? pendingUploadPath,
+    Value<String?>? mediaEnvelope,
     Value<int?>? replyToID,
     Value<String?>? replyToContent,
     Value<bool>? isEdited,
@@ -2227,6 +2283,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       mediaDuration: mediaDuration ?? this.mediaDuration,
       localMediaPath: localMediaPath ?? this.localMediaPath,
       pendingUploadPath: pendingUploadPath ?? this.pendingUploadPath,
+      mediaEnvelope: mediaEnvelope ?? this.mediaEnvelope,
       replyToID: replyToID ?? this.replyToID,
       replyToContent: replyToContent ?? this.replyToContent,
       isEdited: isEdited ?? this.isEdited,
@@ -2292,6 +2349,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (pendingUploadPath.present) {
       map['pending_upload_path'] = Variable<String>(pendingUploadPath.value);
     }
+    if (mediaEnvelope.present) {
+      map['media_envelope'] = Variable<String>(mediaEnvelope.value);
+    }
     if (replyToID.present) {
       map['reply_to_i_d'] = Variable<int>(replyToID.value);
     }
@@ -2355,6 +2415,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('mediaDuration: $mediaDuration, ')
           ..write('localMediaPath: $localMediaPath, ')
           ..write('pendingUploadPath: $pendingUploadPath, ')
+          ..write('mediaEnvelope: $mediaEnvelope, ')
           ..write('replyToID: $replyToID, ')
           ..write('replyToContent: $replyToContent, ')
           ..write('isEdited: $isEdited, ')
@@ -6888,6 +6949,7 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<int?> mediaDuration,
       Value<String?> localMediaPath,
       Value<String?> pendingUploadPath,
+      Value<String?> mediaEnvelope,
       Value<int?> replyToID,
       Value<String?> replyToContent,
       Value<bool> isEdited,
@@ -6920,6 +6982,7 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<int?> mediaDuration,
       Value<String?> localMediaPath,
       Value<String?> pendingUploadPath,
+      Value<String?> mediaEnvelope,
       Value<int?> replyToID,
       Value<String?> replyToContent,
       Value<bool> isEdited,
@@ -7017,6 +7080,11 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<String> get pendingUploadPath => $composableBuilder(
     column: $table.pendingUploadPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mediaEnvelope => $composableBuilder(
+    column: $table.mediaEnvelope,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7170,6 +7238,11 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get mediaEnvelope => $composableBuilder(
+    column: $table.mediaEnvelope,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get replyToID => $composableBuilder(
     column: $table.replyToID,
     builder: (column) => ColumnOrderings(column),
@@ -7300,6 +7373,11 @@ class $$LocalMessagesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get mediaEnvelope => $composableBuilder(
+    column: $table.mediaEnvelope,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get replyToID =>
       $composableBuilder(column: $table.replyToID, builder: (column) => column);
 
@@ -7402,6 +7480,7 @@ class $$LocalMessagesTableTableManager
                 Value<int?> mediaDuration = const Value.absent(),
                 Value<String?> localMediaPath = const Value.absent(),
                 Value<String?> pendingUploadPath = const Value.absent(),
+                Value<String?> mediaEnvelope = const Value.absent(),
                 Value<int?> replyToID = const Value.absent(),
                 Value<String?> replyToContent = const Value.absent(),
                 Value<bool> isEdited = const Value.absent(),
@@ -7432,6 +7511,7 @@ class $$LocalMessagesTableTableManager
                 mediaDuration: mediaDuration,
                 localMediaPath: localMediaPath,
                 pendingUploadPath: pendingUploadPath,
+                mediaEnvelope: mediaEnvelope,
                 replyToID: replyToID,
                 replyToContent: replyToContent,
                 isEdited: isEdited,
@@ -7464,6 +7544,7 @@ class $$LocalMessagesTableTableManager
                 Value<int?> mediaDuration = const Value.absent(),
                 Value<String?> localMediaPath = const Value.absent(),
                 Value<String?> pendingUploadPath = const Value.absent(),
+                Value<String?> mediaEnvelope = const Value.absent(),
                 Value<int?> replyToID = const Value.absent(),
                 Value<String?> replyToContent = const Value.absent(),
                 Value<bool> isEdited = const Value.absent(),
@@ -7494,6 +7575,7 @@ class $$LocalMessagesTableTableManager
                 mediaDuration: mediaDuration,
                 localMediaPath: localMediaPath,
                 pendingUploadPath: pendingUploadPath,
+                mediaEnvelope: mediaEnvelope,
                 replyToID: replyToID,
                 replyToContent: replyToContent,
                 isEdited: isEdited,

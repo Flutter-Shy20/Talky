@@ -214,7 +214,7 @@ extension _ChatActions on _ChatDetailScreenState {
       return;
     }
 
-    _chat.repository.sendMediaFile(
+    _chat.repository.sendEncryptedMediaFile(
       conversationID: widget.conversationId!,
       type: type,
       file: file,

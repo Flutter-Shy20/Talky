@@ -58,6 +58,12 @@ class LocalMessages extends Table {
   /// Chemin du fichier local à uploader (envoi offline d'un média).
   TextColumn get pendingUploadPath => text().nullable()();
 
+  /// Média E2EE (envelope encryption, voir MEDIAS_E2EE.md) : JSON opaque
+  /// {mediaKey, mediaId, sha256, mime, size, name} tant que le blob n'a pas
+  /// été téléchargé + déchiffré localement. JAMAIS affiché comme légende
+  /// (contrairement à `content`) — uniquement lu par `_resolveEncryptedMedia`.
+  TextColumn get mediaEnvelope => text().nullable()();
+
   IntColumn get replyToID => integer().nullable()();
   TextColumn get replyToContent => text().nullable()();
   BoolColumn get isEdited => boolean().withDefault(const Constant(false))();
@@ -245,7 +251,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -272,6 +278,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 6) {
             await m.createTable(senderKeyRows);
+          }
+          if (from < 7) {
+            await m.addColumn(localMessages, localMessages.mediaEnvelope);
           }
         },
       );

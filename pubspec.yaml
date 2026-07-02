@@ -77,6 +77,7 @@ dependencies:
   file_picker: ^8.1.2                 # Sélection de documents
   cached_network_image: ^3.4.1        # Affichage + cache disque des images
   video_player: ^2.9.2                # Lecture vidéo inline
+  video_thumbnail: ^0.5.6             # Miniature vidéo (E2EE, voir §4.3 MEDIAS_E2EE.md)
   chewie: ^1.8.5                      # Contrôles vidéo prêts à l'emploi
   record: ^5.1.2                      # Enregistrement messages vocaux
   emoji_picker_flutter: ^3.1.0        # Sélecteur d'émojis

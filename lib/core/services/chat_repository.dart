@@ -3,11 +3,18 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:cryptography/cryptography.dart' show SecretKey, Sha256;
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:mime/mime.dart' show lookupMimeType;
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../crypto/e2ee_service.dart';
 import '../crypto/group_cipher_service.dart';
+import '../crypto/media_cipher_service.dart';
 import '../crypto/vault_service.dart';
 import '../db/app_database.dart';
 import '../db/chat_dao.dart';
@@ -30,6 +37,7 @@ class ChatRepository {
   final GroupCipherService _group;
   final VaultService _vault;
   final MediaCacheService _mediaCache = MediaCacheService();
+  final MediaCipherService _mediaCipher = MediaCipherService();
 
   int _myId = 0;
   bool _listenersBound = false;
@@ -43,6 +51,14 @@ class ChatRepository {
   final Set<int> _pendingReads = {};
   /// Retry tracker pour les lectures hors-ligne (conversationID -> retryCount)
   final Map<int, int> _pendingReadsRetry = {};
+
+  /// `clientId` des envois média en cours (chiffrement + upload, avant
+  /// `_emitSend`). Un média volumineux peut prendre plusieurs secondes ;
+  /// si une reconnexion déclenche `flushOutbox` pendant ce laps de temps, la
+  /// ligne encore `syncPending` serait reprise en parallèle et émise deux
+  /// fois (le serveur ne déduplique pas par clientId). Ce set empêche
+  /// `flushOutbox` de retraiter une ligne déjà en cours d'envoi.
+  final Set<String> _sendsInFlight = {};
 
   void setActiveConversation(int conversationID) =>
       _activeConversationID = conversationID;
@@ -245,12 +261,17 @@ class ChatRepository {
   /// dernier message (via socket, en clair), ne pas le régresser vers ce
   /// libellé générique à chaque resynchronisation REST.
   ///
-  /// On ne peut pas comparer les timestamps à l'égalité stricte : l'horodatage
-  /// local (capturé avant l'aller-retour réseau) précède toujours de peu celui
-  /// du serveur (`NOW()` à l'insertion) — d'où une tolérance de quelques
-  /// secondes plutôt qu'une comparaison exacte.
-  static const _lastMessageTolerance = Duration(seconds: 15);
-
+  /// Pas de comparaison par horodatage ici (approche abandonnée) : l'écart
+  /// entre l'horodatage local (capturé au tap "envoyer", avant chiffrement
+  /// + upload) et celui du serveur (capturé à l'insertion, donc APRÈS)
+  /// dépend de la durée de l'upload — pour une grosse vidéo (chiffrement par
+  /// chunks, voir §4.4 MEDIAS_E2EE.md) cet écart dépasse facilement plusieurs
+  /// dizaines de secondes, rendant toute fenêtre de tolérance fixe non-fiable
+  /// (régression observée : aperçu vidéo qui retombe sur le libellé générique
+  /// dès qu'un resync survient après la fenêtre). Le flux socket live
+  /// (`_bumpConversationSummary` sur envoi/réception) reste l'unique source
+  /// de vérité pour faire AVANCER l'aperçu vers un message plus récent ; ce
+  /// resync REST ne sert qu'à ne jamais le faire RÉGRESSER.
   Future<LocalConversationsCompanion> _preserveLocalPreview(
       LocalConversationsCompanion incoming) async {
     if (incoming.lastMessage.value != '🔒 Message chiffré') return incoming;
@@ -261,16 +282,11 @@ class ChatRepository {
         .getSingleOrNull();
     if (existing == null) return incoming;
 
-    final existingAt = existing.lastMessageAt;
-    final incomingAt = incoming.lastMessageAt.value;
-    final closeEnough = existingAt != null &&
-        incomingAt != null &&
-        existingAt.difference(incomingAt).abs() <= _lastMessageTolerance;
     final localPreviewIsBetter = existing.lastMessage != null &&
         existing.lastMessage!.isNotEmpty &&
         existing.lastMessage != '🔒 Message chiffré';
 
-    if (closeEnough && localPreviewIsBetter) {
+    if (localPreviewIsBetter) {
       return incoming.copyWith(
         lastMessage: Value(existing.lastMessage),
         lastMessageAt: Value(existing.lastMessageAt),
@@ -363,8 +379,16 @@ class ChatRepository {
   /// Aperçu canonique pour les messages média : on respecte le `content` saisi
   /// s'il existe, sinon on retombe sur l'emoji + libellé de type. Évite que
   /// l'aperçu de conv affiche un nom de fichier brut (`IMG_2026.jpg`).
+  /// Pour un média (type != 0), le texte de repli `_kEncryptedFallback` n'est
+  /// JAMAIS une légende réelle (les messages média n'en ont pas côté E2EE) —
+  /// l'ignorer pour retomber sur l'emoji plutôt que de figer "Message
+  /// chiffré" dans l'aperçu de conversation si un resync concurrent échoue à
+  /// redéchiffrer (Double Ratchet / Sender Keys à usage unique).
   static String _previewForMedia(int type, String? content, String? mediaName) {
-    if (content != null && content.trim().isNotEmpty) return content;
+    final hasRealContent = content != null &&
+        content.trim().isNotEmpty &&
+        (type == 0 || content != _kEncryptedFallback);
+    if (hasRealContent) return content;
     switch (type) {
       case 1:
         return '📷 Photo';
@@ -380,57 +404,21 @@ class ChatRepository {
   }
 
 
-  Future<void> sendMedia({
-    required int conversationID,
-    required int type, // 1=image 2=vidéo 3=audio 4=fichier
-    required String mediaUrl,
-    String? mediaName,
-    int? mediaDuration,
-    String? localMediaPath,
-    String? content,
-  }) async {
-    final clientId = _newClientId();
-    final now = DateTime.now().toUtc();
-
-    await _dao.upsertMessage(LocalMessagesCompanion.insert(
-      clientId: clientId,
-      conversationID: conversationID,
-      senderID: _myId,
-      sendAt: now,
-      content: Value(content),
-      type: Value(type),
-      status: const Value(0),
-      mediaUrl: Value(mediaUrl),
-      mediaName: Value(mediaName),
-      mediaDuration: Value(mediaDuration),
-      localMediaPath: Value(localMediaPath),
-      syncPending: const Value(true),
-    ));
-    _bumpConversationSummary(
-        conversationID, _previewForMedia(type, content, mediaName), type, now,
-        senderID: _myId, status: 0);
-
-    await _emitSend(
-      clientId: clientId,
-      conversationID: conversationID,
-      content: content,
-      type: type,
-      mediaUrl: mediaUrl,
-      mediaName: mediaName,
-      mediaDuration: mediaDuration,
-    );
-  }
-
-  Future<void> sendMediaFile({
+  /// Envoi média avec envelope encryption (voir MEDIAS_E2EE.md) : le fichier
+  /// est chiffré en AES-256-GCM avec une clé jetable AVANT l'upload — le
+  /// serveur ne reçoit qu'un blob opaque. La clé (+ id du blob, hash, mime,
+  /// taille, nom réel) voyage ensuite comme `content` d'un message normal,
+  /// donc `_emitSend` la chiffre déjà via le ratchet 1-1 ou les Sender Keys
+  /// de groupe — rien de spécifique aux groupes à réimplémenter ici.
+  Future<void> sendEncryptedMediaFile({
     required int conversationID,
     required int type, // 1=image 2=vidéo 3=audio 4=fichier
     required File file,
     String? mediaName,
     int? mediaDuration,
-    String? content,
   }) async {
     if (_myId == 0) {
-      debugPrint('[ChatRepo] sendMediaFile ignoré : utilisateur non lié (myId=0)');
+      debugPrint('[ChatRepo] sendEncryptedMediaFile ignoré : utilisateur non lié (myId=0)');
       return;
     }
     final clientId = _newClientId();
@@ -442,121 +430,138 @@ class ChatRepository {
       conversationID: conversationID,
       senderID: _myId,
       sendAt: now,
-      content: Value(content),
       type: Value(type),
       status: const Value(0),
       mediaName: Value(name),
       mediaDuration: Value(mediaDuration),
       localMediaPath: Value(file.path),
-      pendingUploadPath: Value(file.path),
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(
-        conversationID, _previewForMedia(type, content, name), type, now,
+        conversationID, _previewForMedia(type, null, name), type, now,
         senderID: _myId, status: 0);
 
+    _sendsInFlight.add(clientId);
     try {
-      final res = await _api.uploadMedia(file);
-      final url = res['url'] as String?;
-      if (url == null) throw Exception('upload sans url');
+      final plainLength = await file.length();
+      const chunkSize = MediaCipherService.defaultChunkSize;
+      final mediaKey = await _mediaCipher.newMediaKey();
+      final encryptedLength = MediaCipherService.encryptedLengthFor(plainLength, chunkSize);
 
+      // Miniature (voir §4.3 MEDIAS_E2EE.md) : petite, elle voyage EN CLAIR
+      // dans l'enveloppe (donc chiffrée avec le reste du message par le
+      // ratchet/GroupCipher) — pas de clé ni d'upload séparés. Images et
+      // vidéos (frame extraite à 0 ms) uniquement.
+      String? thumbnailB64;
+      if (type == 1) {
+        try {
+          final thumbBytes = await FlutterImageCompress.compressWithFile(
+            file.path,
+            minWidth: 160,
+            minHeight: 160,
+            quality: 40,
+            format: CompressFormat.jpeg,
+          );
+          if (thumbBytes != null) thumbnailB64 = base64Encode(thumbBytes);
+        } catch (e) {
+          debugPrint('[ChatRepo] génération miniature échouée: $e');
+        }
+      } else if (type == 2) {
+        try {
+          final thumbBytes = await VideoThumbnail.thumbnailData(
+            video: file.path,
+            imageFormat: ImageFormat.JPEG,
+            maxWidth: 160,
+            maxHeight: 160,
+            quality: 40,
+          );
+          if (thumbBytes != null) thumbnailB64 = base64Encode(thumbBytes);
+        } catch (e) {
+          debugPrint('[ChatRepo] génération miniature vidéo échouée: $e');
+        }
+      }
+
+      // Chiffrement + upload en streaming (voir §4.4 MEDIAS_E2EE.md) : le
+      // fichier n'est jamais chargé entièrement en mémoire, même pour une
+      // grosse vidéo. Le hash du blob chiffré (intégrité, vérifié par le
+      // destinataire avant déchiffrement) est calculé à la volée en
+      // observant le flux au passage, sans le bufferiser une seconde fois.
+      final hashSink = Sha256().newHashSink();
+      final encryptedStream = _mediaCipher
+          .encryptFileStreaming(file, mediaKey, chunkSize: chunkSize)
+          .map((chunk) {
+        hashSink.add(chunk);
+        return chunk;
+      });
+
+      final uploaded = await _api.uploadEncryptedStream(encryptedStream, encryptedLength);
+      hashSink.close();
+      final blobHash = (await hashSink.hash()).bytes;
+
+      final envelope = jsonEncode({
+        'v': 1,
+        'mediaKey': base64Encode(await mediaKey.extractBytes()),
+        'mediaId': uploaded['id'],
+        'sha256': base64Encode(blobHash),
+        'mime': lookupMimeType(file.path) ?? 'application/octet-stream',
+        'size': plainLength,
+        'name': name,
+        if (thumbnailB64 != null) 'thumbnail': thumbnailB64,
+      });
+
+      // Persisté AVANT l'émission : si le socket n'est pas prêt, `_emitSend`
+      // revient sans rien envoyer, mais `flushOutbox` retrouvera l'enveloppe
+      // déjà construite via `mediaEnvelope` pour rejouer l'envoi sans
+      // re-uploader le blob.
       await (_db.update(_db.localMessages)..where((m) => m.clientId.equals(clientId)))
           .write(LocalMessagesCompanion(
-        mediaUrl: Value(url),
-        pendingUploadPath: const Value(null),
+        mediaEnvelope: Value(envelope),
         status: const Value(1), // envoyé (message:sent affinera ensuite)
       ));
 
       await _emitSend(
         clientId: clientId,
         conversationID: conversationID,
-        content: content,
+        content: envelope,
         type: type,
-        mediaUrl: url,
-        mediaName: name,
-        mediaDuration: mediaDuration,
       );
     } catch (e) {
-      debugPrint('[ChatRepo] upload média échoué: $e');
-      // Erreur réseau (timeout / socket coupé) → laisser en pending pour rejeu
-      // par flushOutbox à la reconnexion. Erreur fatale (4xx/5xx serveur) →
-      // markFailed pour ne pas tourner en boucle.
-      if (_isTransientNetworkError(e)) {
-        debugPrint('[ChatRepo] upload différé — pending intact pour rejeu');
-      } else {
-        await _dao.markFailed(clientId);
-      }
+      debugPrint('[ChatRepo] envoi média chiffré échoué: $e');
+      // Contrairement au flux legacy, un échec ici (chiffrement ou upload)
+      // n'a pas d'équivalent "pendingUploadPath" rejouable par flushOutbox :
+      // on échoue directement, l'utilisateur réessaie depuis le sélecteur.
+      await _dao.markFailed(clientId);
+    } finally {
+      _sendsInFlight.remove(clientId);
     }
-  }
-
-  bool _isTransientNetworkError(Object e) {
-    if (e is TalkyException) {
-      // statusCode 0 = pas de réponse HTTP (offline / timeout). 5xx aussi
-      // raisonnable à retenter. 4xx = erreur cliente, on abandonne.
-      return e.statusCode == 0 || (e.statusCode >= 500 && e.statusCode < 600);
-    }
-    return true; // exceptions Dart inattendues : on est prudent et on retente
   }
 
   /// Renvoie tous les messages en attente (appelé à la reconnexion socket).
-  /// Gère AUSSI les uploads de fichier qui n'ont pas pu aboutir : si un
-  /// message porte `pendingUploadPath` sans `mediaUrl`, on relance l'upload
-  /// avant l'émission du message:send.
+  /// Le média E2EE est déjà chiffré+uploadé avant l'émission (voir
+  /// `sendEncryptedMediaFile`) : il ne reste jamais qu'à rejouer l'enveloppe
+  /// (`mediaEnvelope`) si seule l'émission a échoué/été différée.
   Future<void> flushOutbox() async {
     final pending = await _dao.pendingMessages();
     for (final m in pending) {
-      final needsUpload = m.pendingUploadPath != null &&
-          m.pendingUploadPath!.isNotEmpty &&
-          (m.mediaUrl == null || m.mediaUrl!.isEmpty);
-
-      if (needsUpload) {
-        final file = File(m.pendingUploadPath!);
-        if (!file.existsSync()) {
-          debugPrint('[ChatRepo] flush: fichier disparu pour ${m.clientId} → failed');
-          await _dao.markFailed(m.clientId);
-          continue;
-        }
-        try {
-          final res = await _api.uploadMedia(file);
-          final url = res['url'] as String?;
-          if (url == null) throw Exception('upload sans url');
-          await (_db.update(_db.localMessages)..where((x) => x.clientId.equals(m.clientId)))
-              .write(LocalMessagesCompanion(
-            mediaUrl: Value(url),
-            pendingUploadPath: const Value(null),
-            status: const Value(1),
-          ));
-          await _emitSend(
-            clientId: m.clientId,
-            conversationID: m.conversationID,
-            content: m.content,
-            type: m.type,
-            mediaUrl: url,
-            mediaName: m.mediaName,
-            mediaDuration: m.mediaDuration,
-            replyToID: m.replyToID,
-            replyToContent: m.replyToContent,
-          );
-        } catch (e) {
-          debugPrint('[ChatRepo] flush upload échoué pour ${m.clientId}: $e');
-          if (!_isTransientNetworkError(e)) {
-            await _dao.markFailed(m.clientId);
-          }
-          // On laisse tomber la suite pour ce message, on retentera plus tard.
-        }
-      } else {
-        await _emitSend(
-          clientId: m.clientId,
-          conversationID: m.conversationID,
-          content: m.content,
-          type: m.type,
-          mediaUrl: m.mediaUrl,
-          mediaName: m.mediaName,
-          mediaDuration: m.mediaDuration,
-          replyToID: m.replyToID,
-          replyToContent: m.replyToContent,
-        );
-      }
+      // Un envoi média chiffré est déjà en cours (chiffrement/upload) pour ce
+      // clientId : ne pas le retraiter, sous peine d'émettre le message deux
+      // fois (le serveur ne déduplique pas par clientId).
+      if (_sendsInFlight.contains(m.clientId)) continue;
+      // Média E2EE déjà chiffré+uploadé (blob + enveloppe prêts, seule
+      // l'émission avait échoué/été différée) : rejouer l'enveloppe telle
+      // quelle plutôt que `content` (resté null pour ne pas fuiter en
+      // légende — voir `sendEncryptedMediaFile`).
+      await _emitSend(
+        clientId: m.clientId,
+        conversationID: m.conversationID,
+        content: m.mediaEnvelope ?? m.content,
+        type: m.type,
+        mediaUrl: m.mediaUrl,
+        mediaName: m.mediaName,
+        mediaDuration: m.mediaDuration,
+        replyToID: m.replyToID,
+        replyToContent: m.replyToContent,
+      );
     }
     // Rejoue les accusés de lecture émis hors-ligne.
     if (_api.isSocketReady && _pendingReads.isNotEmpty) {
@@ -572,58 +577,19 @@ class ChatRepository {
         .get();
     for (final m in failed) {
       await _dao.incrementRetryCount(m.clientId);
-      final needsUpload = m.pendingUploadPath != null &&
-          m.pendingUploadPath!.isNotEmpty &&
-          (m.mediaUrl == null || m.mediaUrl!.isEmpty);
-
-      if (needsUpload) {
-        final file = File(m.pendingUploadPath!);
-        if (!file.existsSync()) {
-          debugPrint('[ChatRepo] retry: fichier disparu pour ${m.clientId} → keep failed');
-          continue;
-        }
-        try {
-          final res = await _api.uploadMedia(file);
-          final url = res['url'] as String?;
-          if (url == null) throw Exception('upload sans url');
-          await (_db.update(_db.localMessages)..where((x) => x.clientId.equals(m.clientId)))
-              .write(LocalMessagesCompanion(
-            mediaUrl: Value(url),
-            pendingUploadPath: const Value(null),
-            status: const Value(1),
-          ));
-          await _emitSend(
-            clientId: m.clientId,
-            conversationID: m.conversationID,
-            content: m.content,
-            type: m.type,
-            mediaUrl: url,
-            mediaName: m.mediaName,
-            mediaDuration: m.mediaDuration,
-            replyToID: m.replyToID,
-            replyToContent: m.replyToContent,
-          );
-        } catch (e) {
-          debugPrint('[ChatRepo] retry upload échoué pour ${m.clientId}: $e');
-          if (!_isTransientNetworkError(e)) {
-            await _dao.markFailed(m.clientId);
-          }
-        }
-      } else {
-        // Message texte ou média déjà uploadé : remettre en pending et réémettre
-        await _dao.retryFailed(m.clientId);
-        await _emitSend(
-          clientId: m.clientId,
-          conversationID: m.conversationID,
-          content: m.content,
-          type: m.type,
-          mediaUrl: m.mediaUrl,
-          mediaName: m.mediaName,
-          mediaDuration: m.mediaDuration,
-          replyToID: m.replyToID,
-          replyToContent: m.replyToContent,
-        );
-      }
+      // Message texte ou média déjà chiffré+uploadé : remettre en pending et réémettre.
+      await _dao.retryFailed(m.clientId);
+      await _emitSend(
+        clientId: m.clientId,
+        conversationID: m.conversationID,
+        content: m.mediaEnvelope ?? m.content,
+        type: m.type,
+        mediaUrl: m.mediaUrl,
+        mediaName: m.mediaName,
+        mediaDuration: m.mediaDuration,
+        replyToID: m.replyToID,
+        replyToContent: m.replyToContent,
+      );
     }
   }
 
@@ -784,7 +750,7 @@ class ChatRepository {
         final plain = await _vault.open(archiveBlob, archiveNonce);
         if (plain != null) result['content'] = plain;
       }
-      return result;
+      return _relocateMediaEnvelope(result, j['type']);
     }
 
     if (ciphertext == null) return result;
@@ -799,7 +765,7 @@ class ChatRepository {
       // `header` — juste le ciphertext, keyé par (groupe, expéditeur).
       final plaintext = await _group.decrypt(conversationID, senderId, ciphertext);
       result['content'] = plaintext ?? _kEncryptedFallback;
-      return result;
+      return _relocateMediaEnvelope(result, j['type']);
     }
 
     // Message 1-1 d'un autre : déchiffrement Double Ratchet.
@@ -820,6 +786,27 @@ class ChatRepository {
 
     final plaintext = await _e2ee.decrypt(senderId, ciphertext, nonce, header);
     result['content'] = plaintext ?? _kEncryptedFallback;
+    return _relocateMediaEnvelope(result, j['type']);
+  }
+
+  /// Un message média E2EE porte, une fois déchiffré, l'enveloppe JSON
+  /// (clé média, id du blob, hash, mime, taille, nom) — jamais un texte
+  /// affichable. On la sort de `content` (qui alimente la légende visible
+  /// des bulles média, voir chat_bubbles.dart) vers `mediaEnvelope`, lue
+  /// uniquement par `_resolveEncryptedMedia`.
+  Map<String, dynamic> _relocateMediaEnvelope(Map<String, dynamic> result, dynamic typeVal) {
+    if (_toInt(typeVal) == 0) return result;
+    final content = result['content']?.toString();
+    if (content == null || content.isEmpty || content == _kEncryptedFallback) return result;
+    try {
+      final decoded = jsonDecode(content);
+      if (decoded is Map && decoded.containsKey('mediaKey')) {
+        result['mediaEnvelope'] = content;
+        result['content'] = null;
+      }
+    } catch (_) {
+      // Pas du JSON : légende/texte de repli normal, on laisse tel quel.
+    }
     return result;
   }
 
@@ -843,7 +830,7 @@ class ChatRepository {
             ..['content'] = plain
             ..remove('archive_blob')
             ..remove('archive_nonce');
-          await _upsertServerMsg(enriched);
+          await _upsertServerMsg(_relocateMediaEnvelope(enriched, row['type']));
         }
       }
     } catch (e) {
@@ -870,6 +857,11 @@ class ChatRepository {
     await _db.transaction(() async {
       String? carriedLocalPath;
       String? carriedContent;
+      // Média E2EE : `mediaName` ne voyage jamais en clair (voir
+      // sendEncryptedMediaFile), il faut donc le récupérer depuis la ligne
+      // optimiste locale plutôt que depuis l'écho serveur.
+      String? carriedMediaName;
+      String? carriedMediaEnvelope;
 
       // Un message déjà confirmé (ex: écho E2EE re-synchronisé après coup, ou
       // ratchet Double Ratchet qui ne peut pas redéchiffrer une 2e fois une
@@ -881,6 +873,13 @@ class ChatRepository {
       if (existing != null && existing.content != null && existing.content!.isNotEmpty) {
         carriedContent ??= existing.content;
       }
+      // Média déjà résolu une 1ère fois (enveloppe stockée ou fichier déjà en
+      // cache) : un nouveau décryptage de la MÊME ciphertext échoue TOUJOURS
+      // en cas de resynchronisation ou de livraison dupliquée (Double Ratchet
+      // et Sender Keys sont à usage unique). Le média reste valide — il ne
+      // faut jamais régresser la légende vers le texte de repli dans ce cas.
+      final mediaAlreadyResolved = existing != null &&
+          (existing.mediaEnvelope != null || existing.localMediaPath != null);
 
       final candidates = await (_db.select(_db.localMessages)
             ..where((m) {
@@ -911,6 +910,8 @@ class ChatRepository {
 
       for (final m in candidates) {
         carriedLocalPath ??= m.localMediaPath;
+        carriedMediaName ??= m.mediaName;
+        carriedMediaEnvelope ??= m.mediaEnvelope;
         if (m.content != null && m.content!.isNotEmpty) carriedContent ??= m.content;
         await (_db.delete(_db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
       }
@@ -919,6 +920,12 @@ class ChatRepository {
       var companion = _msgJsonToCompanion(json).copyWith(clientId: Value(srvKey));
       if (carriedLocalPath != null) {
         companion = companion.copyWith(localMediaPath: Value(carriedLocalPath));
+      }
+      if (companion.mediaName.value == null && carriedMediaName != null) {
+        companion = companion.copyWith(mediaName: Value(carriedMediaName));
+      }
+      if (companion.mediaEnvelope.value == null && carriedMediaEnvelope != null) {
+        companion = companion.copyWith(mediaEnvelope: Value(carriedMediaEnvelope));
       }
       // Si l'écho/la resynchronisation n'apporte pas de plaintext réel (soit
       // `content` absent — mes propres messages —, soit le texte de repli
@@ -930,24 +937,91 @@ class ChatRepository {
           companion.content.value == _kEncryptedFallback;
       if (incomingHasNoRealContent && carriedContent != null) {
         companion = companion.copyWith(content: Value(carriedContent));
+      } else if (mediaAlreadyResolved && companion.content.value == _kEncryptedFallback) {
+        // Média déjà connu (voir `mediaAlreadyResolved` ci-dessus) : pas de
+        // contenu réel à restaurer (les messages média n'ont normalement pas
+        // de légende), mais on doit quand même supprimer le texte de repli
+        // parasite plutôt que de l'afficher sous un média pourtant valide.
+        companion = companion.copyWith(content: const Value(null));
       }
 
       debugPrint('[ChatRepo] _upsertServerMsg msgID=$msgID conv=$convID candidates=${candidates.length} wasNew=$wasNew');
       await _dao.upsertMessage(companion);
     });
 
-    // Préfetch média (images/audio toujours, fichiers < 5 Mo) pour rendre
-    // l'historique consultable offline. On ne déclenche que pour les messages
-    // réellement nouveaux afin d'éviter de recharger l'identique à chaque sync.
-    if (prefetchMedia && wasNew) {
-      final mtype = _toInt(json['type']);
-      final mediaUrl = json['mediaUrl']?.toString();
-      if (mediaUrl != null && mediaUrl.isNotEmpty) {
-        if (mtype == 1 || mtype == 3) {
-          _cacheMedia(msgID, mediaUrl);
-        } else if (mtype == 4) {
-          _cacheMedia(msgID, mediaUrl, maxBytes: 5 * 1024 * 1024);
+    if (wasNew) {
+      final mediaEnvelope = json['mediaEnvelope']?.toString();
+      if (mediaEnvelope != null && mediaEnvelope.isNotEmpty) {
+        // Média E2EE : toujours résoudre (télécharger + déchiffrer + cacher)
+        // dès qu'on découvre le message, réception live ou resync historique
+        // — sans quoi la bulle resterait indéfiniment vide (pas d'action
+        // manuelle équivalente au tap-to-load du flux legacy pour l'instant).
+        unawaited(_resolveEncryptedMedia(msgID, mediaEnvelope));
+      } else if (prefetchMedia) {
+        // Préfetch média legacy (images/audio toujours, fichiers < 5 Mo) pour
+        // rendre l'historique consultable offline.
+        final mtype = _toInt(json['type']);
+        final mediaUrl = json['mediaUrl']?.toString();
+        if (mediaUrl != null && mediaUrl.isNotEmpty) {
+          if (mtype == 1 || mtype == 3) {
+            _cacheMedia(msgID, mediaUrl);
+          } else if (mtype == 4) {
+            _cacheMedia(msgID, mediaUrl, maxBytes: 5 * 1024 * 1024);
+          }
         }
+      }
+    }
+  }
+
+  /// Résout un média E2EE reçu : télécharge le blob chiffré et le déchiffre
+  /// en streaming (jamais bufferisé entièrement, même pour une grosse
+  /// vidéo — voir §4.4 MEDIAS_E2EE.md), écrit le résultat dans un fichier
+  /// temporaire, vérifie son intégrité (hash calculé côté émetteur avant
+  /// upload) puis ne le promeut au chemin final que si le hash correspond.
+  /// Contrairement au ratchet/Sender Keys, la clé média AES-GCM n'est pas à
+  /// usage unique : appeler ceci plusieurs fois pour le même message est
+  /// sans risque, juste redondant (d'où le garde `wasNew` à l'appel).
+  Future<void> _resolveEncryptedMedia(int msgID, String envelopeJson) async {
+    File? tmpFile;
+    try {
+      final env = jsonDecode(envelopeJson) as Map<String, dynamic>;
+      final mediaId = _toInt(env['mediaId']);
+      final mediaKey = SecretKey(base64Decode(env['mediaKey'] as String));
+      final expectedHash = base64Decode(env['sha256'] as String);
+
+      final base = await getApplicationDocumentsDirectory();
+      final cacheDir = Directory(p.join(base.path, 'media_cache', 'e2ee'));
+      if (!cacheDir.existsSync()) cacheDir.createSync(recursive: true);
+      final name = (env['name'] as String?) ?? 'media_$mediaId';
+      final finalPath = p.join(cacheDir.path, '${msgID}_$name');
+      tmpFile = File('$finalPath.part');
+
+      final hashSink = Sha256().newHashSink();
+      final encryptedStream = _api.downloadMediaBlobStreaming(mediaId).map((chunk) {
+        hashSink.add(chunk);
+        return chunk;
+      });
+
+      final sink = tmpFile.openWrite();
+      await for (final clearChunk in _mediaCipher.decryptStreaming(encryptedStream, mediaKey)) {
+        sink.add(clearChunk);
+      }
+      await sink.close();
+
+      hashSink.close();
+      final actualHash = (await hashSink.hash()).bytes;
+      if (!MediaCipherService.bytesEqual(actualHash, expectedHash)) {
+        debugPrint('[ChatRepo] média E2EE msgID=$msgID: hash invalide, blob rejeté');
+        await tmpFile.delete();
+        return;
+      }
+
+      await tmpFile.rename(finalPath);
+      await _dao.setResolvedMedia(msgID, localPath: finalPath, mediaName: env['name'] as String?);
+    } catch (e) {
+      debugPrint('[ChatRepo] résolution média E2EE échouée msgID=$msgID: $e');
+      if (tmpFile != null && await tmpFile.exists()) {
+        await tmpFile.delete();
       }
     }
   }
@@ -1170,6 +1244,13 @@ class ChatRepository {
       mediaUrl: Value(j['mediaUrl']?.toString()),
       mediaName: Value(j['mediaName']?.toString()),
       mediaDuration: Value(j['mediaDuration'] == null ? null : _toInt(j['mediaDuration'])),
+      // `Value.absent()` si absent (et non `Value(null)`) : un resync qui ne
+      // reçoit pas d'enveloppe (déchiffrement déjà consommé, ou message
+      // texte) ne doit jamais effacer une enveloppe déjà stockée pour cette
+      // ligne — `insertOnConflictUpdate` laisse la colonne intacte.
+      mediaEnvelope: j.containsKey('mediaEnvelope')
+          ? Value(j['mediaEnvelope']?.toString())
+          : const Value.absent(),
       replyToID: Value(j['replyToID'] == null ? null : _toInt(j['replyToID'])),
       replyToContent: Value(j['replyToContent']?.toString()),
       isEdited: Value(j['isEdited'] == 1 || j['isEdited'] == true),
