@@ -292,13 +292,15 @@ extension _ChatActions on _ChatDetailScreenState {
               ),
               const Divider(height: 1),
               AppSpacing.vGapSm,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              Wrap(
+                alignment: WrapAlignment.spaceEvenly,
+                runSpacing: AppSpacing.sm,
                 children: [
                   _attachOption(Icons.photo_library, 'Galerie', sem.info, _pickImageFromGallery),
                   _attachOption(Icons.camera_alt, 'Caméra', context.colors.primary, _pickImageFromCamera),
                   _attachOption(Icons.videocam, 'Vidéo', context.colors.error, _pickVideo),
                   _attachOption(Icons.insert_drive_file, 'Fichier', sem.warning, _pickFile),
+                  _attachOption(Icons.location_on, 'Position', sem.success, _sendLocation),
                 ],
               ),
             ],
@@ -327,6 +329,67 @@ extension _ChatActions on _ChatDetailScreenState {
         ),
       ),
     );
+  }
+
+  /// Récupère la position GPS courante et l'envoie comme message.
+  Future<void> _sendLocation() async {
+    if (widget.conversationId == null || _myId == null) return;
+
+    // 1. Service de localisation activé ?
+    final serviceOn = await Geolocator.isLocationServiceEnabled();
+    if (!serviceOn) {
+      _showLocationError('Activez la localisation pour partager votre position.');
+      return;
+    }
+
+    // 2. Permission.
+    var perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+    }
+    if (perm == LocationPermission.denied ||
+        perm == LocationPermission.deniedForever) {
+      _showLocationError('Permission de localisation refusée.');
+      return;
+    }
+
+    // 3. Retour visuel pendant l'acquisition du fix GPS.
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Récupération de votre position…'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+
+    // 4. Acquisition puis envoi.
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
+      );
+      _chat.repository.sendLocation(
+        conversationID: widget.conversationId!,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        replyToID: _replyTo?.msgID,
+        replyToContent: _replyTo == null ? null : _previewOf(_replyTo!),
+      );
+      rebuild(() => _replyTo = null);
+      _scrollToBottom();
+    } catch (e) {
+      debugPrint('[ChatDetail] position non obtenue ($e)');
+      _showLocationError('Impossible d\'obtenir la position. Réessayez.');
+    }
+  }
+
+  void _showLocationError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _pickImageFromGallery() async {

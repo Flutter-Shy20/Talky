@@ -68,6 +68,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
                         ),
                       ],
                     )
+                  else if (isLocationMarkerContent(msg.content))
+                    _buildLocationPreview(msg, isMe)
                   else ...[
                     if (msg.type != 0) _buildMedia(msg, isMe),
                     if (msg.content != null &&
@@ -267,6 +269,125 @@ extension _ChatBubbles on _ChatDetailScreenState {
         ],
       ),
     );
+  }
+
+  // ── Aperçu de position (message texte porteur d'un marqueur) ───────
+  Widget _buildLocationPreview(LocalMessage msg, bool isMe) {
+    final marker = parseLocationMarker(msg.content);
+    if (marker == null) {
+      return Text(
+        locationPreviewLabel,
+        style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)),
+      );
+    }
+    final lat = marker.latitude;
+    final lng = marker.longitude;
+    final onSurface = _bubbleText(isMe);
+    final muted = _bubbleMuted(isMe);
+    final maxW = MediaQuery.of(context).size.width * 0.66;
+    final cardWidth = maxW < 240.0 ? maxW : 240.0;
+
+    return ClipRRect(
+      borderRadius: AppRadius.brSm,
+      child: GestureDetector(
+        onTap: () => _openLocationInMaps(lat, lng),
+        child: SizedBox(
+          width: cardWidth,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Vignette carte statique + épingle centrale.
+              SizedBox(
+                height: 130,
+                width: cardWidth,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CachedNetworkImage(
+                      imageUrl: osmStaticMapUrl(lat, lng, width: 480, height: 260),
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => _mapFallback(isMe),
+                      errorWidget: (_, __, ___) => _mapFallback(isMe),
+                    ),
+                    const Align(
+                      alignment: Alignment.center,
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: 10),
+                        child: Icon(Icons.location_on,
+                            color: Colors.redAccent, size: 40),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Pied : libellé + appel à l'action.
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    Icon(Icons.map_outlined, size: 18, color: onSurface),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            marker.label ?? 'Position partagée',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.text.bodyMedium?.copyWith(
+                              color: onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            'Ouvrir dans Google Maps',
+                            style: context.text.labelSmall?.copyWith(color: muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, size: 18, color: muted),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Fond de secours si la vignette carte n'est pas chargeable (hors-ligne, etc.).
+  Widget _mapFallback(bool isMe) {
+    final base = isMe ? context.colors.onPrimary : context.colors.onSurface;
+    return Container(
+      color: base.withAlpha(20),
+      alignment: Alignment.center,
+      child: Icon(Icons.map, size: 44, color: base.withAlpha(120)),
+    );
+  }
+
+  /// Ouvre la position dans Google Maps (app native ou navigateur).
+  Future<void> _openLocationInMaps(double lat, double lng) async {
+    final uri = googleMapsUri(lat, lng);
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible d\'ouvrir Google Maps.')),
+        );
+      }
+    } catch (e) {
+      debugPrint('[ChatDetail] ouverture Maps échouée ($e)');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible d\'ouvrir Google Maps.')),
+        );
+      }
+    }
   }
 
   // ── Rendu média selon le type ──────────────────────────────────────

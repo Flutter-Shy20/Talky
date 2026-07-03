@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../db/app_database.dart';
 import '../db/chat_dao.dart';
 import '../utils/forward_message.dart';
+import '../utils/location_message.dart';
 import '../utils/media_album.dart';
 import 'media_cache_service.dart';
 import '../../talky_api_client.dart';
@@ -225,10 +226,61 @@ class ChatRepository {
     );
   }
 
+  /// Envoie une position (message texte type 0 porteur d'un marqueur).
+  /// Le message circule comme un texte : aucun changement backend requis.
+  Future<void> sendLocation({
+    required int conversationID,
+    required double latitude,
+    required double longitude,
+    String? label,
+    int? replyToID,
+    String? replyToContent,
+  }) async {
+    if (_myId == 0) {
+      debugPrint('[ChatRepo] sendLocation ignoré : utilisateur non lié (myId=0)');
+      return;
+    }
+    final content = encodeLocationMarker(
+      latitude: latitude,
+      longitude: longitude,
+      label: label,
+    );
+    final clientId = _newClientId();
+    final now = DateTime.now().toUtc();
+
+    await _dao.upsertMessage(LocalMessagesCompanion.insert(
+      clientId: clientId,
+      conversationID: conversationID,
+      senderID: _myId,
+      sendAt: now,
+      content: Value(content),
+      type: const Value(0),
+      status: const Value(0),
+      replyToID: Value(replyToID),
+      replyToContent: Value(replyToContent),
+      syncPending: const Value(true),
+    ));
+    // Aperçu de conversation lisible (pas le marqueur brut).
+    _bumpConversationSummary(conversationID, locationPreviewLabel, 0, now,
+        senderID: _myId, status: 0);
+
+    _emitSend(
+      clientId: clientId,
+      conversationID: conversationID,
+      content: content,
+      type: 0,
+      replyToID: replyToID,
+      replyToContent: replyToContent,
+    );
+  }
+
   /// Aperçu canonique pour les messages média : on respecte le `content` saisi
   /// s'il existe, sinon on retombe sur l'emoji + libellé de type. Évite que
   /// l'aperçu de conv affiche un nom de fichier brut (`IMG_2026.jpg`).
   static String _previewForMedia(int type, String? content, String? mediaName) {
+    if (isLocationMarkerContent(content)) {
+      return locationPreviewLabel;
+    }
     if (isAlbumMarkerContent(content)) {
       final marker = parseAlbumMarker(content);
       if (marker != null) {
