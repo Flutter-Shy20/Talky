@@ -107,6 +107,13 @@ class ChatRepository {
       rejoinActiveRoom();
       await resyncActiveConversation();
       await _flushPendingReads();
+      // Rejoue tout message resté `syncPending` dès la reconnexion, au lieu
+      // d'attendre le prochain tick de `ChatSyncTimer` (jusqu'à 5 min) : sur
+      // réseau mobile réel, un `message:sent` perdu lors d'une coupure socket
+      // ne doit pas laisser l'expéditeur bloqué sur "en cours" plus longtemps
+      // que nécessaire. Sûr désormais grâce à la dédup serveur par clientId
+      // (migration 013) : un message déjà bien arrivé n'est jamais dupliqué.
+      await flushOutbox();
     } catch (e) {
       debugPrint('[ChatRepo] authVerified handler failed: $e');
     }
@@ -550,15 +557,18 @@ class ChatRepository {
       // Média E2EE déjà chiffré+uploadé (blob + enveloppe prêts, seule
       // l'émission avait échoué/été différée) : rejouer l'enveloppe telle
       // quelle plutôt que `content` (resté null pour ne pas fuiter en
-      // légende — voir `sendEncryptedMediaFile`).
+      // légende — voir `sendEncryptedMediaFile`). Le nom/URL du média sont
+      // DÉJÀ dans l'enveloppe chiffrée : ne jamais les repasser en clair ici
+      // (seul le flux legacy, sans mediaEnvelope, en a légitimement besoin).
+      final isE2eeMedia = m.mediaEnvelope != null;
       await _emitSend(
         clientId: m.clientId,
         conversationID: m.conversationID,
         content: m.mediaEnvelope ?? m.content,
         type: m.type,
-        mediaUrl: m.mediaUrl,
-        mediaName: m.mediaName,
-        mediaDuration: m.mediaDuration,
+        mediaUrl: isE2eeMedia ? null : m.mediaUrl,
+        mediaName: isE2eeMedia ? null : m.mediaName,
+        mediaDuration: isE2eeMedia ? null : m.mediaDuration,
         replyToID: m.replyToID,
         replyToContent: m.replyToContent,
       );
@@ -579,14 +589,15 @@ class ChatRepository {
       await _dao.incrementRetryCount(m.clientId);
       // Message texte ou média déjà chiffré+uploadé : remettre en pending et réémettre.
       await _dao.retryFailed(m.clientId);
+      final isE2eeMedia = m.mediaEnvelope != null;
       await _emitSend(
         clientId: m.clientId,
         conversationID: m.conversationID,
         content: m.mediaEnvelope ?? m.content,
         type: m.type,
-        mediaUrl: m.mediaUrl,
-        mediaName: m.mediaName,
-        mediaDuration: m.mediaDuration,
+        mediaUrl: isE2eeMedia ? null : m.mediaUrl,
+        mediaName: isE2eeMedia ? null : m.mediaName,
+        mediaDuration: isE2eeMedia ? null : m.mediaDuration,
         replyToID: m.replyToID,
         replyToContent: m.replyToContent,
       );
@@ -1148,6 +1159,20 @@ class ChatRepository {
           payload = await _e2ee.encrypt(recipientId, content);
         }
       }
+
+      if (payload == null && groupPayload == null) {
+        // Ne JAMAIS envoyer `content` en clair au serveur : mieux vaut un
+        // échec visible (retentable via flushOutbox) qu'une fuite — pour un
+        // message média, `content` porte l'enveloppe avec la clé AES en
+        // clair, pas juste un texte. Cause typique : conversation pas encore
+        // en cache local (`localConversations`) ou session ratchet / sender
+        // key pas encore disponible au moment de l'envoi.
+        debugPrint('[ChatRepo] _emitSend abandonné (chiffrement impossible) '
+            'clientId=$clientId conv=$conversationID — marqué en échec, '
+            'jamais envoyé en clair.');
+        await _dao.markFailed(clientId);
+        return;
+      }
     }
 
     // Coffre F3 : second layer AES-GCM pour l'archivage de l'historique.
@@ -1160,7 +1185,9 @@ class ChatRepository {
       'clientId': clientId,
       'conversationID': conversationID,
       // E2EE : ciphertext + nonce + header DR (1-1), ou ciphertext Sender Key
-      // (groupe). Fallback plaintext si aucune session/sender key dispo.
+      // (groupe). Le cas "ni l'un ni l'autre" est intercepté au-dessus —
+      // cette branche `content` en clair ne sert plus qu'aux cas où `content`
+      // est une chaîne vide (rien à chiffrer, rien à fuiter).
       if (payload != null) ...payload.toSocketMap()
       else if (groupPayload != null) ...groupPayload.toSocketMap()
       else if (content != null) 'content': content,

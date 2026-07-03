@@ -4,6 +4,7 @@
 // F2 : chaque état de session et chaque OTPK sont persistés dans AppDatabase via
 //      SignalStore. L'application peut redémarrer sans perdre les sessions actives.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -102,6 +103,11 @@ class E2eeService {
   final Map<int, _DrState> _sessions = {};
   final Map<int, ({int id, SimpleKeyPair kp})> _pendingOtpks = {};
 
+  // Incrémenté à chaque `init`/`clear` : permet à une boucle de retry en
+  // arrière-plan de détecter qu'elle est devenue obsolète (changement de
+  // compte, logout) et de s'arrêter sans avoir besoin d'un Timer à annuler.
+  int _bundleUploadEpoch = 0;
+
   E2eeService(this._api, {AppDatabase? db})
       : _secure = const FlutterSecureStorage(),
         _store = db != null ? SignalStore(db) : null;
@@ -127,10 +133,38 @@ class E2eeService {
     // Charger les OTPKs persistées (F2)
     await _loadOtpksFromStore();
 
-    try {
-      await _uploadBundle();
-    } catch (e) {
-      debugPrint('[E2EE] upload bundle différé: $e');
+    final epoch = ++_bundleUploadEpoch;
+    unawaited(_uploadBundleWithRetry(epoch));
+  }
+
+  /// Sans clé déposée côté serveur, l'utilisateur est injoignable en E2EE
+  /// (X3DH échoue avec un 404 sur `/keys/:id/bundle` — cf. incident du
+  /// 2026-07-03 : un simple hoquet réseau au premier lancement a laissé le
+  /// compte sans bundle indéfiniment, `_uploadBundle` n'étant appelé qu'une
+  /// fois). Retry en arrière-plan avec backoff, sans bloquer `init()` — le
+  /// dépôt est idempotent côté serveur (`ON DUPLICATE KEY UPDATE` / `INSERT
+  /// IGNORE`), rejouer ne pose donc aucun risque de duplication.
+  static const _bundleRetryDelays = [
+    Duration(seconds: 2),
+    Duration(seconds: 5),
+    Duration(seconds: 15),
+    Duration(seconds: 30),
+    Duration(seconds: 60),
+  ];
+
+  Future<void> _uploadBundleWithRetry(int epoch) async {
+    for (var attempt = 0; epoch == _bundleUploadEpoch; attempt++) {
+      try {
+        await _uploadBundle();
+        return;
+      } catch (e) {
+        if (epoch != _bundleUploadEpoch) return; // compte changé/déconnecté entretemps
+        final delay = _bundleRetryDelays[
+            attempt.clamp(0, _bundleRetryDelays.length - 1)];
+        debugPrint('[E2EE] upload bundle échoué (tentative ${attempt + 1}), '
+            'nouvelle tentative dans ${delay.inSeconds}s: $e');
+        await Future.delayed(delay);
+      }
     }
   }
 
@@ -676,5 +710,6 @@ class E2eeService {
     _identity = null;
     _sessions.clear();
     _pendingOtpks.clear();
+    ++_bundleUploadEpoch; // stoppe toute boucle de retry d'upload en cours
   }
 }
