@@ -28,11 +28,45 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
   bool _renderersReady = false;
   bool _closing = false;
 
+  /// Menu (top bar + contrôles) visible ou masqué.
+  bool _controlsVisible = true;
+
+  /// `true` = flux local affiché en grand (remote en incrustation).
+  bool _localIsPrimary = false;
+
+  /// Masque / réaffiche le menu (appui sur l'écran hors bouton).
+  void _toggleControls() {
+    if (!mounted) return;
+    setState(() => _controlsVisible = !_controlsVisible);
+  }
+
+  /// Permute quel flux vidéo est affiché en grand (appui sur le PiP).
+  void _swapVideos() {
+    if (!mounted) return;
+    setState(() => _localIsPrimary = !_localIsPrimary);
+  }
+
   @override
   void initState() {
     super.initState();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<CallService>(context, listen: false).markCallUiVisible();
+      }
+    });
     _initRenderers();
+  }
+
+  /// Quitte l'écran plein sans raccrocher (chevron ou retour système).
+  void _minimize() {
+    if (_closing || !mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  void _onFullscreenPop(bool didPop) {
+    if (!didPop || _closing || !mounted) return;
+    Provider.of<CallService>(context, listen: false).markCallUiMinimized();
   }
 
   Future<void> _initRenderers() async {
@@ -102,7 +136,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
       _localRenderer.srcObject = null;
       _remoteRenderer.srcObject = null;
     }
-    if (mounted) Navigator.of(context).maybePop();
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _hangUp() async {
@@ -119,7 +153,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     } else {
       await cs.endCall();
     }
-    if (mounted) Navigator.of(context).maybePop();
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
@@ -138,85 +172,141 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CallService>(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) => _onFullscreenPop(didPop),
+      child: Consumer<CallService>(
       builder: (_, cs, __) {
         final isVideo = cs.isVideo;
         final isGroup = cs.groupRoomId != null;
         final hasRemoteVideo =
             !isGroup && isVideo && _remoteRenderer.srcObject != null;
+        final localAvailable = isVideo &&
+            _renderersReady &&
+            _localRenderer.srcObject != null;
+        // On ne peut permuter que si les deux flux vidéo sont présents.
+        final canSwap = !isGroup && localAvailable && hasRemoteVideo;
+        final localIsBig = canSwap && _localIsPrimary;
+
+        // Renderer affiché en incrustation (PiP) : l'inverse du grand.
+        final pipRenderer = localIsBig ? _remoteRenderer : _localRenderer;
+        // Le flux local est toujours affiché en miroir (caméra frontale).
+        final pipMirror = !localIsBig;
+
+        // ─── Vue principale (plein écran) ───
+        final Widget bigView;
+        if (isGroup) {
+          bigView = _GroupGrid(
+            streams: cs.groupRemoteStreams,
+            roster: cs.groupRoster,
+            activeSpeakers: cs.activeSpeakers,
+          );
+        } else if (localIsBig) {
+          bigView = RTCVideoView(
+            _localRenderer,
+            mirror: true,
+            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+          );
+        } else if (hasRemoteVideo) {
+          bigView = RTCVideoView(
+            _remoteRenderer,
+            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+          );
+        } else {
+          bigView = _AudioBackdrop(
+            name: cs.remoteUserName ?? 'Inconnu',
+            photoUrl: cs.remoteUserPhoto,
+            isSpeaking:
+                cs.isUserSpeaking(cs.remoteUserId?.toString() ?? ''),
+            isRemoteMuted: cs.isRemoteMuted,
+          );
+        }
+
         return Scaffold(
           backgroundColor: AppColors.black,
           body: Stack(
             fit: StackFit.expand,
             children: [
-              // Background : grille groupe / remote vidéo plein écran / avatar
-              if (isGroup)
-                _GroupGrid(
-                  streams: cs.groupRemoteStreams,
-                  roster: cs.groupRoster,
-                  activeSpeakers: cs.activeSpeakers,
-                )
-              else if (hasRemoteVideo)
-                RTCVideoView(
-                  _remoteRenderer,
-                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                )
-              else
-                _AudioBackdrop(
-                  name: cs.remoteUserName ?? 'Inconnu',
-                  photoUrl: cs.remoteUserPhoto,
-                  isSpeaking: cs.isUserSpeaking(
-                      cs.remoteUserId?.toString() ?? ''),
+              // Vue principale + zone tactile : masque/réaffiche le menu.
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _toggleControls,
+                  child: bigView,
                 ),
+              ),
 
-              // Local video PiP (vidéo uniquement)
-              if (isVideo && _renderersReady && _localRenderer.srcObject != null)
+              // Incrustation vidéo locale (PiP).
+              // Tap → permute grand/petit (ou masque le menu si non permutable).
+              if (localAvailable && !isGroup)
                 Positioned(
                   right: AppSpacing.lg,
                   top: MediaQuery.of(context).padding.top + AppSpacing.md,
-                  child: _LocalPiP(renderer: _localRenderer),
+                  child: GestureDetector(
+                    onTap: canSwap ? _swapVideos : _toggleControls,
+                    child: _LocalPiP(
+                      renderer: pipRenderer,
+                      mirror: pipMirror,
+                      enlarged: !_controlsVisible,
+                    ),
+                  ),
                 ),
 
-              // Top bar : nom + statut + chronomètre
+              // Top bar : nom + statut + chronomètre (masquable).
               Positioned(
                 left: 0,
                 right: 0,
                 top: MediaQuery.of(context).padding.top,
-                child: _TopBar(
-                  name: isGroup
-                      ? 'Appel groupé'
-                      : (cs.remoteUserName ?? 'Appel'),
-                  status: isGroup
-                      ? '${cs.groupRemoteStreams.length + 1} participants'
-                      : _statusLabel(cs),
-                  duration: cs.status == CallStatus.connected
-                      ? cs.formattedDuration
-                      : null,
-                  onMinimize: () => Navigator.of(context).maybePop(),
+                child: IgnorePointer(
+                  ignoring: !_controlsVisible,
+                  child: AnimatedOpacity(
+                    opacity: _controlsVisible ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: _TopBar(
+                      name: isGroup
+                          ? 'Appel groupé'
+                          : (cs.remoteUserName ?? 'Appel'),
+                      status: isGroup
+                          ? '${cs.groupRemoteStreams.length + 1} participants'
+                          : _statusLabel(cs),
+                      duration: cs.status == CallStatus.connected
+                          ? cs.formattedDuration
+                          : null,
+                      onMinimize: _minimize,
+                    ),
+                  ),
                 ),
               ),
 
-              // Bottom controls
+              // Bottom controls (masquable).
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: _BottomControls(
-                  isVideo: isVideo,
-                  isMuted: cs.isMuted,
-                  isVideoOn: cs.isVideoOn,
-                  isSpeakerOn: cs.isSpeakerOn,
-                  onMute: () => cs.toggleMute(),
-                  onSpeaker: () => cs.toggleSpeaker(),
-                  onCamera: () => cs.toggleCamera(),
-                  onSwitchCam: () => cs.switchCamera(),
-                  onHangUp: _hangUp,
+                child: IgnorePointer(
+                  ignoring: !_controlsVisible,
+                  child: AnimatedOpacity(
+                    opacity: _controlsVisible ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: _BottomControls(
+                      isVideo: isVideo,
+                      isMuted: cs.isMuted,
+                      isVideoOn: cs.isVideoOn,
+                      isSpeakerOn: cs.isSpeakerOn,
+                      onMute: () => cs.toggleMute(),
+                      onSpeaker: () => cs.toggleSpeaker(),
+                      onCamera: () => cs.toggleCamera(),
+                      onSwitchCam: () => cs.switchCamera(),
+                      onHangUp: _hangUp,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         );
       },
+    ),
     );
   }
 
@@ -242,11 +332,13 @@ class _AudioBackdrop extends StatelessWidget {
     required this.name,
     required this.photoUrl,
     this.isSpeaking = false,
+    this.isRemoteMuted = false,
   });
 
   final String name;
   final String? photoUrl;
   final bool isSpeaking;
+  final bool isRemoteMuted;
 
   @override
   Widget build(BuildContext context) {
@@ -265,50 +357,90 @@ class _AudioBackdrop extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: SpeakingIndicatorBorder(
-        isSpeaking: isSpeaking,
-        shape: BoxShape.circle,
-        borderWidth: 4,
-        child: CircleAvatar(
-          radius: 90,
-          backgroundColor: AppColors.brandPrimary,
-          backgroundImage: hasPhoto ? NetworkImage(url) : null,
-          child: hasPhoto
-              ? null
-              : Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 64,
-                    fontWeight: FontWeight.w600,
-                  ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SpeakingIndicatorBorder(
+            isSpeaking: isSpeaking,
+            shape: BoxShape.circle,
+            borderWidth: 4,
+            child: CircleAvatar(
+              radius: 90,
+              backgroundColor: AppColors.brandPrimary,
+              backgroundImage: hasPhoto ? NetworkImage(url) : null,
+              child: hasPhoto
+                  ? null
+                  : Text(
+                      initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 64,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ),
+          if (isRemoteMuted)
+            Positioned(
+              bottom: 80,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-        ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(CupertinoIcons.mic_off, color: Colors.redAccent, size: 16),
+                    SizedBox(width: 6),
+                    Text(
+                      'Micro coupé',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
 
 class _LocalPiP extends StatelessWidget {
-  const _LocalPiP({required this.renderer});
+  const _LocalPiP({
+    required this.renderer,
+    this.mirror = true,
+    this.enlarged = false,
+  });
 
   final RTCVideoRenderer renderer;
 
+  /// Miroir horizontal (vrai pour le flux local en caméra frontale).
+  final bool mirror;
+
+  /// Agrandit légèrement l'incrustation quand le menu est masqué.
+  final bool enlarged;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 110,
-      height: 160,
-      decoration: const BoxDecoration(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      width: enlarged ? 132 : 110,
+      height: enlarged ? 192 : 160,
+      decoration: BoxDecoration(
         borderRadius: AppRadius.brSm,
-        boxShadow: [
+        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+        boxShadow: const [
           BoxShadow(color: Colors.black54, blurRadius: 12, offset: Offset(0, 4)),
         ],
       ),
       clipBehavior: Clip.hardEdge,
       child: RTCVideoView(
         renderer,
-        mirror: true,
+        mirror: mirror,
         objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
       ),
     );
@@ -539,6 +671,7 @@ class _GroupGrid extends StatelessWidget {
             stream: e.value,
             name: info?.name ?? 'Participant',
             isSpeaking: activeSpeakers.contains(e.key),
+            isMuted: info?.isMuted ?? false,
           );
         },
       ),
@@ -553,12 +686,14 @@ class _RemoteTile extends StatefulWidget {
     required this.stream,
     required this.name,
     required this.isSpeaking,
+    this.isMuted = false,
   });
 
   final String userId;
   final MediaStream stream;
   final String name;
   final bool isSpeaking;
+  final bool isMuted;
 
   @override
   State<_RemoteTile> createState() => _RemoteTileState();
@@ -645,15 +780,27 @@ class _RemoteTileState extends State<_RemoteTile> {
                   colors: [Colors.black87, Colors.transparent],
                 ),
               ),
-              child: Text(
-                widget.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (widget.isMuted)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(CupertinoIcons.mic_off,
+                          color: Colors.redAccent, size: 14),
+                    ),
+                ],
               ),
             ),
           ),
