@@ -80,6 +80,34 @@ class _DrState {
     required this.dhR,
     this.x3dhHeader,
   });
+
+  /// Instantané profond, pour pouvoir annuler tout avancement de chaîne si
+  /// le déchiffrement final échoue — voir `decrypt()`.
+  _DrState clone() => _DrState(
+        rk: rk,
+        cks: cks,
+        ckr: ckr,
+        dhS: dhS,
+        dhR: dhR,
+        x3dhHeader: x3dhHeader != null ? Map<String, dynamic>.from(x3dhHeader!) : null,
+      )
+        ..ns = ns
+        ..nr = nr
+        ..pn = pn
+        ..skipped = skipped.map((k, v) => MapEntry(k, List<int>.from(v)));
+
+  void restoreFrom(_DrState other) {
+    rk = other.rk;
+    cks = other.cks;
+    ckr = other.ckr;
+    dhS = other.dhS;
+    dhR = other.dhR;
+    ns = other.ns;
+    nr = other.nr;
+    pn = other.pn;
+    skipped = other.skipped;
+    x3dhHeader = other.x3dhHeader;
+  }
 }
 
 // ── Service ────────────────────────────────────────────────────────────────
@@ -451,9 +479,17 @@ class E2eeService {
       int senderId, String ciphertextB64, String nonceB64,
       Map<String, dynamic> header) async {
     if (!isReady) return null;
-    try {
-      final state = await _getOrBuildIncoming(senderId, header);
 
+    final alreadyCommitted = _sessions.containsKey(senderId);
+    final state = await _getOrBuildIncoming(senderId, header);
+    // Instantané : si le déchiffrement final échoue, on annule tout
+    // avancement de la chaîne de réception plutôt que de le persister. Une
+    // chaîne Double Ratchet avance à sens unique — committer un avancement
+    // basé sur une clé dérivée fausse (ex. one-time-prekey obsolète, ou
+    // simplement un ciphertext corrompu) rendrait la session illisible pour
+    // TOUS les messages suivants, sans recours (incident du 2026-07-03).
+    final snapshot = state.clone();
+    try {
       final dhPubBytes = base64Decode(header['dh'] as String);
       final dhPub      = SimplePublicKey(dhPubBytes, type: KeyPairType.x25519);
       final msgN       = header['n'] as int;
@@ -462,9 +498,13 @@ class E2eeService {
       // Clé de message sautée ?
       final skipKey = '${base64Encode(dhPubBytes)}:$msgN';
       if (state.skipped.containsKey(skipKey)) {
-        final mk = SecretKey(state.skipped.remove(skipKey)!);
+        final mk = SecretKey(state.skipped[skipKey]!);
+        final plaintext = await _aesgcmDecrypt(
+            mk, base64Decode(ciphertextB64), base64Decode(nonceB64));
+        state.skipped.remove(skipKey);
+        _sessions[senderId] = state;
         await _saveSession(senderId, state);
-        return _aesgcmDecrypt(mk, base64Decode(ciphertextB64), base64Decode(nonceB64));
+        return plaintext;
       }
 
       if (state.dhR == null || !_pubEq(dhPub, state.dhR!)) {
@@ -478,13 +518,20 @@ class E2eeService {
       state.ckr = newCkr;
       state.nr++;
 
-      // Persistance F2
-      await _saveSession(senderId, state);
-
-      return await _aesgcmDecrypt(
+      final plaintext = await _aesgcmDecrypt(
           mk, base64Decode(ciphertextB64), base64Decode(nonceB64));
+
+      // Persistance F2 — uniquement une fois le déchiffrement confirmé.
+      _sessions[senderId] = state;
+      await _saveSession(senderId, state);
+      return plaintext;
     } catch (e) {
       debugPrint('[E2EE] decrypt échoué ($senderId): $e');
+      // Une session déjà committée (messages précédents réussis) ne doit
+      // jamais régresser vers cet essai raté. Une session tout juste
+      // construite (1er message de l'échange) n'a rien committé — rien à
+      // annuler, le prochain essai repartira d'une base propre.
+      if (alreadyCommitted) state.restoreFrom(snapshot);
       return null;
     }
   }
@@ -521,10 +568,14 @@ class E2eeService {
     if (header['type'] != 'prekey') {
       throw StateError('[E2EE] pas de session pour $senderId et header non-prekey');
     }
-    final state = await _buildIncoming(senderId, header);
-    _sessions[senderId] = state;
-    await _saveSession(senderId, state);
-    return state;
+    // Ne PAS committer (cache mémoire + disque) tant que le tout premier
+    // déchiffrement de cette session n'a pas réussi — voir `decrypt()`. Une
+    // one-time-prekey obsolète distribuée par le serveur (identité locale
+    // régénérée après réinstall/reset pendant qu'un ancien lot d'OTPs traîne
+    // encore en base) produit une clé racine X3DH fausse ; committer quand
+    // même rendrait la session illisible pour toujours, texte et média
+    // (incident du 2026-07-03).
+    return _buildIncoming(senderId, header);
   }
 
   // ── Persistance SQLite des sessions ───────────────────────────────────────
