@@ -71,7 +71,8 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] !! Answer acceptée → CONNECTED');
         _status = CallStatus.connected;
         _startDurationTimer();
-        _startSpeakingDetection(groupMode: false);
+        // Détection de parole désactivée pour les appels 1-à-1 : réservée
+        // aux meetings (voir meeting_service.dart).
         if (!kIsWeb) {
           await _markCallSessionConnected();
         }

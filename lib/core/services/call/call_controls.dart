@@ -4,8 +4,11 @@ part of '../call_service.dart';
 
 extension CallControls on CallService {
   Future<void> toggleMute() async {
-    await _webrtc.toggleMic();
-    _isMuted = !_isMuted;
+    // On dérive _isMuted du résultat RÉEL appliqué au track WebRTC
+    // (et non d'un simple flip indépendant), pour ne jamais désynchroniser
+    // l'icône affichée de l'état effectif du micro envoyé au correspondant.
+    final micEnabled = await _webrtc.toggleMic();
+    _isMuted = !micEnabled;
     // Notifier les autres participants de l'état micro
     final isGroup = _groupRoomId != null;
     if (isGroup) {

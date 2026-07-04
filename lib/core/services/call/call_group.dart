@@ -55,7 +55,8 @@ extension CallGroup on CallService {
 
       _status = CallStatus.connected;
       _startDurationTimer();
-      _startSpeakingDetection(groupMode: true);
+      // Détection de parole désactivée pour les appels de groupe : réservée
+      // aux meetings (voir meeting_service.dart).
       if (!kIsWeb) {
         _currentCallId = 'group_$roomId';
         await _acquireCallSession(
@@ -112,7 +113,8 @@ extension CallGroup on CallService {
 
       _status = CallStatus.connected;
       _startDurationTimer();
-      _startSpeakingDetection(groupMode: true);
+      // Détection de parole désactivée pour les appels de groupe : réservée
+      // aux meetings (voir meeting_service.dart).
       if (!kIsWeb) {
         _currentCallId = 'group_$roomId';
         await _acquireCallSession(

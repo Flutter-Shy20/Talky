@@ -193,7 +193,8 @@ extension CallOneToOne on CallService {
 
       _status = CallStatus.connected;
       _startDurationTimer();
-      _startSpeakingDetection(groupMode: false);
+      // Détection de parole désactivée pour les appels 1-à-1 : réservée aux
+      // meetings (voir meeting_service.dart).
       if (!kIsWeb) {
         await _acquireCallSession(
           isVideo: _isVideo,

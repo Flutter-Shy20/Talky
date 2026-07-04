@@ -412,11 +412,25 @@ class WebRTCService {
     _pendingIceCandidates.clear();
   }
 
-  Future<void> toggleMic() async {
-    final tracks = _localStream?.getAudioTracks();
-    if (tracks != null && tracks.isNotEmpty) {
-      tracks.first.enabled = !tracks.first.enabled;
+  /// Coupe/active le micro et renvoie l'état RÉEL appliqué au(x) track(s)
+  /// (true = micro actif, false = micro coupé). On applique le changement à
+  /// TOUTES les pistes audio locales (et pas seulement `tracks.first`) pour
+  /// éviter tout micro "fantôme" resté actif, et on renvoie l'état réellement
+  /// lu sur le track plutôt que de se fier à un booléen applicatif séparé qui
+  /// peut se désynchroniser de l'état WebRTC réel (c'était la source du bug :
+  /// l'UI affichait "coupé" alors que le track envoyait toujours de l'audio).
+  Future<bool> toggleMic() async {
+    final tracks = _localStream?.getAudioTracks() ?? const [];
+    if (tracks.isEmpty) {
+      debugPrint('[WebRTC] ** toggleMic: aucune piste audio locale trouvée');
+      return false;
     }
+    final newEnabledState = !tracks.first.enabled;
+    for (final track in tracks) {
+      track.enabled = newEnabledState;
+    }
+    debugPrint('[WebRTC] 🎙 Micro ${newEnabledState ? "activé" : "coupé"} sur ${tracks.length} piste(s)');
+    return newEnabledState;
   }
 
   Future<void> toggleCamera() async {
