@@ -15,6 +15,13 @@ class WebRTCService {
   final List<RTCIceCandidate> _pendingIceCandidates = [];
   bool _remoteDescriptionSet = false;
 
+  // État "source de vérité" du mute, indépendant du flag `enabled` du track.
+  // Sert à ré-appliquer le mute si le système audio (Android/iOS) réinitialise
+  // la route audio (Bluetooth, écouteurs, appel système...) et repasse le
+  // micro actif de son propre chef après quelques minutes d'appel.
+  bool _isMicMuted = false;
+  Timer? _micMuteEnforcer;
+
   Function(MediaStream)? onLocalStream;
   Function(MediaStream)? onRemoteStream;
   Function(RTCIceCandidate)? onIceCandidate;
@@ -414,23 +421,62 @@ class WebRTCService {
 
   /// Coupe/active le micro et renvoie l'état RÉEL appliqué au(x) track(s)
   /// (true = micro actif, false = micro coupé). On applique le changement à
-  /// TOUTES les pistes audio locales (et pas seulement `tracks.first`) pour
-  /// éviter tout micro "fantôme" resté actif, et on renvoie l'état réellement
-  /// lu sur le track plutôt que de se fier à un booléen applicatif séparé qui
-  /// peut se désynchroniser de l'état WebRTC réel (c'était la source du bug :
-  /// l'UI affichait "coupé" alors que le track envoyait toujours de l'audio).
+  /// TOUTES les pistes audio locales (et pas seulement `tracks.first`), ET on
+  /// utilise en plus `Helper.setMicrophoneMute` (API native du plugin) plutôt
+  /// que le seul flag `enabled`.
+  ///
+  /// Pourquoi : `track.enabled = false` ne fait que couper l'envoi RTP côté
+  /// Dart/WebRTC, mais ne coupe pas forcément la capture au niveau de la
+  /// session audio native (Android/iOS). Quand l'OS réinitialise la route
+  /// audio en cours d'appel (reconnexion Bluetooth, écouteurs filaires,
+  /// interruption par un appel système, veille d'écran...) — ce qui explique
+  /// le délai de "quelques minutes" observé — il peut réactiver la capture
+  /// native sans que `enabled` ne bouge côté Dart. `Helper.setMicrophoneMute`
+  /// agit au niveau natif et est donc plus robuste face à ces changements.
+  /// On ajoute en plus un timer qui ré-applique périodiquement le mute tant
+  /// qu'il est actif, en filet de sécurité si l'OS le réinitialise quand même.
   Future<bool> toggleMic() async {
+    final newMutedState = !_isMicMuted;
+    final applied = await _applyMicMuted(newMutedState);
+    if (applied) {
+      _isMicMuted = newMutedState;
+      _syncMicMuteEnforcer();
+    }
+    return !_isMicMuted;
+  }
+
+  Future<bool> _applyMicMuted(bool muted) async {
     final tracks = _localStream?.getAudioTracks() ?? const [];
     if (tracks.isEmpty) {
       debugPrint('[WebRTC] ** toggleMic: aucune piste audio locale trouvée');
       return false;
     }
-    final newEnabledState = !tracks.first.enabled;
     for (final track in tracks) {
-      track.enabled = newEnabledState;
+      track.enabled = !muted;
+      try {
+        Helper.setMicrophoneMute(muted, track);
+      } catch (e) {
+        debugPrint('[WebRTC] ** Helper.setMicrophoneMute a échoué: $e');
+      }
     }
-    debugPrint('[WebRTC] 🎙 Micro ${newEnabledState ? "activé" : "coupé"} sur ${tracks.length} piste(s)');
-    return newEnabledState;
+    debugPrint('[WebRTC] 🎙 Micro ${muted ? "coupé" : "activé"} sur ${tracks.length} piste(s)');
+    return true;
+  }
+
+  void _syncMicMuteEnforcer() {
+    _micMuteEnforcer?.cancel();
+    _micMuteEnforcer = null;
+    if (!_isMicMuted) return;
+    // Tant que le micro doit rester coupé, on réapplique l'état toutes les
+    // 3 secondes pour contrer toute réinitialisation faite par l'OS.
+    _micMuteEnforcer = Timer.periodic(const Duration(seconds: 3), (_) {
+      final tracks = _localStream?.getAudioTracks() ?? const [];
+      final needsReassert = tracks.any((t) => t.enabled != false);
+      if (needsReassert) {
+        debugPrint('[WebRTC] !! Micro réactivé par le système, ré-application du mute');
+        _applyMicMuted(true);
+      }
+    });
   }
 
   Future<void> toggleCamera() async {
@@ -450,6 +496,9 @@ class WebRTCService {
   Future<void> dispose() async {
     try {
       debugPrint('[WebRTC] == Nettoyage WebRTC...'); 
+      _micMuteEnforcer?.cancel();
+      _micMuteEnforcer = null;
+      _isMicMuted = false;
       debugPrint('[WebRTC] ** Arrêt des tracks locaux...');
       if (_localStream != null) {
         for (final track in _localStream!.getTracks()) {
