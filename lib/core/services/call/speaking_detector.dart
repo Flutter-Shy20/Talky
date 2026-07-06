@@ -52,6 +52,8 @@ class SpeakingDetector extends ChangeNotifier {
   final Set<String> _activeSpeakers = {};
   final Map<String, int> _aboveStreak = {};
   final Map<String, int> _belowStreak = {};
+  bool Function() _isLocalMuted = () => false;
+  Set<String> Function() _mutedRemoteUserIds = () => const {};
 
   Set<String> get activeSpeakers => Set.unmodifiable(_activeSpeakers);
   bool isSpeaking(String id) => _activeSpeakers.contains(id);
@@ -60,7 +62,23 @@ class SpeakingDetector extends ChangeNotifier {
   /// Démarre le polling. [peerConnectionsProvider] doit renvoyer la map
   /// courante userId→RTCPeerConnection à chaque appel (pas une copie figée),
   /// car des participants rejoignent/quittent en cours d'appel.
-  void start(Map<String, RTCPeerConnection> Function() peerConnectionsProvider) {
+  ///
+  /// [isLocalMuted] doit renvoyer l'état "micro coupé" applicatif courant
+  /// (celui piloté par le bouton mute), et [mutedRemoteUserIds] l'ensemble
+  /// des participants distants actuellement mute (état reçu par socket).
+  /// Ces deux callbacks servent de garde-fou : `getStats()` reflète le niveau
+  /// de captation matérielle du micro, qui peut rester non-nul un court
+  /// instant (ou selon la plateforme) même après avoir coupé le micro — sans
+  /// ce garde-fou, le halo violet peut donc rester affiché alors que le
+  /// micro est coupé. On force ici l'extinction immédiate, sans attendre
+  /// l'hystérésis, dès qu'on sait que la source est mute.
+  void start(
+    Map<String, RTCPeerConnection> Function() peerConnectionsProvider, {
+    bool Function()? isLocalMuted,
+    Set<String> Function()? mutedRemoteUserIds,
+  }) {
+    _isLocalMuted = isLocalMuted ?? () => false;
+    _mutedRemoteUserIds = mutedRemoteUserIds ?? () => const {};
     _timer?.cancel();
     _timer = Timer.periodic(pollInterval, (_) => _poll(peerConnectionsProvider()));
   }
@@ -69,10 +87,24 @@ class SpeakingDetector extends ChangeNotifier {
     if (peerConnections.isEmpty) return;
 
     bool localCaptured = false;
+    final mutedRemotes = _mutedRemoteUserIds();
+    final localMuted = _isLocalMuted();
+
+    // Micro local coupé : on éteint immédiatement l'indicateur (sans
+    // attendre les frames d'hystérésis) et on ignore les mesures de ce
+    // cycle, qui peuvent être trompeuses juste après le mute.
+    if (localMuted) {
+      _forceOff(localKey);
+    }
 
     for (final entry in peerConnections.entries) {
       final userId = entry.key;
       final pc = entry.value;
+      // Participant distant signalé comme mute : même logique, on ne se fie
+      // pas uniquement à `audioLevel` qui peut mettre un cycle à retomber.
+      if (mutedRemotes.contains(userId)) {
+        _forceOff(userId);
+      }
       try {
         final reports = await pc.getStats();
         for (final r in reports) {
@@ -81,6 +113,7 @@ class SpeakingDetector extends ChangeNotifier {
 
           // Flux distant reçu de ce pair.
           if (r.type == 'inbound-rtp') {
+            if (mutedRemotes.contains(userId)) continue;
             final level = (values['audioLevel'] as num?)?.toDouble();
             if (level != null) _registerSample(userId, level);
           }
@@ -90,6 +123,10 @@ class SpeakingDetector extends ChangeNotifier {
           // on ne la capture qu'une fois par cycle.
           if (!localCaptured &&
               (r.type == 'media-source' || r.type == 'track')) {
+            if (localMuted) {
+              localCaptured = true;
+              continue;
+            }
             final level = (values['audioLevel'] as num?)?.toDouble();
             if (level != null) {
               _registerSample(localKey, level);
@@ -100,6 +137,16 @@ class SpeakingDetector extends ChangeNotifier {
       } catch (e) {
         debugPrint('[SpeakingDetector] getStats échoué pour $userId: $e');
       }
+    }
+  }
+
+  /// Éteint immédiatement l'indicateur pour [id], sans passer par
+  /// l'hystérésis normale (utilisé quand on SAIT que la source est mute).
+  void _forceOff(String id) {
+    _aboveStreak[id] = 0;
+    _belowStreak[id] = framesToDeactivate;
+    if (_activeSpeakers.remove(id)) {
+      notifyListeners();
     }
   }
 

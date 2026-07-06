@@ -406,7 +406,14 @@ class MeetingService extends ChangeNotifier {
 
     _status = MeetingStatus.connected;
     _startDurationTimer();
-    speakingDetector.start(() => _peerConnections);
+    speakingDetector.start(
+      () => _peerConnections,
+      isLocalMuted: () => _isMuted,
+      mutedRemoteUserIds: () => _remoteMutedStates.entries
+          .where((e) => e.value)
+          .map((e) => e.key)
+          .toSet(),
+    );
 
     if (!kIsWeb && _currentMeeting != null) {
       final isVideo = _currentMeeting!.typeMedia == 0;
