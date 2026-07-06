@@ -440,8 +440,23 @@ class E2eeService {
       final state = await _getOrBuildOutgoing(recipientId);
 
       if (state.cks == null) {
-        debugPrint('[E2EE] encrypt: CKs absent pour $recipientId');
-        return null;
+        // Session issue d'une réception (`_buildIncoming`) qui n'a encore
+        // jamais servi à émettre — cas du destinataire qui répond pour la
+        // première fois après avoir reçu un message. Il manquait le ratchet
+        // DH côté émission : `dhS` a déjà été généré dans `_buildIncoming`
+        // mais jamais utilisé, `dhR` (dernière clé de ratchet connue du pair)
+        // est déjà là. Sans dériver `cks` maintenant, ce compte ne pouvait
+        // plus jamais initier d'envoi vers ce pair — seulement recevoir
+        // (incident du 2026-07-06 : premier message d'un côté fonctionne,
+        // la réponse échoue systématiquement avec "CKs absent").
+        if (state.dhR == null) {
+          debugPrint('[E2EE] encrypt: aucune chaîne d\'envoi possible pour '
+              '$recipientId (dhR absent)');
+          return null;
+        }
+        final (rk2, cks) = await _kdfRk(state.rk, await _dh(state.dhS, state.dhR!));
+        state.rk = rk2;
+        state.cks = cks;
       }
 
       final (newCks, mk) = await _kdfCk(state.cks!);

@@ -21,6 +21,7 @@
         android:label="Alanya"
         android:name="${applicationName}"
         android:usesCleartextTraffic="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

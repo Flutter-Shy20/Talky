@@ -6,7 +6,23 @@ extension SocketApi on TalkyApiClient {
     if (_accessToken == null) return;
     if (_socket?.connected == true) return;
 
-    _socket = io.io(TalkyApiClient.socketUrl, <String, dynamic>{
+    // Le segment de chemin de `socketUrl` (ex: `/tmp/`) n'est PAS un préfixe
+    // de requête pour la lib socket.io : passé tel quel comme URL de
+    // connexion, il est interprété comme un NAMESPACE Socket.IO (`/tmp`), qui
+    // n'existe pas côté serveur (seul le namespace par défaut `/` est
+    // enregistré) → rejeté avec "Invalid namespace", après un transport bas
+    // niveau qui, lui, s'ouvre bien (d'où `onReconnect` qui se déclenche sans
+    // jamais `onConnect` : incident du 2026-07-06). Le chemin HTTP réel du
+    // handshake se configure exclusivement via l'option `path` ci-dessous ;
+    // l'URL de connexion doit rester seulement l'origine (schéma+hôte+port).
+    final socketUri = Uri.parse(TalkyApiClient.socketUrl);
+    final socketOrigin = socketUri.origin;
+    final socketPathPrefix = socketUri.path;
+    final socketPath =
+        '${socketPathPrefix.endsWith('/') ? socketPathPrefix : '$socketPathPrefix/'}socket.io/';
+
+    _socket = io.io(socketOrigin, <String, dynamic>{
+      'path': socketPath,
       'transports': ['websocket'],
       'autoConnect': false,
       'reconnection': true,
