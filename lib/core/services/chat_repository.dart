@@ -1250,6 +1250,44 @@ class ChatRepository {
     _dao.touchEmitted(clientId);
   }
 
+  /// À appeler dès la réception de l'event socket `call_log_updated` :
+  /// met à jour l'aperçu de la discussion (liste des conversations) pour
+  /// refléter le dernier appel, exactement comme un message le ferait.
+  Future<void> applyCallToConversationSummary({
+    required int conversationID,
+    required Call call,
+    required int myId,
+  }) async {
+    final isVideo = call.type == 1;
+    final icon = isVideo ? '📹' : '📞';
+    String label;
+    switch (call.status) {
+      case 2:
+        label = 'Appel refusé';
+        break;
+      case 3:
+        label = 'Appel manqué';
+        break;
+      default:
+        final d = call.duree;
+        label = (d != null && d > 0) ? 'Appel (${_formatCallDuree(d)})' : 'Appel';
+    }
+    await _bumpConversationSummary(
+      conversationID,
+      '$icon $label',
+      isVideo ? 6 : 5, // 5=appel audio, 6=appel vidéo (types réservés)
+      _parseDate(call.createdAt) ?? DateTime.now(),
+      fromOther: call.idCaller != myId,
+      senderID: call.idCaller,
+    );
+  }
+
+  static String _formatCallDuree(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _bumpConversationSummary(
     int conversID,
     String preview,

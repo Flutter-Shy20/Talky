@@ -100,6 +100,31 @@ extension CallSignaling on CallService {
       await _terminateCall();
     });
 
+    // Appel terminé/refusé : mise à jour du log d'appel ET de l'aperçu
+    // de la discussion (liste des conversations), reçu par les DEUX côtés.
+    _apiClient.onSocketEvent(SocketEvents.callLogUpdated, (data) async {
+      if (data is! Map) return;
+      try {
+        final me = await StorageService().getUser();
+        if (me == null) return;
+        final payload = Map<String, dynamic>.from(data);
+
+        await _cache?.applyCallLogUpdate(payload, myId: me.alanyaID);
+
+        final rawCall = payload['call'];
+        final conversationID = int.tryParse(payload['conversationID']?.toString() ?? '');
+        if (rawCall is Map && conversationID != null) {
+          await _chatRepo?.applyCallToConversationSummary(
+            conversationID: conversationID,
+            call: Call.fromJson(Map<String, dynamic>.from(rawCall)),
+            myId: me.alanyaID,
+          );
+        }
+      } catch (e) {
+        debugPrint('[CallService] ** Erreur call_log_updated: $e');
+      }
+    });
+
     // ICE candidate 1-à-1
     _apiClient.onSocketEvent(SocketEvents.iceCandidate, (data) {
       if (data is! Map || data['candidate'] == null) return;

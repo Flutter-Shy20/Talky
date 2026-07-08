@@ -101,7 +101,11 @@ class TalkyApp extends StatelessWidget {
         Provider<AppDatabase>.value(value: database),
         Provider<LocalCacheRepository>.value(value: localCache),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => CallService(apiClient: apiClient)),
+        ChangeNotifierProvider(create: (_) => CallService(
+          apiClient: apiClient,
+          chatRepository: chatProvider.repository,
+          cache: localCache,
+        )),
         ChangeNotifierProvider(create: (_) => MeetingService(apiClient: apiClient)),
         ChangeNotifierProvider.value(value: chatProvider),
         ChangeNotifierProvider(

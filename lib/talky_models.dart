@@ -691,6 +691,10 @@ class SocketEvents {
   static const callRejected  = 'call_rejected';
   static const callEnded     = 'call_ended';
   static const callFailed    = 'call_failed';
+  // Émis par le backend aux DEUX participants quand un appel se termine
+  // (terminé ou refusé) : contient { conversationID, call } pour rafraîchir
+  // à la fois le log d'appel dans le chat et l'aperçu dans les discussions.
+  static const callLogUpdated = 'call_log_updated';
 
   // Appels groupe (Flutter → Backend)
   static const createGroupCall    = 'create_group_call';

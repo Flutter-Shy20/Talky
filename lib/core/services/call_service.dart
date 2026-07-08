@@ -6,6 +6,9 @@ import '../../screens/calls/ongoing_call_screen.dart';
 import '../../core/call_limits.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import 'storage_service.dart';
+import 'chat_repository.dart';
+import 'local_cache_repository.dart';
 import 'audio_helper.dart' as audio;
 import 'callkit_service.dart';
 import 'call_session_guard.dart';
@@ -44,6 +47,10 @@ class CallService extends ChangeNotifier {
   final WebRTCService _webrtc = WebRTCService();
   final RingtoneService _ringtone = RingtoneService.instance;
   final CallKitService _callKit = CallKitService.instance;
+  // Optionnels : permettent de rafraîchir le log d'appel et l'aperçu des
+  // discussions dès la réception de l'event socket `call_log_updated`.
+  final ChatRepository? _chatRepo;
+  final LocalCacheRepository? _cache;
 
   CallStatus _status = CallStatus.idle;
   int? _remoteUserId;
@@ -153,7 +160,13 @@ class CallService extends ChangeNotifier {
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  CallService({required TalkyApiClient apiClient}) : _apiClient = apiClient {
+  CallService({
+    required TalkyApiClient apiClient,
+    ChatRepository? chatRepository,
+    LocalCacheRepository? cache,
+  })  : _apiClient = apiClient,
+        _chatRepo = chatRepository,
+        _cache = cache {
     _initRingtone();
     _setupSocketListeners();
     // Le détecteur est un ChangeNotifier séparé : on relaie ses

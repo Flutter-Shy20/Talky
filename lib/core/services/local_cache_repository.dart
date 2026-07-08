@@ -241,6 +241,24 @@ class LocalCacheRepository {
     );
   }
 
+  /// À appeler dès la réception de l'event socket `call_log_updated` :
+  /// upsert immédiat de l'appel dans le cache local (bulle du chat),
+  /// sans attendre le prochain `syncCalls()` (login/reconnexion).
+  Future<void> applyCallLogUpdate(Map<String, dynamic> data, {required int myId}) async {
+    final rawCall = data['call'];
+    if (rawCall is! Map) return;
+    final call = Call.fromJson(Map<String, dynamic>.from(rawCall));
+    if (call.idCall == 0) return;
+
+    final other = (call.idCaller == myId) ? call.receiver : call.caller;
+    await _db.into(_db.localCalls).insertOnConflictUpdate(_callToCompanion(call, other));
+    if (other != null) {
+      await _db.into(_db.localUsers).insertOnConflictUpdate(
+            _userToCompanion(other, cachedAt: DateTime.now()),
+          );
+    }
+  }
+
   LocalCallsCompanion _callToCompanion(Call c, User? other) {
     return LocalCallsCompanion(
       idCall: Value(c.idCall),
