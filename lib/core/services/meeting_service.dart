@@ -43,6 +43,9 @@ class MeetingService extends ChangeNotifier {
   // Contrôles
   bool _isMuted = false;
   bool _isVideoOff = false;
+  // Garde-fou : ré-applique périodiquement le mute natif tant que le micro
+  // doit rester coupé (voir toggleMute() pour l'explication complète).
+  Timer? _micMuteEnforcer;
 
   // États mute des participants distants (userId → isMuted)
   final Map<String, bool> _remoteMutedStates = {};
@@ -641,19 +644,56 @@ class MeetingService extends ChangeNotifier {
   // MÉDIAS 
 
   Future<void> toggleMute() async {
-    if (_localStream != null && _localStream!.getAudioTracks().isNotEmpty) {
-      final track = _localStream!.getAudioTracks().first;
-      track.enabled = !track.enabled;
-      _isMuted = !track.enabled;
-      // Notifier les autres participants
-      if (_currentMeeting != null) {
-        _apiClient.sendSocketEvent(SocketEvents.meetingMuteState, {
-          'meetingId': _currentMeeting!.idMeeting,
-          'isMuted': _isMuted,
-        });
-      }
-      notifyListeners();
+    if (_localStream == null || _localStream!.getAudioTracks().isEmpty) return;
+
+    final newMuted = !_isMuted;
+    _applyMicMuted(newMuted);
+    _isMuted = newMuted;
+    _syncMicMuteEnforcer();
+
+    // Notifier les autres participants
+    if (_currentMeeting != null) {
+      _apiClient.sendSocketEvent(SocketEvents.meetingMuteState, {
+        'meetingId': _currentMeeting!.idMeeting,
+        'isMuted': _isMuted,
+      });
     }
+    notifyListeners();
+  }
+
+  /// Applique l'état [muted] à TOUTES les pistes audio locales, à la fois
+  /// via `enabled` (coupe l'envoi RTP) ET via `Helper.setMicrophoneMute`
+  /// (coupe la capture au niveau de la session audio native Android/iOS).
+  ///
+  /// `enabled=false` seul ne suffit pas : quand l'OS réinitialise la route
+  /// ou la session audio en cours de meeting (Bluetooth, écouteurs, appel
+  /// système, mise en veille prolongée...), il peut réactiver la capture
+  /// native sans que ce flag ne change côté Dart — c'était la cause du bug
+  /// où le correspondant continuait d'entendre après un temps de silence.
+  void _applyMicMuted(bool muted) {
+    final tracks = _localStream?.getAudioTracks() ?? const [];
+    for (final track in tracks) {
+      track.enabled = !muted;
+      try {
+        Helper.setMicrophoneMute(muted, track);
+      } catch (e) {
+        debugPrint('[MeetingService] ** Helper.setMicrophoneMute a échoué: $e');
+      }
+    }
+  }
+
+  void _syncMicMuteEnforcer() {
+    _micMuteEnforcer?.cancel();
+    _micMuteEnforcer = null;
+    if (!_isMuted) return;
+    // Tant que le micro doit rester coupé, on réapplique INCONDITIONNELLEMENT
+    // (pas seulement si `enabled` a changé : la réinitialisation peut se
+    // produire au niveau natif sans toucher ce flag côté Dart) toutes les
+    // 2 secondes, en filet de sécurité.
+    _micMuteEnforcer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!_isMuted) return;
+      _applyMicMuted(true);
+    });
   }
 
   Future<void> toggleVideo() async {
@@ -691,6 +731,8 @@ class MeetingService extends ChangeNotifier {
   // CLEANUP
   Future<void> _cleanup() async {
     speakingDetector.stop();
+    _micMuteEnforcer?.cancel();
+    _micMuteEnforcer = null;
     if (!kIsWeb) {
       await CallSessionGuard.instance.release();
     }

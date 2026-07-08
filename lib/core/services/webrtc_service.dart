@@ -467,15 +467,16 @@ class WebRTCService {
     _micMuteEnforcer?.cancel();
     _micMuteEnforcer = null;
     if (!_isMicMuted) return;
-    // Tant que le micro doit rester coupé, on réapplique l'état toutes les
-    // 3 secondes pour contrer toute réinitialisation faite par l'OS.
-    _micMuteEnforcer = Timer.periodic(const Duration(seconds: 3), (_) {
-      final tracks = _localStream?.getAudioTracks() ?? const [];
-      final needsReassert = tracks.any((t) => t.enabled != false);
-      if (needsReassert) {
-        debugPrint('[WebRTC] !! Micro réactivé par le système, ré-application du mute');
-        _applyMicMuted(true);
-      }
+    // Tant que le micro doit rester coupé, on réapplique INCONDITIONNELLEMENT
+    // (et pas seulement si `track.enabled` a changé) toutes les 2 secondes.
+    // Le mute natif (Helper.setMicrophoneMute, au niveau de la session audio
+    // Android/iOS) peut être réinitialisé par l'OS SANS que `track.enabled`
+    // ne change côté Dart — un simple `if (needsReassert)` basé sur ce flag
+    // ratait donc ce cas précis, laissant le micro réellement actif après
+    // un temps de silence/inactivité alors que l'UI affichait "coupé".
+    _micMuteEnforcer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!_isMicMuted) return;
+      _applyMicMuted(true);
     });
   }
 
