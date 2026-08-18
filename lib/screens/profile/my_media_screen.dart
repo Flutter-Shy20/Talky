@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/backend_url.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/video_message_preview.dart';
 import '../chats/media_viewer_screen.dart';
 
 /// Grille paginée des médias envoyés par l'utilisateur.
@@ -104,6 +105,43 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
     );
   }
 
+  /// Tuile de la grille. Mêmes aperçus que l'écran médias d'une conversation :
+  /// la vidéo s'appuie sur `mediaThumb` (aucun fichier local ici, les médias
+  /// viennent du serveur), l'image sur son URL.
+  Widget _tile(MyMediaItem item) {
+    final fallback = context.semantic.surfaceMuted;
+    if (item.isVideo) {
+      return VideoMessagePreview(
+        thumbBase64: item.mediaThumb,
+        durationSeconds: item.mediaDuration,
+        borderRadius: BorderRadius.zero,
+        expandToFill: true,
+        playIconSize: 26,
+        fallbackColor: fallback,
+      );
+    }
+
+    final url = normalizeBackendUrl(item.mediaUrl) ?? '';
+    if (url.isEmpty) {
+      return Container(
+        color: context.semantic.brandContainer,
+        child: Icon(Icons.image_outlined, color: context.colors.primary),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      placeholder: (_, __) => Container(color: fallback),
+      errorWidget: (_, __, ___) => Container(
+        color: context.semantic.brandContainer,
+        child: Icon(
+          Icons.broken_image_outlined,
+          color: context.colors.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -160,49 +198,9 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
                             );
                           }
                           final item = _items[index];
-                          final url = normalizeBackendUrl(item.mediaUrl) ?? '';
                           return GestureDetector(
                             onTap: () => _openViewer(index),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                if (url.isNotEmpty && !item.isVideo)
-                                  CachedNetworkImage(
-                                    imageUrl: url,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) => Container(
-                                      color: context.semantic.surfaceMuted,
-                                    ),
-                                    errorWidget: (_, __, ___) => Container(
-                                      color: context.semantic.brandContainer,
-                                      child: Icon(
-                                        Icons.broken_image_outlined,
-                                        color: context.colors.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Container(
-                                    color: context.semantic.brandContainer,
-                                    child: Icon(
-                                      item.isVideo
-                                          ? Icons.videocam_outlined
-                                          : Icons.image_outlined,
-                                      color: context.colors.primary,
-                                    ),
-                                  ),
-                                if (item.isVideo)
-                                  const Positioned(
-                                    right: 6,
-                                    bottom: 6,
-                                    child: Icon(
-                                      Icons.play_circle_fill,
-                                      color: Colors.white70,
-                                      size: 22,
-                                    ),
-                                  ),
-                              ],
-                            ),
+                            child: _tile(item),
                           );
                         },
                       ),

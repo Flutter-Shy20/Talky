@@ -195,6 +195,11 @@ class MyMediaItem {
   final int type;
   final String mediaUrl;
   final String? mediaName;
+
+  /// Vignette JPEG base64 envoyée avec le message, renseignée par le backend
+  /// pour les vidéos uniquement (une image a déjà son URL).
+  final String? mediaThumb;
+  final int? mediaDuration;
   final DateTime? sendAt;
 
   const MyMediaItem({
@@ -203,6 +208,8 @@ class MyMediaItem {
     required this.type,
     required this.mediaUrl,
     this.mediaName,
+    this.mediaThumb,
+    this.mediaDuration,
     this.sendAt,
   });
 
@@ -218,6 +225,10 @@ class MyMediaItem {
             : int.tryParse(json['type']?.toString() ?? '') ?? 0,
         mediaUrl: json['mediaUrl']?.toString() ?? '',
         mediaName: json['mediaName']?.toString(),
+        mediaThumb: json['mediaThumb']?.toString(),
+        mediaDuration: json['mediaDuration'] is int
+            ? json['mediaDuration'] as int
+            : int.tryParse(json['mediaDuration']?.toString() ?? ''),
         sendAt: json['sendAt'] != null
             ? DateTime.tryParse(json['sendAt'].toString())
             : null,
