@@ -42,6 +42,35 @@ String? localeCodeOf(AppLocalePreference preference) => switch (preference) {
       AppLocalePreference.system => null,
     };
 
+/// Nom d'une langue **écrit dans cette langue**, `null` pour
+/// [AppLocalePreference.system] (qui est un mode, pas une langue).
+///
+/// Ces libellés ne passent volontairement pas par l'ARB. Traduits, ils
+/// afficheraient 英语 / 法语 à quelqu'un qui a basculé l'app en chinois par
+/// erreur : il ne retrouverait plus sa langue dans la liste. C'est la
+/// convention des sélecteurs de langue d'iOS, d'Android et de WhatsApp, et
+/// c'est aussi ce que fait déjà `nativeNameOf` côté traduction des messages.
+String? nativeLabelOf(AppLocalePreference preference) => switch (preference) {
+      AppLocalePreference.french => 'Français',
+      AppLocalePreference.english => 'English',
+      AppLocalePreference.chinese => '中文',
+      AppLocalePreference.system => null,
+    };
+
+/// Langue que [AppLocalePreference.system] donnerait ici et maintenant.
+///
+/// Sert à afficher « Système — actuellement Français » : sans ça, le mode
+/// système ne dit jamais ce qu'il résout.
+AppLocalePreference platformResolvedPreference() {
+  final code = platformResolvedLocale().languageCode;
+  for (final preference in kForcedLocalePreferences) {
+    if (localeCodeOf(preference) == code) return preference;
+  }
+  // Inatteignable tant que [platformResolvedLocale] retombe sur une langue
+  // supportée, mais on ne renvoie pas `system` : ce serait une boucle.
+  return AppLocalePreference.french;
+}
+
 /// Locale plateforme parmi les langues supportées (FR par défaut).
 ///
 /// Utilisable **hors [LocaleController]** — isolate FCM d'arrière-plan, CallKit.

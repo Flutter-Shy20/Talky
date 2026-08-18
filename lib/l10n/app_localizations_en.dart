@@ -170,16 +170,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguage => 'Language';
 
   @override
-  String get settingsLangFr => 'French';
-
-  @override
-  String get settingsLangEn => 'English';
-
-  @override
-  String get settingsLangZh => 'Chinese';
-
-  @override
   String get settingsLangSystem => 'System';
+
+  @override
+  String get settingsSectionLanguages => 'Languages';
+
+  @override
+  String get settingsAppLanguage => 'App language';
+
+  @override
+  String get settingsMessageTranslation => 'Message translation';
+
+  @override
+  String settingsLangSystemResolved(String language) {
+    return 'Follows your phone — currently $language';
+  }
+
+  @override
+  String get languageScreenHint =>
+      'The language of the app. It does not change the language of the messages you receive.';
+
+  @override
+  String get languageSectionMessages => 'Messages';
 
   @override
   String get settingsMedia => 'Media';
@@ -221,9 +233,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mediaSaveFailed => 'Could not save this media';
-
-  @override
-  String get settingsCalls => 'Calls';
 
   @override
   String get settingsRingtone => 'Call ringtone';
@@ -5465,6 +5474,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tripsTraceExpiredBody =>
       'Location points for this trip have been purged. The summary and timeline remain available.';
+
+  @override
+  String get tripsTraceUnavailable => 'Trace unavailable';
+
+  @override
+  String get tripsTraceUnavailableBody =>
+      'Could not load this trip\'s location points. They have not been deleted — try again.';
+
+  @override
+  String get tripsTraceEmpty => 'No location recorded';
+
+  @override
+  String get tripsTraceEmptyBody =>
+      'No location was recorded during this trip. The summary and timeline remain available.';
 
   @override
   String get tripsEventStarted => 'Started';

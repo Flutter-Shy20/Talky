@@ -52,10 +52,21 @@
   "settingsThemeDark": "Dark",
   "settingsThemeSystem": "System",
   "settingsLanguage": "Language",
-  "settingsLangFr": "French",
-  "settingsLangEn": "English",
-  "settingsLangZh": "Chinese",
   "settingsLangSystem": "System",
+  "settingsSectionLanguages": "Languages",
+  "settingsAppLanguage": "App language",
+  "settingsMessageTranslation": "Message translation",
+  "settingsLangSystemResolved": "Follows your phone — currently {language}",
+  "@settingsLangSystemResolved": {
+    "description": "Sous-titre du mode « Système » : indique la langue effectivement résolue.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "languageScreenHint": "The language of the app. It does not change the language of the messages you receive.",
+  "languageSectionMessages": "Messages",
   "settingsMedia": "Media",
   "settingsAutoDownload": "Automatic download",
   "settingsAutoDownloadSubtitle": "Download received media inside the app",
@@ -69,7 +80,6 @@
   "mediaAlreadyInDownloads": "Already in Downloads",
   "mediaSaveAgain": "Save again",
   "mediaSaveFailed": "Could not save this media",
-  "settingsCalls": "Calls",
   "settingsRingtone": "Call ringtone",
   "ringtoneScreenTitle": "Call ringtone",
   "ringtoneSectionSystem": "Default ringtone",
@@ -2514,6 +2524,10 @@
   "tripsDetailNoEvents": "No events recorded.",
   "tripsTraceExpired": "Trace expired",
   "tripsTraceExpiredBody": "Location points for this trip have been purged. The summary and timeline remain available.",
+  "tripsTraceUnavailable": "Trace unavailable",
+  "tripsTraceUnavailableBody": "Could not load this trip's location points. They have not been deleted — try again.",
+  "tripsTraceEmpty": "No location recorded",
+  "tripsTraceEmptyBody": "No location was recorded during this trip. The summary and timeline remain available.",
   "tripsEventStarted": "Started",
   "tripsEventExtended": "Extended",
   "tripsEventArrivalDetected": "Arrival detected",

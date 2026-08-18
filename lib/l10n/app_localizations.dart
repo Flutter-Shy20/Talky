@@ -412,29 +412,47 @@ abstract class AppLocalizations {
   /// **'Langue'**
   String get settingsLanguage;
 
-  /// No description provided for @settingsLangFr.
-  ///
-  /// In fr, this message translates to:
-  /// **'Français'**
-  String get settingsLangFr;
-
-  /// No description provided for @settingsLangEn.
-  ///
-  /// In fr, this message translates to:
-  /// **'Anglais'**
-  String get settingsLangEn;
-
-  /// No description provided for @settingsLangZh.
-  ///
-  /// In fr, this message translates to:
-  /// **'Chinois'**
-  String get settingsLangZh;
-
   /// No description provided for @settingsLangSystem.
   ///
   /// In fr, this message translates to:
   /// **'Système'**
   String get settingsLangSystem;
+
+  /// No description provided for @settingsSectionLanguages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Langues'**
+  String get settingsSectionLanguages;
+
+  /// No description provided for @settingsAppLanguage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Langue de l\'application'**
+  String get settingsAppLanguage;
+
+  /// No description provided for @settingsMessageTranslation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction des messages'**
+  String get settingsMessageTranslation;
+
+  /// Sous-titre du mode « Système » : indique la langue effectivement résolue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suit le téléphone — actuellement {language}'**
+  String settingsLangSystemResolved(String language);
+
+  /// No description provided for @languageScreenHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'La langue de l\'application. Elle ne change pas la langue des messages que vous recevez.'**
+  String get languageScreenHint;
+
+  /// No description provided for @languageSectionMessages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages'**
+  String get languageSectionMessages;
 
   /// No description provided for @settingsMedia.
   ///
@@ -513,12 +531,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible d’enregistrer ce média'**
   String get mediaSaveFailed;
-
-  /// No description provided for @settingsCalls.
-  ///
-  /// In fr, this message translates to:
-  /// **'Appels'**
-  String get settingsCalls;
 
   /// No description provided for @settingsRingtone.
   ///
@@ -9555,6 +9567,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Les positions de ce trajet ont été purgées. Le résumé et la frise restent disponibles.'**
   String get tripsTraceExpiredBody;
+
+  /// No description provided for @tripsTraceUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trace indisponible'**
+  String get tripsTraceUnavailable;
+
+  /// No description provided for @tripsTraceUnavailableBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les positions de ce trajet. Elles n\'ont pas été effacées — réessayez.'**
+  String get tripsTraceUnavailableBody;
+
+  /// No description provided for @tripsTraceEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune position'**
+  String get tripsTraceEmpty;
+
+  /// No description provided for @tripsTraceEmptyBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune position n\'a été enregistrée pendant ce trajet. Le résumé et la frise restent disponibles.'**
+  String get tripsTraceEmptyBody;
 
   /// No description provided for @tripsEventStarted.
   ///

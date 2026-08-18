@@ -7,6 +7,8 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/locale_controller.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../widgets/profile/language_choice_list.dart';
+import '../../../widgets/profile/theme_preview_picker.dart';
 import '../widgets/onboarding_shell.dart';
 
 /// Étape 3 : thème, langue, biométrie, puis entrée dans l'app.
@@ -102,53 +104,26 @@ class _PersonalizeStepState extends State<PersonalizeStep> {
         children: [
           OnboardingSectionLabel(l10n.onboardingThemeLabel),
           AppSpacing.vGapMd,
-          SegmentedButton<ThemeMode>(
-            segments: [
-              ButtonSegment(
-                value: ThemeMode.light,
-                label: Text(l10n.settingsThemeLight),
-                icon: const Icon(Icons.light_mode_outlined),
-              ),
-              ButtonSegment(
-                value: ThemeMode.dark,
-                label: Text(l10n.settingsThemeDark),
-                icon: const Icon(Icons.dark_mode_outlined),
-              ),
-              ButtonSegment(
-                value: ThemeMode.system,
-                label: Text(l10n.settingsThemeSystem),
-                icon: const Icon(Icons.brightness_auto_outlined),
-              ),
-            ],
-            selected: {_theme},
-            onSelectionChanged:
-                busy ? null : (s) => setState(() => _theme = s.first),
+          ThemePreviewPicker(
+            padding: EdgeInsets.zero,
+            enabled: !busy,
+            selected: _theme,
+            lightLabel: l10n.settingsThemeLight,
+            darkLabel: l10n.settingsThemeDark,
+            systemLabel: l10n.settingsThemeSystem,
+            onChanged: (mode) => setState(() => _theme = mode),
           ),
           AppSpacing.vGapXxl,
           OnboardingSectionLabel(l10n.onboardingLanguageLabel),
-          AppSpacing.vGapMd,
-          SegmentedButton<AppLocalePreference>(
-            segments: [
-              ButtonSegment(
-                value: AppLocalePreference.french,
-                label: Text(l10n.settingsLangFr),
-              ),
-              ButtonSegment(
-                value: AppLocalePreference.english,
-                label: Text(l10n.settingsLangEn),
-              ),
-              ButtonSegment(
-                value: AppLocalePreference.chinese,
-                label: Text(l10n.settingsLangZh),
-              ),
-              ButtonSegment(
-                value: AppLocalePreference.system,
-                label: Text(l10n.settingsLangSystem),
-              ),
-            ],
-            selected: {_locale},
-            onSelectionChanged:
-                busy ? null : (s) => setState(() => _locale = s.first),
+          AppSpacing.vGapSm,
+          // Même liste, même ordre et mêmes noms natifs que dans les réglages :
+          // les deux écrans lisent `kForcedLocalePreferences`, plus de segments
+          // recopiés à la main d'un écran à l'autre.
+          LanguageChoiceList(
+            contentPadding: EdgeInsets.zero,
+            enabled: !busy,
+            selected: _locale,
+            onChanged: (preference) => setState(() => _locale = preference),
           ),
           AppSpacing.vGapXxl,
           OnboardingSectionLabel(l10n.onboardingBiometricTitle),
