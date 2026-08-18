@@ -30,11 +30,16 @@ class TripDetailScreen extends StatefulWidget {
   State<TripDetailScreen> createState() => _TripDetailScreenState();
 }
 
+/// Ce qu'on sait de la trace. Trois issues distinctes, parce que les confondre
+/// ment à l'utilisateur : une trace purgée est définitivement partie, une trace
+/// qu'on n'a pas pu charger est toujours là.
+enum _EtatTrace { chargement, disponible, vide, purgee, erreur }
+
 class _TripDetailScreenState extends State<TripDetailScreen> {
   Trip? _trip;
   List<LocalTripEvent> _events = const [];
   List<TripPoint>? _trace;
-  bool _tracePurged = false;
+  _EtatTrace _etatTrace = _EtatTrace.chargement;
   bool _charge = true;
   Object? _erreur;
 
@@ -49,18 +54,30 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     setState(() {
       _charge = true;
       _erreur = null;
+      // Une nouvelle tentative repart du chargement : sinon le bouton
+      // « Réessayer » laisserait l'ancien message d'erreur à l'écran.
+      _etatTrace = _EtatTrace.chargement;
     });
     final trips = context.read<TripRepository>();
     try {
       final synced = await trips.syncTrip(widget.tripId, isOwner: true);
       final events = await trips.getEventsOnce(widget.tripId);
       List<TripPoint>? trace;
-      var purged = false;
+      _EtatTrace etat;
       try {
         trace = await trips.loadTrace(widget.tripId);
-        purged = trace == null;
+        if (trace == null) {
+          etat = _EtatTrace.purgee;
+        } else if (trace.isEmpty) {
+          etat = _EtatTrace.vide;
+        } else {
+          etat = _EtatTrace.disponible;
+        }
       } catch (_) {
-        purged = true;
+        // Un réseau qui tombe n'est PAS une purge. Annoncer « trace expirée »
+        // ici faisait croire à l'utilisateur que ses positions avaient été
+        // effacées, alors qu'elles l'attendaient toujours sur le serveur.
+        etat = _EtatTrace.erreur;
         trace = null;
       }
       if (!mounted) return;
@@ -68,7 +85,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         if (synced != null) _trip = synced;
         _events = events;
         _trace = trace;
-        _tracePurged = purged;
+        _etatTrace = etat;
         _charge = false;
       });
     } catch (e) {
@@ -76,6 +93,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       setState(() {
         _erreur = e;
         _charge = false;
+        // La trace n'a même pas été demandée : sans ceci la carte resterait sur
+        // son indicateur de chargement indéfiniment.
+        _etatTrace = _EtatTrace.erreur;
       });
     }
   }
@@ -221,22 +241,58 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     );
   }
 
+  /// Place d'une carte absente : même gabarit quelle qu'en soit la raison.
+  Widget _messageTrace({
+    required IconData icon,
+    required String title,
+    required String message,
+    Widget? action,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: EmptyState(
+        icon: icon,
+        title: title,
+        message: message,
+        action: action,
+      ),
+    );
+  }
+
   Widget _carteSection(dynamic l10n, Trip t) {
-    if (_charge && _trace == null && !_tracePurged) {
-      return const SizedBox(
-        height: 220,
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (_tracePurged || (_trace != null && _trace!.isEmpty)) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: EmptyState(
+    switch (_etatTrace) {
+      case _EtatTrace.chargement:
+        return const SizedBox(
+          height: 220,
+          child: Center(child: CircularProgressIndicator()),
+        );
+      case _EtatTrace.purgee:
+        return _messageTrace(
           icon: Icons.route_outlined,
           title: l10n.tripsTraceExpired,
           message: l10n.tripsTraceExpiredBody,
-        ),
-      );
+        );
+      case _EtatTrace.vide:
+        return _messageTrace(
+          icon: Icons.location_off_outlined,
+          title: l10n.tripsTraceEmpty,
+          message: l10n.tripsTraceEmptyBody,
+        );
+      case _EtatTrace.erreur:
+        // Rechargeable : les positions sont toujours là, c'est l'appel qui a
+        // échoué.
+        return _messageTrace(
+          icon: Icons.cloud_off_outlined,
+          title: l10n.tripsTraceUnavailable,
+          message: l10n.tripsTraceUnavailableBody,
+          action: TextButton.icon(
+            onPressed: _charge ? null : _charger,
+            icon: const Icon(Icons.refresh),
+            label: Text(l10n.retry),
+          ),
+        );
+      case _EtatTrace.disponible:
+        break;
     }
 
     final points = (_trace ?? const <TripPoint>[])
