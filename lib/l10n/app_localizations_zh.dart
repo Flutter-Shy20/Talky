@@ -169,16 +169,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLanguage => '语言';
 
   @override
-  String get settingsLangFr => '法语';
-
-  @override
-  String get settingsLangEn => '英语';
-
-  @override
-  String get settingsLangZh => '中文';
-
-  @override
   String get settingsLangSystem => '跟随系统';
+
+  @override
+  String get settingsSectionLanguages => '语言';
+
+  @override
+  String get settingsAppLanguage => '应用语言';
+
+  @override
+  String get settingsMessageTranslation => '消息翻译';
+
+  @override
+  String settingsLangSystemResolved(String language) {
+    return '跟随手机设置——当前为 $language';
+  }
+
+  @override
+  String get languageScreenHint => '此设置仅更改应用界面的语言，不会更改您收到的消息的语言。';
+
+  @override
+  String get languageSectionMessages => '消息';
 
   @override
   String get settingsMedia => '媒体';
@@ -218,9 +229,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mediaSaveFailed => '无法保存该媒体文件';
-
-  @override
-  String get settingsCalls => '通话';
 
   @override
   String get settingsRingtone => '来电铃声';
@@ -5300,6 +5308,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get tripsTraceExpiredBody => '该行程的位置点已被清除。概要和时间线仍然可用。';
+
+  @override
+  String get tripsTraceUnavailable => '轨迹无法加载';
+
+  @override
+  String get tripsTraceUnavailableBody => '无法加载该行程的位置点。它们并未被删除，请重试。';
+
+  @override
+  String get tripsTraceEmpty => '没有位置记录';
+
+  @override
+  String get tripsTraceEmptyBody => '该行程期间没有记录任何位置。概要和时间线仍然可用。';
 
   @override
   String get tripsEventStarted => '已开始';

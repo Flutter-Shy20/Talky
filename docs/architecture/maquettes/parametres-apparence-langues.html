@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alanya — Réglages Apparence et Langues</title>
+
+<style>
+  :root {
+    --brand: #3F51B5; --brand-2: #5C6BC0; --brand-container: #E8EAF6;
+    --error: #C62828; --error-container: #FDECEC;
+    --success: #1FA363; --success-container: #E2F6EC;
+    --warning: #B26A00; --warning-container: #FDF1DC;
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82; --page-ink-3: #8B93A8;
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --brand: #93A0EA; --brand-2: #7986CB; --brand-container: #283593;
+      --error: #FF8A80; --error-container: #3A1414;
+      --success: #6FE0AC; --success-container: #143726;
+      --warning: #FFCC80; --warning-container: #3A2C10;
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF; --page-ink-3: #6F7787;
+    }
+  }
+  :root[data-theme="dark"] {
+    --brand: #93A0EA; --brand-2: #7986CB; --brand-container: #283593;
+    --error: #FF8A80; --error-container: #3A1414;
+    --success: #6FE0AC; --success-container: #143726;
+    --warning: #FFCC80; --warning-container: #3A2C10;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF; --page-ink-3: #6F7787;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page-bg); color: var(--page-ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1240px; margin: 0 auto; padding: clamp(24px,5vw,60px) clamp(16px,4vw,40px) 80px; display: flex; flex-direction: column; gap: clamp(40px,6vw,68px); }
+
+  .masthead { display: flex; flex-direction: column; gap: 12px; max-width: 68ch; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--brand); font-weight: 600; }
+  h1 { margin: 0; font-size: clamp(1.6rem,3.4vw,2.3rem); font-weight: 700; letter-spacing: -.022em; text-wrap: balance; }
+  .lead { margin: 0; color: var(--page-ink-2); max-width: 64ch; }
+
+  .section { display: flex; flex-direction: column; gap: 22px; }
+  .section > header { display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+  .section h2 { margin: 0; font-size: 13px; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--page-ink-2); }
+  .section h3 { margin: 0; font-size: clamp(1.15rem,2vw,1.4rem); font-weight: 650; letter-spacing: -.015em; text-wrap: balance; }
+  .section p { margin: 0; color: var(--page-ink-2); max-width: 66ch; }
+  .rule { height: 1px; background: var(--page-line); border: 0; margin: 0; }
+
+  .stage { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: clamp(20px,3vw,32px); align-items: start; }
+  .stage.duo { grid-template-columns: repeat(auto-fit, minmax(300px, 420px)); }
+  .block { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+  .caption { display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; max-width: 34ch; }
+  .caption .k { font-family: var(--mono); font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--page-ink-2); }
+  .caption .d { font-size: 13px; color: var(--page-ink-2); line-height: 1.5; }
+
+  .verdict { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+  .verdict.keep { background: var(--success-container); color: var(--success); }
+  .verdict.no { background: var(--error-container); color: var(--error); }
+  .verdict.meh { background: var(--warning-container); color: var(--warning); }
+
+  /* ---------- appareil ---------- */
+  .device { width: 100%; max-width: 336px; border-radius: 32px; padding: 8px; border: 1px solid var(--page-line); box-shadow: 0 20px 48px rgba(26,35,126,.14), 0 2px 6px rgba(0,0,0,.06); background: var(--page-panel); }
+  .screen { border-radius: 25px; overflow: hidden; display: flex; flex-direction: column; min-height: 560px; font-size: 14px; }
+  .screen[data-mode="light"] { --s-bg:#F6F7FB; --s-surface:#FFFFFF; --s-muted:#F1F3F8; --s-line:#E2E5EC; --s-ink:#1A1D23; --s-ink-2:#5B6273; --s-ink-3:#9AA0AE; --s-brand:#3F51B5; --s-brand-c:#E8EAF6; --s-shadow: 0 1px 3px rgba(16,24,40,.06); }
+  .screen[data-mode="dark"]  { --s-bg:#0F1115; --s-surface:#181B21; --s-muted:#232833; --s-line:#333947; --s-ink:#F2F4F8; --s-ink-2:#AAB1C0; --s-ink-3:#7A8294; --s-brand:#A6B1F0; --s-brand-c:#2A317A; --s-shadow: 0 1px 3px rgba(0,0,0,.4); }
+  .screen { background: var(--s-bg); color: var(--s-ink); }
+
+  .appbar { background: var(--s-surface); padding: 15px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--s-line); flex: none; }
+  .appbar h4 { margin: 0; font-size: 18px; font-weight: 650; flex: 1; letter-spacing: -.01em; }
+  .back { width: 19px; height: 19px; color: var(--s-brand); flex: none; }
+  .body { flex: 1; overflow: hidden; padding-bottom: 20px; }
+
+  .glabel { padding: 20px 20px 8px; font-size: 11.5px; font-weight: 700; color: var(--s-brand); text-transform: uppercase; letter-spacing: .06em; }
+  .card { margin: 0 12px; background: var(--s-surface); border-radius: 16px; box-shadow: var(--s-shadow); overflow: hidden; }
+  .card.flush { margin: 0; border-radius: 0; box-shadow: none; }
+
+  .tile { display: flex; align-items: center; gap: 13px; padding: 13px 16px; border-bottom: 1px solid var(--s-line); }
+  .tile:last-child { border-bottom: none; }
+  .ticon { width: 34px; height: 34px; border-radius: 50%; background: var(--s-muted); color: var(--s-ink-2); display: grid; place-items: center; flex: none; }
+  .ticon svg { width: 18px; height: 18px; }
+  .tbody { flex: 1; min-width: 0; }
+  .ttitle { font-size: 14.5px; font-weight: 500; letter-spacing: -.005em; }
+  .tsub { font-size: 12px; color: var(--s-ink-2); margin-top: 1px; }
+  .tval { font-size: 13px; color: var(--s-ink-2); flex: none; }
+  .chev { color: var(--s-ink-3); flex: none; width: 16px; height: 16px; }
+
+  /* segmenté */
+  .seg { display: flex; margin: 4px 16px 16px; border: 1px solid var(--s-line); border-radius: 999px; overflow: hidden; }
+  .seg > div { flex: 1 1 0; min-width: 0; padding: 11px 4px; text-align: center; font-size: 11.5px; color: var(--s-ink-2); border-right: 1px solid var(--s-line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .seg > div:last-child { border-right: none; }
+  .seg > div.on { background: var(--s-brand-c); color: var(--s-brand); font-weight: 600; }
+  .seg.tight > div { font-size: 10.5px; padding: 11px 2px; }
+
+  /* cartes d'aperçu de thème */
+  .themes { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; padding: 14px 16px 16px; }
+  .theme { display: flex; flex-direction: column; gap: 7px; align-items: center; }
+  .swatch { width: 100%; aspect-ratio: 62/78; border-radius: 11px; border: 2px solid var(--s-line); overflow: hidden; position: relative; display: flex; }
+  .theme.on .swatch { border-color: var(--s-brand); box-shadow: 0 0 0 2px var(--s-brand-c); }
+  .half { flex: 1; padding: 8px 6px; display: flex; flex-direction: column; gap: 4px; }
+  .half.l { background: #FFFFFF; }
+  .half.d { background: #14171E; }
+  .ln { height: 4px; border-radius: 2px; }
+  .half.l .ln { background: #D8DCE6; } .half.l .ln.b { background: #3F51B5; width: 62%; }
+  .half.d .ln { background: #3A404C; } .half.d .ln.b { background: #8E9BF0; width: 62%; }
+  .tname { font-size: 11.5px; color: var(--s-ink-2); }
+  .theme.on .tname { color: var(--s-brand); font-weight: 650; }
+
+  /* radio list */
+  .radio { display: flex; align-items: center; gap: 13px; padding: 14px 16px; border-bottom: 1px solid var(--s-line); }
+  .radio:last-child { border-bottom: none; }
+  .dot { width: 19px; height: 19px; border-radius: 50%; border: 2px solid var(--s-ink-3); flex: none; display: grid; place-items: center; }
+  .radio.on .dot { border-color: var(--s-brand); }
+  .radio.on .dot::after { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--s-brand); }
+  .rname { font-size: 15px; font-weight: 500; }
+  .radio.on .rname { color: var(--s-brand); }
+  .rsub { font-size: 12px; color: var(--s-ink-2); margin-top: 1px; }
+  .hint { padding: 14px 20px 4px; font-size: 12px; color: var(--s-ink-2); line-height: 1.5; }
+
+  /* bottom sheet */
+  .sheet-wrap { position: relative; flex: 1; overflow: hidden; }
+  .scrim { position: absolute; inset: 0; background: rgba(10,12,17,.45); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--s-surface); border-radius: 20px 20px 0 0; padding-bottom: 10px; box-shadow: 0 -8px 28px rgba(0,0,0,.22); }
+  .grabber { width: 34px; height: 4px; border-radius: 999px; background: var(--s-line); margin: 10px auto 6px; }
+  .sheet-title { padding: 4px 16px 10px; font-size: 15px; font-weight: 650; }
+
+  /* menu déroulant */
+  .menu { position: absolute; right: 14px; top: 96px; background: var(--s-surface); border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.24); padding: 6px 0; min-width: 150px; z-index: 3; }
+  .menu > div { padding: 10px 14px; font-size: 14px; white-space: nowrap; }
+  .menu > div.on { color: var(--s-brand); font-weight: 600; background: var(--s-brand-c); }
+  .clip { position: relative; flex: 1; overflow: hidden; }
+
+  /* annotation */
+  .flag { position: absolute; z-index: 4; font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--error); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+
+  /* listes de constats */
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px,1fr)); gap: 14px; }
+  .note { background: var(--page-panel); border: 1px solid var(--page-line); border-radius: var(--r-md); padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+  .note .n { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--page-ink-3); }
+  .note strong { font-size: 14.5px; font-weight: 650; letter-spacing: -.01em; }
+  .note span { font-size: 13.5px; color: var(--page-ink-2); }
+  .note code, .tbl code { font-family: var(--mono); font-size: .88em; background: var(--page-bg); padding: 1px 5px; border-radius: 5px; }
+
+  /* tableau */
+  .tblwrap { overflow-x: auto; border: 1px solid var(--page-line); border-radius: var(--r-md); background: var(--page-panel); }
+  table.tbl { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 13.5px; }
+  .tbl th { text-align: left; font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--page-ink-2); font-weight: 600; padding: 12px 16px; border-bottom: 1px solid var(--page-line); }
+  .tbl td { padding: 12px 16px; border-bottom: 1px solid var(--page-line); vertical-align: top; color: var(--page-ink-2); }
+  .tbl td:first-child { color: var(--page-ink); font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+  .tbl tr:last-child td { border-bottom: none; }
+  .tag { display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; font-weight: 700; }
+  .tag.new { background: var(--success-container); color: var(--success); }
+  .tag.mod { background: var(--brand-container); color: var(--brand); }
+  .tag.del { background: var(--error-container); color: var(--error); }
+
+  footer { font-family: var(--mono); font-size: 11px; color: var(--page-ink-2); padding-top: 22px; border-top: 1px solid var(--page-line); line-height: 1.7; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .device { transition: transform .25s ease; }
+    .device:hover { transform: translateY(-3px); }
+  }
+
+  .theme-toggle { position: fixed; top: 16px; right: 16px; background: var(--page-panel); border: 1px solid var(--page-line); border-radius: var(--r-sm); padding: 6px 12px; font-size: 12px; font-family: var(--mono); cursor: pointer; color: var(--page-ink-2); z-index: 99; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" type="button" onclick="toggleTheme()">Thème clair / sombre</button>
+<div class="page">
+
+<header class="masthead">
+  <span class="eyebrow">Paramètres · refonte apparence &amp; langues</span>
+  <h1>Le sélecteur de langue ne tient plus dans un bouton segmenté</h1>
+  <p class="lead">Le chinois a fait passer le contrôle à quatre segments : les libellés se tronquent dès 340 dp, et le portugais en ajouterait un cinquième. Voici l'audit, trois options comparées pour la langue, la refonte du bloc Apparence, et la page complète après changement.</p>
+</header>
+
+<hr class="rule">
+
+<!-- ============ 1. AUDIT ============ -->
+<section class="section">
+  <header>
+    <h2>01 — Constat</h2>
+    <h3>Ce qui casse aujourd'hui</h3>
+    <p>La capture ci-dessous reproduit <code>settings_screen.dart</code> tel qu'il est actuellement rendu sur un écran de 340 dp de large.</p>
+  </header>
+  <div class="stage duo">
+    <div class="block">
+      <div class="device"><div class="screen" data-mode="light" style="min-height:430px;">
+        <div class="appbar">
+          <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <h4>Paramètres</h4>
+        </div>
+        <div class="body" style="position:relative;">
+          <div class="glabel">Apparence</div>
+          <div class="seg"><div class="on">Clair</div><div>Sombre</div><div>Système</div></div>
+          <div class="glabel">Langue</div>
+          <span class="flag" style="right:14px; top:150px;">tronqué</span>
+          <div class="seg tight"><div class="on">Franç…</div><div>Angl…</div><div>Chin…</div><div>Syst…</div></div>
+          <div class="glabel">Appels</div>
+          <div class="card flush"><div class="tile">
+            <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+            <div class="tbody"><div class="ttitle">Sonnerie</div><div class="tsub">Par défaut du système</div></div>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </div></div>
+        </div>
+      </div></div>
+      <div class="caption"><span class="k">Avant · 340 dp</span><span class="d">Quatre segments pour la langue, deux sections d'un seul contrôle qui se suivent.</span></div>
+    </div>
+
+    <div class="notes" style="align-self:stretch;">
+      <div class="note">
+        <span class="n">A — Largeur</span>
+        <strong>Quatre segments ne rentrent pas</strong>
+        <span>« Français / Anglais / Chinois / Système » demande ~76 dp par segment sans les marges. Flutter tronque. En chinois les libellés passent, en allemand ou en portugais ils casseront encore plus tôt.</span>
+      </div>
+      <div class="note">
+        <span class="n">B — Extensibilité</span>
+        <strong>Chaque langue ajoutée coûte deux écrans</strong>
+        <span>Les segments sont écrits à la main dans <code>settings_screen.dart</code> <em>et</em> dans <code>personalize_step.dart</code>. <code>kForcedLocalePreferences</code> existe déjà pour éviter ça, mais aucun des deux sélecteurs ne s'en sert.</span>
+      </div>
+      <div class="note">
+        <span class="n">C — Lisibilité</span>
+        <strong>Les noms de langue sont traduits</strong>
+        <span>L'app en chinois affiche 法语 / 英语 / 中文. Quelqu'un qui a basculé en chinois par erreur ne retrouve pas « English ». La convention (iOS, Android, WhatsApp) : chaque langue s'écrit dans sa propre langue.</span>
+      </div>
+      <div class="note">
+        <span class="n">D — Icônes</span>
+        <strong>Deux icônes pour la même chose</strong>
+        <span><code>Icons.language</code> sur Français, <code>Icons.translate</code> sur Anglais et Chinois. La différence ne veut rien dire.</span>
+      </div>
+      <div class="note">
+        <span class="n">E — Sémantique</span>
+        <strong>« Système » n'est pas une langue</strong>
+        <span>C'est un mode. Il partage la ligne avec trois langues et ne dit jamais ce qu'il résout — l'utilisateur ne sait pas s'il va obtenir français ou anglais.</span>
+      </div>
+      <div class="note">
+        <span class="n">F — Collision</span>
+        <strong>« Langue » contre « Traduction »</strong>
+        <span>Deux sections distinctes et éloignées règlent chacune une langue : celle de l'interface, celle des messages reçus. Rien ne le dit.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============ 2. OPTIONS LANGUE ============ -->
+<section class="section">
+  <header>
+    <h2>02 — Décision principale</h2>
+    <h3>Où choisit-on sa langue ?</h3>
+    <p>Le contrôle segmenté sort. Trois remplaçants tiennent la route ; ils diffèrent surtout par ce qu'ils supportent à dix langues.</p>
+  </header>
+  <div class="stage">
+
+    <!-- A : écran dédié -->
+    <div class="block">
+      <div class="device"><div class="screen" data-mode="light">
+        <div class="appbar">
+          <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <h4>Langue</h4>
+        </div>
+        <div class="body">
+          <div class="hint">La langue de l'application. Elle ne change pas la langue des messages que vous recevez.</div>
+          <div class="glabel">Langue de l'application</div>
+          <div class="card">
+            <div class="radio"><div class="dot"></div><div class="tbody"><div class="rname">Système</div><div class="rsub">Suit le téléphone — actuellement Français</div></div></div>
+            <div class="radio on"><div class="dot"></div><div class="tbody"><div class="rname">Français</div></div></div>
+            <div class="radio"><div class="dot"></div><div class="tbody"><div class="rname">English</div></div></div>
+            <div class="radio"><div class="dot"></div><div class="tbody"><div class="rname">中文</div></div></div>
+          </div>
+          <div class="glabel">Messages</div>
+          <div class="card"><div class="tile">
+            <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 8h10M9 4v4M11 20l4-9 4 9M12.5 17h5.5"/><path d="M12 8c0 4-3.5 7-7 8"/><path d="M9 12c1.5 2 3 3 5 4"/></svg></div>
+            <div class="tbody"><div class="ttitle">Traduction des messages</div><div class="tsub">Automatique · vers le français</div></div>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </div></div>
+        </div>
+      </div></div>
+      <div class="caption">
+        <span class="verdict keep">✓ Recommandé</span>
+        <span class="k">A — Écran dédié</span>
+        <span class="d">Une liste radio, construite par boucle sur <code>kForcedLocalePreferences</code>. Tient à 3 comme à 30 langues, laisse la place à un champ de recherche plus tard, et suit ce que font déjà Sonnerie, Vitesse de lecture et Traduction — tous des sous-écrans.</span>
+      </div>
+    </div>
+
+    <!-- B : bottom sheet -->
+    <div class="block">
+      <div class="device"><div class="screen" data-mode="light">
+        <div class="appbar">
+          <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <h4>Paramètres</h4>
+        </div>
+        <div class="sheet-wrap">
+          <div class="body">
+            <div class="glabel">Apparence</div>
+            <div class="card" style="height:104px;"></div>
+            <div class="glabel">Langues</div>
+            <div class="card" style="height:120px;"></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="grabber"></div>
+            <div class="sheet-title">Langue de l'application</div>
+            <div class="radio"><div class="dot"></div><div class="tbody"><div class="rname">Système</div><div class="rsub">Actuellement Français</div></div></div>
+            <div class="radio on"><div class="dot"></div><div class="tbody"><div class="rname">Français</div></div></div>
+            <div class="radio"><div class="dot"></div><div class="tbody"><div class="rname">English</div></div></div>
+            <div class="radio"><div class="dot"></div><div class="tbody"><div class="rname">中文</div></div></div>
+          </div>
+        </div>
+      </div></div>
+      <div class="caption">
+        <span class="verdict meh">Possible</span>
+        <span class="k">B — Feuille modale</span>
+        <span class="d">Un aller-retour de moins. Mais à huit langues la feuille scrolle dans une page qui scrolle déjà, elle n'a pas de titre d'écran pour les lecteurs d'écran, et rien n'y tient l'explication interface / messages.</span>
+      </div>
+    </div>
+
+    <!-- C : menu -->
+    <div class="block">
+      <div class="device"><div class="screen" data-mode="light">
+        <div class="appbar">
+          <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <h4>Paramètres</h4>
+        </div>
+        <div class="clip">
+          <div class="body">
+            <div class="glabel">Langues</div>
+            <div class="card">
+              <div class="tile">
+                <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18a15 15 0 010-18"/></svg></div>
+                <div class="tbody"><div class="ttitle">Langue de l'application</div></div>
+                <span class="tval" style="color:var(--s-brand);font-weight:600;">Français ▾</span>
+              </div>
+              <div class="tile" style="opacity:.45;">
+                <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 8h10M9 4v4M11 20l4-9 4 9M12.5 17h5.5"/></svg></div>
+                <div class="tbody"><div class="ttitle">Traduction des messages</div></div>
+              </div>
+            </div>
+          </div>
+          <span class="flag" style="right:12px; bottom:62px;">déborde</span>
+          <div class="menu">
+            <div>Système</div>
+            <div class="on">Français</div>
+            <div>English</div>
+            <div>中文（简体）</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="caption">
+        <span class="verdict no">✕ Écarté</span>
+        <span class="k">C — Menu déroulant dans la tuile</span>
+        <span class="d">Compact, mais le menu Material se pose par-dessus la liste et se fait rogner en bas d'écran, la valeur longue (中文（简体）) déborde la tuile, et la cible tactile passe sous 48 dp.</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============ 3. APPARENCE ============ -->
+<section class="section">
+  <header>
+    <h2>03 — Apparence</h2>
+    <h3>Le thème se montre, il ne se lit pas</h3>
+    <p>Trois segments tiennent techniquement dans la largeur — ce n'est pas un problème de place. Mais « Clair / Sombre / Système » demande de se représenter un résultat qu'on pourrait simplement afficher.</p>
+  </header>
+  <div class="stage duo">
+    <div class="block">
+      <div class="device"><div class="screen" data-mode="light" style="min-height:230px;">
+        <div class="body">
+          <div class="glabel">Apparence</div>
+          <div class="card" style="padding-top:6px;">
+            <div class="seg" style="margin:10px 16px 14px;"><div class="on">Clair</div><div>Sombre</div><div>Système</div></div>
+          </div>
+        </div>
+      </div></div>
+      <div class="caption">
+        <span class="verdict meh">Statu quo</span>
+        <span class="k">Bouton segmenté</span>
+        <span class="d">Fonctionne, mais reste une ligne de texte de plus dans une page qui en compte déjà beaucoup.</span>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="device"><div class="screen" data-mode="light" style="min-height:230px;">
+        <div class="body">
+          <div class="glabel">Apparence</div>
+          <div class="card">
+            <div class="themes">
+              <div class="theme on">
+                <div class="swatch"><div class="half l"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:78%"></div><div class="ln" style="width:55%"></div></div></div>
+                <span class="tname">Clair</span>
+              </div>
+              <div class="theme">
+                <div class="swatch"><div class="half d"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:78%"></div><div class="ln" style="width:55%"></div></div></div>
+                <span class="tname">Sombre</span>
+              </div>
+              <div class="theme">
+                <div class="swatch">
+                  <div class="half l"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:70%"></div></div>
+                  <div class="half d"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:70%"></div></div>
+                </div>
+                <span class="tname">Système</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="caption">
+        <span class="verdict keep">✓ Recommandé</span>
+        <span class="k">Trois aperçus</span>
+        <span class="d">Le mode « Système » se lit d'un coup d'œil grâce à la vignette coupée en deux — c'est exactement ce qu'aucun libellé ne réussit à dire. Reste à trois cartes pour toujours : le thème n'a pas vocation à grossir, contrairement à la langue.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============ 4. PAGE APRÈS ============ -->
+<section class="section">
+  <header>
+    <h2>04 — Résultat</h2>
+    <h3>La page de paramètres après refonte</h3>
+    <p>Huit sections deviennent six, et plus aucune ne contient un seul contrôle orphelin. <strong>Vitesse de lecture</strong> descend dans Médias (c'est de la lecture de médias), <strong>Sonnerie</strong> remonte dans Communication, <strong>Accessibilité</strong> rejoint Apparence (taille du texte, animations réduites), et <strong>Traduction des messages</strong> se range à côté de la langue de l'interface pour que la différence saute aux yeux.</p>
+  </header>
+  <div class="stage duo">
+
+    <div class="block">
+      <div class="device"><div class="screen" data-mode="light" style="min-height:940px;">
+        <div class="appbar">
+          <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <h4>Paramètres</h4>
+        </div>
+        <div class="body">
+          <div class="glabel">Communication</div>
+          <div class="card">
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+              <div class="tbody"><div class="ttitle">Notifications</div><div class="tsub">Alertes, son, Ne pas déranger</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 00-9.3-5"/><path d="M6 9v-1"/><path d="M3 3l18 18"/><path d="M6 8c0 7-3 8-3 8h13"/></svg></div>
+              <div class="tbody"><div class="ttitle">Conversations silencieuses</div><div class="tsub">3 conversations</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+              <div class="tbody"><div class="ttitle">Sonnerie d'appel</div><div class="tsub">Par défaut du système</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="glabel">Apparence</div>
+          <div class="card">
+            <div class="themes">
+              <div class="theme on">
+                <div class="swatch"><div class="half l"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:78%"></div><div class="ln" style="width:55%"></div></div></div>
+                <span class="tname">Clair</span>
+              </div>
+              <div class="theme">
+                <div class="swatch"><div class="half d"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:78%"></div><div class="ln" style="width:55%"></div></div></div>
+                <span class="tname">Sombre</span>
+              </div>
+              <div class="theme">
+                <div class="swatch">
+                  <div class="half l"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:70%"></div></div>
+                  <div class="half d"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:70%"></div></div>
+                </div>
+                <span class="tname">Système</span>
+              </div>
+            </div>
+            <div class="tile" style="border-top:1px solid var(--s-line);">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8.5 9.5h7"/></svg></div>
+              <div class="tbody"><div class="ttitle">Accessibilité</div><div class="tsub">Taille du texte, animations réduites</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="glabel">Langues</div>
+          <div class="card">
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18a15 15 0 010-18"/></svg></div>
+              <div class="tbody"><div class="ttitle">Langue de l'application</div></div>
+              <span class="tval">Français</span>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 8h10M9 4v4M11 20l4-9 4 9M12.5 17h5.5"/><path d="M12 8c0 4-3.5 7-7 8"/></svg></div>
+              <div class="tbody"><div class="ttitle">Traduction des messages</div><div class="tsub">Automatique · vers le français</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="glabel">Médias</div>
+          <div class="card">
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-6 6"/></svg></div>
+              <div class="tbody"><div class="ttitle">Enregistrer dans la galerie</div></div>
+              <div style="width:42px;height:25px;border-radius:999px;background:var(--s-brand);position:relative;flex:none;"><div style="position:absolute;right:3px;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;"></div></div>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 11l5 5 5-5M4 21h16"/></svg></div>
+              <div class="tbody"><div class="ttitle">Téléchargement automatique</div></div>
+              <div style="width:42px;height:25px;border-radius:999px;background:var(--s-line);position:relative;flex:none;"><div style="position:absolute;left:3px;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;"></div></div>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21a9 9 0 109-9"/><path d="M12 8v4l3 2"/></svg></div>
+              <div class="tbody"><div class="ttitle">Vitesse de lecture</div><div class="tsub">Normale (1×)</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="glabel">Application</div>
+          <div class="card">
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v5h10V4"/><circle cx="8" cy="15" r="1"/></svg></div>
+              <div class="tbody"><div class="ttitle">Stockage et cache</div><div class="tsub">1,8 Go utilisés</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 8.5a16 16 0 0120 0M5 12.5a11 11 0 0114 0M8.5 16.5a6 6 0 017 0"/><circle cx="12" cy="20" r="1"/></svg></div>
+              <div class="tbody"><div class="ttitle">Réseau et données</div><div class="tsub">Qualité, économie de données</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="glabel">Informations</div>
+          <div class="card">
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r=".7" fill="currentColor"/></svg></div>
+              <div class="tbody"><div class="ttitle">À propos et mentions légales</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="caption"><span class="k">Après · thème clair</span><span class="d">Six sections, toutes à deux items ou plus.</span></div>
+    </div>
+
+    <div class="block">
+      <div class="device"><div class="screen" data-mode="dark" style="min-height:940px;">
+        <div class="appbar">
+          <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <h4>Paramètres</h4>
+        </div>
+        <div class="body">
+          <div class="glabel">Communication</div>
+          <div class="card">
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+              <div class="tbody"><div class="ttitle">Notifications</div><div class="tsub">Alertes, son, Ne pas déranger</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 00-9.3-5"/><path d="M3 3l18 18"/><path d="M6 8c0 7-3 8-3 8h13"/></svg></div>
+              <div class="tbody"><div class="ttitle">Conversations silencieuses</div><div class="tsub">3 conversations</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+              <div class="tbody"><div class="ttitle">Sonnerie d'appel</div><div class="tsub">Par défaut du système</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="glabel">Apparence</div>
+          <div class="card">
+            <div class="themes">
+              <div class="theme">
+                <div class="swatch"><div class="half l"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:78%"></div><div class="ln" style="width:55%"></div></div></div>
+                <span class="tname">Clair</span>
+              </div>
+              <div class="theme on">
+                <div class="swatch"><div class="half d"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:78%"></div><div class="ln" style="width:55%"></div></div></div>
+                <span class="tname">Sombre</span>
+              </div>
+              <div class="theme">
+                <div class="swatch">
+                  <div class="half l"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:70%"></div></div>
+                  <div class="half d"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:70%"></div></div>
+                </div>
+                <span class="tname">Système</span>
+              </div>
+            </div>
+            <div class="tile" style="border-top:1px solid var(--s-line);">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8.5 9.5h7"/></svg></div>
+              <div class="tbody"><div class="ttitle">Accessibilité</div><div class="tsub">Taille du texte, animations réduites</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="glabel">Langues</div>
+          <div class="card">
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18a15 15 0 010-18"/></svg></div>
+              <div class="tbody"><div class="ttitle">Langue de l'application</div></div>
+              <span class="tval">中文</span>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 8h10M9 4v4M11 20l4-9 4 9M12.5 17h5.5"/><path d="M12 8c0 4-3.5 7-7 8"/></svg></div>
+              <div class="tbody"><div class="ttitle">Traduction des messages</div><div class="tsub">Automatique · vers le chinois</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="glabel">Médias</div>
+          <div class="card">
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-6 6"/></svg></div>
+              <div class="tbody"><div class="ttitle">Enregistrer dans la galerie</div></div>
+              <div style="width:42px;height:25px;border-radius:999px;background:var(--s-brand);position:relative;flex:none;"><div style="position:absolute;right:3px;top:3px;width:19px;height:19px;border-radius:50%;background:#181B21;"></div></div>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 11l5 5 5-5M4 21h16"/></svg></div>
+              <div class="tbody"><div class="ttitle">Téléchargement automatique</div></div>
+              <div style="width:42px;height:25px;border-radius:999px;background:var(--s-line);position:relative;flex:none;"><div style="position:absolute;left:3px;top:3px;width:19px;height:19px;border-radius:50%;background:#9AA0AE;"></div></div>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21a9 9 0 109-9"/><path d="M12 8v4l3 2"/></svg></div>
+              <div class="tbody"><div class="ttitle">Vitesse de lecture</div><div class="tsub">Normale (1×)</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="glabel">Application</div>
+          <div class="card">
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v5h10V4"/><circle cx="8" cy="15" r="1"/></svg></div>
+              <div class="tbody"><div class="ttitle">Stockage et cache</div><div class="tsub">1,8 Go utilisés</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 8.5a16 16 0 0120 0M5 12.5a11 11 0 0114 0M8.5 16.5a6 6 0 017 0"/><circle cx="12" cy="20" r="1"/></svg></div>
+              <div class="tbody"><div class="ttitle">Réseau et données</div><div class="tsub">Qualité, économie de données</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="glabel">Informations</div>
+          <div class="card">
+            <div class="tile">
+              <div class="ticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r=".7" fill="currentColor"/></svg></div>
+              <div class="tbody"><div class="ttitle">À propos et mentions légales</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="caption"><span class="k">Après · thème sombre, app en chinois</span><span class="d">La valeur affichée reste 中文 : le nom natif ne se traduit pas.</span></div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============ 5. ONBOARDING ============ -->
+<section class="section">
+  <header>
+    <h2>05 — Effet de bord</h2>
+    <h3>L'onboarding a exactement le même bouton</h3>
+    <p><code>personalize_step.dart</code> duplique les quatre segments. Il n'y a pas de tuile de navigation possible dans un pas d'onboarding, mais il y a de la hauteur : la liste radio y tient directement, et le thème garde ses trois aperçus.</p>
+  </header>
+  <div class="stage duo">
+    <div class="block">
+      <div class="device"><div class="screen" data-mode="light" style="min-height:600px;">
+        <div class="appbar" style="border-bottom:none;background:var(--s-bg);">
+          <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <h4 style="font-size:15px;color:var(--s-ink-2);font-weight:500;">Étape 4 sur 5</h4>
+        </div>
+        <div class="body" style="padding:0 4px;">
+          <div style="padding:4px 20px 18px;">
+            <div style="font-size:22px;font-weight:700;letter-spacing:-.02em;">Personnalisez Alanya</div>
+            <div style="font-size:13.5px;color:var(--s-ink-2);margin-top:6px;">Vous pourrez tout modifier plus tard dans les paramètres.</div>
+          </div>
+          <div style="padding:0 20px 8px;font-size:11.5px;font-weight:700;color:var(--s-brand);text-transform:uppercase;letter-spacing:.06em;">Thème</div>
+          <div class="themes" style="padding:0 20px 20px;">
+            <div class="theme"><div class="swatch"><div class="half l"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:70%"></div></div></div><span class="tname">Clair</span></div>
+            <div class="theme"><div class="swatch"><div class="half d"><div class="ln b"></div><div class="ln"></div><div class="ln" style="width:70%"></div></div></div><span class="tname">Sombre</span></div>
+            <div class="theme on"><div class="swatch"><div class="half l"><div class="ln b"></div><div class="ln"></div></div><div class="half d"><div class="ln b"></div><div class="ln"></div></div></div><span class="tname">Système</span></div>
+          </div>
+          <div style="padding:0 20px 8px;font-size:11.5px;font-weight:700;color:var(--s-brand);text-transform:uppercase;letter-spacing:.06em;">Langue</div>
+          <div style="margin:0 12px;background:var(--s-surface);border-radius:16px;box-shadow:var(--s-shadow);overflow:hidden;">
+            <div class="radio on"><div class="dot"></div><div class="tbody"><div class="rname">Système</div><div class="rsub">Français, d'après votre téléphone</div></div></div>
+            <div class="radio"><div class="dot"></div><div class="tbody"><div class="rname">Français</div></div></div>
+            <div class="radio"><div class="dot"></div><div class="tbody"><div class="rname">English</div></div></div>
+            <div class="radio"><div class="dot"></div><div class="tbody"><div class="rname">中文</div></div></div>
+          </div>
+        </div>
+      </div></div>
+      <div class="caption"><span class="k">Onboarding — personnalisation</span><span class="d">Même source de vérité, même ordre, mêmes noms natifs que dans les paramètres.</span></div>
+    </div>
+
+    <div class="notes" style="align-self:stretch;">
+      <div class="note">
+        <span class="n">Règle</span>
+        <strong>Une langue = une entrée, un seul endroit</strong>
+        <span>Ajouter le portugais devient : une valeur dans l'<code>enum AppLocalePreference</code>, une ligne dans <code>kForcedLocalePreferences</code>, un nom natif, les fichiers <code>.arb</code>. Aucun écran à toucher — c'est ce que la boucle achète.</span>
+      </div>
+      <div class="note">
+        <span class="n">Compatibilité</span>
+        <strong>Rien ne bouge côté persistance</strong>
+        <span>La refonte est purement visuelle : <code>AppLocalePreference</code>, la clé <code>app_locale</code> et la synchro <code>user_settings.locale</code> restent identiques. Les appareils déjà installés gardent leur langue.</span>
+      </div>
+      <div class="note">
+        <span class="n">Accessibilité</span>
+        <strong>Le sélectionné se dit, pas seulement se voit</strong>
+        <span>Une liste de <code>RadioListTile</code> annonce « sélectionné » à TalkBack et VoiceOver, ce que les segments tronqués ne font pas correctement. Les cartes de thème prennent un <code>Semantics(label:, selected:)</code>.</span>
+      </div>
+      <div class="note">
+        <span class="n">À trancher</span>
+        <strong>Faut-il des cartes en creux ?</strong>
+        <span>Les maquettes montrent des cartes arrondies à 12 dp du bord ; <code>SettingsGroup</code> rend aujourd'hui un bloc pleine largeur. C'est trois lignes dans le widget partagé — mais ça touche tous les écrans de réglages, donc à valider séparément.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============ 6. CODE ============ -->
+<section class="section">
+  <header>
+    <h2>06 — Mise en œuvre</h2>
+    <h3>Ce que ça touche</h3>
+    <p>Aucune migration, aucun changement de contrat backend. Six fichiers de code, trois fichiers de traduction.</p>
+  </header>
+  <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Fichier</th><th></th><th>Changement</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>core/theme/locale_controller.dart</td>
+          <td><span class="tag mod">modifié</span></td>
+          <td>Ajouter <code>nativeLabelOf(AppLocalePreference)</code> — « Français », « English », « 中文 » — à côté de <code>kForcedLocalePreferences</code>. Ce sont des constantes, pas des chaînes traduites : elles s'écrivent toujours pareil quelle que soit la langue de l'app.</td>
+        </tr>
+        <tr>
+          <td>screens/profile/language_screen.dart</td>
+          <td><span class="tag new">nouveau</span></td>
+          <td>Ligne « Système » + boucle <code>RadioListTile</code> sur <code>kForcedLocalePreferences</code>. Réutilise le <code>patchAndSync</code> déjà écrit dans <code>settings_screen.dart</code>.</td>
+        </tr>
+        <tr>
+          <td>widgets/profile/theme_preview_picker.dart</td>
+          <td><span class="tag new">nouveau</span></td>
+          <td>Trois cartes d'aperçu pour <code>ThemeMode</code>, dessinées avec les tokens de <code>app_colors.dart</code> — pas des images, donc pas d'asset à maintenir.</td>
+        </tr>
+        <tr>
+          <td>screens/profile/settings_screen.dart</td>
+          <td><span class="tag mod">modifié</span></td>
+          <td>Regroupement en six sections, le <code>SegmentedButton&lt;AppLocalePreference&gt;</code> disparaît au profit d'une <code>SettingsNavTile</code>, celui du thème laisse place au sélecteur d'aperçus.</td>
+        </tr>
+        <tr>
+          <td>screens/onboarding/steps/personalize_step.dart</td>
+          <td><span class="tag mod">modifié</span></td>
+          <td>Les deux <code>SegmentedButton</code> écrits à la main deviennent la même liste radio et le même sélecteur d'aperçus.</td>
+        </tr>
+        <tr>
+          <td>l10n/app_{fr,en,zh}.arb</td>
+          <td><span class="tag del">nettoyé</span></td>
+          <td>
+            Suppression : <code>settingsLangFr</code>, <code>settingsLangEn</code>, <code>settingsLangZh</code> — remplacées par les noms natifs.<br>
+            Ajout : <code>settingsSectionLanguages</code>, <code>settingsAppLanguage</code>, <code>settingsMessageTranslation</code>, <code>languageScreenHint</code>, et <code>settingsLangSystemResolved</code> avec un placeholder pour « Suit le téléphone — actuellement {langue} ».
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  Tokens : app_colors.dart · app_dimens.dart — Maquette : refonte Apparence &amp; Langues, 18 août 2026<br>
+  Contraintes respectées : <code>AppLocalePreference</code> et la clé <code>app_locale</code> ne sont ni renommées ni réordonnées.
+</footer>
+
+</div>
+<script>
+  function toggleTheme() {
+    const r = document.documentElement;
+    const c = r.getAttribute('data-theme');
+    if (c === 'dark') r.removeAttribute('data-theme');
+    else if (c === 'light') r.setAttribute('data-theme', 'dark');
+    else r.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
+  }
+</script>
+</body>
+</html>

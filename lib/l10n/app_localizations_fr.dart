@@ -170,16 +170,28 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsLanguage => 'Langue';
 
   @override
-  String get settingsLangFr => 'Français';
-
-  @override
-  String get settingsLangEn => 'Anglais';
-
-  @override
-  String get settingsLangZh => 'Chinois';
-
-  @override
   String get settingsLangSystem => 'Système';
+
+  @override
+  String get settingsSectionLanguages => 'Langues';
+
+  @override
+  String get settingsAppLanguage => 'Langue de l\'application';
+
+  @override
+  String get settingsMessageTranslation => 'Traduction des messages';
+
+  @override
+  String settingsLangSystemResolved(String language) {
+    return 'Suit le téléphone — actuellement $language';
+  }
+
+  @override
+  String get languageScreenHint =>
+      'La langue de l\'application. Elle ne change pas la langue des messages que vous recevez.';
+
+  @override
+  String get languageSectionMessages => 'Messages';
 
   @override
   String get settingsMedia => 'Médias';
@@ -221,9 +233,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mediaSaveFailed => 'Impossible d’enregistrer ce média';
-
-  @override
-  String get settingsCalls => 'Appels';
 
   @override
   String get settingsRingtone => 'Sonnerie d\'appel';
@@ -5539,6 +5548,20 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get tripsTraceExpiredBody =>
       'Les positions de ce trajet ont été purgées. Le résumé et la frise restent disponibles.';
+
+  @override
+  String get tripsTraceUnavailable => 'Trace indisponible';
+
+  @override
+  String get tripsTraceUnavailableBody =>
+      'Impossible de charger les positions de ce trajet. Elles n\'ont pas été effacées — réessayez.';
+
+  @override
+  String get tripsTraceEmpty => 'Aucune position';
+
+  @override
+  String get tripsTraceEmptyBody =>
+      'Aucune position n\'a été enregistrée pendant ce trajet. Le résumé et la frise restent disponibles.';
 
   @override
   String get tripsEventStarted => 'Départ';

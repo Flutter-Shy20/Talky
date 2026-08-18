@@ -66,10 +66,21 @@
   "settingsThemeDark": "Sombre",
   "settingsThemeSystem": "Système",
   "settingsLanguage": "Langue",
-  "settingsLangFr": "Français",
-  "settingsLangEn": "Anglais",
-  "settingsLangZh": "Chinois",
   "settingsLangSystem": "Système",
+  "settingsSectionLanguages": "Langues",
+  "settingsAppLanguage": "Langue de l'application",
+  "settingsMessageTranslation": "Traduction des messages",
+  "settingsLangSystemResolved": "Suit le téléphone — actuellement {language}",
+  "@settingsLangSystemResolved": {
+    "description": "Sous-titre du mode « Système » : indique la langue effectivement résolue.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "languageScreenHint": "La langue de l'application. Elle ne change pas la langue des messages que vous recevez.",
+  "languageSectionMessages": "Messages",
   "settingsMedia": "Médias",
   "settingsAutoDownload": "Téléchargement automatique",
   "settingsAutoDownloadSubtitle": "Télécharge les médias reçus dans l’app",
@@ -83,7 +94,6 @@
   "mediaAlreadyInDownloads": "Déjà dans Téléchargements",
   "mediaSaveAgain": "Enregistrer à nouveau",
   "mediaSaveFailed": "Impossible d’enregistrer ce média",
-  "settingsCalls": "Appels",
   "settingsRingtone": "Sonnerie d'appel",
   "ringtoneScreenTitle": "Sonnerie d'appel",
   "ringtoneSectionSystem": "Sonnerie par défaut",
@@ -3404,6 +3414,10 @@
   "tripsDetailNoEvents": "Aucun événement enregistré.",
   "tripsTraceExpired": "Trace expirée",
   "tripsTraceExpiredBody": "Les positions de ce trajet ont été purgées. Le résumé et la frise restent disponibles.",
+  "tripsTraceUnavailable": "Trace indisponible",
+  "tripsTraceUnavailableBody": "Impossible de charger les positions de ce trajet. Elles n'ont pas été effacées — réessayez.",
+  "tripsTraceEmpty": "Aucune position",
+  "tripsTraceEmptyBody": "Aucune position n'a été enregistrée pendant ce trajet. Le résumé et la frise restent disponibles.",
   "tripsEventStarted": "Départ",
   "tripsEventExtended": "Prolongation",
   "tripsEventArrivalDetected": "Arrivée détectée",
