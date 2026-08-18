@@ -2932,6 +2932,44 @@
   "deleteAccountLogoutNow": "Se déconnecter",
   "myMediaEmpty": "Aucun média partagé pour le moment",
   "myMediaLoadFailed": "Impossible de charger vos médias",
+  "bytesUnitB": "o",
+  "bytesUnitKB": "Ko",
+  "bytesUnitMB": "Mo",
+  "bytesUnitGB": "Go",
+  "myMediaSortRecent": "Récents",
+  "myMediaSortLargest": "Plus lourds",
+  "myMediaOnThisDevice": "{size} sur cet appareil",
+  "@myMediaOnThisDevice": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaFreeSpace": "Libérer de l'espace",
+  "myMediaFreeSpaceConfirm": "La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l'ouverture.",
+  "myMediaFreedSpace": "{size} libérés sur cet appareil",
+  "@myMediaFreedSpace": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaNothingCached": "Aucun de ces médias n'occupe d'espace sur cet appareil",
+  "myMediaForwardUnavailable": "Ces médias ne sont plus dans vos conversations sur cet appareil",
+  "myMediaSelectAll": "Tout sélectionner",
+  "myMediaFilterReceived": "Reçus",
+  "myMediaFilterSent": "Envoyés",
+  "myMediaFilterAll": "Tous",
+  "myMediaFrom": "De {name}",
+  "@myMediaFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "dndSummaryActive": "{start} – {end} · {days}",
   "@dndSummaryActive": {
     "placeholders": {

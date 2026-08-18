@@ -749,6 +749,17 @@ class ChatDao {
         .write(LocalMessagesCompanion(deletedForID: Value(userId)));
   }
 
+  /// Messages locaux correspondant à des msgID serveur. L'écran Mes médias
+  /// travaille sur des identifiants renvoyés par l'API et a besoin des lignes
+  /// Drift pour transférer. Un média dont la conversation n'est plus en cache
+  /// local n'a pas de ligne : la liste renvoyée peut être plus courte.
+  Future<List<LocalMessage>> messagesByIds(List<int> msgIDs) {
+    if (msgIDs.isEmpty) return Future.value(const []);
+    return (db.select(db.localMessages)
+          ..where((m) => m.msgID.isIn(msgIDs) & m.isDeleted.equals(false)))
+        .get();
+  }
+
   Future<void> setLocalMediaPath(int msgID, String path) {
     return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
         .write(LocalMessagesCompanion(localMediaPath: Value(path)));

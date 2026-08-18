@@ -4550,6 +4550,63 @@ class AppLocalizationsZh extends AppLocalizations {
   String get myMediaLoadFailed => '无法加载您的媒体';
 
   @override
+  String get bytesUnitB => '字节';
+
+  @override
+  String get bytesUnitKB => 'KB';
+
+  @override
+  String get bytesUnitMB => 'MB';
+
+  @override
+  String get bytesUnitGB => 'GB';
+
+  @override
+  String get myMediaSortRecent => '最近';
+
+  @override
+  String get myMediaSortLargest => '最大';
+
+  @override
+  String myMediaOnThisDevice(String size) {
+    return '本机占用 $size';
+  }
+
+  @override
+  String get myMediaFreeSpace => '释放空间';
+
+  @override
+  String get myMediaFreeSpaceConfirm => '将删除所选媒体在本机的副本。它们仍保留在聊天中，打开时会重新下载。';
+
+  @override
+  String myMediaFreedSpace(String size) {
+    return '已在本机释放 $size';
+  }
+
+  @override
+  String get myMediaNothingCached => '这些媒体均未占用本机空间';
+
+  @override
+  String get myMediaForwardUnavailable => '这些媒体已不在本机的聊天记录中';
+
+  @override
+  String get myMediaSelectAll => '全选';
+
+  @override
+  String get myMediaFilterReceived => '已接收';
+
+  @override
+  String get myMediaFilterSent => '已发送';
+
+  @override
+  String get myMediaFilterAll => '全部';
+
+  @override
+  String myMediaFrom(String name) {
+    return '来自 $name';
+  }
+
+  @override
   String dndSummaryActive(String start, String end, String days) {
     return '$start – $end · $days';
   }

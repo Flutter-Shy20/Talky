@@ -4740,6 +4740,66 @@ class AppLocalizationsFr extends AppLocalizations {
   String get myMediaLoadFailed => 'Impossible de charger vos médias';
 
   @override
+  String get bytesUnitB => 'o';
+
+  @override
+  String get bytesUnitKB => 'Ko';
+
+  @override
+  String get bytesUnitMB => 'Mo';
+
+  @override
+  String get bytesUnitGB => 'Go';
+
+  @override
+  String get myMediaSortRecent => 'Récents';
+
+  @override
+  String get myMediaSortLargest => 'Plus lourds';
+
+  @override
+  String myMediaOnThisDevice(String size) {
+    return '$size sur cet appareil';
+  }
+
+  @override
+  String get myMediaFreeSpace => 'Libérer de l\'espace';
+
+  @override
+  String get myMediaFreeSpaceConfirm =>
+      'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l\'ouverture.';
+
+  @override
+  String myMediaFreedSpace(String size) {
+    return '$size libérés sur cet appareil';
+  }
+
+  @override
+  String get myMediaNothingCached =>
+      'Aucun de ces médias n\'occupe d\'espace sur cet appareil';
+
+  @override
+  String get myMediaForwardUnavailable =>
+      'Ces médias ne sont plus dans vos conversations sur cet appareil';
+
+  @override
+  String get myMediaSelectAll => 'Tout sélectionner';
+
+  @override
+  String get myMediaFilterReceived => 'Reçus';
+
+  @override
+  String get myMediaFilterSent => 'Envoyés';
+
+  @override
+  String get myMediaFilterAll => 'Tous';
+
+  @override
+  String myMediaFrom(String name) {
+    return 'De $name';
+  }
+
+  @override
   String dndSummaryActive(String start, String end, String days) {
     return '$start – $end · $days';
   }

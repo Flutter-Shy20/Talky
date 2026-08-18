@@ -1722,14 +1722,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  /// Formate une taille d'octets en « Ko » / « Mo » (virgule décimale FR).
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes o';
-    final kb = bytes / 1024;
-    if (kb < 1024) return '${kb.toStringAsFixed(0)} Ko';
-    final mb = kb / 1024;
-    return '${mb.toStringAsFixed(1).replaceAll('.', ',')} Mo';
-  }
+  String _formatBytes(int bytes) => formatBytes(bytes, context.l10n);
 
   /// Overlay spinner ou barre de progression pendant l'envoi d'un média.
   Widget _buildUploadProgressOverlay(LocalMessage msg) {

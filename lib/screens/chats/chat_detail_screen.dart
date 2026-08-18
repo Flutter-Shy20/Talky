@@ -34,6 +34,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/audio_message_kind.dart';
+import '../../core/utils/byte_format.dart';
 import '../../core/utils/conversation_display.dart';
 import '../../core/utils/document_file_style.dart';
 import '../../core/utils/file_metadata.dart';

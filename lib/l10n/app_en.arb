@@ -2050,6 +2050,44 @@
   "deleteAccountLogoutNow": "Sign out",
   "myMediaEmpty": "No shared media yet",
   "myMediaLoadFailed": "Could not load your media",
+  "bytesUnitB": "B",
+  "bytesUnitKB": "KB",
+  "bytesUnitMB": "MB",
+  "bytesUnitGB": "GB",
+  "myMediaSortRecent": "Recent",
+  "myMediaSortLargest": "Largest",
+  "myMediaOnThisDevice": "{size} on this device",
+  "@myMediaOnThisDevice": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaFreeSpace": "Free up space",
+  "myMediaFreeSpaceConfirm": "The local copy of the selected media will be removed. They stay in your chats and will download again when opened.",
+  "myMediaFreedSpace": "{size} freed on this device",
+  "@myMediaFreedSpace": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaNothingCached": "None of these media take up space on this device",
+  "myMediaForwardUnavailable": "These media are no longer in your chats on this device",
+  "myMediaSelectAll": "Select all",
+  "myMediaFilterReceived": "Received",
+  "myMediaFilterSent": "Sent",
+  "myMediaFilterAll": "All",
+  "myMediaFrom": "From {name}",
+  "@myMediaFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "dndSummaryActive": "{start} – {end} · {days}",
   "@dndSummaryActive": {
     "placeholders": {

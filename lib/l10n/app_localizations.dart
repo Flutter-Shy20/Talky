@@ -8272,6 +8272,108 @@ abstract class AppLocalizations {
   /// **'Impossible de charger vos médias'**
   String get myMediaLoadFailed;
 
+  /// No description provided for @bytesUnitB.
+  ///
+  /// In fr, this message translates to:
+  /// **'o'**
+  String get bytesUnitB;
+
+  /// No description provided for @bytesUnitKB.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ko'**
+  String get bytesUnitKB;
+
+  /// No description provided for @bytesUnitMB.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mo'**
+  String get bytesUnitMB;
+
+  /// No description provided for @bytesUnitGB.
+  ///
+  /// In fr, this message translates to:
+  /// **'Go'**
+  String get bytesUnitGB;
+
+  /// No description provided for @myMediaSortRecent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récents'**
+  String get myMediaSortRecent;
+
+  /// No description provided for @myMediaSortLargest.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus lourds'**
+  String get myMediaSortLargest;
+
+  /// No description provided for @myMediaOnThisDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size} sur cet appareil'**
+  String myMediaOnThisDevice(String size);
+
+  /// No description provided for @myMediaFreeSpace.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libérer de l\'espace'**
+  String get myMediaFreeSpace;
+
+  /// No description provided for @myMediaFreeSpaceConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l\'ouverture.'**
+  String get myMediaFreeSpaceConfirm;
+
+  /// No description provided for @myMediaFreedSpace.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size} libérés sur cet appareil'**
+  String myMediaFreedSpace(String size);
+
+  /// No description provided for @myMediaNothingCached.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun de ces médias n\'occupe d\'espace sur cet appareil'**
+  String get myMediaNothingCached;
+
+  /// No description provided for @myMediaForwardUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces médias ne sont plus dans vos conversations sur cet appareil'**
+  String get myMediaForwardUnavailable;
+
+  /// No description provided for @myMediaSelectAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout sélectionner'**
+  String get myMediaSelectAll;
+
+  /// No description provided for @myMediaFilterReceived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçus'**
+  String get myMediaFilterReceived;
+
+  /// No description provided for @myMediaFilterSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyés'**
+  String get myMediaFilterSent;
+
+  /// No description provided for @myMediaFilterAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous'**
+  String get myMediaFilterAll;
+
+  /// No description provided for @myMediaFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'De {name}'**
+  String myMediaFrom(String name);
+
   /// No description provided for @dndSummaryActive.
   ///
   /// In fr, this message translates to:

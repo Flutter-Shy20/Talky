@@ -4690,6 +4690,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myMediaLoadFailed => 'Could not load your media';
 
   @override
+  String get bytesUnitB => 'B';
+
+  @override
+  String get bytesUnitKB => 'KB';
+
+  @override
+  String get bytesUnitMB => 'MB';
+
+  @override
+  String get bytesUnitGB => 'GB';
+
+  @override
+  String get myMediaSortRecent => 'Recent';
+
+  @override
+  String get myMediaSortLargest => 'Largest';
+
+  @override
+  String myMediaOnThisDevice(String size) {
+    return '$size on this device';
+  }
+
+  @override
+  String get myMediaFreeSpace => 'Free up space';
+
+  @override
+  String get myMediaFreeSpaceConfirm =>
+      'The local copy of the selected media will be removed. They stay in your chats and will download again when opened.';
+
+  @override
+  String myMediaFreedSpace(String size) {
+    return '$size freed on this device';
+  }
+
+  @override
+  String get myMediaNothingCached =>
+      'None of these media take up space on this device';
+
+  @override
+  String get myMediaForwardUnavailable =>
+      'These media are no longer in your chats on this device';
+
+  @override
+  String get myMediaSelectAll => 'Select all';
+
+  @override
+  String get myMediaFilterReceived => 'Received';
+
+  @override
+  String get myMediaFilterSent => 'Sent';
+
+  @override
+  String get myMediaFilterAll => 'All';
+
+  @override
+  String myMediaFrom(String name) {
+    return 'From $name';
+  }
+
+  @override
   String dndSummaryActive(String start, String end, String days) {
     return '$start – $end · $days';
   }

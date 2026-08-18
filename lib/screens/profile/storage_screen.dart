@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/services/storage_info_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/byte_format.dart';
 import '../../widgets/profile/settings_group.dart';
 
 /// Répartition du stockage et actions de vidage du cache.
@@ -23,16 +24,7 @@ class _StorageScreenState extends State<StorageScreen> {
     context.read<StorageInfoService>().refresh();
   }
 
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes o';
-    if (bytes < 1024 * 1024) {
-      return '${(bytes / 1024).toStringAsFixed(1)} Ko';
-    }
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} Mo';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} Go';
-  }
+  String _formatBytes(int bytes) => formatBytes(bytes, context.l10n);
 
   Future<void> _clearMediaCache() async {
     final l10n = context.l10n;

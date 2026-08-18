@@ -1362,6 +1362,44 @@
   "deleteAccountLogoutNow": "退出登录",
   "myMediaEmpty": "暂无分享过的媒体",
   "myMediaLoadFailed": "无法加载您的媒体",
+  "bytesUnitB": "字节",
+  "bytesUnitKB": "KB",
+  "bytesUnitMB": "MB",
+  "bytesUnitGB": "GB",
+  "myMediaSortRecent": "最近",
+  "myMediaSortLargest": "最大",
+  "myMediaOnThisDevice": "本机占用 {size}",
+  "@myMediaOnThisDevice": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaFreeSpace": "释放空间",
+  "myMediaFreeSpaceConfirm": "将删除所选媒体在本机的副本。它们仍保留在聊天中，打开时会重新下载。",
+  "myMediaFreedSpace": "已在本机释放 {size}",
+  "@myMediaFreedSpace": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaNothingCached": "这些媒体均未占用本机空间",
+  "myMediaForwardUnavailable": "这些媒体已不在本机的聊天记录中",
+  "myMediaSelectAll": "全选",
+  "myMediaFilterReceived": "已接收",
+  "myMediaFilterSent": "已发送",
+  "myMediaFilterAll": "全部",
+  "myMediaFrom": "来自 {name}",
+  "@myMediaFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "dndSummaryActive": "{start} – {end} · {days}",
   "dndSummaryInactive": "已关闭",
   "exportPhase1ShareSubject": "Alanya 数据导出（资料与元数据）",
