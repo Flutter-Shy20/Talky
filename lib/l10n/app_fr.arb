@@ -68,6 +68,7 @@
   "settingsLanguage": "Langue",
   "settingsLangFr": "Français",
   "settingsLangEn": "Anglais",
+  "settingsLangZh": "Chinois",
   "settingsLangSystem": "Système",
   "settingsMedia": "Médias",
   "settingsAutoDownload": "Téléchargement automatique",
@@ -2936,6 +2937,44 @@
   "deleteAccountLogoutNow": "Se déconnecter",
   "myMediaEmpty": "Aucun média partagé pour le moment",
   "myMediaLoadFailed": "Impossible de charger vos médias",
+  "bytesUnitB": "o",
+  "bytesUnitKB": "Ko",
+  "bytesUnitMB": "Mo",
+  "bytesUnitGB": "Go",
+  "myMediaSortRecent": "Récents",
+  "myMediaSortLargest": "Plus lourds",
+  "myMediaOnThisDevice": "{size} sur cet appareil",
+  "@myMediaOnThisDevice": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaFreeSpace": "Libérer de l'espace",
+  "myMediaFreeSpaceConfirm": "La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l'ouverture.",
+  "myMediaFreedSpace": "{size} libérés sur cet appareil",
+  "@myMediaFreedSpace": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaNothingCached": "Aucun de ces médias n'occupe d'espace sur cet appareil",
+  "myMediaForwardUnavailable": "Ces médias ne sont plus dans vos conversations sur cet appareil",
+  "myMediaSelectAll": "Tout sélectionner",
+  "myMediaFilterReceived": "Reçus",
+  "myMediaFilterSent": "Envoyés",
+  "myMediaFilterAll": "Tous",
+  "myMediaFrom": "De {name}",
+  "@myMediaFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "dndSummaryActive": "{start} – {end} · {days}",
   "@dndSummaryActive": {
     "placeholders": {
@@ -3126,6 +3165,7 @@
       }
     }
   },
+  "tripsCardStartedByMe": "Vous avez démarré un trajet",
   "tripsCardAwaiting": "{name} devrait être arrivé·e",
   "@tripsCardAwaiting": {
     "placeholders": {
@@ -3134,6 +3174,7 @@
       }
     }
   },
+  "tripsCardAwaitingByMe": "Vous devriez être arrivé·e",
   "tripsCardAlert": "{name} n'a pas confirmé son arrivée",
   "@tripsCardAlert": {
     "placeholders": {
@@ -3142,6 +3183,7 @@
       }
     }
   },
+  "tripsCardAlertByMe": "Vous n'avez pas confirmé votre arrivée",
   "tripsCardSos": "{name} a déclenché un SOS",
   "@tripsCardSos": {
     "placeholders": {
@@ -3150,6 +3192,7 @@
       }
     }
   },
+  "tripsCardSosByMe": "Vous avez déclenché un SOS",
   "tripsCardArrived": "{name} est bien arrivé·e",
   "@tripsCardArrived": {
     "placeholders": {
@@ -3158,6 +3201,7 @@
       }
     }
   },
+  "tripsCardArrivedByMe": "Vous êtes bien arrivé·e",
   "tripsCardStopped": "{name} a arrêté le partage",
   "@tripsCardStopped": {
     "placeholders": {
@@ -3166,6 +3210,7 @@
       }
     }
   },
+  "tripsCardStoppedByMe": "Vous avez arrêté le partage",
   "tripsCardFollow": "Suivre en direct",
   "tripsCardView": "Voir",
   "tripsCardSeePosition": "Voir la position",
@@ -3306,6 +3351,15 @@
   "tripsDegradedFix": "Réparer",
   "locationSearchHint": "Rechercher un lieu, une adresse…",
   "locationSearchEmpty": "Aucun résultat. Vous pouvez toujours choisir sur la carte.",
+  "locationSearchUnavailable": "La recherche est indisponible. Vérifiez votre connexion et réessayez.",
+  "locationPickerChooseDestination": "Choisir une destination",
+  "locationPickerUseDestination": "Choisir cette destination",
+  "locationUseMyPosition": "Utiliser ma position",
+  "locationPickerInstruction": "Recherchez, déplacez la carte ou utilisez votre position",
+  "mapCompassNorth": "Remettre le nord en haut",
+  "@mapCompassNorth": {
+    "description": "Tooltip de la boussole : remet la carte nord en haut"
+  },
   "tripsCardFalseAlarm": "{name} a signalé une fausse alerte",
   "@tripsCardFalseAlarm": {
     "placeholders": {
@@ -3314,6 +3368,7 @@
       }
     }
   },
+  "tripsCardFalseAlarmByMe": "Vous avez signalé une fausse alerte",
   "tripsSosFalseAlarmSent": "Votre cercle a été prévenu que tout va bien.",
   "tripsCall": "Appeler",
   "tripsPermissionTitle": "Autoriser la localisation",
@@ -3402,5 +3457,62 @@
   "tripsUnreachableBody": "Impossible de joindre le serveur. Votre connexion est peut-être coupée.",
   "tripsLeave": "Quitter le suivi",
   "tripsLeaveTitle": "Quitter ce trajet ?",
-  "tripsLeaveBody": "Vous ne verrez plus sa position et ne serez pas alerté s'il ne confirme pas son arrivée."
+  "tripsLeaveBody": "Vous ne verrez plus sa position et ne serez pas alerté s'il ne confirme pas son arrivée.",
+  "@_TRADUCTION": {},
+  "translationSection": "Traduction",
+  "autoTranslate": "Traduction automatique",
+  "autoTranslateDescription": "Traduire les messages reçus qui ne sont pas dans votre langue de lecture.",
+  "onDeviceTranslationNotice": "La traduction s'effectue sur votre appareil. Aucun message n'est envoyé à un service tiers, et elle fonctionne hors ligne.",
+  "translateTo": "Traduire vers",
+  "translatedFrom": "Traduit du {language}",
+  "@translatedFrom": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "showOriginal": "voir l'original",
+  "showTranslation": "voir la traduction",
+  "translate": "Traduire",
+  "translating": "Traduction…",
+  "translationFailed": "Traduction impossible",
+  "translationUnavailable": "Aucune traduction disponible pour ce message.",
+  "languageModels": "Modèles de langue",
+  "languageModelsDescription": "Chaque langue occupe environ {size} Mo sur votre appareil.",
+  "@languageModelsDescription": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadLanguageModel": "Télécharger {language} ({size} Mo) pour traduire",
+  "@downloadLanguageModel": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      },
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadModel": "Télécharger",
+  "deleteModel": "Supprimer",
+  "downloadingModel": "Téléchargement de {language}…",
+  "@downloadingModel": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "modelDownloadFailed": "Téléchargement impossible. Vérifiez votre connexion Wi-Fi.",
+  "modelDownloadWifiNotice": "Le téléchargement se fait en Wi-Fi pour préserver vos données mobiles.",
+  "translateThisConversation": "Traduire cette conversation",
+  "translateModeAuto": "Automatique",
+  "translateModeAlways": "Toujours",
+  "translateModeNever": "Jamais",
+  "translateModeAutoSubtitle": "Suit le réglage général"
 }

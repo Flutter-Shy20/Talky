@@ -54,6 +54,7 @@
   "settingsLanguage": "Language",
   "settingsLangFr": "French",
   "settingsLangEn": "English",
+  "settingsLangZh": "Chinese",
   "settingsLangSystem": "System",
   "settingsMedia": "Media",
   "settingsAutoDownload": "Automatic download",
@@ -2054,6 +2055,44 @@
   "deleteAccountLogoutNow": "Sign out",
   "myMediaEmpty": "No shared media yet",
   "myMediaLoadFailed": "Could not load your media",
+  "bytesUnitB": "B",
+  "bytesUnitKB": "KB",
+  "bytesUnitMB": "MB",
+  "bytesUnitGB": "GB",
+  "myMediaSortRecent": "Recent",
+  "myMediaSortLargest": "Largest",
+  "myMediaOnThisDevice": "{size} on this device",
+  "@myMediaOnThisDevice": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaFreeSpace": "Free up space",
+  "myMediaFreeSpaceConfirm": "The local copy of the selected media will be removed. They stay in your chats and will download again when opened.",
+  "myMediaFreedSpace": "{size} freed on this device",
+  "@myMediaFreedSpace": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaNothingCached": "None of these media take up space on this device",
+  "myMediaForwardUnavailable": "These media are no longer in your chats on this device",
+  "myMediaSelectAll": "Select all",
+  "myMediaFilterReceived": "Received",
+  "myMediaFilterSent": "Sent",
+  "myMediaFilterAll": "All",
+  "myMediaFrom": "From {name}",
+  "@myMediaFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "dndSummaryActive": "{start} – {end} · {days}",
   "@dndSummaryActive": {
     "placeholders": {
@@ -2244,6 +2283,7 @@
       }
     }
   },
+  "tripsCardStartedByMe": "You started a trip",
   "tripsCardAwaiting": "{name} should have arrived",
   "@tripsCardAwaiting": {
     "placeholders": {
@@ -2252,6 +2292,7 @@
       }
     }
   },
+  "tripsCardAwaitingByMe": "You should have arrived",
   "tripsCardAlert": "{name} did not confirm arrival",
   "@tripsCardAlert": {
     "placeholders": {
@@ -2260,6 +2301,7 @@
       }
     }
   },
+  "tripsCardAlertByMe": "You did not confirm arrival",
   "tripsCardSos": "{name} triggered an SOS",
   "@tripsCardSos": {
     "placeholders": {
@@ -2268,6 +2310,7 @@
       }
     }
   },
+  "tripsCardSosByMe": "You triggered an SOS",
   "tripsCardArrived": "{name} arrived safely",
   "@tripsCardArrived": {
     "placeholders": {
@@ -2276,6 +2319,7 @@
       }
     }
   },
+  "tripsCardArrivedByMe": "You arrived safely",
   "tripsCardStopped": "{name} stopped sharing",
   "@tripsCardStopped": {
     "placeholders": {
@@ -2284,6 +2328,7 @@
       }
     }
   },
+  "tripsCardStoppedByMe": "You stopped sharing",
   "tripsCardFollow": "Follow live",
   "tripsCardView": "View",
   "tripsCardSeePosition": "See location",
@@ -2424,6 +2469,12 @@
   "tripsDegradedFix": "Fix",
   "locationSearchHint": "Search a place or address…",
   "locationSearchEmpty": "No results. You can still pick on the map.",
+  "locationSearchUnavailable": "Search is unavailable. Check your connection and try again.",
+  "locationPickerChooseDestination": "Choose a destination",
+  "locationPickerUseDestination": "Use this destination",
+  "locationUseMyPosition": "Use my location",
+  "locationPickerInstruction": "Search, move the map, or use your location",
+  "mapCompassNorth": "Reset north up",
   "tripsCardFalseAlarm": "{name} reported a false alarm",
   "@tripsCardFalseAlarm": {
     "placeholders": {
@@ -2432,6 +2483,7 @@
       }
     }
   },
+  "tripsCardFalseAlarmByMe": "You reported a false alarm",
   "tripsSosFalseAlarmSent": "Your circle has been told you're fine.",
   "tripsCall": "Call",
   "tripsPermissionTitle": "Allow location access",
@@ -2520,5 +2572,62 @@
   "tripsUnreachableBody": "The server can't be reached. Your connection may be down.",
   "tripsLeave": "Stop following",
   "tripsLeaveTitle": "Stop following this trip?",
-  "tripsLeaveBody": "You'll no longer see their position, and won't be alerted if they don't confirm arrival."
+  "tripsLeaveBody": "You'll no longer see their position, and won't be alerted if they don't confirm arrival.",
+  "@_TRADUCTION": {},
+  "translationSection": "Translation",
+  "autoTranslate": "Automatic translation",
+  "autoTranslateDescription": "Translate incoming messages that aren't in your reading language.",
+  "onDeviceTranslationNotice": "Translation happens on your device. No message is sent to a third-party service, and it works offline.",
+  "translateTo": "Translate into",
+  "translatedFrom": "Translated from {language}",
+  "@translatedFrom": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "showOriginal": "see original",
+  "showTranslation": "see translation",
+  "translate": "Translate",
+  "translating": "Translating…",
+  "translationFailed": "Couldn't translate",
+  "translationUnavailable": "No translation available for this message.",
+  "languageModels": "Language models",
+  "languageModelsDescription": "Each language takes about {size} MB on your device.",
+  "@languageModelsDescription": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadLanguageModel": "Download {language} ({size} MB) to translate",
+  "@downloadLanguageModel": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      },
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadModel": "Download",
+  "deleteModel": "Delete",
+  "downloadingModel": "Downloading {language}…",
+  "@downloadingModel": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "modelDownloadFailed": "Download failed. Check your Wi-Fi connection.",
+  "modelDownloadWifiNotice": "Downloads use Wi-Fi to spare your mobile data.",
+  "translateThisConversation": "Translate this conversation",
+  "translateModeAuto": "Automatic",
+  "translateModeAlways": "Always",
+  "translateModeNever": "Never",
+  "translateModeAutoSubtitle": "Follows the general setting"
 }

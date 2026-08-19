@@ -192,17 +192,38 @@ class AccountDeletionSchedule {
 class MyMediaItem {
   final int msgID;
   final int conversationID;
+  final int senderID;
+
+  /// Pseudo de l'expéditeur, à afficher sur un média reçu.
+  final String? senderName;
+  final bool isMine;
   final int type;
   final String mediaUrl;
   final String? mediaName;
+
+  /// Vignette JPEG base64 envoyée avec le message, renseignée par le backend
+  /// pour les vidéos uniquement (une image a déjà son URL).
+  final String? mediaThumb;
+  final int? mediaDuration;
+
+  /// Poids en octets. Nul pour les médias envoyés avant que l'app ne relève la
+  /// taille des images et vidéos : l'écran n'affiche alors pas de poids plutôt
+  /// que d'en inventer un.
+  final int? mediaSize;
   final DateTime? sendAt;
 
   const MyMediaItem({
     required this.msgID,
     required this.conversationID,
+    required this.senderID,
+    required this.isMine,
+    this.senderName,
     required this.type,
     required this.mediaUrl,
     this.mediaName,
+    this.mediaThumb,
+    this.mediaDuration,
+    this.mediaSize,
     this.sendAt,
   });
 
@@ -213,11 +234,23 @@ class MyMediaItem {
         conversationID: json['conversationID'] is int
             ? json['conversationID'] as int
             : int.tryParse(json['conversationID']?.toString() ?? '') ?? 0,
+        senderID: json['senderID'] is int
+            ? json['senderID'] as int
+            : int.tryParse(json['senderID']?.toString() ?? '') ?? 0,
+        senderName: json['senderName']?.toString(),
+        isMine: json['isMine'] == true,
         type: json['type'] is int
             ? json['type'] as int
             : int.tryParse(json['type']?.toString() ?? '') ?? 0,
         mediaUrl: json['mediaUrl']?.toString() ?? '',
         mediaName: json['mediaName']?.toString(),
+        mediaThumb: json['mediaThumb']?.toString(),
+        mediaDuration: json['mediaDuration'] is int
+            ? json['mediaDuration'] as int
+            : int.tryParse(json['mediaDuration']?.toString() ?? ''),
+        mediaSize: json['mediaSize'] is int
+            ? json['mediaSize'] as int
+            : int.tryParse(json['mediaSize']?.toString() ?? ''),
         sendAt: json['sendAt'] != null
             ? DateTime.tryParse(json['sendAt'].toString())
             : null,
@@ -228,7 +261,10 @@ class MyMediaItem {
 
 class MyMediaPage {
   final List<MyMediaItem> items;
-  final int? nextCursor;
+
+  /// Opaque : un msgID en tri chronologique, un couple « taille_msgID » en tri
+  /// par poids. Il est renvoyé tel quel au serveur, jamais interprété ici.
+  final String? nextCursor;
 
   const MyMediaPage({required this.items, this.nextCursor});
 
@@ -243,9 +279,7 @@ class MyMediaPage {
     final nc = json['nextCursor'];
     return MyMediaPage(
       items: list,
-      nextCursor: nc == null
-          ? null
-          : (nc is int ? nc : int.tryParse(nc.toString())),
+      nextCursor: nc?.toString(),
     );
   }
 }

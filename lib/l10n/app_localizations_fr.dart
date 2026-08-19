@@ -176,6 +176,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsLangEn => 'Anglais';
 
   @override
+  String get settingsLangZh => 'Chinois';
+
+  @override
   String get settingsLangSystem => 'Système';
 
   @override
@@ -4755,6 +4758,66 @@ class AppLocalizationsFr extends AppLocalizations {
   String get myMediaLoadFailed => 'Impossible de charger vos médias';
 
   @override
+  String get bytesUnitB => 'o';
+
+  @override
+  String get bytesUnitKB => 'Ko';
+
+  @override
+  String get bytesUnitMB => 'Mo';
+
+  @override
+  String get bytesUnitGB => 'Go';
+
+  @override
+  String get myMediaSortRecent => 'Récents';
+
+  @override
+  String get myMediaSortLargest => 'Plus lourds';
+
+  @override
+  String myMediaOnThisDevice(String size) {
+    return '$size sur cet appareil';
+  }
+
+  @override
+  String get myMediaFreeSpace => 'Libérer de l\'espace';
+
+  @override
+  String get myMediaFreeSpaceConfirm =>
+      'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l\'ouverture.';
+
+  @override
+  String myMediaFreedSpace(String size) {
+    return '$size libérés sur cet appareil';
+  }
+
+  @override
+  String get myMediaNothingCached =>
+      'Aucun de ces médias n\'occupe d\'espace sur cet appareil';
+
+  @override
+  String get myMediaForwardUnavailable =>
+      'Ces médias ne sont plus dans vos conversations sur cet appareil';
+
+  @override
+  String get myMediaSelectAll => 'Tout sélectionner';
+
+  @override
+  String get myMediaFilterReceived => 'Reçus';
+
+  @override
+  String get myMediaFilterSent => 'Envoyés';
+
+  @override
+  String get myMediaFilterAll => 'Tous';
+
+  @override
+  String myMediaFrom(String name) {
+    return 'De $name';
+  }
+
+  @override
   String dndSummaryActive(String start, String end, String days) {
     return '$start – $end · $days';
   }
@@ -5050,9 +5113,15 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get tripsCardStartedByMe => 'Vous avez démarré un trajet';
+
+  @override
   String tripsCardAwaiting(String name) {
     return '$name devrait être arrivé·e';
   }
+
+  @override
+  String get tripsCardAwaitingByMe => 'Vous devriez être arrivé·e';
 
   @override
   String tripsCardAlert(String name) {
@@ -5060,9 +5129,15 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get tripsCardAlertByMe => 'Vous n\'avez pas confirmé votre arrivée';
+
+  @override
   String tripsCardSos(String name) {
     return '$name a déclenché un SOS';
   }
+
+  @override
+  String get tripsCardSosByMe => 'Vous avez déclenché un SOS';
 
   @override
   String tripsCardArrived(String name) {
@@ -5070,9 +5145,15 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get tripsCardArrivedByMe => 'Vous êtes bien arrivé·e';
+
+  @override
   String tripsCardStopped(String name) {
     return '$name a arrêté le partage';
   }
+
+  @override
+  String get tripsCardStoppedByMe => 'Vous avez arrêté le partage';
 
   @override
   String get tripsCardFollow => 'Suivre en direct';
@@ -5347,9 +5428,32 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun résultat. Vous pouvez toujours choisir sur la carte.';
 
   @override
+  String get locationSearchUnavailable =>
+      'La recherche est indisponible. Vérifiez votre connexion et réessayez.';
+
+  @override
+  String get locationPickerChooseDestination => 'Choisir une destination';
+
+  @override
+  String get locationPickerUseDestination => 'Choisir cette destination';
+
+  @override
+  String get locationUseMyPosition => 'Utiliser ma position';
+
+  @override
+  String get locationPickerInstruction =>
+      'Recherchez, déplacez la carte ou utilisez votre position';
+
+  @override
+  String get mapCompassNorth => 'Remettre le nord en haut';
+
+  @override
   String tripsCardFalseAlarm(String name) {
     return '$name a signalé une fausse alerte';
   }
+
+  @override
+  String get tripsCardFalseAlarmByMe => 'Vous avez signalé une fausse alerte';
 
   @override
   String get tripsSosFalseAlarmSent =>
@@ -5545,4 +5649,92 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get tripsLeaveBody =>
       'Vous ne verrez plus sa position et ne serez pas alerté s\'il ne confirme pas son arrivée.';
+
+  @override
+  String get translationSection => 'Traduction';
+
+  @override
+  String get autoTranslate => 'Traduction automatique';
+
+  @override
+  String get autoTranslateDescription =>
+      'Traduire les messages reçus qui ne sont pas dans votre langue de lecture.';
+
+  @override
+  String get onDeviceTranslationNotice =>
+      'La traduction s\'effectue sur votre appareil. Aucun message n\'est envoyé à un service tiers, et elle fonctionne hors ligne.';
+
+  @override
+  String get translateTo => 'Traduire vers';
+
+  @override
+  String translatedFrom(String language) {
+    return 'Traduit du $language';
+  }
+
+  @override
+  String get showOriginal => 'voir l\'original';
+
+  @override
+  String get showTranslation => 'voir la traduction';
+
+  @override
+  String get translate => 'Traduire';
+
+  @override
+  String get translating => 'Traduction…';
+
+  @override
+  String get translationFailed => 'Traduction impossible';
+
+  @override
+  String get translationUnavailable =>
+      'Aucune traduction disponible pour ce message.';
+
+  @override
+  String get languageModels => 'Modèles de langue';
+
+  @override
+  String languageModelsDescription(int size) {
+    return 'Chaque langue occupe environ $size Mo sur votre appareil.';
+  }
+
+  @override
+  String downloadLanguageModel(String language, int size) {
+    return 'Télécharger $language ($size Mo) pour traduire';
+  }
+
+  @override
+  String get downloadModel => 'Télécharger';
+
+  @override
+  String get deleteModel => 'Supprimer';
+
+  @override
+  String downloadingModel(String language) {
+    return 'Téléchargement de $language…';
+  }
+
+  @override
+  String get modelDownloadFailed =>
+      'Téléchargement impossible. Vérifiez votre connexion Wi-Fi.';
+
+  @override
+  String get modelDownloadWifiNotice =>
+      'Le téléchargement se fait en Wi-Fi pour préserver vos données mobiles.';
+
+  @override
+  String get translateThisConversation => 'Traduire cette conversation';
+
+  @override
+  String get translateModeAuto => 'Automatique';
+
+  @override
+  String get translateModeAlways => 'Toujours';
+
+  @override
+  String get translateModeNever => 'Jamais';
+
+  @override
+  String get translateModeAutoSubtitle => 'Suit le réglage général';
 }

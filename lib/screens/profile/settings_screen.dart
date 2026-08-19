@@ -19,6 +19,9 @@ import 'ringtone_settings_screen.dart';
 import 'playback_speed_screen.dart';
 import 'storage_screen.dart';
 import '../../core/services/ringtone_preferences.dart';
+import '../../core/services/translation/translation_languages.dart';
+import '../../core/services/translation/translation_settings.dart';
+import 'translation_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -224,6 +227,11 @@ class SettingsScreen extends StatelessWidget {
                       label: Text(l10n.settingsLangEn),
                     ),
                     ButtonSegment(
+                      value: AppLocalePreference.chinese,
+                      icon: const Icon(Icons.translate),
+                      label: Text(l10n.settingsLangZh),
+                    ),
+                    ButtonSegment(
                       value: AppLocalePreference.system,
                       icon: const Icon(Icons.brightness_auto_outlined),
                       label: Text(l10n.settingsLangSystem),
@@ -262,6 +270,25 @@ class SettingsScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const RingtoneSettingsScreen(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          AppSpacing.vGapXxl,
+          SettingsGroup(
+            title: l10n.translationSection,
+            child: Consumer<TranslationSettings>(
+              builder: (_, settings, __) => SettingsNavTile(
+                icon: Icons.translate_outlined,
+                title: l10n.autoTranslate,
+                subtitle: settings.auto
+                    ? nativeNameOf(settings.target)
+                    : l10n.translateModeNever,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TranslationSettingsScreen(),
                   ),
                 ),
               ),

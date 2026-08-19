@@ -7,6 +7,7 @@ import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
 import 'app_localizations_fr.dart';
+import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
 
@@ -96,6 +97,7 @@ abstract class AppLocalizations {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
     Locale('fr'),
+    Locale('zh'),
   ];
 
   /// No description provided for @appTitle.
@@ -421,6 +423,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Anglais'**
   String get settingsLangEn;
+
+  /// No description provided for @settingsLangZh.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chinois'**
+  String get settingsLangZh;
 
   /// No description provided for @settingsLangSystem.
   ///
@@ -8294,6 +8302,108 @@ abstract class AppLocalizations {
   /// **'Impossible de charger vos médias'**
   String get myMediaLoadFailed;
 
+  /// No description provided for @bytesUnitB.
+  ///
+  /// In fr, this message translates to:
+  /// **'o'**
+  String get bytesUnitB;
+
+  /// No description provided for @bytesUnitKB.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ko'**
+  String get bytesUnitKB;
+
+  /// No description provided for @bytesUnitMB.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mo'**
+  String get bytesUnitMB;
+
+  /// No description provided for @bytesUnitGB.
+  ///
+  /// In fr, this message translates to:
+  /// **'Go'**
+  String get bytesUnitGB;
+
+  /// No description provided for @myMediaSortRecent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récents'**
+  String get myMediaSortRecent;
+
+  /// No description provided for @myMediaSortLargest.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus lourds'**
+  String get myMediaSortLargest;
+
+  /// No description provided for @myMediaOnThisDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size} sur cet appareil'**
+  String myMediaOnThisDevice(String size);
+
+  /// No description provided for @myMediaFreeSpace.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libérer de l\'espace'**
+  String get myMediaFreeSpace;
+
+  /// No description provided for @myMediaFreeSpaceConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l\'ouverture.'**
+  String get myMediaFreeSpaceConfirm;
+
+  /// No description provided for @myMediaFreedSpace.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size} libérés sur cet appareil'**
+  String myMediaFreedSpace(String size);
+
+  /// No description provided for @myMediaNothingCached.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun de ces médias n\'occupe d\'espace sur cet appareil'**
+  String get myMediaNothingCached;
+
+  /// No description provided for @myMediaForwardUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces médias ne sont plus dans vos conversations sur cet appareil'**
+  String get myMediaForwardUnavailable;
+
+  /// No description provided for @myMediaSelectAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout sélectionner'**
+  String get myMediaSelectAll;
+
+  /// No description provided for @myMediaFilterReceived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçus'**
+  String get myMediaFilterReceived;
+
+  /// No description provided for @myMediaFilterSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyés'**
+  String get myMediaFilterSent;
+
+  /// No description provided for @myMediaFilterAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous'**
+  String get myMediaFilterAll;
+
+  /// No description provided for @myMediaFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'De {name}'**
+  String myMediaFrom(String name);
+
   /// No description provided for @dndSummaryActive.
   ///
   /// In fr, this message translates to:
@@ -8756,11 +8866,23 @@ abstract class AppLocalizations {
   /// **'{name} a démarré un trajet'**
   String tripsCardStarted(String name);
 
+  /// No description provided for @tripsCardStartedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez démarré un trajet'**
+  String get tripsCardStartedByMe;
+
   /// No description provided for @tripsCardAwaiting.
   ///
   /// In fr, this message translates to:
   /// **'{name} devrait être arrivé·e'**
   String tripsCardAwaiting(String name);
+
+  /// No description provided for @tripsCardAwaitingByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous devriez être arrivé·e'**
+  String get tripsCardAwaitingByMe;
 
   /// No description provided for @tripsCardAlert.
   ///
@@ -8768,11 +8890,23 @@ abstract class AppLocalizations {
   /// **'{name} n\'a pas confirmé son arrivée'**
   String tripsCardAlert(String name);
 
+  /// No description provided for @tripsCardAlertByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez pas confirmé votre arrivée'**
+  String get tripsCardAlertByMe;
+
   /// No description provided for @tripsCardSos.
   ///
   /// In fr, this message translates to:
   /// **'{name} a déclenché un SOS'**
   String tripsCardSos(String name);
+
+  /// No description provided for @tripsCardSosByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez déclenché un SOS'**
+  String get tripsCardSosByMe;
 
   /// No description provided for @tripsCardArrived.
   ///
@@ -8780,11 +8914,23 @@ abstract class AppLocalizations {
   /// **'{name} est bien arrivé·e'**
   String tripsCardArrived(String name);
 
+  /// No description provided for @tripsCardArrivedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous êtes bien arrivé·e'**
+  String get tripsCardArrivedByMe;
+
   /// No description provided for @tripsCardStopped.
   ///
   /// In fr, this message translates to:
   /// **'{name} a arrêté le partage'**
   String tripsCardStopped(String name);
+
+  /// No description provided for @tripsCardStoppedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez arrêté le partage'**
+  String get tripsCardStoppedByMe;
 
   /// No description provided for @tripsCardFollow.
   ///
@@ -9242,11 +9388,53 @@ abstract class AppLocalizations {
   /// **'Aucun résultat. Vous pouvez toujours choisir sur la carte.'**
   String get locationSearchEmpty;
 
+  /// No description provided for @locationSearchUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'La recherche est indisponible. Vérifiez votre connexion et réessayez.'**
+  String get locationSearchUnavailable;
+
+  /// No description provided for @locationPickerChooseDestination.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir une destination'**
+  String get locationPickerChooseDestination;
+
+  /// No description provided for @locationPickerUseDestination.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir cette destination'**
+  String get locationPickerUseDestination;
+
+  /// No description provided for @locationUseMyPosition.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser ma position'**
+  String get locationUseMyPosition;
+
+  /// No description provided for @locationPickerInstruction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recherchez, déplacez la carte ou utilisez votre position'**
+  String get locationPickerInstruction;
+
+  /// Tooltip de la boussole : remet la carte nord en haut
+  ///
+  /// In fr, this message translates to:
+  /// **'Remettre le nord en haut'**
+  String get mapCompassNorth;
+
   /// No description provided for @tripsCardFalseAlarm.
   ///
   /// In fr, this message translates to:
   /// **'{name} a signalé une fausse alerte'**
   String tripsCardFalseAlarm(String name);
+
+  /// No description provided for @tripsCardFalseAlarmByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez signalé une fausse alerte'**
+  String get tripsCardFalseAlarmByMe;
 
   /// No description provided for @tripsSosFalseAlarmSent.
   ///
@@ -9595,6 +9783,156 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Vous ne verrez plus sa position et ne serez pas alerté s\'il ne confirme pas son arrivée.'**
   String get tripsLeaveBody;
+
+  /// No description provided for @translationSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction'**
+  String get translationSection;
+
+  /// No description provided for @autoTranslate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction automatique'**
+  String get autoTranslate;
+
+  /// No description provided for @autoTranslateDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduire les messages reçus qui ne sont pas dans votre langue de lecture.'**
+  String get autoTranslateDescription;
+
+  /// No description provided for @onDeviceTranslationNotice.
+  ///
+  /// In fr, this message translates to:
+  /// **'La traduction s\'effectue sur votre appareil. Aucun message n\'est envoyé à un service tiers, et elle fonctionne hors ligne.'**
+  String get onDeviceTranslationNotice;
+
+  /// No description provided for @translateTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduire vers'**
+  String get translateTo;
+
+  /// No description provided for @translatedFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduit du {language}'**
+  String translatedFrom(String language);
+
+  /// No description provided for @showOriginal.
+  ///
+  /// In fr, this message translates to:
+  /// **'voir l\'original'**
+  String get showOriginal;
+
+  /// No description provided for @showTranslation.
+  ///
+  /// In fr, this message translates to:
+  /// **'voir la traduction'**
+  String get showTranslation;
+
+  /// No description provided for @translate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduire'**
+  String get translate;
+
+  /// No description provided for @translating.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction…'**
+  String get translating;
+
+  /// No description provided for @translationFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction impossible'**
+  String get translationFailed;
+
+  /// No description provided for @translationUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune traduction disponible pour ce message.'**
+  String get translationUnavailable;
+
+  /// No description provided for @languageModels.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modèles de langue'**
+  String get languageModels;
+
+  /// No description provided for @languageModelsDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque langue occupe environ {size} Mo sur votre appareil.'**
+  String languageModelsDescription(int size);
+
+  /// No description provided for @downloadLanguageModel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger {language} ({size} Mo) pour traduire'**
+  String downloadLanguageModel(String language, int size);
+
+  /// No description provided for @downloadModel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger'**
+  String get downloadModel;
+
+  /// No description provided for @deleteModel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get deleteModel;
+
+  /// No description provided for @downloadingModel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement de {language}…'**
+  String downloadingModel(String language);
+
+  /// No description provided for @modelDownloadFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement impossible. Vérifiez votre connexion Wi-Fi.'**
+  String get modelDownloadFailed;
+
+  /// No description provided for @modelDownloadWifiNotice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le téléchargement se fait en Wi-Fi pour préserver vos données mobiles.'**
+  String get modelDownloadWifiNotice;
+
+  /// No description provided for @translateThisConversation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduire cette conversation'**
+  String get translateThisConversation;
+
+  /// No description provided for @translateModeAuto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Automatique'**
+  String get translateModeAuto;
+
+  /// No description provided for @translateModeAlways.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toujours'**
+  String get translateModeAlways;
+
+  /// No description provided for @translateModeNever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jamais'**
+  String get translateModeNever;
+
+  /// No description provided for @translateModeAutoSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suit le réglage général'**
+  String get translateModeAutoSubtitle;
 }
 
 class _AppLocalizationsDelegate
@@ -9608,7 +9946,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en', 'fr'].contains(locale.languageCode);
+      <String>['en', 'fr', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -9621,6 +9959,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsEn();
     case 'fr':
       return AppLocalizationsFr();
+    case 'zh':
+      return AppLocalizationsZh();
   }
 
   throw FlutterError(

@@ -279,6 +279,24 @@ class MediaCacheService {
     }
   }
 
+  /// Supprime la copie en cache d'un seul média et renvoie les octets libérés
+  /// (0 si rien n'était en cache). Sert à « libérer de l'espace » depuis
+  /// l'écran Mes médias : le fichier reste sur le serveur et se retéléchargera
+  /// à la prochaine consultation.
+  Future<int> removeForUrl(String url) async {
+    try {
+      final path = await cachedPathFor(url);
+      if (path == null) return 0;
+      final file = File(path);
+      final bytes = file.lengthSync();
+      file.deleteSync();
+      return bytes;
+    } catch (e, st) {
+      AppLog.w('MediaCache', 'Suppression ciblée du cache échouée', e, st);
+      return 0;
+    }
+  }
+
   /// Vide entièrement le cache média (logout / changement de compte).
   Future<void> clearAll() async {
     try {

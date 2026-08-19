@@ -405,11 +405,20 @@ extension AuthApi on TalkyApiClient {
     );
   }
 
-  Future<MyMediaPage> getMyMedia({int? cursor, int limit = 30}) async {
+  /// [sort] vaut `recent` (par défaut) ou `size` pour les plus lourds d'abord.
+  /// [owner] vaut `received` (par défaut), `sent` ou `all`.
+  Future<MyMediaPage> getMyMedia({
+    String? cursor,
+    int limit = 30,
+    String sort = 'recent',
+    String owner = 'received',
+  }) async {
     final uri = Uri.parse('${TalkyApiClient.baseUrl}/auth/me/media').replace(
       queryParameters: {
         'limit': '$limit',
-        if (cursor != null) 'cursor': '$cursor',
+        'sort': sort,
+        'owner': owner,
+        if (cursor != null) 'cursor': cursor,
       },
     );
     final data = await _handleRequest(

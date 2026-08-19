@@ -325,17 +325,13 @@ class MessageSender {
     }
     final name = mediaName ?? uploadFile.path.split('/').last;
 
-    final isMusic =
-        type == 3 && audioKindFromName(name) == AudioMessageKind.music;
-
-    int? fileMediaSize;
-    int? fileMediaPageCount;
-    // La musique affiche sa taille en sous-titre de bulle, comme un document.
-    if (type == 4 || isMusic) {
-      final meta = await fileMetadataForSend(uploadFile, mediaName: name);
-      if (meta.size > 0) fileMediaSize = meta.size;
-      fileMediaPageCount = meta.pageCount;
-    }
+    // Poids relevé pour tous les médias : il sert au sous-titre des bulles
+    // document et musique, et à l'écran « Mes médias » qui affiche et trie les
+    // images et vidéos par taille. Le coût est un lengthSync(), le comptage de
+    // pages restant réservé aux PDF par fileMetadataForSend.
+    final meta = await fileMetadataForSend(uploadFile, mediaName: name);
+    final int? fileMediaSize = meta.size > 0 ? meta.size : null;
+    final int? fileMediaPageCount = meta.pageCount;
 
     // Image / vidéo / pochette : mini-vignette base64 pour l'aperçu
     // destinataire (hors téléchargement).
@@ -435,17 +431,10 @@ class MessageSender {
       // Horodatage strictement croissant : préserve l'ordre de sélection.
       final now = base.add(Duration(milliseconds: i));
       final name = item.mediaName ?? uploadFile.path.split('/').last;
-      final isMusic =
-          item.type == 3 && audioKindFromName(name) == AudioMessageKind.music;
-
-      int? fileMediaSize;
-      int? fileMediaPageCount;
-      // La musique affiche sa taille en sous-titre de bulle, comme un document.
-      if (item.type == 4 || isMusic) {
-        final meta = await fileMetadataForSend(uploadFile, mediaName: name);
-        if (meta.size > 0) fileMediaSize = meta.size;
-        fileMediaPageCount = meta.pageCount;
-      }
+      // Poids relevé pour tous les médias — voir sendMediaFile.
+      final meta = await fileMetadataForSend(uploadFile, mediaName: name);
+      final int? fileMediaSize = meta.size > 0 ? meta.size : null;
+      final int? fileMediaPageCount = meta.pageCount;
 
       final mediaThumb =
           await _mediaThumbFor(item.type, uploadFile.path, mediaName: name);
