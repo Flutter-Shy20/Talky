@@ -1,8 +1,12 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/media_cache_service.dart';
+import '../../core/services/media_grid_cache.dart';
 import '../../core/services/storage_info_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -72,12 +76,22 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
   final _selected = <int>{};
 
   _MediaSort _sort = _MediaSort.recent;
-  _MediaOwner _owner = _MediaOwner.received;
+
+  /// Tous par défaut : « Mes médias » doit contenir tous les médias de
+  /// l'utilisateur (envoyés comme reçus). Les pastilles Reçus/Envoyés
+  /// permettent de resserrer le périmètre.
+  _MediaOwner _owner = _MediaOwner.all;
+
   String? _nextCursor;
   bool _loading = false;
   bool _initial = true;
   bool _working = false;
   String? _error;
+
+  /// Octets décodés des vignettes base64, par msgID. Évite de re-décoder à
+  /// chaque build (Image.memory est keyé sur l'identité des octets) et borne
+  /// la mémoire (~15 Ko par vignette).
+  final _thumbBytes = <int, Uint8List>{};
 
   bool get _selecting => _selected.isNotEmpty;
 
@@ -131,6 +145,8 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
           // Une sélection portant sur des éléments qui ne sont plus chargés
           // n'aurait plus de sens : on repart propre.
           _selected.clear();
+          // Les vignettes décodées correspondent aux anciennes pages.
+          _thumbBytes.clear();
         } else {
           _items.addAll(page.items);
         }
@@ -558,6 +574,20 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
     );
   }
 
+  /// Octets décodés une seule fois par média (le décodage base64 est keyé
+  /// sur l'identité des octets par le cache d'images de Flutter, un nouveau
+  /// décodage à chaque build ré-enregistrerait une entrée).
+  Uint8List _thumbBytesFor(int msgID, String base64) {
+    var bytes = _thumbBytes[msgID];
+    if (bytes == null) {
+      // Borne mémoire (~15 Ko par vignette, 400 × 15 Ko ≈ 6 Mo au pire).
+      if (_thumbBytes.length > 400) _thumbBytes.clear();
+      bytes = base64Decode(base64);
+      _thumbBytes[msgID] = bytes;
+    }
+    return bytes;
+  }
+
   Widget _cell(MyMediaItem item, int globalIndex, AppLocalizations l10n) {
     final checked = _selected.contains(item.msgID);
     final sender = item.senderName;
@@ -578,7 +608,11 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
   }
 
   /// Aperçu seul, sans habillage : la vidéo s'appuie sur `mediaThumb` (aucun
-  /// fichier local ici, les médias viennent du serveur), l'image sur son URL.
+  /// fichier local ici, les médias viennent du serveur), l'image aussi quand
+  /// la vignette existe — affichée en mémoire, elle évite de télécharger le
+  /// fichier original (pleine taille) pour chaque tuile de la grille.
+  /// Les médias anciens sans vignette retombent sur l'URL, via un cache
+  /// réseau dédié à la grille (voir [MediaGridCache]).
   Widget _preview(MyMediaItem item) {
     final fallback = context.semantic.surfaceMuted;
     if (item.isVideo) {
@@ -592,6 +626,15 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
       );
     }
 
+    final thumb = item.mediaThumb;
+    if (thumb != null && thumb.isNotEmpty) {
+      return Image.memory(
+        _thumbBytesFor(item.msgID, thumb),
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+      );
+    }
+
     final url = normalizeBackendUrl(item.mediaUrl) ?? '';
     if (url.isEmpty) {
       return Container(
@@ -601,6 +644,11 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
     }
     return CachedNetworkImage(
       imageUrl: url,
+      cacheManager: MediaGridCache.instance,
+      // La grille n'affiche que de petites tuiles : inutile de garder en
+      // mémoire ou sur disque l'image pleine taille.
+      memCacheWidth: 480,
+      maxWidthDiskCache: 480,
       fit: BoxFit.cover,
       placeholder: (_, __) => Container(color: fallback),
       errorWidget: (_, __, ___) => Container(
