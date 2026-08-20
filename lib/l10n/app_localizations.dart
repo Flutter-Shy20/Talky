@@ -1618,6 +1618,18 @@ abstract class AppLocalizations {
   /// **'Impossible de télécharger le média'**
   String get unableToDownloadTheMedia;
 
+  /// No description provided for @mediaExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Média expiré'**
+  String get mediaExpired;
+
+  /// No description provided for @mediaNoLongerAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce média n\'est plus disponible'**
+  String get mediaNoLongerAvailable;
+
   /// No description provided for @unableToUnblockThisContact.
   ///
   /// In fr, this message translates to:
@@ -8355,6 +8367,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l\'ouverture.'**
   String get myMediaFreeSpaceConfirm;
+
+  /// No description provided for @myMediaFreeSpaceConfirmMaybeGone.
+  ///
+  /// In fr, this message translates to:
+  /// **'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations, mais certains sont anciens : s\'ils ne sont plus disponibles sur le serveur, ils resteront introuvables.'**
+  String get myMediaFreeSpaceConfirmMaybeGone;
 
   /// No description provided for @myMediaFreedSpace.
   ///

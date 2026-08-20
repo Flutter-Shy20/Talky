@@ -260,6 +260,8 @@
   "unableToUpdateTheCountry": "Unable to update the country",
   "errorStartingTheCall": "Error starting the call",
   "unableToDownloadTheMedia": "Unable to download the media",
+  "mediaExpired": "Media expired",
+  "mediaNoLongerAvailable": "This media is no longer available",
   "unableToUnblockThisContact": "Unable to unblock this contact",
   "unableToLoadNumbers": "Unable to load numbers",
   "searchByNameUsernameOr": "Search by name, username or ...",
@@ -2071,6 +2073,7 @@
   },
   "myMediaFreeSpace": "Free up space",
   "myMediaFreeSpaceConfirm": "The local copy of the selected media will be removed. They stay in your chats and will download again when opened.",
+  "myMediaFreeSpaceConfirmMaybeGone": "The local copy of the selected media will be removed. They stay in your chats, but some are old: if they are no longer available on the server, they will stay unavailable.",
   "myMediaFreedSpace": "{size} freed on this device",
   "@myMediaFreedSpace": {
     "placeholders": {

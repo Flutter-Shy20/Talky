@@ -730,6 +730,8 @@
   "unableToUpdateTheCountry": "Impossible de mettre à jour le pays",
   "errorStartingTheCall": "Erreur lors du démarrage de l'appel",
   "unableToDownloadTheMedia": "Impossible de télécharger le média",
+  "mediaExpired": "Média expiré",
+  "mediaNoLongerAvailable": "Ce média n'est plus disponible",
   "unableToUnblockThisContact": "Impossible de débloquer ce contact",
   "unableToLoadNumbers": "Impossible de charger les numéros",
   "searchByNameUsernameOr": "Rechercher par nom, pseudo ou ...",
@@ -2953,6 +2955,7 @@
   },
   "myMediaFreeSpace": "Libérer de l'espace",
   "myMediaFreeSpaceConfirm": "La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l'ouverture.",
+  "myMediaFreeSpaceConfirmMaybeGone": "La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations, mais certains sont anciens : s'ils ne sont plus disponibles sur le serveur, ils resteront introuvables.",
   "myMediaFreedSpace": "{size} libérés sur cet appareil",
   "@myMediaFreedSpace": {
     "placeholders": {

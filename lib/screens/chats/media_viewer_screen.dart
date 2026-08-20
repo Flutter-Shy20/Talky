@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/services/alanya_media_export_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/media_save_feedback.dart';
 
 /// Élément affichable dans la visionneuse multi-médias.
@@ -26,6 +27,13 @@ class MediaViewerItem {
   final String? localPath;
   final String? networkUrl;
   final String? title;
+
+  /// Ni fichier local, ni URL réseau : le média a été purgé côté serveur
+  /// (rétention 30 jours, cf. `mediaRetention.js`) et n'a jamais été
+  /// téléchargé sur cet appareil — il n'y a rien à afficher ni à récupérer.
+  bool get isExpired =>
+      (localPath == null || !File(localPath!).existsSync()) &&
+      (networkUrl == null || networkUrl!.isEmpty);
 
   /// Identifiant du message porteur, s'il y en a un : sert à savoir si ce
   /// média a déjà été exporté vers l'appareil.
@@ -111,6 +119,8 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     if (index < 0 || index >= widget.items.length) return;
     final item = widget.items[index];
     if (!item.isVideo || _videos[index] != null) return;
+
+    if (item.isExpired) return;
 
     final hasLocal =
         item.localPath != null && File(item.localPath!).existsSync();
@@ -302,6 +312,8 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   }
 
   Widget _buildVideo(int index) {
+    final item = widget.items[index];
+    if (item.isExpired) return _buildExpiredPlaceholder();
     final chewie = _chewies[index];
     final video = _videos[index];
     if (chewie == null || video == null) {
@@ -314,6 +326,7 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   }
 
   Widget _buildImage(MediaViewerItem item) {
+    if (item.isExpired) return _buildExpiredPlaceholder();
     final hasLocal =
         item.localPath != null && File(item.localPath!).existsSync();
     if (hasLocal) {
@@ -330,6 +343,26 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
           size: 64,
         ),
       ),
+    );
+  }
+
+  /// Média jamais téléchargé et purgé côté serveur : ni spinner bloqué, ni
+  /// icône "cassée" — un état explicite.
+  Widget _buildExpiredPlaceholder() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.history_toggle_off_rounded,
+          color: AppColors.white.withValues(alpha: 0.54),
+          size: 64,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          context.l10n.mediaNoLongerAvailable,
+          style: TextStyle(color: AppColors.white.withValues(alpha: 0.7)),
+        ),
+      ],
     );
   }
 }

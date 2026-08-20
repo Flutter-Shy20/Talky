@@ -1,12 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/db/chat_dao.dart';
 import '../../core/services/media_cache_service.dart';
-import '../../core/services/media_grid_cache.dart';
 import '../../core/services/storage_info_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -15,30 +16,24 @@ import '../../core/utils/byte_format.dart';
 import '../../core/utils/forward_message.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/chat_provider.dart';
-import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/video_message_preview.dart';
 import '../chats/forward_message_screen.dart';
 import '../chats/media_viewer_screen.dart';
 
-/// Ordre de la grille. `wire` est la valeur attendue par `GET /auth/me/media`.
-enum _MediaSort {
-  recent('recent'),
-  largest('size');
+/// Miroir, pour l'avertissement de suppression uniquement, de
+/// `MEDIA_RETENTION_DAYS` côté serveur (`mediaRetentionPolicy.js`, défaut 30
+/// jours). Purement indicatif : la vraie valeur est réglable par variable
+/// d'environnement serveur et le client ne peut pas la connaître avec
+/// certitude — ça sert juste à distinguer « sûrement encore sur le serveur »
+/// de « peut-être déjà purgé », pour affiner le texte de confirmation.
+const _kMediaRetentionDaysHeuristic = 30;
 
-  const _MediaSort(this.wire);
-  final String wire;
-}
+/// Ordre d'affichage de la grille.
+enum _MediaSort { recent, largest }
 
 /// Origine des médias affichés.
-enum _MediaOwner {
-  received('received'),
-  sent('sent'),
-  all('all');
-
-  const _MediaOwner(this.wire);
-  final String wire;
-}
+enum _MediaOwner { received, sent, all }
 
 /// Une journée de médias, ou la totalité quand le tri par poids rend les dates
 /// sans objet. [offset] est l'indice du premier élément dans la liste complète,
@@ -55,12 +50,16 @@ class _MediaGroup {
   });
 }
 
-/// Grille paginée des médias de l'utilisateur, doublée d'un outil de gestion
-/// du stockage : origine, poids et date de chaque élément, tri par taille, et
-/// sélection multiple pour libérer de la place ou transférer.
+/// Grille des médias **réellement présents sur l'appareil**, doublée d'un
+/// outil de gestion du stockage : origine, poids et date de chaque élément,
+/// tri par taille, et sélection multiple pour libérer de la place ou
+/// transférer.
 ///
-/// Les médias **reçus** sont affichés par défaut : ce sont eux que le
-/// téléchargement automatique met en cache, donc eux qui occupent l'appareil.
+/// Source de vérité : la base locale (Drift), pas le serveur — un média reçu
+/// mais jamais téléchargé (auto-téléchargement désactivé, échec de
+/// téléchargement…) n'apparaît jamais ici, seulement une fois
+/// `localMediaPath` renseigné, que ce soit via le téléchargement automatique
+/// ou manuel. Ça fonctionne donc entièrement hors connexion.
 class MyMediaScreen extends StatefulWidget {
   const MyMediaScreen({super.key});
 
@@ -70,7 +69,6 @@ class MyMediaScreen extends StatefulWidget {
 
 class _MyMediaScreenState extends State<MyMediaScreen> {
   final _items = <MyMediaItem>[];
-  final _scrollController = ScrollController();
 
   /// msgID des éléments cochés. Vide = mode consultation.
   final _selected = <int>{};
@@ -82,8 +80,7 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
   /// permettent de resserrer le périmètre.
   _MediaOwner _owner = _MediaOwner.all;
 
-  String? _nextCursor;
-  bool _loading = false;
+  StreamSubscription<List<LocalMediaRow>>? _sub;
   bool _initial = true;
   bool _working = false;
   String? _error;
@@ -98,8 +95,7 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
-    _scrollController.addListener(_onScroll);
+    _subscribe();
     // Le compteur d'espace en tête vient du même service que l'écran
     // Paramètres › Stockage, pour que les deux affichent la même valeur.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -109,79 +105,119 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _sub?.cancel();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_loading || _nextCursor == null) return;
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      _load();
-    }
-  }
-
-  Future<void> _load({bool refresh = false}) async {
-    if (_loading) return;
-    if (!refresh && _nextCursor == null && !_initial) return;
-
+  /// (Ré)abonnement à la base locale selon le filtre d'origine courant.
+  /// Appelé à l'ouverture et à chaque changement de pastille Reçus/Envoyés :
+  /// le tri par poids, lui, se fait en mémoire (voir [_onRows]), inutile de
+  /// se réabonner pour ça.
+  void _subscribe() {
+    _sub?.cancel();
+    _thumbBytes.clear();
+    final dao = context.read<ChatProvider>().repository.dao;
+    final myId = context.read<ChatProvider>().repository.myId;
+    bool? mineOnly;
+    if (_owner == _MediaOwner.sent) mineOnly = true;
+    if (_owner == _MediaOwner.received) mineOnly = false;
     setState(() {
-      _loading = true;
-      if (refresh) _error = null;
-    });
-
-    try {
-      final page = await context.read<TalkyApiClient>().getMyMedia(
-            cursor: refresh ? null : _nextCursor,
-            sort: _sort.wire,
-            owner: _owner.wire,
-          );
-      if (!mounted) return;
-      setState(() {
-        if (refresh) {
-          _items
-            ..clear()
-            ..addAll(page.items);
-          // Une sélection portant sur des éléments qui ne sont plus chargés
-          // n'aurait plus de sens : on repart propre.
-          _selected.clear();
-          // Les vignettes décodées correspondent aux anciennes pages.
-          _thumbBytes.clear();
-        } else {
-          _items.addAll(page.items);
-        }
-        _nextCursor = page.nextCursor;
-        _initial = false;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _initial = false;
-        _error = '$e';
-      });
-    }
-  }
-
-  Future<void> _reload() async {
-    setState(() {
-      _nextCursor = null;
       _initial = true;
+      _error = null;
     });
-    await _load(refresh: true);
+    _sub = dao.watchLocalMedia(myId, mineOnly: mineOnly).listen(
+      _onRows,
+      onError: (e) {
+        if (!mounted) return;
+        setState(() {
+          _initial = false;
+          _error = '$e';
+        });
+      },
+    );
+  }
+
+  /// Convertit les lignes locales en [MyMediaItem] pour l'affichage, en
+  /// vérifiant au passage que le fichier annoncé existe encore réellement sur
+  /// le disque — la base peut mentir si le fichier a été effacé hors de
+  /// l'app (nettoyage du système, gestionnaire de fichiers…). Un fichier
+  /// manquant est désynchronisé de la base plutôt que laissé à pointer dans
+  /// le vide.
+  void _onRows(List<LocalMediaRow> rows) {
+    final dao = context.read<ChatProvider>().repository.dao;
+    final myId = context.read<ChatProvider>().repository.myId;
+    final items = <MyMediaItem>[];
+    for (final row in rows) {
+      final msg = row.message;
+      final path = msg.localMediaPath;
+      if (path == null || !File(path).existsSync()) {
+        if (path != null) unawaited(dao.clearLocalMediaPath(msg.msgID));
+        continue;
+      }
+      items.add(MyMediaItem(
+        msgID: msg.msgID,
+        conversationID: msg.conversationID,
+        senderID: msg.senderID,
+        isMine: msg.senderID == myId,
+        senderName: row.senderName,
+        type: msg.type,
+        mediaUrl: msg.mediaUrl ?? '',
+        mediaName: msg.mediaName,
+        mediaThumb: msg.mediaThumb,
+        mediaDuration: msg.mediaDuration,
+        mediaSize: msg.mediaSize,
+        sendAt: msg.sendAt,
+        localMediaPath: path,
+      ));
+    }
+    if (_sort == _MediaSort.largest) {
+      items.sort((a, b) => (b.mediaSize ?? 0).compareTo(a.mediaSize ?? 0));
+    }
+    // Tri "récent" déjà assuré par l'ORDER BY sendAt DESC de la requête.
+
+    if (!mounted) return;
+    setState(() {
+      _items
+        ..clear()
+        ..addAll(items);
+      // Une sélection portant sur des éléments qui ne sont plus chargés
+      // n'aurait plus de sens.
+      _selected.removeWhere((id) => items.every((i) => i.msgID != id));
+      _initial = false;
+    });
+  }
+
+  /// Force une nouvelle vérification d'existence des fichiers (voir
+  /// [_onRows]) : utile si des fichiers ont été effacés hors de l'app depuis
+  /// le dernier passage, ce dont la base ne peut pas être informée toute
+  /// seule.
+  Future<void> _reload() async {
+    _subscribe();
   }
 
   Future<void> _changeSort(_MediaSort sort) async {
-    if (sort == _sort || _loading) return;
+    if (sort == _sort) return;
     setState(() => _sort = sort);
-    await _reload();
+    // Le jeu d'éléments ne change pas, seul l'ordre : pas besoin de
+    // réabonnement, un tri en mémoire suffit à partir de la liste courante.
+    final current = List<MyMediaItem>.from(_items);
+    if (sort == _MediaSort.largest) {
+      current.sort((a, b) => (b.mediaSize ?? 0).compareTo(a.mediaSize ?? 0));
+    } else {
+      current.sort((a, b) => (b.sendAt ?? DateTime(0))
+          .compareTo(a.sendAt ?? DateTime(0)));
+    }
+    setState(() {
+      _items
+        ..clear()
+        ..addAll(current);
+    });
   }
 
   Future<void> _changeOwner(_MediaOwner owner) async {
-    if (owner == _owner || _loading) return;
+    if (owner == _owner) return;
     setState(() => _owner = owner);
-    await _reload();
+    _subscribe();
   }
 
   // ── Regroupement ─────────────────────────────────────────────────────
@@ -254,18 +290,29 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
 
   // ── Actions ──────────────────────────────────────────────────────────
 
-  /// Supprime la copie locale des médias cochés. Le fichier reste sur le
-  /// serveur et se retéléchargera à l'ouverture : la grille ne change pas.
+  /// Supprime la copie locale des médias cochés : ils disparaissent de « Mes
+  /// médias » (qui ne liste que ce qui est téléchargé) et redeviennent, dans
+  /// leur conversation, un média à retélécharger. Le message et le fichier
+  /// distant ne sont pas touchés — sauf si le fichier distant a déjà été
+  /// purgé côté serveur (rétention 30 jours), auquel cas cette suppression
+  /// devient définitive : voir l'avertissement adapté ci-dessous.
   Future<void> _freeSpace() async {
     final l10n = context.l10n;
     final targets = _selectedItems;
     if (targets.isEmpty) return;
 
+    final maybeGone = targets.any((i) =>
+        i.sendAt != null &&
+        DateTime.now().difference(i.sendAt!).inDays >
+            _kMediaRetentionDaysHeuristic);
+
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.myMediaFreeSpace),
-        content: Text(l10n.myMediaFreeSpaceConfirm),
+        content: Text(maybeGone
+            ? l10n.myMediaFreeSpaceConfirmMaybeGone
+            : l10n.myMediaFreeSpaceConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -288,10 +335,12 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
       final bytes = await cache.removeForUrl(item.mediaUrl);
       if (bytes > 0) {
         freed += bytes;
-        // Le chemin local pointait sur le fichier qu'on vient d'effacer : le
-        // laisser en base ferait échouer l'ouverture de la bulle.
-        await dao.clearLocalMediaPath(item.msgID);
       }
+      // Le chemin local pointait sur le fichier qu'on vient d'effacer (ou
+      // sur un fichier hors du cache géré par [MediaCacheService], selon
+      // l'origine du téléchargement) : le laisser en base ferait échouer
+      // l'ouverture de la bulle dans la conversation.
+      await dao.clearLocalMediaPath(item.msgID);
     }
     if (!mounted) return;
 
@@ -349,6 +398,7 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
         .map(
           (m) => MediaViewerItem(
             isVideo: m.isVideo,
+            localPath: m.localMediaPath,
             networkUrl: normalizeBackendUrl(m.mediaUrl),
             title: m.mediaName,
             msgID: m.msgID,
@@ -487,7 +537,7 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
       );
 
   Widget _body(AppLocalizations l10n) {
-    if (_initial && _loading) {
+    if (_initial) {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null && _items.isEmpty) {
@@ -521,18 +571,11 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
 
     final groups = _buildGroups();
     return RefreshIndicator(
-      onRefresh: () => _load(refresh: true),
+      onRefresh: _reload,
       child: ListView.builder(
-        controller: _scrollController,
         padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-        itemCount: groups.length + (_loading ? 1 : 0),
+        itemCount: groups.length,
         itemBuilder: (context, index) {
-          if (index >= groups.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            );
-          }
           final group = groups[index];
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -607,16 +650,16 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
     );
   }
 
-  /// Aperçu seul, sans habillage : la vidéo s'appuie sur `mediaThumb` (aucun
-  /// fichier local ici, les médias viennent du serveur), l'image aussi quand
-  /// la vignette existe — affichée en mémoire, elle évite de télécharger le
-  /// fichier original (pleine taille) pour chaque tuile de la grille.
-  /// Les médias anciens sans vignette retombent sur l'URL, via un cache
-  /// réseau dédié à la grille (voir [MediaGridCache]).
+  /// Aperçu seul, sans habillage. Le fichier est, par construction de
+  /// [ChatDao.watchLocalMedia], toujours présent sur le disque — aucun appel
+  /// réseau ici, ni pour l'image/vidéo elle-même ni pour sa vignette :
+  /// `mediaThumb` (base64, en priorité, décodage bon marché pour une petite
+  /// tuile de grille) ou à défaut le fichier local lui-même.
   Widget _preview(MyMediaItem item) {
     final fallback = context.semantic.surfaceMuted;
     if (item.isVideo) {
       return VideoMessagePreview(
+        localPath: item.localMediaPath,
         thumbBase64: item.mediaThumb,
         durationSeconds: item.mediaDuration,
         borderRadius: BorderRadius.zero,
@@ -635,29 +678,24 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
       );
     }
 
-    final url = normalizeBackendUrl(item.mediaUrl) ?? '';
-    if (url.isEmpty) {
-      return Container(
-        color: context.semantic.brandContainer,
-        child: Icon(Icons.image_outlined, color: context.colors.primary),
+    final path = item.localMediaPath;
+    if (path != null) {
+      return Image.file(
+        File(path),
+        fit: BoxFit.cover,
+        cacheWidth: 480,
+        errorBuilder: (_, __, ___) => Container(
+          color: context.semantic.brandContainer,
+          child: Icon(
+            Icons.broken_image_outlined,
+            color: context.colors.onSurfaceVariant,
+          ),
+        ),
       );
     }
-    return CachedNetworkImage(
-      imageUrl: url,
-      cacheManager: MediaGridCache.instance,
-      // La grille n'affiche que de petites tuiles : inutile de garder en
-      // mémoire ou sur disque l'image pleine taille.
-      memCacheWidth: 480,
-      maxWidthDiskCache: 480,
-      fit: BoxFit.cover,
-      placeholder: (_, __) => Container(color: fallback),
-      errorWidget: (_, __, ___) => Container(
-        color: context.semantic.brandContainer,
-        child: Icon(
-          Icons.broken_image_outlined,
-          color: context.colors.onSurfaceVariant,
-        ),
-      ),
+    return Container(
+      color: context.semantic.brandContainer,
+      child: Icon(Icons.image_outlined, color: context.colors.primary),
     );
   }
 

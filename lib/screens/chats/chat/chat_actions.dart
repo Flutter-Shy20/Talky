@@ -2088,6 +2088,25 @@ extension _ChatActions on _ChatDetailScreenState {
     return url != null && url.isNotEmpty;
   }
 
+  /// Média jamais téléchargé dont le fichier a été purgé côté serveur (>30
+  /// jours, cf. `mediaRetention.js`) : `mediaUrl` a été vidée, il n'y a donc
+  /// plus rien à récupérer — contrairement à `_needsMediaDownload`, retenter
+  /// un téléchargement ne peut pas aboutir.
+  bool _isExpiredMedia(LocalMessage msg) {
+    if (msg.isViewOnce) return false;
+    if (_hasLocal(msg)) return false;
+    if (msg.type != 1 && msg.type != 2 && msg.type != 4) return false;
+    final url = msg.mediaUrl;
+    return url == null || url.isEmpty;
+  }
+
+  void _showMediaExpiredSnackBar() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.mediaNoLongerAvailable)),
+    );
+  }
+
   Future<String?> _downloadReceivedMedia(LocalMessage msg) async {
     final url = msg.mediaUrl;
     if (url == null || url.isEmpty || msg.msgID == 0) return null;
@@ -2147,6 +2166,21 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
+  Widget _mediaExpiredBadge() {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.black.withValues(alpha: 0.55),
+        shape: BoxShape.circle,
+      ),
+      child: const Center(
+        child: Icon(Icons.history_toggle_off_rounded,
+            color: AppColors.white, size: 26),
+      ),
+    );
+  }
+
   Future<void> _openViewer(LocalMessage msg, {required bool isVideo}) async {
     await _openAlbumViewer([msg], initialIndex: 0);
   }
@@ -2163,6 +2197,10 @@ extension _ChatActions on _ChatDetailScreenState {
     final target = items.isEmpty
         ? null
         : items[initialIndex.clamp(0, items.length - 1)];
+    if (target != null && _isExpiredMedia(target)) {
+      _showMediaExpiredSnackBar();
+      return;
+    }
     if (target != null && _needsMediaDownload(target)) {
       final path = await _downloadReceivedMedia(target);
       if (path == null) return;
@@ -2318,7 +2356,10 @@ extension _ChatActions on _ChatDetailScreenState {
             : null;
 
     if (path == null) {
-      if (msg.mediaUrl == null) return;
+      if (msg.mediaUrl == null || msg.mediaUrl!.isEmpty) {
+        _showMediaExpiredSnackBar();
+        return;
+      }
       if (_needsMediaDownload(msg)) {
         path = await _downloadReceivedMedia(msg);
       } else {

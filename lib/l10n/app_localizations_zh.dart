@@ -906,6 +906,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get unableToDownloadTheMedia => '无法下载该媒体';
 
   @override
+  String get mediaExpired => '媒体已过期';
+
+  @override
+  String get mediaNoLongerAvailable => '该媒体已不可用';
+
+  @override
   String get unableToUnblockThisContact => '无法解除屏蔽该联系人';
 
   @override
@@ -4595,6 +4601,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get myMediaFreeSpaceConfirm => '将删除所选媒体在本机的副本。它们仍保留在聊天中，打开时会重新下载。';
+
+  @override
+  String get myMediaFreeSpaceConfirmMaybeGone =>
+      '将删除所选媒体在本机的副本。它们仍保留在聊天中，但部分文件较旧：如果服务器上已不再保留，将无法重新获取。';
 
   @override
   String myMediaFreedSpace(String size) {

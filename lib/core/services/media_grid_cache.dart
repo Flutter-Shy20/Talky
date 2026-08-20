@@ -20,8 +20,11 @@ class MediaGridCache {
   static CacheManager get instance => _instance ??= CacheManager(
         Config(
           'mediaGridCache',
+          // `stalePeriod` : un média non consulté pendant 30 jours est
+          // purgé. `maxNrOfCacheObjects` : au-delà de 3 000 objets, les
+          // plus anciens sont évincés (LRU). (L'API Config de la 3.4.x ne
+          // connaît que ces deux réglages de durée/taille — pas de maxAge.)
           maxNrOfCacheObjects: 3000,
-          maxAge: const Duration(days: 60),
           stalePeriod: const Duration(days: 30),
         ),
       );

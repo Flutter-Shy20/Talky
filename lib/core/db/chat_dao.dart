@@ -9,6 +9,16 @@ import '../utils/media_album.dart';
 import '../utils/system_event_payload.dart';
 import 'app_database.dart';
  
+/// Une ligne de [ChatDao.watchLocalMedia] : le message porteur du média, plus
+/// le nom d'expéditeur résolu depuis le cache local de contacts
+/// ([LocalUsers]) quand il est connu — `null` sinon (homonyme non mis en
+/// cache localement), l'affichage s'en passe déjà.
+class LocalMediaRow {
+  final LocalMessage message;
+  final String? senderName;
+  const LocalMediaRow(this.message, this.senderName);
+}
+
 class ChatDao {
   final AppDatabase db;
   ChatDao(this.db);
@@ -749,10 +759,9 @@ class ChatDao {
         .write(LocalMessagesCompanion(deletedForID: Value(userId)));
   }
 
-  /// Messages locaux correspondant à des msgID serveur. L'écran Mes médias
-  /// travaille sur des identifiants renvoyés par l'API et a besoin des lignes
-  /// Drift pour transférer. Un média dont la conversation n'est plus en cache
-  /// local n'a pas de ligne : la liste renvoyée peut être plus courte.
+  /// Messages locaux correspondant à des msgID (ceux affichés dans Mes médias,
+  /// pour transférer la sélection). Un média dont la conversation n'est plus
+  /// en cache local n'a pas de ligne : la liste renvoyée peut être plus courte.
   Future<List<LocalMessage>> messagesByIds(List<int> msgIDs) {
     if (msgIDs.isEmpty) return Future.value(const []);
     return (db.select(db.localMessages)
@@ -768,6 +777,53 @@ class ChatDao {
   Future<void> clearLocalMediaPath(int msgID) {
     return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
         .write(const LocalMessagesCompanion(localMediaPath: Value(null)));
+  }
+
+  /// Source de « Mes médias » : uniquement les images/vidéos dont
+  /// `localMediaPath` est renseigné, c'est-à-dire réellement téléchargées sur
+  /// l'appareil — jamais un média simplement reçu. Que le téléchargement ait
+  /// été automatique ou manuel ne change rien, les deux passent par
+  /// [setLocalMediaPath]. L'existence du fichier sur disque (le chemin peut
+  /// pointer sur un fichier depuis effacé hors de l'app) reste à vérifier par
+  /// l'appelant — ce fichier n'importe pas `dart:io`.
+  ///
+  /// Vue unique exclue côté destinataire (jamais de copie persistante) mais
+  /// gardée côté expéditeur, comme le faisait l'ancien endpoint serveur.
+  Stream<List<LocalMediaRow>> watchLocalMedia(int myId, {bool? mineOnly}) {
+    final query = db.select(db.localMessages).join([
+      leftOuterJoin(
+        db.localUsers,
+        db.localUsers.alanyaID.equalsExp(db.localMessages.senderID),
+      ),
+    ])
+      ..where(db.localMessages.isDeleted.equals(false) &
+          (db.localMessages.deletedForID.isNull() |
+              db.localMessages.deletedForID.equals(myId).not()) &
+          db.localMessages.type.isIn(const [1, 2]) &
+          db.localMessages.localMediaPath.isNotNull() &
+          (db.localMessages.isViewOnce.equals(false) |
+              db.localMessages.senderID.equals(myId)));
+    if (mineOnly == true) {
+      query.where(db.localMessages.senderID.equals(myId));
+    } else if (mineOnly == false) {
+      query.where(db.localMessages.senderID.equals(myId).not());
+    }
+    query
+      ..orderBy([
+        OrderingTerm(
+            expression: db.localMessages.sendAt, mode: OrderingMode.desc),
+      ])
+      ..limit(2000);
+
+    return query.watch().map((rows) => rows.map((row) {
+          final msg = row.readTable(db.localMessages);
+          final user = row.readTableOrNull(db.localUsers);
+          final name = user == null
+              ? null
+              : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+          return LocalMediaRow(
+              msg, (name == null || name.isEmpty) ? null : name);
+        }).toList());
   }
 
   // ── Traduction sur l'appareil ───────────────────────────────────────

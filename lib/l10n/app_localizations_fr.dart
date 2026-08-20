@@ -978,6 +978,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get unableToDownloadTheMedia => 'Impossible de télécharger le média';
 
   @override
+  String get mediaExpired => 'Média expiré';
+
+  @override
+  String get mediaNoLongerAvailable => 'Ce média n\'est plus disponible';
+
+  @override
   String get unableToUnblockThisContact => 'Impossible de débloquer ce contact';
 
   @override
@@ -4786,6 +4792,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get myMediaFreeSpaceConfirm =>
       'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l\'ouverture.';
+
+  @override
+  String get myMediaFreeSpaceConfirmMaybeGone =>
+      'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations, mais certains sont anciens : s\'ils ne sont plus disponibles sur le serveur, ils resteront introuvables.';
 
   @override
   String myMediaFreedSpace(String size) {

@@ -212,6 +212,11 @@ class MyMediaItem {
   final int? mediaSize;
   final DateTime? sendAt;
 
+  /// Chemin du fichier téléchargé sur l'appareil. Renseigné uniquement par la
+  /// source locale ([ChatDao.watchLocalMedia]) — un [MyMediaItem] construit
+  /// depuis l'API distante n'a pas cette information et reste `null`.
+  final String? localMediaPath;
+
   const MyMediaItem({
     required this.msgID,
     required this.conversationID,
@@ -225,6 +230,7 @@ class MyMediaItem {
     this.mediaDuration,
     this.mediaSize,
     this.sendAt,
+    this.localMediaPath,
   });
 
   factory MyMediaItem.fromJson(Map<String, dynamic> json) => MyMediaItem(
