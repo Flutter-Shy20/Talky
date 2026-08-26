@@ -220,6 +220,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mediaSaveFailed => '无法保存该媒体文件';
 
   @override
+  String get mediaExpired => '媒体已过期';
+
+  @override
+  String get mediaExpiredHint => '该媒体在服务器上已不再可用';
+
+  @override
   String get settingsCalls => '通话';
 
   @override
@@ -3915,7 +3921,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get storageClearTemp => '清除临时文件';
 
   @override
-  String get storageClearCacheConfirm => '缓存文件将被删除。媒体可以重新下载。';
+  String get storageClearCacheConfirm =>
+      '缓存文件将被删除。服务器上仍存在的媒体可以重新下载；较早的媒体将永久丢失。';
 
   @override
   String get storageClearCacheDone => '媒体缓存已清除';

@@ -223,6 +223,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mediaSaveFailed => 'Could not save this media';
 
   @override
+  String get mediaExpired => 'Media expired';
+
+  @override
+  String get mediaExpiredHint =>
+      'This media is no longer available on the server';
+
+  @override
   String get settingsCalls => 'Calls';
 
   @override
@@ -4026,7 +4033,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storageClearCacheConfirm =>
-      'Cached files will be removed. Media can be downloaded again.';
+      'Cached files will be removed. Media still on the server can be downloaded again; older ones will be lost for good.';
 
   @override
   String get storageClearCacheDone => 'Media cache cleared';

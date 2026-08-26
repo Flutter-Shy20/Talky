@@ -7,15 +7,39 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../utils/app_log.dart';
 import '../utils/backend_url.dart';
+import 'media_expiry_policy.dart';
 
 //  Télécharge et conserve les médias reçus dans le dossier de l'app pour
-//  une consultation hors-ligne. Évince les plus vieux fichiers (LRU) quand
-//  le cache dépasse [kMaxCacheBytes].
+//  une consultation hors-ligne.
+//
+//  ── Aucune éviction automatique ──
+//
+//  Un média téléchargé sur l'appareil reste accessible **jusqu'à la
+//  désinstallation de l'application ou un changement de compte**. Rien d'autre
+//  ne le supprime.
+//
+//  Une éviction LRU plafonnait auparavant ce dossier à 500 Mo : au-delà, les
+//  fichiers les moins récemment consultés étaient effacés en silence, sans que
+//  l'utilisateur en soit averti ni puisse s'y opposer. Ce plafond n'était une
+//  contrainte ni d'Android ni d'iOS — une constante écrite à la main.
+//
+//  Elle est retirée parce que sa combinaison avec la rétention serveur était
+//  destructrice : tant que le serveur conservait tout, un fichier évincé se
+//  retéléchargeait et personne ne s'en apercevait. Depuis que le serveur
+//  supprime au-delà de sa rétention, évincé côté appareil + tombé côté serveur
+//  = **perdu définitivement**. Les deux mécanismes étaient anodins séparément
+//  et destructeurs ensemble.
+//
+//  Le dossier grossit donc librement, et c'est l'utilisateur qui le gère :
+//  [currentSizeBytes] alimente l'écran de stockage, [clearAll] le vide sur sa
+//  demande explicite (`StorageInfoService.clearMediaCache`) comme au
+//  changement de compte.
+//
+//  ⚠ Vider ce cache est devenu une suppression DÉFINITIVE pour tout média dont
+//  la partition serveur est déjà tombée : il ne se retéléchargera pas. Le
+//  libellé proposé à l'utilisateur doit le dire — « libérer de l'espace » n'est
+//  plus anodin.
 class MediaCacheService {
-  /// Plafond dur du cache (octets). Au-delà, on évince jusqu'à
-  /// [kTargetCacheBytes] pour éviter de re-évincer constamment.
-  static const int kMaxCacheBytes = 500 * 1024 * 1024;
-  static const int kTargetCacheBytes = 400 * 1024 * 1024;
 
   Directory? _dir;
 
@@ -45,6 +69,10 @@ class MediaCacheService {
     final resolved = _resolvedUrl(url);
     try {
       final res = await http.get(Uri.parse(resolved)).timeout(const Duration(seconds: 30));
+      // Un 410 signifie que le média a dépassé sa rétention côté serveur : le
+      // corps porte la durée appliquée, qu'on mémorise pour pouvoir conclure
+      // sans requête la prochaine fois.
+      if (MediaExpiryPolicy.noteResponse(res.statusCode, body: res.body)) return null;
       if (res.statusCode != 200) return null;
       final tmp = await getTemporaryDirectory();
       final path = p.join(
@@ -86,6 +114,10 @@ class MediaCacheService {
       final request = http.Request('GET', Uri.parse(resolved));
       final streamed =
           await client.send(request).timeout(const Duration(seconds: 60));
+      // En flux le corps n'est pas lu : le statut seul suffit à conclure que
+      // le média est mort. La durée de rétention sera apprise d'une réponse
+      // non streamée — elle n'est pas nécessaire pour abandonner ici.
+      if (MediaExpiryPolicy.noteResponse(streamed.statusCode)) return null;
       if (streamed.statusCode != 200) return null;
 
       final int? total = streamed.contentLength;
@@ -173,6 +205,7 @@ class MediaCacheService {
         final streamed = await client
             .send(request)
             .timeout(const Duration(seconds: 60));
+        if (MediaExpiryPolicy.noteResponse(streamed.statusCode)) return null;
         if (streamed.statusCode != 200) return null;
 
         final int? total = streamed.contentLength;
@@ -204,7 +237,6 @@ class MediaCacheService {
         if (file.existsSync()) await file.delete();
         await tmp.rename(file.path);
         onProgress?.call(1.0);
-        unawaited(evictIfNeeded());
         return file.path;
       } finally {
         client.close();
@@ -233,6 +265,13 @@ class MediaCacheService {
         return file.path;
       }
 
+      // Média expiré côté serveur : inutile de partir. L'ORDRE compte — ce
+      // test vient APRÈS la lecture du cache local, jamais avant : une copie
+      // déjà téléchargée reste accessible indéfiniment, même quand le serveur
+      // a supprimé l'original. C'est la règle produit : ce chantier borne
+      // l'espace du serveur, jamais celui de l'utilisateur.
+      if (MediaExpiryPolicy.isExpired(resolved)) return null;
+
       if (maxBytes != null) {
         try {
           final head = await http.head(Uri.parse(resolved)).timeout(const Duration(seconds: 5));
@@ -247,10 +286,9 @@ class MediaCacheService {
       }
 
       final res = await http.get(Uri.parse(resolved)).timeout(const Duration(seconds: 30));
+      if (MediaExpiryPolicy.noteResponse(res.statusCode, body: res.body)) return null;
       if (res.statusCode != 200) return null;
       await file.writeAsBytes(res.bodyBytes);
-      // Éviction post-write : non-bloquante pour le caller.
-      unawaited(evictIfNeeded());
       return file.path;
     } catch (e) {
       debugPrint('[MediaCache] échec cache $resolved: $e');
@@ -298,54 +336,6 @@ class MediaCacheService {
     }
   }
 
-  /// Évince les fichiers les plus anciens (par `accessed` puis `modified`)
-  /// si le cache dépasse [kMaxCacheBytes], jusqu'à redescendre à
-  /// [kTargetCacheBytes]. Idempotent et best-effort (erreurs ignorées).
-  Future<void> evictIfNeeded() async {
-    try {
-      final size = await currentSizeBytes();
-      if (size <= kMaxCacheBytes) return;
-      final dir = await _cacheDir();
-      final entries = dir
-          .listSync(followLinks: false)
-          .whereType<File>()
-          .map((f) {
-        DateTime ts;
-        int length;
-        try {
-          final st = f.statSync();
-          ts = st.accessed.isAfter(st.modified) ? st.modified : st.accessed;
-          length = st.size;
-        } catch (_) {
-          ts = DateTime.fromMillisecondsSinceEpoch(0);
-          length = 0;
-        }
-        return _CacheEntry(f, ts, length);
-      }).toList()
-        ..sort((a, b) => a.ts.compareTo(b.ts));
-
-      var running = size;
-      var evicted = 0;
-      for (final e in entries) {
-        if (running <= kTargetCacheBytes) break;
-        try {
-          e.file.deleteSync();
-          running -= e.length;
-          evicted++;
-        } catch (err, st) {
-          AppLog.w('MediaCache', 'Éviction fichier cache échouée', err, st);
-        }
-      }
-      if (evicted > 0) {
-        debugPrint('[MediaCache] LRU évincé $evicted fichier(s), '
-            'taille ${(size / 1024 / 1024).toStringAsFixed(1)}MB → '
-            '${(running / 1024 / 1024).toStringAsFixed(1)}MB');
-      }
-    } catch (e) {
-      debugPrint('[MediaCache] evictIfNeeded échoué: $e');
-    }
-  }
-
   String _resolvedUrl(String url) => normalizeBackendUrl(url) ?? url;
 
   String _fileName(String url) {
@@ -354,11 +344,4 @@ class MediaCacheService {
     if (last != null && last.isNotEmpty) return last;
     return '${url.hashCode}.bin';
   }
-}
-
-class _CacheEntry {
-  final File file;
-  final DateTime ts;
-  final int length;
-  _CacheEntry(this.file, this.ts, this.length);
 }

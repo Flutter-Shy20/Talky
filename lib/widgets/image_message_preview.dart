@@ -5,9 +5,11 @@ import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../core/services/media_expiry_policy.dart';
 import '../core/services/video_thumbnail_service.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_dimens.dart';
+import '../l10n/app_localizations.dart';
 
 /// Aperçu image dans les bulles / grilles.
 ///
@@ -82,6 +84,13 @@ class ImageMessagePreview extends StatelessWidget {
         fallback: fallback,
         iconColor: onVariant,
       );
+    } else if (MediaExpiryPolicy.isExpired(networkUrl)) {
+      // Le média a dépassé sa rétention côté serveur ET aucune copie locale
+      // n'existe. On le sait sans requête — la date est dans l'URL — donc on
+      // n'affiche ni spinner ni image cassée : l'état est définitif, il doit
+      // se lire comme tel. Le repli générique, lui, reste réservé aux vrais
+      // échecs (réseau, fichier illisible), qui eux peuvent se résoudre seuls.
+      child = _expiredBox(fallback, onVariant, context);
     } else if (networkUrl != null && networkUrl!.isNotEmpty) {
       child = CachedNetworkImage(
         imageUrl: networkUrl!,
@@ -89,7 +98,12 @@ class ImageMessagePreview extends StatelessWidget {
         width: expandToFill ? double.infinity : null,
         height: expandToFill ? double.infinity : null,
         placeholder: (_, __) => ColoredBox(color: fallback),
-        errorWidget: (_, __, ___) => _fallbackBox(fallback, onVariant),
+        // Le 410 peut tomber pendant l'affichage : la rétention vient peut-être
+        // d'être apprise, ou l'URL n'est pas partitionnée et seul le serveur
+        // pouvait trancher. On rejuge donc au moment de l'erreur.
+        errorWidget: (_, __, ___) => MediaExpiryPolicy.isExpired(networkUrl)
+            ? _expiredBox(fallback, onVariant, context)
+            : _fallbackBox(fallback, onVariant),
       );
     } else {
       child = _fallbackBox(fallback, onVariant);
@@ -110,6 +124,36 @@ class ImageMessagePreview extends StatelessWidget {
     }
 
     return ClipRRect(borderRadius: radius, child: framed);
+  }
+
+  /// Encart « média expiré » : distinct du repli générique parce que l'état
+  /// est DÉFINITIF. Une icône cassée laisse croire à un incident passager et
+  /// invite à réessayer ; ici il n'y a plus rien à attendre, et le dire
+  /// clairement vaut mieux qu'un carré vide.
+  Widget _expiredBox(Color fallback, Color iconColor, BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ColoredBox(
+      color: fallback,
+      child: SizedBox(
+        width: expandToFill ? double.infinity : 200,
+        height: expandToFill ? double.infinity : 160,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.hourglass_disabled_outlined, size: 40, color: iconColor),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                l10n?.mediaExpired ?? 'Média expiré',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: iconColor),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _fallbackBox(Color fallback, Color iconColor) {

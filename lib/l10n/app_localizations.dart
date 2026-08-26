@@ -514,6 +514,18 @@ abstract class AppLocalizations {
   /// **'Impossible d’enregistrer ce média'**
   String get mediaSaveFailed;
 
+  /// No description provided for @mediaExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Média expiré'**
+  String get mediaExpired;
+
+  /// No description provided for @mediaExpiredHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce média n’est plus disponible sur le serveur'**
+  String get mediaExpiredHint;
+
   /// No description provided for @settingsCalls.
   ///
   /// In fr, this message translates to:
@@ -7081,7 +7093,7 @@ abstract class AppLocalizations {
   /// No description provided for @storageClearCacheConfirm.
   ///
   /// In fr, this message translates to:
-  /// **'Les fichiers en cache seront supprimés. Les médias pourront être retéléchargés.'**
+  /// **'Les fichiers en cache seront supprimés. Les médias encore présents sur le serveur pourront être retéléchargés ; les plus anciens seront définitivement perdus.'**
   String get storageClearCacheConfirm;
 
   /// No description provided for @storageClearCacheDone.

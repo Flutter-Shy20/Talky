@@ -298,7 +298,8 @@ class ChatRepository {
       await _dao.purgeGhostMessages();
       await _dao.purgeDuplicateOptimistics();
       await _dao.purgeDuplicateByMsgId();
-      await _mediaCache.evictIfNeeded();
+      // Plus d'éviction du cache média ici : un média téléchargé reste jusqu'à
+      // la désinstallation ou un changement de compte. Voir MediaCacheService.
     } catch (e) {
       debugPrint('[ChatRepo] startup purges échouées: $e');
     }
@@ -1646,7 +1647,10 @@ class ChatRepository {
     required bool isViewOnce,
     String? mediaName,
   }) async {
-    if (!MediaDownloadPreferences.isAutoDownloadEnabled) return;
+    // Consulte la préférence ET le réseau : l'auto-téléchargement est actif par
+    // défaut, mais restreint au Wi-Fi pour ne pas consommer le forfait de
+    // l'utilisateur sans qu'il l'ait demandé.
+    if (!await MediaDownloadPreferences.shouldAutoDownloadNow()) return;
     await ensureReceivedMediaLocal(
       msgID: msgID,
       mediaUrl: url,
