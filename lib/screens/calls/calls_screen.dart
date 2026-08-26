@@ -27,12 +27,18 @@ class CallsScreen extends StatefulWidget {
 }
 
 class _CallsScreenState extends State<CallsScreen> {
+  /// Taille de page — doit rester <= au plafond serveur (100).
+  static const int _pageSize = 50;
+
   List<Call> _recentCalls = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
   // !! ID mis en cache — pas de FutureBuilder dans chaque ListTile
   int _myId = 0;
   bool _searchOpen = false;
   final TextEditingController _searchCtrl = TextEditingController();
+  final ScrollController _scrollCtrl = ScrollController();
   String _search = '';
   final Map<int, LocalUser> _knownUsers = {};
 
@@ -40,13 +46,22 @@ class _CallsScreenState extends State<CallsScreen> {
   void initState() {
     super.initState();
     _initCurrentUser();
+    _scrollCtrl.addListener(_onScroll);
     _loadRecentCalls();
   }
 
   @override
   void dispose() {
+    _scrollCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    final pos = _scrollCtrl.position;
+    // Marge de 300 px : la page suivante arrive avant que le pouce touche le bas.
+    if (pos.pixels >= pos.maxScrollExtent - 300) _loadMoreCalls();
   }
 
   void _toggleSearch() {
@@ -65,7 +80,37 @@ class _CallsScreenState extends State<CallsScreen> {
     _myId = auth.currentUser?.alanyaID ?? 0;
   }
 
+  /// Fusionne une page dans la liste courante — jamais d'affectation directe.
+  /// Le cache local garde plus d'historique qu'une page serveur : écraser
+  /// faisait disparaître de l'écran les appels déjà descendus, à chaque
+  /// rafraîchissement. La version serveur l'emporte sur la copie en cache
+  /// (statut et durée y sont à jour), le reste est conservé.
+  void _mergeCalls(Iterable<Call> incoming) {
+    final byId = {for (final c in _recentCalls) c.idCall: c};
+    for (final c in incoming) {
+      byId[c.idCall] = c;
+    }
+    // Date décodée une fois par appel, pas à chaque comparaison : le tri rejoue
+    // sur la liste entière à chaque page chargée, et elle ne fait que grandir.
+    final dated = [
+      for (final c in byId.values) (date: _callDate(c), call: c),
+    ]..sort((a, b) {
+        final cmp = b.date.compareTo(a.date);
+        return cmp != 0 ? cmp : b.call.idCall.compareTo(a.call.idCall);
+      });
+    _recentCalls = [for (final e in dated) e.call];
+  }
+
+  DateTime _callDate(Call c) =>
+      DateTime.tryParse(c.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+  List<Call> _parseCalls(List<dynamic> raw) => raw
+      .map((item) =>
+          item is Call ? item : Call.fromJson(item as Map<String, dynamic>))
+      .toList();
+
   Future<void> _loadRecentCalls() async {
+    _hasMore = true; // un refresh rouvre la pagination fermée par une erreur
     // 1) Hydrate immédiatement depuis le cache local (instantané, offline-safe).
     try {
       final cache = Provider.of<LocalCacheRepository>(context, listen: false);
@@ -75,7 +120,7 @@ class _CallsScreenState extends State<CallsScreen> {
         await _hydrateKnownUsers(localCalls, cache);
         if (!mounted) return;
         setState(() {
-          _recentCalls = localCalls.map(_localToCall).toList();
+          _mergeCalls(localCalls.map(_localToCall));
           _isLoading = false;
         });
       } else {
@@ -85,18 +130,15 @@ class _CallsScreenState extends State<CallsScreen> {
       AppLog.e('CallsScreen', 'Chargement appels (cache) échoué', e, st);
     }
 
-    // 2) Rafraîchit depuis l'API (best-effort, écrase le cache si succès).
+    // 2) Rafraîchit la page la plus récente depuis l'API (best-effort).
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final raw = await apiClient.getCallHistory();
-      final calls = raw
-          .map((item) => item is Call
-              ? item
-              : Call.fromJson(item as Map<String, dynamic>))
-          .toList();
+      final raw = await apiClient.getCallHistory(limit: _pageSize);
       if (!mounted) return;
       setState(() {
-        _recentCalls = calls;
+        _mergeCalls(_parseCalls(raw));
+        // Page pleine = il reste probablement de l'historique en dessous.
+        _hasMore = raw.length >= _pageSize;
         _isLoading = false;
       });
       // Réutilise la réponse déjà téléchargée pour alimenter le cache local :
@@ -106,7 +148,50 @@ class _CallsScreenState extends State<CallsScreen> {
         cache.ingestCallsRaw(raw, myId: _myId);
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      // Hors ligne : on reste sur le cache et on referme la pagination, sinon
+      // le pied de liste tournerait dans le vide. Le pull-to-refresh la rouvre.
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasMore = false;
+        });
+      }
+    }
+  }
+
+  /// Page suivante : on repart du plus ancien appel déjà en main. Le curseur
+  /// porte sur la liste complète (masqués compris) pour ne pas sauter de ligne.
+  Future<void> _loadMoreCalls() async {
+    if (_isLoadingMore || !_hasMore || _isLoading || _recentCalls.isEmpty) return;
+    setState(() => _isLoadingMore = true);
+    try {
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final raw = await apiClient.getCallHistory(
+        before: _recentCalls.last.idCall,
+        limit: _pageSize,
+      );
+      if (!mounted) return;
+      setState(() {
+        _mergeCalls(_parseCalls(raw));
+        _hasMore = raw.length >= _pageSize;
+        _isLoadingMore = false;
+      });
+      // L'historique profond descend aussi dans le cache : il restera lisible
+      // hors ligne à la prochaine ouverture.
+      if (mounted && _myId != 0) {
+        final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+        cache.ingestCallsRaw(raw, myId: _myId);
+      }
+    } catch (e, st) {
+      AppLog.e('CallsScreen', 'Page d\'appels suivante échouée', e, st);
+      // Une page qui échoue arrête le défilement plutôt que de retenter à
+      // chaque pixel scrollé ; le pull-to-refresh remet la pagination en route.
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+          _hasMore = false;
+        });
+      }
     }
   }
 
@@ -262,9 +347,23 @@ class _CallsScreenState extends State<CallsScreen> {
     return RefreshIndicator(
       onRefresh: _loadRecentCalls,
       child: ListView.builder(
+        controller: _scrollCtrl,
         padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
-        itemCount: filtered.length,
+        itemCount: filtered.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
+          if (index >= filtered.length) {
+            // Atteindre ce pied de page déclenche déjà `_loadMoreCalls`.
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+          }
           final call = filtered[index];
           // !! Calcul direct — pas de FutureBuilder
           final otherUser = call.idCaller != _myId ? call.caller : call.receiver;

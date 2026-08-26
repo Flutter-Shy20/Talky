@@ -3,10 +3,18 @@
 part of '../talky_api_client.dart';
 
 extension CallsApi on TalkyApiClient {
-  Future<List<dynamic>> getCallHistory() async {
-    final data = await _handleRequest(
-      () => _client.get(Uri.parse('${TalkyApiClient.baseUrl}/calls'), headers: _headers),
+  /// Historique paginé, du plus récent au plus ancien.
+  ///
+  /// [before] = idCall du plus ancien appel déjà en main : la réponse reprend
+  /// juste en dessous. Une page plus courte que [limit] signale la fin.
+  Future<List<dynamic>> getCallHistory({int? before, int limit = 50}) async {
+    final uri = Uri.parse('${TalkyApiClient.baseUrl}/calls').replace(
+      queryParameters: {
+        'limit': '$limit',
+        if (before != null && before > 0) 'before': '$before',
+      },
     );
+    final data = await _handleRequest(() => _client.get(uri, headers: _headers));
     return data is List ? data : [];
   }
 
