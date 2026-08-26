@@ -2177,6 +2177,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get infoAction => 'Info';
 
   @override
+  String get reportAction => 'Report';
+
+  @override
+  String get reportMessageTitle => 'Report this message';
+
+  @override
+  String get reportUserTitle => 'Report this account';
+
+  @override
+  String get reportSubtitle =>
+      'Your report goes to the ALANYA team. The person concerned is not told.';
+
+  @override
+  String get reportReasonHarassment => 'Harassment or bullying';
+
+  @override
+  String get reportReasonHate => 'Hate speech';
+
+  @override
+  String get reportReasonViolence => 'Violence or threats';
+
+  @override
+  String get reportReasonSexual => 'Sexual content';
+
+  @override
+  String get reportReasonScam => 'Scam or fraud';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonImpersonation => 'Impersonation';
+
+  @override
+  String get reportReasonOther => 'Something else';
+
+  @override
+  String get reportNoteHint => 'Details (optional)';
+
+  @override
+  String get reportSubmit => 'Send report';
+
+  @override
+  String get reportSent => 'Report sent. Thank you.';
+
+  @override
+  String get reportFailed => 'Could not send. Try again.';
+
+  @override
   String get cannotPlaceCallCheckInternet =>
       'Unable to place a call, check your internet connection and try again.';
 

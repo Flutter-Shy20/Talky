@@ -2116,6 +2116,54 @@ class AppLocalizationsZh extends AppLocalizations {
   String get infoAction => '详情';
 
   @override
+  String get reportAction => '举报';
+
+  @override
+  String get reportMessageTitle => '举报此消息';
+
+  @override
+  String get reportUserTitle => '举报此账号';
+
+  @override
+  String get reportSubtitle => '您的举报将发送给 ALANYA 团队。对方不会收到通知。';
+
+  @override
+  String get reportReasonHarassment => '骚扰或欺凌';
+
+  @override
+  String get reportReasonHate => '仇恨言论';
+
+  @override
+  String get reportReasonViolence => '暴力或威胁';
+
+  @override
+  String get reportReasonSexual => '色情内容';
+
+  @override
+  String get reportReasonScam => '诈骗';
+
+  @override
+  String get reportReasonSpam => '垃圾信息';
+
+  @override
+  String get reportReasonImpersonation => '冒充他人';
+
+  @override
+  String get reportReasonOther => '其他';
+
+  @override
+  String get reportNoteHint => '补充说明（选填）';
+
+  @override
+  String get reportSubmit => '发送举报';
+
+  @override
+  String get reportSent => '举报已发送，谢谢。';
+
+  @override
+  String get reportFailed => '发送失败，请重试。';
+
+  @override
   String get cannotPlaceCallCheckInternet => '无法发起通话，请检查网络连接后重试。';
 
   @override

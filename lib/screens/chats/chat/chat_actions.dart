@@ -579,6 +579,23 @@ extension _ChatActions on _ChatDetailScreenState {
                   _showMessageInfo(msg);
                 },
               ),
+            // Signaler ne concerne que ce qu'on reçoit d'un tiers : son propre
+            // message se supprime, et le compte officiel se signale à personne.
+            // `msgID != 0` est requis — le serveur ne connaît pas encore un
+            // message qui n'a pas fini de partir.
+            if (!isMe && !officialIncoming && msg.msgID != 0 && !msg.isDeleted)
+              ListTile(
+                leading: Icon(Icons.flag_outlined, color: error),
+                title: Text(context.l10n.reportAction),
+                onTap: () {
+                  Navigator.pop(context);
+                  showReportSheet(
+                    context,
+                    targetType: 'message',
+                    targetId: msg.msgID,
+                  );
+                },
+              ),
             AppSpacing.vGapSm,
           ],
         ),

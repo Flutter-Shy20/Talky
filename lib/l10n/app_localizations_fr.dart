@@ -2196,6 +2196,55 @@ class AppLocalizationsFr extends AppLocalizations {
   String get infoAction => 'Infos';
 
   @override
+  String get reportAction => 'Signaler';
+
+  @override
+  String get reportMessageTitle => 'Signaler ce message';
+
+  @override
+  String get reportUserTitle => 'Signaler ce compte';
+
+  @override
+  String get reportSubtitle =>
+      'Votre signalement est transmis à l’équipe ALANYA. La personne concernée n’en est pas informée.';
+
+  @override
+  String get reportReasonHarassment => 'Harcèlement ou intimidation';
+
+  @override
+  String get reportReasonHate => 'Propos haineux';
+
+  @override
+  String get reportReasonViolence => 'Violence ou menaces';
+
+  @override
+  String get reportReasonSexual => 'Contenu sexuel';
+
+  @override
+  String get reportReasonScam => 'Arnaque ou fraude';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonImpersonation => 'Usurpation d’identité';
+
+  @override
+  String get reportReasonOther => 'Autre';
+
+  @override
+  String get reportNoteHint => 'Précision (facultatif)';
+
+  @override
+  String get reportSubmit => 'Envoyer le signalement';
+
+  @override
+  String get reportSent => 'Signalement transmis. Merci.';
+
+  @override
+  String get reportFailed => 'Envoi impossible. Réessayez.';
+
+  @override
   String get cannotPlaceCallCheckInternet =>
       'Impossible de passer un appel, vérifiez votre connexion à internet et réessayez.';
 

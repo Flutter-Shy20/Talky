@@ -4012,6 +4012,102 @@ abstract class AppLocalizations {
   /// **'Infos'**
   String get infoAction;
 
+  /// Entrée du menu long-press d'un message et de la fiche contact.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signaler'**
+  String get reportAction;
+
+  /// No description provided for @reportMessageTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signaler ce message'**
+  String get reportMessageTitle;
+
+  /// No description provided for @reportUserTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signaler ce compte'**
+  String get reportUserTitle;
+
+  /// Rassure sur la confidentialité : sans cette phrase, on n'ose pas signaler quelqu'un avec qui on discute.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre signalement est transmis à l’équipe ALANYA. La personne concernée n’en est pas informée.'**
+  String get reportSubtitle;
+
+  /// No description provided for @reportReasonHarassment.
+  ///
+  /// In fr, this message translates to:
+  /// **'Harcèlement ou intimidation'**
+  String get reportReasonHarassment;
+
+  /// No description provided for @reportReasonHate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Propos haineux'**
+  String get reportReasonHate;
+
+  /// No description provided for @reportReasonViolence.
+  ///
+  /// In fr, this message translates to:
+  /// **'Violence ou menaces'**
+  String get reportReasonViolence;
+
+  /// No description provided for @reportReasonSexual.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contenu sexuel'**
+  String get reportReasonSexual;
+
+  /// No description provided for @reportReasonScam.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arnaque ou fraude'**
+  String get reportReasonScam;
+
+  /// No description provided for @reportReasonSpam.
+  ///
+  /// In fr, this message translates to:
+  /// **'Spam'**
+  String get reportReasonSpam;
+
+  /// No description provided for @reportReasonImpersonation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Usurpation d’identité'**
+  String get reportReasonImpersonation;
+
+  /// No description provided for @reportReasonOther.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autre'**
+  String get reportReasonOther;
+
+  /// No description provided for @reportNoteHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Précision (facultatif)'**
+  String get reportNoteHint;
+
+  /// No description provided for @reportSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le signalement'**
+  String get reportSubmit;
+
+  /// No description provided for @reportSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signalement transmis. Merci.'**
+  String get reportSent;
+
+  /// No description provided for @reportFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi impossible. Réessayez.'**
+  String get reportFailed;
+
   /// No description provided for @cannotPlaceCallCheckInternet.
   ///
   /// In fr, this message translates to:

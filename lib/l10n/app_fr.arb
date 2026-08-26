@@ -1179,6 +1179,28 @@
   "archiveAction": "Archiver",
   "markAsRead": "Marquer lu",
   "infoAction": "Infos",
+  "reportAction": "Signaler",
+  "@reportAction": {
+    "description": "Entrée du menu long-press d'un message et de la fiche contact."
+  },
+  "reportMessageTitle": "Signaler ce message",
+  "reportUserTitle": "Signaler ce compte",
+  "reportSubtitle": "Votre signalement est transmis à l’équipe ALANYA. La personne concernée n’en est pas informée.",
+  "@reportSubtitle": {
+    "description": "Rassure sur la confidentialité : sans cette phrase, on n'ose pas signaler quelqu'un avec qui on discute."
+  },
+  "reportReasonHarassment": "Harcèlement ou intimidation",
+  "reportReasonHate": "Propos haineux",
+  "reportReasonViolence": "Violence ou menaces",
+  "reportReasonSexual": "Contenu sexuel",
+  "reportReasonScam": "Arnaque ou fraude",
+  "reportReasonSpam": "Spam",
+  "reportReasonImpersonation": "Usurpation d’identité",
+  "reportReasonOther": "Autre",
+  "reportNoteHint": "Précision (facultatif)",
+  "reportSubmit": "Envoyer le signalement",
+  "reportSent": "Signalement transmis. Merci.",
+  "reportFailed": "Envoi impossible. Réessayez.",
   "cannotPlaceCallCheckInternet": "Impossible de passer un appel, vérifiez votre connexion à internet et réessayez.",
   "cannotPlaceCallServerFailed": "Impossible de passer un appel, la connexion au serveur a échoué. Réessayez.",
   "connectionRequired": "Connexion requise",
