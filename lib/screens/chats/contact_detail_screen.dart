@@ -333,7 +333,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       }
       if (mounted) setState(() => _isFavorite = next);
     } catch (e) {
-      _snack(context.l10n.actionFailedWithError('$e'), error: true);
+      if (mounted) _snack(context.l10n.actionFailedWithError('$e'), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -358,12 +358,14 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       } else {
         await _api.unblockUser(widget.userId);
       }
-      if (mounted) setState(() {
-        _isBlocked = next;
-        if (next) _blockedByThem = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isBlocked = next;
+          if (next) _blockedByThem = false;
+        });
+      }
     } catch (e) {
-      _snack(context.l10n.actionFailedWithError('$e'), error: true);
+      if (mounted) _snack(context.l10n.actionFailedWithError('$e'), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
