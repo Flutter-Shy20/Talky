@@ -732,6 +732,7 @@
   "unableToUpdateTheCountry": "Impossible de mettre à jour le pays",
   "errorStartingTheCall": "Erreur lors du démarrage de l'appel",
   "unableToDownloadTheMedia": "Impossible de télécharger le média",
+  "mediaNoLongerAvailable": "Ce média n'est plus disponible",
   "unableToUnblockThisContact": "Impossible de débloquer ce contact",
   "unableToLoadNumbers": "Impossible de charger les numéros",
   "searchByNameUsernameOr": "Rechercher par nom, pseudo ou ...",
@@ -2939,6 +2940,76 @@
   "deleteAccountLogoutNow": "Se déconnecter",
   "myMediaEmpty": "Aucun média partagé pour le moment",
   "myMediaLoadFailed": "Impossible de charger vos médias",
+  "bytesUnitB": "o",
+  "bytesUnitKB": "Ko",
+  "bytesUnitMB": "Mo",
+  "bytesUnitGB": "Go",
+  "myMediaSortRecent": "Récents",
+  "myMediaSortLargest": "Plus lourds",
+  "myMediaOnThisDevice": "{size} sur cet appareil",
+  "@myMediaOnThisDevice": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaFreeSpace": "Libérer de l'espace",
+  "myMediaFreeSpaceConfirm": "La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l'ouverture.",
+  "myMediaFreeSpaceConfirmMaybeGone": "La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations, mais certains sont anciens : s'ils ne sont plus disponibles sur le serveur, ils resteront introuvables.",
+  "myMediaFreedSpace": "{size} libérés sur cet appareil",
+  "@myMediaFreedSpace": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaNothingCached": "Aucun de ces médias n'occupe d'espace sur cet appareil",
+  "myMediaForwardUnavailable": "Ces médias ne sont plus dans vos conversations sur cet appareil",
+  "myMediaSelectAll": "Tout sélectionner",
+  "myMediaFilterReceived": "Reçus",
+  "myMediaFilterSent": "Envoyés",
+  "myMediaFilterAll": "Tous",
+  "myMediaFrom": "De {name}",
+  "@myMediaFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaFilters": "Filtres",
+  "myMediaFilterDiscussion": "Discussion",
+  "myMediaAllDiscussions": "Toutes les discussions",
+  "myMediaSearchDiscussion": "Rechercher une discussion",
+  "myMediaFilterOrigin": "Origine",
+  "myMediaFilterPeriod": "Période",
+  "myMediaPeriodAny": "Toute la période",
+  "myMediaPeriodStart": "Début",
+  "myMediaPeriodEnd": "Fin",
+  "myMediaPeriodLast7": "7 jours",
+  "myMediaPeriodLast30": "30 jours",
+  "myMediaPeriodThisYear": "Cette année",
+  "myMediaPeriodClear": "Effacer la période",
+  "myMediaKindAll": "Tout",
+  "myMediaKindPhotos": "Photos",
+  "myMediaKindVideos": "Vidéos",
+  "myMediaKindAudio": "Vocaux",
+  "myMediaKindFiles": "Fichiers",
+  "myMediaSummary": "{count, plural, =0{Aucun élément} =1{1 élément · {size}} other{{count} éléments · {size}}}",
+  "@myMediaSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaEmptyFiltered": "Aucun média ne correspond à ces filtres",
+  "myMediaResetFilters": "Réinitialiser les filtres",
   "dndSummaryActive": "{start} – {end} · {days}",
   "@dndSummaryActive": {
     "placeholders": {

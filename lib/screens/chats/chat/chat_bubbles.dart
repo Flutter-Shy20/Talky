@@ -1722,14 +1722,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  /// Formate une taille d'octets en « Ko » / « Mo » (virgule décimale FR).
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes o';
-    final kb = bytes / 1024;
-    if (kb < 1024) return '${kb.toStringAsFixed(0)} Ko';
-    final mb = kb / 1024;
-    return '${mb.toStringAsFixed(1).replaceAll('.', ',')} Mo';
-  }
+  String _formatBytes(int bytes) => formatBytes(bytes, context.l10n);
 
   /// Overlay spinner ou barre de progression pendant l'envoi d'un média.
   Widget _buildUploadProgressOverlay(LocalMessage msg) {
@@ -1783,9 +1776,14 @@ extension _ChatBubbles on _ChatDetailScreenState {
   Widget _buildImageMedia(LocalMessage msg, {bool bleed = false}) {
     final uploading = msg.status == 0;
     final needsDl = _needsMediaDownload(msg);
+    final expired = _isExpiredMedia(msg);
     final downloading = _mediaDownloadingIds.contains(msg.msgID);
     return GestureDetector(
       onTap: () async {
+        if (expired) {
+          _showMediaExpiredSnackBar();
+          return;
+        }
         if (needsDl) {
           final path = await _downloadReceivedMedia(msg);
           if (path == null) return;
@@ -1801,11 +1799,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
               localPath: _effectiveLocalPath(msg),
               networkUrl: msg.mediaUrl,
               thumbBase64: msg.mediaThumb,
-              useBlurredThumb: needsDl,
+              useBlurredThumb: needsDl || expired,
               borderRadius: BorderRadius.zero,
               fallbackColor: AppColors.black.withValues(alpha: 0.26),
             ),
             if (needsDl) _mediaDownloadBadge(downloading: downloading),
+            if (expired) _mediaExpiredBadge(),
             if (uploading) _buildUploadProgressOverlay(msg),
           ],
         ),
@@ -1816,9 +1815,14 @@ extension _ChatBubbles on _ChatDetailScreenState {
   Widget _buildVideoMedia(LocalMessage msg, {bool bleed = false}) {
     final uploading = msg.status == 0;
     final needsDl = _needsMediaDownload(msg);
+    final expired = _isExpiredMedia(msg);
     final downloading = _mediaDownloadingIds.contains(msg.msgID);
     return GestureDetector(
       onTap: () async {
+        if (expired) {
+          _showMediaExpiredSnackBar();
+          return;
+        }
         if (needsDl) {
           final path = await _downloadReceivedMedia(msg);
           if (path == null) return;
@@ -1838,10 +1842,11 @@ extension _ChatBubbles on _ChatDetailScreenState {
             borderRadius: bleed ? BorderRadius.zero : null,
             playIconSize: 30,
             playPadding: 8,
-            // Masque le play natif si download requis (badge download à la place).
-            hidePlayIcon: needsDl,
+            // Masque le play natif si download requis OU média expiré (badge dédié à la place).
+            hidePlayIcon: needsDl || expired,
           ),
           if (needsDl) _mediaDownloadBadge(downloading: downloading),
+          if (expired) _mediaExpiredBadge(),
           if (uploading) _buildUploadProgressOverlay(msg),
         ],
       ),
@@ -1886,7 +1891,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
     if (meta != null) parts.add(meta);
 
     if (msg.status != 0) {
-      parts.add(needsDl ? context.l10n.tapToDownload : style.openHint);
+      parts.add(_isExpiredMedia(msg)
+          ? context.l10n.mediaExpired
+          : (needsDl ? context.l10n.tapToDownload : style.openHint));
     }
 
     if (parts.isEmpty) return null;
@@ -1999,7 +2006,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final meta = _fileMetaLine(msg, style, needsDl);
     final hint = uploading
         ? null
-        : (needsDl ? context.l10n.tapToDownload : style.openHint);
+        : (_isExpiredMedia(msg)
+            ? context.l10n.mediaExpired
+            : (needsDl ? context.l10n.tapToDownload : style.openHint));
     final subtitleParts = <String>[
       if (meta != null) meta,
       if (hint != null) hint,

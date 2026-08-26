@@ -911,6 +911,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get unableToDownloadTheMedia => '无法下载该媒体';
 
   @override
+  String get mediaNoLongerAvailable => '该媒体已不可用';
+
+  @override
   String get unableToUnblockThisContact => '无法解除屏蔽该联系人';
 
   @override
@@ -4572,6 +4575,139 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get myMediaLoadFailed => '无法加载您的媒体';
+
+  @override
+  String get bytesUnitB => '字节';
+
+  @override
+  String get bytesUnitKB => 'KB';
+
+  @override
+  String get bytesUnitMB => 'MB';
+
+  @override
+  String get bytesUnitGB => 'GB';
+
+  @override
+  String get myMediaSortRecent => '最近';
+
+  @override
+  String get myMediaSortLargest => '最大';
+
+  @override
+  String myMediaOnThisDevice(String size) {
+    return '本机占用 $size';
+  }
+
+  @override
+  String get myMediaFreeSpace => '释放空间';
+
+  @override
+  String get myMediaFreeSpaceConfirm => '将删除所选媒体在本机的副本。它们仍保留在聊天中，打开时会重新下载。';
+
+  @override
+  String get myMediaFreeSpaceConfirmMaybeGone =>
+      '将删除所选媒体在本机的副本。它们仍保留在聊天中，但部分文件较旧：如果服务器上已不再保留，将无法重新获取。';
+
+  @override
+  String myMediaFreedSpace(String size) {
+    return '已在本机释放 $size';
+  }
+
+  @override
+  String get myMediaNothingCached => '这些媒体均未占用本机空间';
+
+  @override
+  String get myMediaForwardUnavailable => '这些媒体已不在本机的聊天记录中';
+
+  @override
+  String get myMediaSelectAll => '全选';
+
+  @override
+  String get myMediaFilterReceived => '已接收';
+
+  @override
+  String get myMediaFilterSent => '已发送';
+
+  @override
+  String get myMediaFilterAll => '全部';
+
+  @override
+  String myMediaFrom(String name) {
+    return '来自 $name';
+  }
+
+  @override
+  String get myMediaFilters => '筛选';
+
+  @override
+  String get myMediaFilterDiscussion => '聊天';
+
+  @override
+  String get myMediaAllDiscussions => '全部聊天';
+
+  @override
+  String get myMediaSearchDiscussion => '搜索聊天';
+
+  @override
+  String get myMediaFilterOrigin => '来源';
+
+  @override
+  String get myMediaFilterPeriod => '时间段';
+
+  @override
+  String get myMediaPeriodAny => '全部时间';
+
+  @override
+  String get myMediaPeriodStart => '开始';
+
+  @override
+  String get myMediaPeriodEnd => '结束';
+
+  @override
+  String get myMediaPeriodLast7 => '7 天';
+
+  @override
+  String get myMediaPeriodLast30 => '30 天';
+
+  @override
+  String get myMediaPeriodThisYear => '今年';
+
+  @override
+  String get myMediaPeriodClear => '清除时间段';
+
+  @override
+  String get myMediaKindAll => '全部';
+
+  @override
+  String get myMediaKindPhotos => '照片';
+
+  @override
+  String get myMediaKindVideos => '视频';
+
+  @override
+  String get myMediaKindAudio => '语音';
+
+  @override
+  String get myMediaKindFiles => '文件';
+
+  @override
+  String myMediaSummary(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个项目 · $size',
+      one: '1 个项目 · $size',
+      zero: '没有项目',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get myMediaEmptyFiltered => '没有符合筛选条件的媒体';
+
+  @override
+  String get myMediaResetFilters => '重置筛选';
 
   @override
   String dndSummaryActive(String start, String end, String days) {

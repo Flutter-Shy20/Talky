@@ -985,6 +985,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get unableToDownloadTheMedia => 'Impossible de télécharger le média';
 
   @override
+  String get mediaNoLongerAvailable => 'Ce média n\'est plus disponible';
+
+  @override
   String get unableToUnblockThisContact => 'Impossible de débloquer ce contact';
 
   @override
@@ -4763,6 +4766,142 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get myMediaLoadFailed => 'Impossible de charger vos médias';
+
+  @override
+  String get bytesUnitB => 'o';
+
+  @override
+  String get bytesUnitKB => 'Ko';
+
+  @override
+  String get bytesUnitMB => 'Mo';
+
+  @override
+  String get bytesUnitGB => 'Go';
+
+  @override
+  String get myMediaSortRecent => 'Récents';
+
+  @override
+  String get myMediaSortLargest => 'Plus lourds';
+
+  @override
+  String myMediaOnThisDevice(String size) {
+    return '$size sur cet appareil';
+  }
+
+  @override
+  String get myMediaFreeSpace => 'Libérer de l\'espace';
+
+  @override
+  String get myMediaFreeSpaceConfirm =>
+      'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l\'ouverture.';
+
+  @override
+  String get myMediaFreeSpaceConfirmMaybeGone =>
+      'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations, mais certains sont anciens : s\'ils ne sont plus disponibles sur le serveur, ils resteront introuvables.';
+
+  @override
+  String myMediaFreedSpace(String size) {
+    return '$size libérés sur cet appareil';
+  }
+
+  @override
+  String get myMediaNothingCached =>
+      'Aucun de ces médias n\'occupe d\'espace sur cet appareil';
+
+  @override
+  String get myMediaForwardUnavailable =>
+      'Ces médias ne sont plus dans vos conversations sur cet appareil';
+
+  @override
+  String get myMediaSelectAll => 'Tout sélectionner';
+
+  @override
+  String get myMediaFilterReceived => 'Reçus';
+
+  @override
+  String get myMediaFilterSent => 'Envoyés';
+
+  @override
+  String get myMediaFilterAll => 'Tous';
+
+  @override
+  String myMediaFrom(String name) {
+    return 'De $name';
+  }
+
+  @override
+  String get myMediaFilters => 'Filtres';
+
+  @override
+  String get myMediaFilterDiscussion => 'Discussion';
+
+  @override
+  String get myMediaAllDiscussions => 'Toutes les discussions';
+
+  @override
+  String get myMediaSearchDiscussion => 'Rechercher une discussion';
+
+  @override
+  String get myMediaFilterOrigin => 'Origine';
+
+  @override
+  String get myMediaFilterPeriod => 'Période';
+
+  @override
+  String get myMediaPeriodAny => 'Toute la période';
+
+  @override
+  String get myMediaPeriodStart => 'Début';
+
+  @override
+  String get myMediaPeriodEnd => 'Fin';
+
+  @override
+  String get myMediaPeriodLast7 => '7 jours';
+
+  @override
+  String get myMediaPeriodLast30 => '30 jours';
+
+  @override
+  String get myMediaPeriodThisYear => 'Cette année';
+
+  @override
+  String get myMediaPeriodClear => 'Effacer la période';
+
+  @override
+  String get myMediaKindAll => 'Tout';
+
+  @override
+  String get myMediaKindPhotos => 'Photos';
+
+  @override
+  String get myMediaKindVideos => 'Vidéos';
+
+  @override
+  String get myMediaKindAudio => 'Vocaux';
+
+  @override
+  String get myMediaKindFiles => 'Fichiers';
+
+  @override
+  String myMediaSummary(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count éléments · $size',
+      one: '1 élément · $size',
+      zero: 'Aucun élément',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get myMediaEmptyFiltered => 'Aucun média ne correspond à ces filtres';
+
+  @override
+  String get myMediaResetFilters => 'Réinitialiser les filtres';
 
   @override
   String dndSummaryActive(String start, String end, String days) {

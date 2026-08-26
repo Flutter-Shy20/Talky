@@ -965,6 +965,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unableToDownloadTheMedia => 'Unable to download the media';
 
   @override
+  String get mediaNoLongerAvailable => 'This media is no longer available';
+
+  @override
   String get unableToUnblockThisContact => 'Unable to unblock this contact';
 
   @override
@@ -4712,6 +4715,142 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myMediaLoadFailed => 'Could not load your media';
+
+  @override
+  String get bytesUnitB => 'B';
+
+  @override
+  String get bytesUnitKB => 'KB';
+
+  @override
+  String get bytesUnitMB => 'MB';
+
+  @override
+  String get bytesUnitGB => 'GB';
+
+  @override
+  String get myMediaSortRecent => 'Recent';
+
+  @override
+  String get myMediaSortLargest => 'Largest';
+
+  @override
+  String myMediaOnThisDevice(String size) {
+    return '$size on this device';
+  }
+
+  @override
+  String get myMediaFreeSpace => 'Free up space';
+
+  @override
+  String get myMediaFreeSpaceConfirm =>
+      'The local copy of the selected media will be removed. They stay in your chats and will download again when opened.';
+
+  @override
+  String get myMediaFreeSpaceConfirmMaybeGone =>
+      'The local copy of the selected media will be removed. They stay in your chats, but some are old: if they are no longer available on the server, they will stay unavailable.';
+
+  @override
+  String myMediaFreedSpace(String size) {
+    return '$size freed on this device';
+  }
+
+  @override
+  String get myMediaNothingCached =>
+      'None of these media take up space on this device';
+
+  @override
+  String get myMediaForwardUnavailable =>
+      'These media are no longer in your chats on this device';
+
+  @override
+  String get myMediaSelectAll => 'Select all';
+
+  @override
+  String get myMediaFilterReceived => 'Received';
+
+  @override
+  String get myMediaFilterSent => 'Sent';
+
+  @override
+  String get myMediaFilterAll => 'All';
+
+  @override
+  String myMediaFrom(String name) {
+    return 'From $name';
+  }
+
+  @override
+  String get myMediaFilters => 'Filters';
+
+  @override
+  String get myMediaFilterDiscussion => 'Chat';
+
+  @override
+  String get myMediaAllDiscussions => 'All chats';
+
+  @override
+  String get myMediaSearchDiscussion => 'Search for a chat';
+
+  @override
+  String get myMediaFilterOrigin => 'Source';
+
+  @override
+  String get myMediaFilterPeriod => 'Period';
+
+  @override
+  String get myMediaPeriodAny => 'All time';
+
+  @override
+  String get myMediaPeriodStart => 'Start';
+
+  @override
+  String get myMediaPeriodEnd => 'End';
+
+  @override
+  String get myMediaPeriodLast7 => '7 days';
+
+  @override
+  String get myMediaPeriodLast30 => '30 days';
+
+  @override
+  String get myMediaPeriodThisYear => 'This year';
+
+  @override
+  String get myMediaPeriodClear => 'Clear period';
+
+  @override
+  String get myMediaKindAll => 'All';
+
+  @override
+  String get myMediaKindPhotos => 'Photos';
+
+  @override
+  String get myMediaKindVideos => 'Videos';
+
+  @override
+  String get myMediaKindAudio => 'Voice';
+
+  @override
+  String get myMediaKindFiles => 'Files';
+
+  @override
+  String myMediaSummary(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items · $size',
+      one: '1 item · $size',
+      zero: 'No items',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get myMediaEmptyFiltered => 'No media matches these filters';
+
+  @override
+  String get myMediaResetFilters => 'Reset filters';
 
   @override
   String dndSummaryActive(String start, String end, String days) {

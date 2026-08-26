@@ -9,6 +9,21 @@ import '../utils/media_album.dart';
 import '../utils/system_event_payload.dart';
 import 'app_database.dart';
  
+/// Types de messages que « Mes médias » sait lister : image, vidéo, audio,
+/// fichier. Le texte (0) et la localisation (5) n'ont pas de fichier joint,
+/// et le message système (6) encore moins.
+const kMyMediaTypes = <int>[1, 2, 3, 4];
+
+/// Une ligne de [ChatDao.watchLocalMedia] : le message porteur du média, plus
+/// le nom d'expéditeur résolu depuis le cache local de contacts
+/// ([LocalUsers]) quand il est connu — `null` sinon (homonyme non mis en
+/// cache localement), l'affichage s'en passe déjà.
+class LocalMediaRow {
+  final LocalMessage message;
+  final String? senderName;
+  const LocalMediaRow(this.message, this.senderName);
+}
+
 class ChatDao {
   final AppDatabase db;
   ChatDao(this.db);
@@ -749,6 +764,16 @@ class ChatDao {
         .write(LocalMessagesCompanion(deletedForID: Value(userId)));
   }
 
+  /// Messages locaux correspondant à des msgID (ceux affichés dans Mes médias,
+  /// pour transférer la sélection). Un média dont la conversation n'est plus
+  /// en cache local n'a pas de ligne : la liste renvoyée peut être plus courte.
+  Future<List<LocalMessage>> messagesByIds(List<int> msgIDs) {
+    if (msgIDs.isEmpty) return Future.value(const []);
+    return (db.select(db.localMessages)
+          ..where((m) => m.msgID.isIn(msgIDs) & m.isDeleted.equals(false)))
+        .get();
+  }
+
   Future<void> setLocalMediaPath(int msgID, String path) {
     return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
         .write(LocalMessagesCompanion(localMediaPath: Value(path)));
@@ -757,6 +782,103 @@ class ChatDao {
   Future<void> clearLocalMediaPath(int msgID) {
     return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
         .write(const LocalMessagesCompanion(localMediaPath: Value(null)));
+  }
+
+  /// Source de « Mes médias » : uniquement les médias dont `localMediaPath`
+  /// est renseigné, c'est-à-dire réellement téléchargés sur l'appareil —
+  /// jamais un média simplement reçu. Que le téléchargement ait été
+  /// automatique ou manuel ne change rien, les deux passent par
+  /// [setLocalMediaPath]. L'existence du fichier sur disque (le chemin peut
+  /// pointer sur un fichier depuis effacé hors de l'app) reste à vérifier par
+  /// l'appelant — ce fichier n'importe pas `dart:io`.
+  ///
+  /// Vue unique exclue côté destinataire (jamais de copie persistante) mais
+  /// gardée côté expéditeur, comme le faisait l'ancien endpoint serveur.
+  ///
+  /// Les filtres sont poussés en SQL plutôt que joués en mémoire : la requête
+  /// est plafonnée à 2000 lignes, filtrer après coup découperait dans les
+  /// 2000 médias les plus récents au lieu des 2000 médias les plus récents
+  /// *qui correspondent* — une discussion peu active n'aurait rien affiché.
+  ///
+  /// [until] est une borne **exclusive** (typiquement le lendemain minuit du
+  /// dernier jour voulu) : un média envoyé le 31 mars à 14 h doit être compris
+  /// dans « jusqu'au 31 mars ».
+  Stream<List<LocalMediaRow>> watchLocalMedia(
+    int myId, {
+    bool? mineOnly,
+    int? conversationID,
+    DateTime? from,
+    DateTime? until,
+    List<int> types = kMyMediaTypes,
+  }) {
+    final query = db.select(db.localMessages).join([
+      leftOuterJoin(
+        db.localUsers,
+        db.localUsers.alanyaID.equalsExp(db.localMessages.senderID),
+      ),
+    ])
+      ..where(db.localMessages.isDeleted.equals(false) &
+          (db.localMessages.deletedForID.isNull() |
+              db.localMessages.deletedForID.equals(myId).not()) &
+          db.localMessages.type.isIn(types.isEmpty ? kMyMediaTypes : types) &
+          db.localMessages.localMediaPath.isNotNull() &
+          (db.localMessages.isViewOnce.equals(false) |
+              db.localMessages.senderID.equals(myId)));
+    if (mineOnly == true) {
+      query.where(db.localMessages.senderID.equals(myId));
+    } else if (mineOnly == false) {
+      query.where(db.localMessages.senderID.equals(myId).not());
+    }
+    if (conversationID != null) {
+      query.where(db.localMessages.conversationID.equals(conversationID));
+    }
+    if (from != null) {
+      query.where(db.localMessages.sendAt.isBiggerOrEqualValue(from));
+    }
+    if (until != null) {
+      query.where(db.localMessages.sendAt.isSmallerThanValue(until));
+    }
+    query
+      ..orderBy([
+        OrderingTerm(
+            expression: db.localMessages.sendAt, mode: OrderingMode.desc),
+      ])
+      ..limit(2000);
+
+    return query.watch().map((rows) => rows.map((row) {
+          final msg = row.readTable(db.localMessages);
+          final user = row.readTableOrNull(db.localUsers);
+          final name = user == null
+              ? null
+              : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+          return LocalMediaRow(
+              msg, (name == null || name.isEmpty) ? null : name);
+        }).toList());
+  }
+
+  /// Les conversations qui ont au moins un média téléchargé sur l'appareil.
+  ///
+  /// Sert le sélecteur « Discussion » de « Mes médias » : la liste complète
+  /// des conversations y proposerait des choix qui n'affichent rien, ce que
+  /// l'utilisateur lit comme un bug plutôt que comme un filtre vide.
+  ///
+  /// Instantané, pas un flux : le sélecteur est une feuille modale, elle se
+  /// referme avant qu'un nouveau média n'arrive.
+  Future<Set<int>> conversationIdsWithLocalMedia(int myId) async {
+    final query = db.selectOnly(db.localMessages, distinct: true)
+      ..addColumns([db.localMessages.conversationID])
+      ..where(db.localMessages.isDeleted.equals(false) &
+          (db.localMessages.deletedForID.isNull() |
+              db.localMessages.deletedForID.equals(myId).not()) &
+          db.localMessages.type.isIn(kMyMediaTypes) &
+          db.localMessages.localMediaPath.isNotNull() &
+          (db.localMessages.isViewOnce.equals(false) |
+              db.localMessages.senderID.equals(myId)));
+    final rows = await query.get();
+    return rows
+        .map((r) => r.read(db.localMessages.conversationID))
+        .whereType<int>()
+        .toSet();
   }
 
   // ── Traduction sur l'appareil ───────────────────────────────────────

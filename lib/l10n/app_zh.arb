@@ -255,6 +255,7 @@
   "unableToUpdateTheCountry": "无法更新国家/地区",
   "errorStartingTheCall": "发起通话时出错",
   "unableToDownloadTheMedia": "无法下载该媒体",
+  "mediaNoLongerAvailable": "该媒体已不可用",
   "unableToUnblockThisContact": "无法解除屏蔽该联系人",
   "unableToLoadNumbers": "无法加载号码列表",
   "searchByNameUsernameOr": "按姓名、用户名或…搜索",
@@ -1369,6 +1370,66 @@
   "deleteAccountLogoutNow": "退出登录",
   "myMediaEmpty": "暂无分享过的媒体",
   "myMediaLoadFailed": "无法加载您的媒体",
+  "bytesUnitB": "字节",
+  "bytesUnitKB": "KB",
+  "bytesUnitMB": "MB",
+  "bytesUnitGB": "GB",
+  "myMediaSortRecent": "最近",
+  "myMediaSortLargest": "最大",
+  "myMediaOnThisDevice": "本机占用 {size}",
+  "@myMediaOnThisDevice": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaFreeSpace": "释放空间",
+  "myMediaFreeSpaceConfirm": "将删除所选媒体在本机的副本。它们仍保留在聊天中，打开时会重新下载。",
+  "myMediaFreeSpaceConfirmMaybeGone": "将删除所选媒体在本机的副本。它们仍保留在聊天中，但部分文件较旧：如果服务器上已不再保留，将无法重新获取。",
+  "myMediaFreedSpace": "已在本机释放 {size}",
+  "@myMediaFreedSpace": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaNothingCached": "这些媒体均未占用本机空间",
+  "myMediaForwardUnavailable": "这些媒体已不在本机的聊天记录中",
+  "myMediaSelectAll": "全选",
+  "myMediaFilterReceived": "已接收",
+  "myMediaFilterSent": "已发送",
+  "myMediaFilterAll": "全部",
+  "myMediaFrom": "来自 {name}",
+  "@myMediaFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaFilters": "\u7b5b\u9009",
+  "myMediaFilterDiscussion": "\u804a\u5929",
+  "myMediaAllDiscussions": "\u5168\u90e8\u804a\u5929",
+  "myMediaSearchDiscussion": "\u641c\u7d22\u804a\u5929",
+  "myMediaFilterOrigin": "来源",
+  "myMediaFilterPeriod": "\u65f6\u95f4\u6bb5",
+  "myMediaPeriodAny": "\u5168\u90e8\u65f6\u95f4",
+  "myMediaPeriodStart": "\u5f00\u59cb",
+  "myMediaPeriodEnd": "\u7ed3\u675f",
+  "myMediaPeriodLast7": "7 \u5929",
+  "myMediaPeriodLast30": "30 \u5929",
+  "myMediaPeriodThisYear": "\u4eca\u5e74",
+  "myMediaPeriodClear": "\u6e05\u9664\u65f6\u95f4\u6bb5",
+  "myMediaKindAll": "\u5168\u90e8",
+  "myMediaKindPhotos": "\u7167\u7247",
+  "myMediaKindVideos": "\u89c6\u9891",
+  "myMediaKindAudio": "\u8bed\u97f3",
+  "myMediaKindFiles": "\u6587\u4ef6",
+  "myMediaSummary": "{count, plural, =0{\u6ca1\u6709\u9879\u76ee} =1{1 \u4e2a\u9879\u76ee \u00b7 {size}} other{{count} \u4e2a\u9879\u76ee \u00b7 {size}}}",
+  "myMediaEmptyFiltered": "\u6ca1\u6709\u7b26\u5408\u7b5b\u9009\u6761\u4ef6\u7684\u5a92\u4f53",
+  "myMediaResetFilters": "\u91cd\u7f6e\u7b5b\u9009",
   "dndSummaryActive": "{start} – {end} · {days}",
   "dndSummaryInactive": "已关闭",
   "exportPhase1ShareSubject": "Alanya 数据导出（资料与元数据）",

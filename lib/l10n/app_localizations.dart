@@ -1630,6 +1630,12 @@ abstract class AppLocalizations {
   /// **'Impossible de télécharger le média'**
   String get unableToDownloadTheMedia;
 
+  /// No description provided for @mediaNoLongerAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce média n\'est plus disponible'**
+  String get mediaNoLongerAvailable;
+
   /// No description provided for @unableToUnblockThisContact.
   ///
   /// In fr, this message translates to:
@@ -8313,6 +8319,240 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible de charger vos médias'**
   String get myMediaLoadFailed;
+
+  /// No description provided for @bytesUnitB.
+  ///
+  /// In fr, this message translates to:
+  /// **'o'**
+  String get bytesUnitB;
+
+  /// No description provided for @bytesUnitKB.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ko'**
+  String get bytesUnitKB;
+
+  /// No description provided for @bytesUnitMB.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mo'**
+  String get bytesUnitMB;
+
+  /// No description provided for @bytesUnitGB.
+  ///
+  /// In fr, this message translates to:
+  /// **'Go'**
+  String get bytesUnitGB;
+
+  /// No description provided for @myMediaSortRecent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récents'**
+  String get myMediaSortRecent;
+
+  /// No description provided for @myMediaSortLargest.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus lourds'**
+  String get myMediaSortLargest;
+
+  /// No description provided for @myMediaOnThisDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size} sur cet appareil'**
+  String myMediaOnThisDevice(String size);
+
+  /// No description provided for @myMediaFreeSpace.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libérer de l\'espace'**
+  String get myMediaFreeSpace;
+
+  /// No description provided for @myMediaFreeSpaceConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l\'ouverture.'**
+  String get myMediaFreeSpaceConfirm;
+
+  /// No description provided for @myMediaFreeSpaceConfirmMaybeGone.
+  ///
+  /// In fr, this message translates to:
+  /// **'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations, mais certains sont anciens : s\'ils ne sont plus disponibles sur le serveur, ils resteront introuvables.'**
+  String get myMediaFreeSpaceConfirmMaybeGone;
+
+  /// No description provided for @myMediaFreedSpace.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size} libérés sur cet appareil'**
+  String myMediaFreedSpace(String size);
+
+  /// No description provided for @myMediaNothingCached.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun de ces médias n\'occupe d\'espace sur cet appareil'**
+  String get myMediaNothingCached;
+
+  /// No description provided for @myMediaForwardUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces médias ne sont plus dans vos conversations sur cet appareil'**
+  String get myMediaForwardUnavailable;
+
+  /// No description provided for @myMediaSelectAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout sélectionner'**
+  String get myMediaSelectAll;
+
+  /// No description provided for @myMediaFilterReceived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçus'**
+  String get myMediaFilterReceived;
+
+  /// No description provided for @myMediaFilterSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyés'**
+  String get myMediaFilterSent;
+
+  /// No description provided for @myMediaFilterAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous'**
+  String get myMediaFilterAll;
+
+  /// No description provided for @myMediaFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'De {name}'**
+  String myMediaFrom(String name);
+
+  /// No description provided for @myMediaFilters.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtres'**
+  String get myMediaFilters;
+
+  /// No description provided for @myMediaFilterDiscussion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Discussion'**
+  String get myMediaFilterDiscussion;
+
+  /// No description provided for @myMediaAllDiscussions.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toutes les discussions'**
+  String get myMediaAllDiscussions;
+
+  /// No description provided for @myMediaSearchDiscussion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher une discussion'**
+  String get myMediaSearchDiscussion;
+
+  /// No description provided for @myMediaFilterOrigin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Origine'**
+  String get myMediaFilterOrigin;
+
+  /// No description provided for @myMediaFilterPeriod.
+  ///
+  /// In fr, this message translates to:
+  /// **'Période'**
+  String get myMediaFilterPeriod;
+
+  /// No description provided for @myMediaPeriodAny.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toute la période'**
+  String get myMediaPeriodAny;
+
+  /// No description provided for @myMediaPeriodStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Début'**
+  String get myMediaPeriodStart;
+
+  /// No description provided for @myMediaPeriodEnd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fin'**
+  String get myMediaPeriodEnd;
+
+  /// No description provided for @myMediaPeriodLast7.
+  ///
+  /// In fr, this message translates to:
+  /// **'7 jours'**
+  String get myMediaPeriodLast7;
+
+  /// No description provided for @myMediaPeriodLast30.
+  ///
+  /// In fr, this message translates to:
+  /// **'30 jours'**
+  String get myMediaPeriodLast30;
+
+  /// No description provided for @myMediaPeriodThisYear.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette année'**
+  String get myMediaPeriodThisYear;
+
+  /// No description provided for @myMediaPeriodClear.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la période'**
+  String get myMediaPeriodClear;
+
+  /// No description provided for @myMediaKindAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout'**
+  String get myMediaKindAll;
+
+  /// No description provided for @myMediaKindPhotos.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photos'**
+  String get myMediaKindPhotos;
+
+  /// No description provided for @myMediaKindVideos.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vidéos'**
+  String get myMediaKindVideos;
+
+  /// No description provided for @myMediaKindAudio.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vocaux'**
+  String get myMediaKindAudio;
+
+  /// No description provided for @myMediaKindFiles.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers'**
+  String get myMediaKindFiles;
+
+  /// No description provided for @myMediaSummary.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun élément} =1{1 élément · {size}} other{{count} éléments · {size}}}'**
+  String myMediaSummary(int count, String size);
+
+  /// No description provided for @myMediaEmptyFiltered.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun média ne correspond à ces filtres'**
+  String get myMediaEmptyFiltered;
+
+  /// No description provided for @myMediaResetFilters.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser les filtres'**
+  String get myMediaResetFilters;
 
   /// No description provided for @dndSummaryActive.
   ///

@@ -296,23 +296,33 @@ class MediaCacheService {
     }
   }
 
-  /// Taille actuelle du cache (octets). Scanne le dossier — appeler avec
-  /// parcimonie.
+  /// Taille actuelle du cache (octets). Le scan s'exécute dans un isolate :
+  /// `listSync` sur l'isolat UI gelait l'écran à l'entrée de « Mes médias »
+  /// quand le dossier cache contenait des milliers de fichiers.
   Future<int> currentSizeBytes() async {
     try {
       final dir = await _cacheDir();
-      final files = dir.listSync(followLinks: false).whereType<File>();
-      var total = 0;
-      for (final f in files) {
-        try {
-          total += f.lengthSync();
-        } catch (e, st) {
-          AppLog.w('MediaCache', 'Lecture taille fichier cache échouée', e, st);
-        }
-      }
-      return total;
+      return await compute(_scanDirSize, dir.path);
     } catch (e) {
       debugPrint('[MediaCache] currentSizeBytes échoué: $e');
+      return 0;
+    }
+  }
+
+  /// Supprime la copie en cache d'un seul média et renvoie les octets libérés
+  /// (0 si rien n'était en cache). Sert à « libérer de l'espace » depuis
+  /// l'écran Mes médias : le fichier reste sur le serveur et se retéléchargera
+  /// à la prochaine consultation.
+  Future<int> removeForUrl(String url) async {
+    try {
+      final path = await cachedPathFor(url);
+      if (path == null) return 0;
+      final file = File(path);
+      final bytes = file.lengthSync();
+      file.deleteSync();
+      return bytes;
+    } catch (e, st) {
+      AppLog.w('MediaCache', 'Suppression ciblée du cache échouée', e, st);
       return 0;
     }
   }
@@ -344,4 +354,24 @@ class MediaCacheService {
     if (last != null && last.isNotEmpty) return last;
     return '${url.hashCode}.bin';
   }
+}
+
+/// Scan synchrone exécuté dans un isolate par [MediaCacheService.currentSizeBytes].
+int _scanDirSize(String dirPath) {
+  var total = 0;
+  try {
+    final dir = Directory(dirPath);
+    if (!dir.existsSync()) return 0;
+    for (final entity in dir.listSync(followLinks: false)) {
+      if (entity is! File) continue;
+      try {
+        total += entity.lengthSync();
+      } catch (_) {
+        // Fichier supprimé entre-temps ou verrouillé — ignoré.
+      }
+    }
+  } catch (_) {
+    // Dossier illisible — on renvoie ce qu'on a pu mesurer.
+  }
+  return total;
 }
