@@ -86,6 +86,22 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     return myId != null && myId == widget.userId;
   }
 
+  /// Le compte officiel, vu depuis l'en-tête de l'écran.
+  ///
+  /// `_isOfficialUser` demande le [User] chargé ; le menu de l'AppBar est
+  /// construit avant lui, et parfois sans lui. Tant que la fiche charge, on
+  /// répond faux : une entrée qui apparaît une fraction de seconde trop tard
+  /// vaut mieux qu'une entrée qui s'affiche puis disparaît.
+  bool get _isOfficialContact => _contact != null && _isOfficialUser(_contact!);
+
+  /// Ouvre la feuille de signalement pour ce compte.
+  ///
+  /// Deux appelants — le menu de l'AppBar et la carte des actions sensibles.
+  /// Deux chemins vers la même feuille, pas deux feuilles.
+  void _reportUser() {
+    showReportSheet(context, targetType: 'user', targetId: widget.userId);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -476,11 +492,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                   _deleteConversation();
                   break;
                 case 'report':
-                  showReportSheet(
-                    context,
-                    targetType: 'user',
-                    targetId: widget.userId,
-                  );
+                  _reportUser();
                   break;
               }
             },
@@ -493,7 +505,12 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
               // Bloquer et signaler répondent à deux besoins distincts : le
               // premier me protège, le second prévient l'équipe. Les proposer
               // côte à côte évite de croire que bloquer suffit à alerter.
-              if (!_isSelf)
+              //
+              // Le compte officiel échappe au signalement : il diffuse et ne
+              // converse pas. `_DangerActionsCard` masque déjà « Bloquer » sur
+              // sa fiche pour la même raison — laisser « Signaler » seul y
+              // proposerait de dénoncer ALANYA à ALANYA.
+              if (!_isSelf && !_isOfficialContact)
                 PopupMenuItem(
                   value: 'report',
                   child: Text(context.l10n.reportAction),
@@ -654,9 +671,11 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           isBlocked: _isBlocked,
           isFavorite: _isFavorite,
           showBlock: !isSelf && !isOfficial,
+          showReport: !isSelf && !isOfficial,
           showRemoveContact: !isSelf && !isOfficial,
           hasConversation: _effectiveConvId != null,
           onBlock: _toggleBlock,
+          onReport: _reportUser,
           onDeleteConversation: _deleteConversation,
           onRemoveContact: _toggleFavorite,
         ),
@@ -1244,8 +1263,14 @@ class _DangerActionsCard extends StatelessWidget {
   /// Masqués sur mon propre profil : on ne se bloque ni ne se retire de ses
   /// propres contacts. Ne reste alors que la suppression de la conversation.
   final bool showBlock;
+
+  /// Masqué aux mêmes conditions que « Bloquer » : on ne se signale pas
+  /// soi-même — le serveur le refuse d'ailleurs — et le compte officiel ne se
+  /// signale à personne.
+  final bool showReport;
   final bool showRemoveContact;
   final VoidCallback onBlock;
+  final VoidCallback onReport;
   final VoidCallback onDeleteConversation;
   final VoidCallback onRemoveContact;
   const _DangerActionsCard({
@@ -1253,39 +1278,62 @@ class _DangerActionsCard extends StatelessWidget {
     required this.isFavorite,
     required this.hasConversation,
     this.showBlock = true,
+    this.showReport = true,
     this.showRemoveContact = true,
     required this.onBlock,
+    required this.onReport,
     required this.onDeleteConversation,
     required this.onRemoveContact,
   });
 
   @override
   Widget build(BuildContext context) {
-    final rows = <Widget>[
-      if (showBlock)
-        _DangerRow(
-          icon: CupertinoIcons.nosign,
-          label: isBlocked ? context.l10n.unblockContact : context.l10n.blockContact,
-          onTap: onBlock,
-        ),
-      if (hasConversation) ...[
-        // Pas de séparateur en tête de carte si « Bloquer » est masqué.
-        if (showBlock) _DangerDivider(),
-        _DangerRow(
-          icon: Icons.delete_outline,
-          label: context.l10n.deleteConversation2,
-          onTap: onDeleteConversation,
-        ),
-      ],
-      if (showRemoveContact && isFavorite) ...[
-        _DangerDivider(),
-        _DangerRow(
-          icon: Icons.person_remove_outlined,
-          label: context.l10n.removeFromContacts,
-          onTap: onRemoveContact,
-        ),
-      ],
-    ];
+    // Construit par ajouts successifs plutôt qu'en littéral : chaque ligne
+    // doit savoir si quelque chose la précède pour décider de son séparateur.
+    // En littéral, cette question se posait à chaque insertion et se
+    // répondait mal — « Retirer des contacts » ouvrait déjà la carte par un
+    // trait quand il s'y trouvait seul.
+    final rows = <Widget>[];
+
+    if (showBlock) {
+      rows.add(_DangerRow(
+        icon: CupertinoIcons.nosign,
+        label:
+            isBlocked ? context.l10n.unblockContact : context.l10n.blockContact,
+        onTap: onBlock,
+      ));
+    }
+
+    // Signaler suit immédiatement Bloquer. C'est ici qu'on cherche quoi faire
+    // de quelqu'un qui pose problème, et les deux réponses doivent s'y trouver
+    // ensemble : reléguée au seul menu ⋮, l'entrée n'était pas trouvée, et la
+    // carte laissait croire que bloquer était tout ce qu'on pouvait faire.
+    if (showReport) {
+      if (rows.isNotEmpty) rows.add(_DangerDivider());
+      rows.add(_DangerRow(
+        icon: Icons.flag_outlined,
+        label: context.l10n.reportUserTitle,
+        onTap: onReport,
+      ));
+    }
+
+    if (hasConversation) {
+      if (rows.isNotEmpty) rows.add(_DangerDivider());
+      rows.add(_DangerRow(
+        icon: Icons.delete_outline,
+        label: context.l10n.deleteConversation2,
+        onTap: onDeleteConversation,
+      ));
+    }
+
+    if (showRemoveContact && isFavorite) {
+      if (rows.isNotEmpty) rows.add(_DangerDivider());
+      rows.add(_DangerRow(
+        icon: Icons.person_remove_outlined,
+        label: context.l10n.removeFromContacts,
+        onTap: onRemoveContact,
+      ));
+    }
     if (rows.isEmpty) return const SizedBox.shrink();
     return _Card(padding: EdgeInsets.zero, child: Column(children: rows));
   }
