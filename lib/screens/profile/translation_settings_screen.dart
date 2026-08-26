@@ -226,6 +226,7 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
     final l10n = context.l10n;
     final installed = _downloaded.contains(lang.code);
     final busy = _busy.contains(lang.code);
+    final bundled = isBundledModel(lang.code);
 
     final secondary =
         context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant);
@@ -236,12 +237,14 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(lang.nativeName),
-          subtitle: busy
-              ? Text(l10n.downloadingModel(lang.nativeName), style: secondary)
-              : installed
-                  ? null
-                  : Text('$kApproxModelSizeMb Mo', style: secondary),
-          trailing: busy
+          subtitle: bundled
+              ? Text(l10n.modelBundled, style: secondary)
+              : busy
+                  ? Text(l10n.downloadingModel(lang.nativeName), style: secondary)
+                  : installed
+                      ? null
+                      : Text('$kApproxModelSizeMb Mo', style: secondary),
+          trailing: bundled || busy
               ? null
               : TextButton(
                   onPressed: () => installed ? _delete(lang) : _download(lang),

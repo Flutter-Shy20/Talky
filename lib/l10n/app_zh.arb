@@ -1628,6 +1628,7 @@
   "downloadLanguageModel": "下载{language}（{size} MB）以进行翻译",
   "downloadModel": "下载",
   "deleteModel": "删除",
+  "modelBundled": "已内置于应用中",
   "downloadingModel": "正在下载{language}…",
   "modelDownloadFailed": "下载失败。请检查 Wi-Fi 连接。",
   "modelDownloadWifiNotice": "下载走 Wi-Fi，以节省您的移动流量。",

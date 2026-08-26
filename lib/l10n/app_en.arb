@@ -2591,6 +2591,7 @@
   },
   "downloadModel": "Download",
   "deleteModel": "Delete",
+  "modelBundled": "Included in the app",
   "downloadingModel": "Downloading {language}…",
   "@downloadingModel": {
     "placeholders": {

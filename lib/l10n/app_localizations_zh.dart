@@ -5427,6 +5427,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteModel => '删除';
 
   @override
+  String get modelBundled => '已内置于应用中';
+
+  @override
   String downloadingModel(String language) {
     return '正在下载$language…';
   }

@@ -3476,6 +3476,10 @@
   },
   "downloadModel": "Télécharger",
   "deleteModel": "Supprimer",
+  "modelBundled": "Inclus dans l’application",
+  "@modelBundled": {
+    "description": "Sous-titre du modèle anglais : livré avec ML Kit, ni téléchargeable ni supprimable."
+  },
   "downloadingModel": "Téléchargement de {language}…",
   "@downloadingModel": {
     "placeholders": {

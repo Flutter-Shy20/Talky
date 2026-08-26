@@ -5674,6 +5674,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get deleteModel => 'Supprimer';
 
   @override
+  String get modelBundled => 'Inclus dans l’application';
+
+  @override
   String downloadingModel(String language) {
     return 'Téléchargement de $language…';
   }

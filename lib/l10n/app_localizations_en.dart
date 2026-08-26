@@ -5617,6 +5617,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteModel => 'Delete';
 
   @override
+  String get modelBundled => 'Included in the app';
+
+  @override
   String downloadingModel(String language) {
     return 'Downloading $language…';
   }

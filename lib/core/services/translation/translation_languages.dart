@@ -37,6 +37,13 @@ class TranslationLanguage {
 /// consommer ses données — ne jamais la présenter comme exacte.
 const int kApproxModelSizeMb = 30;
 
+/// L'anglais est le **pivot** de ML Kit : toute traduction entre deux langues
+/// passe par lui, et son modèle est livré avec la bibliothèque plutôt que
+/// téléchargé. `isModelDownloaded('en')` répond donc vrai en permanence et
+/// `deleteModel('en')` n'a rien à retirer — proposer « Supprimer » sur cette
+/// ligne offrait un bouton sans effet, la tuile se réaffichant à l'identique.
+bool isBundledModel(String bcpCode) => bcpCode == 'en';
+
 /// Langues de l'interface ALANYA. La cible de traduction par défaut d'un
 /// utilisateur est celle-ci ; les autres restent accessibles au sélecteur.
 const List<String> kAppLocales = ['fr', 'en', 'zh'];

@@ -9820,6 +9820,12 @@ abstract class AppLocalizations {
   /// **'Supprimer'**
   String get deleteModel;
 
+  /// Sous-titre du modèle anglais : livré avec ML Kit, ni téléchargeable ni supprimable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inclus dans l’application'**
+  String get modelBundled;
+
   /// No description provided for @downloadingModel.
   ///
   /// In fr, this message translates to:
