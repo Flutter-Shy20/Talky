@@ -335,12 +335,45 @@ class _CallsScreenState extends State<CallsScreen> {
             return (otherUser?.nom ?? '').toLowerCase().contains(_search);
           }).toList();
     if (filtered.isEmpty) {
-      return EmptyState(
-        icon: Icons.call_outlined,
-        title: _search.isEmpty ? context.l10n.noRecentCalls : context.l10n.noResults,
-        message: _search.isEmpty
-            ? context.l10n.yourPastAndReceivedCallsWill
-            : context.l10n.tryAnotherName,
+      // Écran vide ne veut pas dire historique épuisé : masquer localement la
+      // première page, ou y chercher un nom qui n'apparaît qu'à la suivante,
+      // remplaçait la liste par un cul-de-sac — plus de défilement pour
+      // appeler la page suivante, plus de tirer-pour-rafraîchir. On garde donc
+      // la surface défilable, et on continue de dérouler l'historique tant
+      // qu'il en reste : aucun geste ne pourrait révéler une correspondance
+      // située trois pages plus loin.
+      final keepsLoading = _hasMore && _recentCalls.isNotEmpty;
+      if (keepsLoading && !_isLoadingMore) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _loadMoreCalls();
+        });
+      }
+      return RefreshIndicator(
+        onRefresh: _loadRecentCalls,
+        child: CustomScrollView(
+          controller: _scrollCtrl,
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyState(
+                icon: Icons.call_outlined,
+                title:
+                    _search.isEmpty ? context.l10n.noRecentCalls : context.l10n.noResults,
+                message: _search.isEmpty
+                    ? context.l10n.yourPastAndReceivedCallsWill
+                    : context.l10n.tryAnotherName,
+                action: keepsLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : null,
+              ),
+            ),
+          ],
+        ),
       );
     }
     final colors = context.colors;
