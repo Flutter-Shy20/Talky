@@ -14,6 +14,7 @@ import '../../core/theme/app_theme.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../core/services/call/call_history_rules.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'call_detail_screen.dart';
 import 'keypad_screen.dart';
@@ -33,6 +34,8 @@ class _CallsScreenState extends State<CallsScreen> {
   List<Call> _recentCalls = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
+  /// Rafraîchissement en cours — voir `canLoadMorePage`.
+  bool _isRefreshing = false;
   bool _hasMore = true;
   // !! ID mis en cache — pas de FutureBuilder dans chaque ListTile
   int _myId = 0;
@@ -110,6 +113,11 @@ class _CallsScreenState extends State<CallsScreen> {
       .toList();
 
   Future<void> _loadRecentCalls() async {
+    // Le rafraîchissement et le chargement de page suivante écrivent tous deux
+    // `_hasMore`, et `_isLoading` n'était posé que si le cache local était vide :
+    // les deux pouvaient se courir après, le plus lent écrasant la conclusion du
+    // plus rapide. Ce drapeau-ci les exclut vraiment l'un de l'autre.
+    _isRefreshing = true;
     _hasMore = true; // un refresh rouvre la pagination fermée par une erreur
     // 1) Hydrate immédiatement depuis le cache local (instantané, offline-safe).
     try {
@@ -156,13 +164,23 @@ class _CallsScreenState extends State<CallsScreen> {
           _hasMore = false;
         });
       }
+    } finally {
+      _isRefreshing = false;
     }
   }
 
   /// Page suivante : on repart du plus ancien appel déjà en main. Le curseur
   /// porte sur la liste complète (masqués compris) pour ne pas sauter de ligne.
   Future<void> _loadMoreCalls() async {
-    if (_isLoadingMore || !_hasMore || _isLoading || _recentCalls.isEmpty) return;
+    if (!canLoadMorePage(
+      isLoadingMore: _isLoadingMore,
+      isLoading: _isLoading,
+      isRefreshing: _isRefreshing,
+      hasMore: _hasMore,
+      hasCalls: _recentCalls.isNotEmpty,
+    )) {
+      return;
+    }
     setState(() => _isLoadingMore = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
@@ -399,9 +417,16 @@ class _CallsScreenState extends State<CallsScreen> {
           }
           final call = filtered[index];
           // !! Calcul direct — pas de FutureBuilder
-          final otherUser = call.idCaller != _myId ? call.caller : call.receiver;
+          // `idCaller != _myId` dit déjà que l'appel est entrant : le journal
+          // affichait pourtant la flèche « sortant » pour tout appel non manqué.
+          final isIncoming = call.idCaller != _myId;
+          final otherUser = isIncoming ? call.caller : call.receiver;
           final isMissed = call.isMissed;
           final isVideo = call.isVideo;
+          final direction = callDirection(
+            isMissed: isMissed,
+            isIncoming: isIncoming,
+          );
 
           return ListTile(
             contentPadding: const EdgeInsets.symmetric(
@@ -428,7 +453,11 @@ class _CallsScreenState extends State<CallsScreen> {
               child: Row(
                 children: [
                   Icon(
-                    isMissed ? Icons.call_missed : Icons.call_made,
+                    switch (direction) {
+                      CallDirection.missed => Icons.call_missed,
+                      CallDirection.incoming => Icons.call_received,
+                      CallDirection.outgoing => Icons.call_made,
+                    },
                     size: 16,
                     color: isMissed ? colors.error : context.semantic.success,
                   ),

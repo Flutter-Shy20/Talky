@@ -9,6 +9,7 @@ import '../../core/services/call_service.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../core/services/call/call_history_rules.dart';
 import '../../core/utils/conversation_display.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -233,6 +234,13 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   Widget _buildCallInfo() {
     final c = widget.call;
     final missed = c.isMissed;
+    // Même défaut que dans le journal : la flèche « sortant » s'affichait pour
+    // tout appel non manqué, reçu compris.
+    final myId = context.read<AuthProvider>().currentUser?.alanyaID;
+    final direction = callDirection(
+      isMissed: missed,
+      isIncoming: myId != null && c.idCaller != myId,
+    );
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: AppSpacing.screenH,
@@ -253,7 +261,11 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
           Text(context.l10n.lastCall, style: context.text.titleMedium),
           AppSpacing.vGapMd,
           _infoRow(
-            icon: missed ? Icons.call_missed : Icons.call_made,
+            icon: switch (direction) {
+              CallDirection.missed => Icons.call_missed,
+              CallDirection.incoming => Icons.call_received,
+              CallDirection.outgoing => Icons.call_made,
+            },
             iconColor: missed ? context.colors.error : context.semantic.online,
             label: c.statusLabel,
           ),

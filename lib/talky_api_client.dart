@@ -20,6 +20,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'talky_models.dart';
 import 'models/qr_models.dart';
 import 'core/theme/locale_controller.dart';
+import 'core/services/call/call_history_rules.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/app_log.dart';
 
