@@ -94,6 +94,27 @@ class CallControlBar extends StatelessWidget {
                       onSwitchCam();
                     },
                   ),
+                // En vidéo, le bouton de la barre est la caméra : sans cette
+                // entrée, le haut-parleur — forcé à ON à l'init vidéo — ne
+                // pouvait plus jamais être coupé pendant l'appel.
+                if (isVideo)
+                  ListTile(
+                    leading: Icon(
+                      isSpeakerOn
+                          ? CupertinoIcons.speaker_3_fill
+                          : CupertinoIcons.speaker_2,
+                      color: callUi.onControlSurface,
+                    ),
+                    title: Text(
+                      isSpeakerOn ? l10n.turnOffSpeaker : l10n.turnOnSpeaker,
+                      style: TextStyle(color: callUi.onControlSurface),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      HapticFeedback.selectionClick();
+                      onSpeaker();
+                    },
+                  ),
                 if (canAddParticipant && onAddParticipant != null)
                   ListTile(
                     leading: Icon(
