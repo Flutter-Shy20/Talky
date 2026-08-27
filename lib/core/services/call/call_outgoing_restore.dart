@@ -347,7 +347,31 @@ extension CallOutgoingRestore on CallService {
     );
   }
 
+  /// Les offres de reprise se traitent une à une.
+  ///
+  /// Deux peuvent arriver à quelques millisecondes d'intervalle — c'est
+  /// exactement ce que produisait un socket qui revient et livrait deux
+  /// `call_resume`. Traitées en parallèle, elles entrelacent deux
+  /// `setRemoteDescription` sur la même PeerConnection : l'une des deux échoue
+  /// sur un état de signalisation invalide, et sa réponse ne part jamais. Le
+  /// pair n'obtient alors que la réponse à l'offre périmée, qu'il jette.
   Future<void> _handleCallRejoinOffer(Map<String, dynamic> data) async {
+    final previous = _rejoinOfferChain;
+    final done = Completer<void>();
+    _rejoinOfferChain = done.future;
+    try {
+      await previous;
+    } catch (_) {
+      // L'échec de l'offre précédente ne doit pas empêcher celle-ci.
+    }
+    try {
+      await _processCallRejoinOffer(data);
+    } finally {
+      done.complete();
+    }
+  }
+
+  Future<void> _processCallRejoinOffer(Map<String, dynamic> data) async {
     final peerId = int.tryParse(data['peerId']?.toString() ?? '');
     final offerMap = data['offer'];
     if (peerId == null || offerMap is! Map || offerMap['sdp'] == null) return;
@@ -366,6 +390,19 @@ extension CallOutgoingRestore on CallService {
         ? data['generation'] as int
         : int.tryParse(data['generation']?.toString() ?? '');
     if (gen != null) {
+      // Une offre plus ancienne que la génération courante a été doublée par
+      // une plus récente : l'appliquer ferait repartir la négociation en
+      // arrière, et notre réponse serait de toute façon jetée à l'arrivée.
+      if (isStaleRejoinOffer(
+        offerGeneration: gen,
+        localGeneration: _webrtc.iceGeneration,
+      )) {
+        debugPrint(
+          '[CallService] 🛡 call_rejoin_offer génération périmée '
+          'gen=$gen courante=${_webrtc.iceGeneration}',
+        );
+        return;
+      }
       while (_webrtc.iceGeneration < gen) {
         _webrtc.bumpIceGeneration();
       }

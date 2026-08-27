@@ -239,10 +239,15 @@ extension SocketApi on TalkyApiClient {
       _scheduleSocketReconnectWatchdog();
     });
     _socket!.onError((err) => debugPrint('[Socket] Erreur: $err'));
+    // Socket.IO émet `connect` à *chaque* connexion réussie, reconnexions
+    // comprises, et `reconnect` en plus. Ré-émettre `auth:login` ici doublait
+    // donc l'authentification à chaque retour de réseau — et avec elle tout ce
+    // que le serveur enchaîne derrière, à commencer par `call_resume` : deux
+    // reprises simultanées, deux offres ICE, et la réponse à la première jetée
+    // comme périmée par la seconde. On laisse `onConnect` faire son travail.
     _socket!.onReconnect((_) {
-      debugPrint('[Socket] Reconnecté — ré-auth');
+      debugPrint('[Socket] Reconnecté');
       _isSocketAuthVerified = false;
-      unawaited(_emitSocketAuthLogin());
     });
 
     // Ré-attache au socket fraîchement créé les listeners externes déjà

@@ -113,6 +113,18 @@ extension CallReconnect on CallService {
     _isIceRestarting = false;
   }
 
+  /// Une offre de reprise est-elle partie trop récemment pour en refaire une ?
+  ///
+  /// Réémettre repart d'une génération neuve. Tant que la précédente n'a pas eu
+  /// le temps d'être répondue, une seconde offre condamne la première : le pair
+  /// répond à celle qu'il a traitée, et notre compteur a déjà avancé — la garde
+  /// anti-périmé jette alors la seule réponse utile.
+  bool get _restartOfferTooSoon => !canEmitRestartOffer(
+        lastOfferAt: _lastRestartOfferAt,
+        now: DateTime.now(),
+        window: CallService._iceRestartOfferTimeout,
+      );
+
   Future<void> _attemptIceRestart({bool force = false}) async {
     if (!isRestartInitiator) return;
     if (_isEndingCall || _callEndedByUs) return;
@@ -122,6 +134,13 @@ extension CallReconnect on CallService {
     // `force` sert la reprise déclenchée par `call_resume` : l'offre encore
     // « en vol » est justement celle qui vient de se perdre avec le réseau.
     if (_isIceRestarting && !force) return;
+    // Mais `force` ne dispense pas de l'espacement : un socket qui revient peut
+    // livrer deux `call_resume` d'affilée, et deux offres coup sur coup tuent
+    // la reprise au lieu de la sauver.
+    if (_restartOfferTooSoon) {
+      debugPrint('[CallService] ICE restart ignoré (offre récente en vol)');
+      return;
+    }
     if (_iceRestartCount >= CallService._maxIceRestarts) {
       debugPrint('[CallService] ICE restart max atteint → endCall');
       await endCall();
@@ -218,12 +237,7 @@ extension CallReconnect on CallService {
           _onOneToOneMediaReconnected();
           return;
         }
-        final last = _lastRestartOfferAt;
-        if (last != null &&
-            DateTime.now().difference(last) <
-                CallService._iceRestartOfferTimeout) {
-          return; // une offre est en vol : la laisser négocier
-        }
+        if (_restartOfferTooSoon) return; // une offre est en vol : la laisser négocier
         if (await _emitIceRestartOffer()) _isIceRestarting = true;
       },
     );
@@ -238,6 +252,34 @@ extension CallReconnect on CallService {
   /// Appelé quand le PC redevient connected après rejoin answer.
   void _markIceRestartComplete() {
     _isIceRestarting = false;
+  }
+
+  /// Réémet les candidats ICE de l'appel sortant au moment du décrochage.
+  ///
+  /// L'appelant rassemble les siens une à deux secondes après avoir créé son
+  /// offre, donc pendant que le téléphone d'en face sonne — or à ce moment le
+  /// destinataire n'a pas encore d'appareil actif, et le relais les jette.
+  /// `onIceCandidate` ne repassant jamais par un candidat déjà émis, le
+  /// destinataire décroche sans un seul candidat distant : aucune paire à
+  /// tester, et une allocation TURN sans permission, donc sourde. L'appel reste
+  /// muet jusqu'à ce qu'un ICE restart embarque les candidats dans le SDP —
+  /// une vingtaine de secondes plus tard.
+  ///
+  /// Le serveur les met aussi en tampon désormais, mais ce rejeu ne coûte rien
+  /// et vaut pour un backend qui n'aurait pas encore ce tampon. Les doublons
+  /// sont sans effet : WebRTC ignore un candidat déjà connu.
+  void _replayOutgoingIce() {
+    if (_outgoingIceOutbox.isEmpty) return;
+    final generation = _webrtc.iceGeneration;
+    var sent = 0;
+    for (final entry in _outgoingIceOutbox) {
+      if (entry.generation != generation) continue;
+      if (_apiClient.sendSocketEvent(SocketEvents.iceCandidate, entry.payload)) {
+        sent += 1;
+      }
+    }
+    debugPrint('[CallService] 🧊 $sent candidat(s) ICE rejoué(s) au décrochage');
+    _outgoingIceOutbox.clear();
   }
 
   /// La renégociation a abouti — côté signalisation seulement.

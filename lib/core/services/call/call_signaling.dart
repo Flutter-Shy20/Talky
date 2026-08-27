@@ -186,6 +186,10 @@ extension CallSignaling on CallService {
           RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );
         debugPrint('[CallService] !! Answer acceptée → CONNECTED');
+        // Le destinataire vient d'acquérir un appareil actif : ses candidats
+        // à lui vont passer, mais les nôtres, émis pendant qu'il sonnait,
+        // n'avaient nulle part où aller. On les rejoue.
+        _replayOutgoingIce();
         _status = CallStatus.connected;
         _startDurationTimer();
         _startSpeakingDetection(groupMode: false);

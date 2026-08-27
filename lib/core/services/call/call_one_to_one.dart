@@ -49,9 +49,13 @@ extension CallOneToOne on CallService {
         debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ${isVideo ? "ON" : "OFF"})');
       }
 
-      // ICE candidates envoyés au destinataire
+      // ICE candidates envoyés au destinataire. Ils sont aussi conservés :
+      // tant que le téléphone d'en face sonne, le serveur n'a pas d'appareil
+      // où les router, et WebRTC ne repasse jamais deux fois par le même
+      // candidat. Sans ce doublon local, le destinataire décroche sans un seul
+      // candidat distant. Voir `_replayOutgoingIce`.
       _webrtc.onIceCandidate = (candidate) {
-        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
+        final payload = <String, dynamic>{
           'targetUserId': targetUserId.toString(),
           'candidate': {
             'candidate': candidate.candidate,
@@ -60,7 +64,13 @@ extension CallOneToOne on CallService {
           },
           'generation': _webrtc.iceGeneration,
           if (_currentCallId != null) 'callId': _currentCallId,
-        });
+        };
+        if (_outgoingIceOutbox.length < CallService._maxOutgoingIceReplay) {
+          _outgoingIceOutbox.add(
+            (generation: _webrtc.iceGeneration, payload: payload),
+          );
+        }
+        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, payload);
       };
 
       _wireOneToOneConnectionStateHandlers();
@@ -439,6 +449,7 @@ extension CallOneToOne on CallService {
     _remoteUserId = null;
     _remoteUserName = null;
     _remoteUserPhoto = null;
+    _outgoingIceOutbox.clear();
     _pendingOffer = null;
     _currentCallId = null;
     _callDuration = 0;

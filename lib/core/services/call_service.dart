@@ -25,6 +25,7 @@ import 'call/ended_call_registry.dart';
 import 'call/pending_call_reject_store.dart';
 import 'call/pending_outgoing_call_store.dart';
 import 'call/call_conf_routing.dart';
+import 'call/call_restart_policy.dart';
 import 'call/call_restart_roles.dart';
 import 'call/incoming_presentation.dart';
 
@@ -256,6 +257,12 @@ class CallService extends ChangeNotifier {
   Timer? _globalReconnectTimer;
   Timer? _iceRestartRetryTimer;
   DateTime? _lastRestartOfferAt;
+  /// Chaîne d'exécution des offres de reprise : elles se traitent une à une.
+  Future<void> _rejoinOfferChain = Future<void>.value();
+
+  /// Candidats ICE déjà émis pour l'appel sortant en cours, avec leur
+  /// génération. Ils sont rejoués au décrochage : voir `_replayOutgoingIce`.
+  final List<({int generation, Map<String, dynamic> payload})> _outgoingIceOutbox = [];
   bool _isIceRestarting = false;
   int _iceRestartCount = 0;
   static const Duration _reconnectGraceDuration = Duration(seconds: 4);
@@ -271,6 +278,10 @@ class CallService extends ChangeNotifier {
   /// cours de route : le faire trop tôt empêche la négociation d'aboutir, et
   /// l'appel se rétablit en apparence sans qu'aucun média ne passe.
   static const Duration _iceRestartOfferTimeout = Duration(seconds: 12);
+
+  /// Plafond du rejeu des candidats ICE sortants. Un appel vidéo en rassemble
+  /// quelques dizaines ; la borne protège d'un réseau qui en produirait sans fin.
+  static const int _maxOutgoingIceReplay = 128;
 
   /// Hook optionnel après fin d'appel local (ex. resync historique).
   Future<void> Function()? onCallTerminatedHook;
