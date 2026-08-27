@@ -41,13 +41,9 @@ extension CallOneToOne on CallService {
       _webrtc.onLocalStream  = (_) { notify(); };
       _webrtc.onRemoteStream = (_) { notify(); };
 
-      // Initialiser le routage audio : haut-parleur par défaut en vidéo,
-      // écouteur (oreille) par défaut en audio.
-      if (!kIsWeb) {
-        _isSpeakerOn = isVideo;
-        await audio.AudioHelper.setSpeakerphoneOn(isVideo);
-        debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ${isVideo ? "ON" : "OFF"})');
-      }
+      // Sortie audio : un casque déjà connecté l'emporte, sinon haut-parleur
+      // en vidéo et écouteur en audio, comme avant.
+      await _initAudioRoute(isVideo: isVideo);
 
       // ICE candidates envoyés au destinataire. Ils sont aussi conservés :
       // tant que le téléphone d'en face sonne, le serveur n'a pas d'appareil
@@ -207,10 +203,7 @@ extension CallOneToOne on CallService {
       _webrtc.onLocalStream  = (_) { notify(); };
       _webrtc.onRemoteStream = (_) { notify(); };
 
-      if (!kIsWeb) {
-        _isSpeakerOn = _isVideo;
-        await audio.AudioHelper.setSpeakerphoneOn(_isVideo);
-      }
+      await _initAudioRoute(isVideo: _isVideo);
 
       _webrtc.onIceCandidate = (candidate) {
         _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
@@ -456,6 +449,9 @@ extension CallOneToOne on CallService {
     _isMuted = false;
     _isVideoOn = true;
     _isSpeakerOn = false;
+    _stopWatchingAudioOutputs();
+    _audioRoute = CallAudioRoute.earpiece;
+    _audioRoutes = const [CallAudioRoute.earpiece, CallAudioRoute.speaker];
     _isRemoteMuted = false;
     _isRemoteVideoOn = true;
     _durationTimer?.cancel();

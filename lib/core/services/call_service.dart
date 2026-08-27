@@ -25,6 +25,7 @@ import 'call/ended_call_registry.dart';
 import 'call/pending_call_reject_store.dart';
 import 'call/pending_outgoing_call_store.dart';
 import 'call/call_conf_routing.dart';
+import 'call/call_audio_routes.dart';
 import 'call/call_restart_policy.dart';
 import 'call/call_restart_roles.dart';
 import 'call/call_terminal_guards.dart';
@@ -109,6 +110,16 @@ class CallService extends ChangeNotifier {
 
   // Contrôles médias
   bool _isMuted = false;
+  /// Sortie audio courante et sorties proposables. Le bouton de la barre de
+  /// contrôle ne connaissait que « haut-parleur allumé / éteint » : avec un
+  /// casque Bluetooth appairé, l'utilisateur ne savait pas où sortait le son.
+  CallAudioRoute _audioRoute = CallAudioRoute.earpiece;
+  List<CallAudioRoute> _audioRoutes = const [
+    CallAudioRoute.earpiece,
+    CallAudioRoute.speaker,
+  ];
+  StreamSubscription<void>? _audioOutputsSub;
+
   bool _isSpeakerOn = false;
   bool _isVideoOn = true;
 
@@ -302,6 +313,13 @@ class CallService extends ChangeNotifier {
   bool get isVideo => _isVideo;
   bool get isMuted => _isMuted;
   bool get isSpeakerOn => _isSpeakerOn;
+
+  /// Sortie audio courante — écouteur, haut-parleur, filaire ou Bluetooth.
+  CallAudioRoute get audioRoute => _audioRoute;
+
+  /// Sorties proposables, dans l'ordre du bouton.
+  List<CallAudioRoute> get availableAudioRoutes =>
+      List.unmodifiable(_audioRoutes);
   bool get isVideoOn => _isVideoOn;
   bool get isRemoteMuted => _isRemoteMuted;
   bool get isRemoteVideoOn => _isRemoteVideoOn;

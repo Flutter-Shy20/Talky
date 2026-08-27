@@ -1,0 +1,225 @@
+import 'package:talky_flutter/core/services/call/call_audio_routes.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('familles d\'appareils', () {
+    test('les types Bluetooth sont reconnus, profil compris', () {
+      for (final t in ['bluetoothSco', 'bluetoothA2dp', 'bluetoothLe']) {
+        expect(
+          audioOutputKindFromTypeName(t),
+          AudioOutputKind.bluetooth,
+          reason: t,
+        );
+      }
+    });
+
+    test('le filaire couvre casque, écouteurs et prise ligne', () {
+      for (final t in [
+        'wiredHeadset',
+        'wiredHeadphones',
+        'headsetMic',
+        'lineAnalog',
+        'lineDigital',
+        'usbHeadset',
+      ]) {
+        expect(audioOutputKindFromTypeName(t), AudioOutputKind.wired, reason: t);
+      }
+    });
+
+    test('écouteur et haut-parleur intégrés', () {
+      expect(
+        audioOutputKindFromTypeName('builtInEarpiece'),
+        AudioOutputKind.earpiece,
+      );
+      expect(
+        audioOutputKindFromTypeName('builtInSpeaker'),
+        AudioOutputKind.speaker,
+      );
+    });
+
+    test('un type inconnu ne devient pas une route', () {
+      expect(audioOutputKindFromTypeName('hdmi'), AudioOutputKind.other);
+      expect(audioOutputKindFromTypeName(''), AudioOutputKind.other);
+    });
+  });
+
+  group('routes disponibles', () {
+    test('sans périphérique : écouteur et haut-parleur', () {
+      expect(
+        availableAudioRoutes({AudioOutputKind.earpiece, AudioOutputKind.speaker}),
+        [CallAudioRoute.earpiece, CallAudioRoute.speaker],
+      );
+    });
+
+    test('les deux intégrés sont offerts même si la plateforme les tait', () {
+      expect(
+        availableAudioRoutes({AudioOutputKind.bluetooth}),
+        [CallAudioRoute.earpiece, CallAudioRoute.speaker, CallAudioRoute.bluetooth],
+        reason: 'certains Android n\'énumèrent plus l\'écouteur quand un casque '
+            'est connecté',
+      );
+    });
+
+    test('un casque Bluetooth ajoute sa route', () {
+      expect(
+        availableAudioRoutes({
+          AudioOutputKind.earpiece,
+          AudioOutputKind.speaker,
+          AudioOutputKind.bluetooth,
+        }),
+        contains(CallAudioRoute.bluetooth),
+      );
+    });
+
+    test('un type inconnu n\'ajoute rien', () {
+      expect(
+        availableAudioRoutes({AudioOutputKind.earpiece, AudioOutputKind.other}),
+        [CallAudioRoute.earpiece, CallAudioRoute.speaker],
+      );
+    });
+  });
+
+  group('route par défaut', () {
+    test('le Bluetooth gagne, même en vidéo', () {
+      expect(
+        defaultAudioRoute(kinds: {AudioOutputKind.bluetooth}, isVideo: true),
+        CallAudioRoute.bluetooth,
+      );
+      expect(
+        defaultAudioRoute(kinds: {AudioOutputKind.bluetooth}, isVideo: false),
+        CallAudioRoute.bluetooth,
+      );
+    });
+
+    test('le filaire passe avant les intégrés', () {
+      expect(
+        defaultAudioRoute(kinds: {AudioOutputKind.wired}, isVideo: true),
+        CallAudioRoute.wired,
+      );
+    });
+
+    test('le Bluetooth passe avant le filaire', () {
+      expect(
+        defaultAudioRoute(
+          kinds: {AudioOutputKind.wired, AudioOutputKind.bluetooth},
+          isVideo: false,
+        ),
+        CallAudioRoute.bluetooth,
+      );
+    });
+
+    test('sans périphérique, on garde le comportement d\'avant', () {
+      expect(
+        defaultAudioRoute(kinds: {}, isVideo: true),
+        CallAudioRoute.speaker,
+        reason: 'la vidéo sortait déjà au haut-parleur',
+      );
+      expect(
+        defaultAudioRoute(kinds: {}, isVideo: false),
+        CallAudioRoute.earpiece,
+      );
+    });
+  });
+
+  group('rotation du bouton', () {
+    final deux = [CallAudioRoute.earpiece, CallAudioRoute.speaker];
+    final trois = [
+      CallAudioRoute.earpiece,
+      CallAudioRoute.speaker,
+      CallAudioRoute.bluetooth,
+    ];
+
+    test('à deux routes, le bouton reste une bascule', () {
+      expect(
+        nextAudioRoute(current: CallAudioRoute.earpiece, available: deux),
+        CallAudioRoute.speaker,
+      );
+      expect(
+        nextAudioRoute(current: CallAudioRoute.speaker, available: deux),
+        CallAudioRoute.earpiece,
+      );
+    });
+
+    test('à trois, il fait le tour et revient', () {
+      expect(
+        nextAudioRoute(current: CallAudioRoute.speaker, available: trois),
+        CallAudioRoute.bluetooth,
+      );
+      expect(
+        nextAudioRoute(current: CallAudioRoute.bluetooth, available: trois),
+        CallAudioRoute.earpiece,
+      );
+    });
+
+    test('depuis une route disparue, on repart du début', () {
+      expect(
+        nextAudioRoute(current: CallAudioRoute.bluetooth, available: deux),
+        CallAudioRoute.earpiece,
+      );
+    });
+
+    test('liste vide : rien ne bouge', () {
+      expect(
+        nextAudioRoute(current: CallAudioRoute.speaker, available: const []),
+        CallAudioRoute.speaker,
+      );
+    });
+  });
+
+  group('changement de périphérique en cours d\'appel', () {
+    test('le choix de l\'utilisateur est conservé s\'il reste possible', () {
+      expect(
+        resolveAudioRouteAfterChange(
+          current: CallAudioRoute.earpiece,
+          kinds: {AudioOutputKind.bluetooth},
+          isVideo: false,
+        ),
+        CallAudioRoute.earpiece,
+        reason: 'brancher un casque ne doit pas voler le choix en cours',
+      );
+    });
+
+    test('un casque débranché renvoie au défaut', () {
+      expect(
+        resolveAudioRouteAfterChange(
+          current: CallAudioRoute.bluetooth,
+          kinds: {AudioOutputKind.earpiece, AudioOutputKind.speaker},
+          isVideo: false,
+        ),
+        CallAudioRoute.earpiece,
+      );
+      expect(
+        resolveAudioRouteAfterChange(
+          current: CallAudioRoute.wired,
+          kinds: {},
+          isVideo: true,
+        ),
+        CallAudioRoute.speaker,
+      );
+    });
+
+    test('un casque débranché au profit d\'un autre suit le nouveau', () {
+      expect(
+        resolveAudioRouteAfterChange(
+          current: CallAudioRoute.wired,
+          kinds: {AudioOutputKind.bluetooth},
+          isVideo: false,
+        ),
+        CallAudioRoute.bluetooth,
+      );
+    });
+  });
+
+  group('réglage WebRTC', () {
+    test('seul le haut-parleur allume le haut-parleur', () {
+      expect(speakerphoneForRoute(CallAudioRoute.speaker), isTrue);
+      for (final r in [
+        CallAudioRoute.earpiece,
+        CallAudioRoute.wired,
+        CallAudioRoute.bluetooth,
+      ]) {
+        expect(speakerphoneForRoute(r), isFalse, reason: r.name);
+      }
+    });
+  });
+}

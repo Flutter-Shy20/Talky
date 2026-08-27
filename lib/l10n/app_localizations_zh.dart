@@ -1593,6 +1593,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get speaker => '扬声器';
 
   @override
+  String get audioOutputEarpiece => '听筒';
+
+  @override
+  String get audioOutputWired => '有线耳机';
+
+  @override
+  String get audioOutputBluetooth => '蓝牙';
+
+  @override
+  String get changeAudioOutput => '切换音频输出';
+
+  @override
   String get newCall => '新通话';
 
   @override

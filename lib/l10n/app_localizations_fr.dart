@@ -1672,6 +1672,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get speaker => 'Haut-parleur';
 
   @override
+  String get audioOutputEarpiece => 'Écouteur';
+
+  @override
+  String get audioOutputWired => 'Casque filaire';
+
+  @override
+  String get audioOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get changeAudioOutput => 'Changer la sortie audio';
+
+  @override
   String get newCall => 'Nouvel appel';
 
   @override

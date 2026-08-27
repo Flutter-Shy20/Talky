@@ -65,11 +65,63 @@ extension CallControls on CallService {
     });
   }
 
+  /// Passe à la sortie audio suivante.
+  ///
+  /// Avec les seules sorties intégrées, le bouton se comporte comme la bascule
+  /// haut-parleur d'avant. Dès qu'un casque filaire ou Bluetooth est présent, il
+  /// fait le tour des sorties disponibles.
   Future<void> toggleSpeaker() async {
-    _isSpeakerOn = !_isSpeakerOn;
-    await audio.AudioHelper.setSpeakerphoneOn(_isSpeakerOn);
-    debugPrint('[CallService] Haut-parleur: ${_isSpeakerOn ? "ON" : "OFF"}');
+    await setAudioRoute(
+      nextAudioRoute(current: _audioRoute, available: _audioRoutes),
+    );
+  }
+
+  /// Sélectionne une sortie précise.
+  Future<void> setAudioRoute(CallAudioRoute route) async {
+    _audioRoute = route;
+    _isSpeakerOn = speakerphoneForRoute(route);
+    await audio.AudioHelper.applyAudioRoute(route);
+    debugPrint('[CallService] 🔊 Sortie audio: ${route.name}');
     notify();
+  }
+
+  /// Choisit la sortie d'ouverture d'un appel et se met à l'écoute des
+  /// branchements.
+  ///
+  /// Remplace le `setSpeakerphoneOn(isVideo)` posé à l'initialisation : un
+  /// casque déjà connecté doit être pris, plutôt que de renvoyer le son dans le
+  /// haut-parleur du téléphone.
+  Future<void> _initAudioRoute({required bool isVideo}) async {
+    if (kIsWeb) return;
+    final kinds = await audio.AudioHelper.availableOutputKinds();
+    _audioRoutes = availableAudioRoutes(kinds);
+    await setAudioRoute(defaultAudioRoute(kinds: kinds, isVideo: isVideo));
+    _watchAudioOutputs(isVideo: isVideo);
+  }
+
+  /// Un casque branché ou débranché en cours d'appel doit se voir sans que
+  /// l'utilisateur ait à toucher quoi que ce soit.
+  void _watchAudioOutputs({required bool isVideo}) {
+    _audioOutputsSub?.cancel();
+    _audioOutputsSub = audio.AudioHelper.audioOutputsChanged.listen((_) async {
+      final kinds = await audio.AudioHelper.availableOutputKinds();
+      _audioRoutes = availableAudioRoutes(kinds);
+      final resolved = resolveAudioRouteAfterChange(
+        current: _audioRoute,
+        kinds: kinds,
+        isVideo: isVideo,
+      );
+      if (resolved != _audioRoute) {
+        await setAudioRoute(resolved);
+      } else {
+        notify();
+      }
+    });
+  }
+
+  void _stopWatchingAudioOutputs() {
+    _audioOutputsSub?.cancel();
+    _audioOutputsSub = null;
   }
 
   void _startDurationTimer() {

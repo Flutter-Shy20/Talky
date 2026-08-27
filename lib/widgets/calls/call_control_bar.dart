@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/services/call/call_audio_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -17,6 +18,8 @@ class CallControlBar extends StatelessWidget {
     required this.isMuted,
     required this.isVideoOn,
     required this.isSpeakerOn,
+    required this.audioRoute,
+    required this.audioRoutes,
     required this.useVideoChrome,
     required this.onMute,
     required this.onSpeaker,
@@ -32,6 +35,50 @@ class CallControlBar extends StatelessWidget {
   final bool isMuted;
   final bool isVideoOn;
   final bool isSpeakerOn;
+
+  /// Sortie audio courante et sorties proposables. Le bouton ne disait
+  /// « haut-parleur allumé / éteint » que parce qu'il n'en connaissait pas
+  /// d'autres : avec un casque appairé, personne ne savait où sortait le son.
+  final CallAudioRoute audioRoute;
+  final List<CallAudioRoute> audioRoutes;
+
+  /// Icône de la sortie courante.
+  IconData get _routeIcon {
+    switch (audioRoute) {
+      case CallAudioRoute.speaker:
+        return CupertinoIcons.speaker_3_fill;
+      case CallAudioRoute.bluetooth:
+        return Icons.bluetooth_audio;
+      case CallAudioRoute.wired:
+        return Icons.headset;
+      case CallAudioRoute.earpiece:
+        return CupertinoIcons.speaker_2;
+    }
+  }
+
+  /// Nom de la sortie courante, pour l'accessibilité et le menu.
+  String _routeLabel(BuildContext context) {
+    final l10n = context.l10n;
+    switch (audioRoute) {
+      case CallAudioRoute.speaker:
+        return l10n.speaker;
+      case CallAudioRoute.bluetooth:
+        return l10n.audioOutputBluetooth;
+      case CallAudioRoute.wired:
+        return l10n.audioOutputWired;
+      case CallAudioRoute.earpiece:
+        return l10n.audioOutputEarpiece;
+    }
+  }
+
+  /// Avec plus de deux sorties, l'appui ne bascule plus : il fait le tour. Le
+  /// libellé doit le dire, sinon « Activer le haut-parleur » ment une fois sur
+  /// deux.
+  String _routeAction(BuildContext context) => audioRoutes.length > 2
+      ? '${context.l10n.changeAudioOutput} · ${_routeLabel(context)}'
+      : (audioRoute == CallAudioRoute.speaker
+          ? context.l10n.turnOffSpeaker
+          : context.l10n.turnOnSpeaker);
   final bool useVideoChrome;
   final VoidCallback onMute;
   final VoidCallback onSpeaker;
@@ -95,20 +142,21 @@ class CallControlBar extends StatelessWidget {
                     },
                   ),
                 // En vidéo, le bouton de la barre est la caméra : sans cette
-                // entrée, le haut-parleur — forcé à ON à l'init vidéo — ne
-                // pouvait plus jamais être coupé pendant l'appel.
+                // entrée, la sortie audio — haut-parleur à l'init vidéo — ne
+                // pouvait plus jamais être changée pendant l'appel.
                 if (isVideo)
                   ListTile(
-                    leading: Icon(
-                      isSpeakerOn
-                          ? CupertinoIcons.speaker_3_fill
-                          : CupertinoIcons.speaker_2,
-                      color: callUi.onControlSurface,
-                    ),
+                    leading: Icon(_routeIcon, color: callUi.onControlSurface),
                     title: Text(
-                      isSpeakerOn ? l10n.turnOffSpeaker : l10n.turnOnSpeaker,
+                      _routeAction(ctx),
                       style: TextStyle(color: callUi.onControlSurface),
                     ),
+                    subtitle: audioRoutes.length > 2
+                        ? Text(
+                            _routeLabel(ctx),
+                            style: TextStyle(color: callUi.onControlSurface.withValues(alpha: 0.7)),
+                          )
+                        : null,
                     onTap: () {
                       Navigator.pop(ctx);
                       HapticFeedback.selectionClick();
@@ -228,14 +276,12 @@ class CallControlBar extends StatelessWidget {
                   )
                 else
                   _ControlButton(
-                    icon: isSpeakerOn
-                        ? CupertinoIcons.speaker_3_fill
-                        : CupertinoIcons.speaker_2,
-                    active: isSpeakerOn,
+                    icon: _routeIcon,
+                    // Mis en avant dès que le son ne sort plus par l'oreille —
+                    // haut-parleur, casque filaire ou Bluetooth.
+                    active: audioRoute != CallAudioRoute.earpiece,
                     useVideoChrome: useVideoChrome,
-                    semanticsLabel: isSpeakerOn
-                        ? context.l10n.turnOffSpeaker
-                        : context.l10n.turnOnSpeaker,
+                    semanticsLabel: _routeAction(context),
                     onTap: () {
                       HapticFeedback.selectionClick();
                       onSpeaker();

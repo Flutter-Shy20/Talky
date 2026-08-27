@@ -349,10 +349,7 @@ extension CallOutgoingRestore on CallService {
     _wireOneToOneConnectionStateHandlers();
     _isOutgoingCaller = asOutgoingCaller;
 
-    if (!kIsWeb) {
-      _isSpeakerOn = isVideo;
-      await audio.AudioHelper.setSpeakerphoneOn(isVideo);
-    }
+    await _initAudioRoute(isVideo: isVideo);
   }
 
   Future<void> _sendCallRejoinOffer({bool iceRestart = false}) async {

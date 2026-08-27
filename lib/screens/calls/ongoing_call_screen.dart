@@ -747,6 +747,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                               isMuted: cs.isMuted,
                               isVideoOn: cs.isVideoOn,
                               isSpeakerOn: cs.isSpeakerOn,
+                              audioRoute: cs.audioRoute,
+                              audioRoutes: cs.availableAudioRoutes,
                               useVideoChrome: useVideoChrome,
                               onMute: () => cs.toggleMute(),
                               onSpeaker: () => cs.toggleSpeaker(),

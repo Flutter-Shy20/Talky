@@ -2986,6 +2986,30 @@ abstract class AppLocalizations {
   /// **'Haut-parleur'**
   String get speaker;
 
+  /// No description provided for @audioOutputEarpiece.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écouteur'**
+  String get audioOutputEarpiece;
+
+  /// No description provided for @audioOutputWired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Casque filaire'**
+  String get audioOutputWired;
+
+  /// No description provided for @audioOutputBluetooth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bluetooth'**
+  String get audioOutputBluetooth;
+
+  /// No description provided for @changeAudioOutput.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer la sortie audio'**
+  String get changeAudioOutput;
+
   /// No description provided for @newCall.
   ///
   /// In fr, this message translates to:
