@@ -214,8 +214,19 @@ extension CallSignaling on CallService {
 
     // Appel rejeté par le destinataire
     _apiClient.onSocketEvent(SocketEvents.callRejected, (data) async {
-      debugPrint('[CallService] 📞 Appel rejeté');
       final callId = (data is Map ? data['callId'] : null)?.toString();
+      debugPrint('[CallService] 📞 Appel rejeté callId=$callId status=$_status');
+      // Même garde que call_busy / call_no_answer juste en dessous. Sans elle,
+      // un refus tardif — celui d'une invitation en conférence que la couche
+      // native poste en refus 1-à-1, par exemple — raccrochait l'appel en cours.
+      if (!acceptsOutgoingTerminalEvent(
+        callStatusName: _status.name,
+        eventCallId: callId,
+        currentCallId: _currentCallId,
+      )) {
+        debugPrint('[CallService] 🛡 call_rejected ignoré: status=$_status callId=$callId');
+        return;
+      }
       _markTerminalCallId(callId ?? _currentCallId);
       await _terminateCall();
     });
@@ -271,6 +282,23 @@ extension CallSignaling on CallService {
         return;
       }
 
+      // La branche `claimedElsewhere` ci-dessus compare le callId ; celle-ci ne
+      // le faisait pas. Le serveur émet `call_ended` depuis treize endroits —
+      // fin, refus, grâce de déconnexion, resume_ack_timeout, transfert — et un
+      // événement en retard raccrochait l'appel suivant.
+      if (!endsCurrentCall(
+        eventCallId: callId,
+        currentCallId: _currentCallId,
+        confSessionId: _confSessionId,
+        groupRoomId: _groupRoomId,
+      )) {
+        debugPrint(
+          '[CallService] 🛡 call_ended ignoré (autre appel) callId=$callId '
+          'courant=$_currentCallId',
+        );
+        return;
+      }
+
       // Pendant une conf à 3+ encore peuplée, un call_ended parasite ne doit
       // pas raccrocher les restants. Dès qu'il ne reste qu'un pair (retour à
       // deux), call_ended = l'autre a raccroché → on coupe l'appel.
@@ -300,6 +328,14 @@ extension CallSignaling on CallService {
         return;
       }
       if (code == 'DEVICE_ID_REQUIRED' || code == 'CALL_ID_UNAVAILABLE') {
+        if (!acceptsOutgoingTerminalEvent(
+          callStatusName: _status.name,
+          eventCallId: callId,
+          currentCallId: _currentCallId,
+        )) {
+          debugPrint('[CallService] 🛡 call_error $code ignoré: status=$_status');
+          return;
+        }
         _showTransientMessage(
           LocaleController.instance.l10n.callFailed,
         );
@@ -311,9 +347,25 @@ extension CallSignaling on CallService {
     _apiClient.onSocketEvent(SocketEvents.callFailed, (data) async {
       final reason = (data is Map ? data['reason'] : null)?.toString();
       final code = (data is Map ? data['code'] : null)?.toString();
-      debugPrint('[CallService] Appel échoué: reason=$reason code=$code');
+      final failedCallId = (data is Map ? data['callId'] : null)?.toString();
+      debugPrint(
+        '[CallService] Appel échoué: reason=$reason code=$code '
+        'callId=$failedCallId status=$_status',
+      );
+      // Ce handler ne lisait pas le callId du payload et marquait
+      // `_currentCallId` comme terminal : il agissait par construction sur
+      // l'appel en cours au moment de la livraison, quel que soit l'appel
+      // auquel l'échec se rapportait.
+      if (!acceptsOutgoingTerminalEvent(
+        callStatusName: _status.name,
+        eventCallId: failedCallId,
+        currentCallId: _currentCallId,
+      )) {
+        debugPrint('[CallService] 🛡 call_failed ignoré: status=$_status callId=$failedCallId');
+        return;
+      }
       _cancelOutgoingTimeout();
-      _markTerminalCallId(_currentCallId);
+      _markTerminalCallId(failedCallId ?? _currentCallId);
       await _terminateCall();
       if (code == 'CALL_BLOCKED') {
         _showTransientMessage(LocaleController.instance.l10n.callImpossible);
@@ -536,7 +588,22 @@ extension CallSignaling on CallService {
     });
 
     // Appel de groupe terminé
-    _apiClient.onSocketEvent(SocketEvents.groupCallEnded, (_) {
+    // Le payload est vide côté serveur aujourd'hui, mais rien ne vérifiait la
+    // salle ni le statut : un événement tardif de la salle précédente détruisait
+    // le média de l'appel en cours.
+    _apiClient.onSocketEvent(SocketEvents.groupCallEnded, (data) {
+      final roomId = (data is Map ? data['roomId'] : null)?.toString();
+      if (!endsGroupCall(
+        groupRoomId: _groupRoomId,
+        eventRoomId: roomId,
+        callStatusName: _status.name,
+      )) {
+        debugPrint(
+          '[CallService] 🛡 group_call_ended ignoré: salle=$roomId '
+          'courante=$_groupRoomId status=$_status',
+        );
+        return;
+      }
       _terminateGroupCall();
     });
 

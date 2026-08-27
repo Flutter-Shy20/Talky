@@ -79,6 +79,53 @@ class WebRTCService {
     return status.isGranted;
   }
  
+  /// Ferme la pile média précédente s'il en reste une.
+  ///
+  /// Contrairement à [dispose], ne touche ni aux callbacks ni au flux distant
+  /// assigné par l'appelant : `init` va tout réassigner juste après. Le but est
+  /// uniquement de ne pas laisser derrière soi une PeerConnection vivante et
+  /// des pistes de capture ouvertes.
+  Future<void> _disposeCurrentStack() async {
+    final previousPc = _peerConnection;
+    final previousStream = _localStream;
+    if (previousPc == null && previousStream == null) return;
+
+    debugPrint('[WebRTC] ♻ Pile précédente encore présente — fermeture avant réinit');
+    _peerConnection = null;
+    _localStream = null;
+    _remoteDescriptionSet = false;
+    clearPendingIce();
+
+    if (previousPc != null) {
+      // Désarmer d'abord : un Closed émis pendant close() ne doit pas réveiller
+      // les handlers de l'appel courant.
+      previousPc.onIceCandidate = null;
+      previousPc.onConnectionState = null;
+      previousPc.onIceConnectionState = null;
+      previousPc.onTrack = null;
+      try {
+        await previousPc.close();
+      } catch (e) {
+        debugPrint('[WebRTC] ** Erreur fermeture PC précédente: $e');
+      }
+    }
+
+    if (previousStream != null) {
+      for (final track in previousStream.getTracks()) {
+        try {
+          await track.stop();
+        } catch (e) {
+          debugPrint('[WebRTC] ** Erreur arrêt piste précédente: $e');
+        }
+      }
+      try {
+        await previousStream.dispose();
+      } catch (e) {
+        debugPrint('[WebRTC] ** Erreur disposition stream précédent: $e');
+      }
+    }
+  }
+
   Future<void> init(CallType type, {List<Map<String, dynamic>>? iceServers}) async {
     try {
       debugPrint('[WebRTC] ========== Initialisation WebRTC ==========');
@@ -109,6 +156,17 @@ class WebRTCService {
               {'urls': 'stun:stun1.l.google.com:19302'},
             ],
       };
+
+      // Une pile précédente encore debout doit être soldée avant d'être
+      // remplacée. Sinon la PeerConnection orpheline garde `onConnectionState`
+      // branché sur le callback **partagé** du service : en passant Failed ou
+      // Closed, elle déclenche un ICE restart parasite — ou un endCall — contre
+      // l'appel courant. Et les pistes du stream orphelin ne sont jamais
+      // arrêtées : micro et caméra restent capturés.
+      //
+      // Trois des quatre appelants testaient déjà `peerConnection == null` ; la
+      // garde vit désormais ici, où elle ne peut plus être oubliée.
+      await _disposeCurrentStack();
 
       debugPrint('[WebRTC] Création du PeerConnection avec ${(configuration['iceServers'] as List).length} iceServer(s)...');
       _peerConnection = await createPeerConnection(configuration);

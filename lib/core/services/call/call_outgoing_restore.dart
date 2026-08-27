@@ -138,7 +138,13 @@ extension CallOutgoingRestore on CallService {
         debugPrint('[CallService] call_resume: PC morte → rejoin');
         try {
           if (_webrtc.peerConnection == null) {
-            await _initWebRtcForOutgoingRestore(isVideo: _isVideo);
+            await _initWebRtcForOutgoingRestore(
+              isVideo: _isVideo,
+              asOutgoingCaller: resolveOutgoingCaller(
+                serverRole: data['role']?.toString(),
+                current: true,
+              ),
+            );
           }
           await _acquireCallSessionIfNeeded(isVideo: _isVideo);
           await _sendCallRejoinOffer(iceRestart: true);
@@ -198,7 +204,14 @@ extension CallOutgoingRestore on CallService {
     debugPrint('[CallService] 🔄 call_resume peer=$peerId callId=$serverCallId');
 
     try {
-      await _initWebRtcForOutgoingRestore(isVideo: isVideo);
+      // Le serveur dit qui est l'appelant de cet appel — jusqu'ici ignoré.
+      await _initWebRtcForOutgoingRestore(
+        isVideo: isVideo,
+        asOutgoingCaller: resolveOutgoingCaller(
+          serverRole: data['role']?.toString(),
+          current: true,
+        ),
+      );
       await _acquireCallSessionIfNeeded(isVideo: isVideo);
       await _sendCallRejoinOffer(iceRestart: true);
     } catch (e) {
@@ -304,7 +317,18 @@ extension CallOutgoingRestore on CallService {
     return true;
   }
 
-  Future<void> _initWebRtcForOutgoingRestore({required bool isVideo}) async {
+  /// Recrée la pile WebRTC pour une reprise.
+  ///
+  /// [asOutgoingCaller] dit qui, des deux, initiera le prochain ICE restart. Ce
+  /// drapeau était posé à `true` inconditionnellement, y compris quand cette
+  /// méthode est appelée depuis `_processCallRejoinOffer` — donc sur le device
+  /// qui **reçoit** l'offre. Les deux côtés se croyaient alors initiateurs,
+  /// alors que tout le protocole 1-à-1 est « caller-only » : au restart suivant,
+  /// offre contre offre.
+  Future<void> _initWebRtcForOutgoingRestore({
+    required bool isVideo,
+    bool asOutgoingCaller = true,
+  }) async {
     final iceServers = await _apiClient.fetchIceServers(force: true);
     await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
     _webrtc.onLocalStream = (_) { notify(); };
@@ -323,7 +347,7 @@ extension CallOutgoingRestore on CallService {
       });
     };
     _wireOneToOneConnectionStateHandlers();
-    _isOutgoingCaller = true;
+    _isOutgoingCaller = asOutgoingCaller;
 
     if (!kIsWeb) {
       _isSpeakerOn = isVideo;
@@ -412,7 +436,11 @@ extension CallOutgoingRestore on CallService {
 
     try {
       if (_webrtc.peerConnection == null) {
-        await _initWebRtcForOutgoingRestore(isVideo: _isVideo);
+        // On reçoit l'offre : on est l'appelé de ce restart, pas son initiateur.
+        await _initWebRtcForOutgoingRestore(
+          isVideo: _isVideo,
+          asOutgoingCaller: false,
+        );
         await _acquireCallSessionIfNeeded(isVideo: _isVideo);
       }
       await _webrtc.handleOffer(
