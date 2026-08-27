@@ -571,7 +571,18 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
           final localName = localUser?.nom ?? context.l10n.meLabel;
           final localPhoto = localUser?.avatarUrl;
           final localUserId = (cs.localUserId ?? localUser?.alanyaID)?.toString() ?? '';
-          final transferStatusLabel = _statusLabel(cs);
+          final statusLabel = _statusLabel(cs);
+          // « En cours » ferait doublon avec le chrono, mais « Reconnexion… »
+          // et les libellés de transfert portent une information que la durée
+          // n'a pas : ils s'affichent désormais en plus d'elle, pas à sa place.
+          final isPlainConnected =
+              !cs.isTransferInitiator && cs.status == CallStatus.connected;
+          final groupCountLabel = isGroup
+              ? context.l10n.participantsCount(cs.groupRemoteStreams.length + 1)
+              : '';
+          final topBarStatus = !isPlainConnected && statusLabel.isNotEmpty
+              ? statusLabel
+              : groupCountLabel;
           final displayName = isGroup
               ? (cs.isConference
                   ? context.l10n.confCallOfThree
@@ -705,13 +716,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                             duration: AppDurations.normal,
                             child: CallTopBar(
                               name: displayName,
-                              status: transferStatusLabel.isNotEmpty
-                                  ? transferStatusLabel
-                                  : (isGroup
-                                      ? context.l10n.participantsCount(
-                                          cs.groupRemoteStreams.length + 1,
-                                        )
-                                      : ''),
+                              status: topBarStatus,
                               duration: (cs.status == CallStatus.connected ||
                                       cs.status == CallStatus.reconnecting)
                                   ? cs.formattedDuration

@@ -82,13 +82,19 @@ class CallTopBar extends StatelessWidget {
                       fontSize: 13,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
-                  )
-                else
+                  ),
+                // Durée et statut cohabitent. Les afficher en alternative
+                // jetait « Reconnexion… » et le compte de participants dès
+                // que le chrono démarrait — la durée n'est jamais nulle en
+                // `connected` ni en `reconnecting`.
+                if (status.isNotEmpty) ...[
+                  if (duration != null) AppSpacing.vGapXs,
                   _StatusChip(
                     label: status,
                     callUi: callUi,
                     useVideoChrome: useVideoChrome,
                   ),
+                ],
               ],
             ),
           ),
