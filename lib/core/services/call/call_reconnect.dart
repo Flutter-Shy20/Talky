@@ -61,6 +61,7 @@ extension CallReconnect on CallService {
   void _onOneToOneMediaReconnected() {
     _cancelDisconnectGrace();
     _cancelGlobalReconnectTimeout();
+    _cancelIceRestartRetry();
     _iceRestartCount = 0;
     _isIceRestarting = false;
     if (_status == CallStatus.reconnecting) {
@@ -108,24 +109,26 @@ extension CallReconnect on CallService {
   void _cancelAllReconnectTimers() {
     _cancelDisconnectGrace();
     _cancelGlobalReconnectTimeout();
+    _cancelIceRestartRetry();
     _isIceRestarting = false;
   }
 
-  Future<void> _attemptIceRestart() async {
+  Future<void> _attemptIceRestart({bool force = false}) async {
     if (!isRestartInitiator) return;
     if (_isEndingCall || _callEndedByUs) return;
     if (_status != CallStatus.reconnecting && _status != CallStatus.connected) {
       return;
     }
-    if (_isIceRestarting) return;
+    // `force` sert la reprise déclenchée par `call_resume` : l'offre encore
+    // « en vol » est justement celle qui vient de se perdre avec le réseau.
+    if (_isIceRestarting && !force) return;
     if (_iceRestartCount >= CallService._maxIceRestarts) {
       debugPrint('[CallService] ICE restart max atteint → endCall');
       await endCall();
       return;
     }
 
-    final pc = _webrtc.peerConnection;
-    if (pc == null) {
+    if (_webrtc.peerConnection == null) {
       // Pas de branche Recreating dans ce lot : ICE restart uniquement.
       // PC null / max retries → fin propre (end_call), pas de recreate PC.
       debugPrint('[CallService] ICE restart impossible (PC null) → endCall');
@@ -135,31 +138,84 @@ extension CallReconnect on CallService {
 
     _isIceRestarting = true;
     _iceRestartCount += 1;
-    final generation = _webrtc.bumpIceGeneration();
-    debugPrint(
-      '[CallService] ICE restart #$_iceRestartCount generation=$generation',
-    );
+    debugPrint('[CallService] ICE restart #$_iceRestartCount');
 
+    if (!await _emitIceRestartOffer()) {
+      // Rien n'a quitté le téléphone. Rendre la cartouche et lever le verrou :
+      // sinon la reprise déclenchée par `call_resume` au retour du réseau se
+      // heurtait à `_isIceRestarting`, et l'appel mourait au timeout global
+      // sans qu'aucune offre n'ait jamais circulé.
+      _isIceRestarting = false;
+      _iceRestartCount -= 1;
+    }
+    _armIceRestartRetry();
+  }
+
+  /// Crée l'offre d'ICE restart et l'envoie. Rend `false` si rien n'est parti —
+  /// le socket est le seul canal, et il peut être à terre au moment précis où
+  /// on en a besoin.
+  Future<bool> _emitIceRestartOffer() async {
+    final peer = _remoteUserId;
+    if (_webrtc.peerConnection == null || peer == null) return false;
+    if (!_apiClient.isSocketReady) {
+      debugPrint('[CallService] offre de reprise différée (socket non prêt)');
+      return false;
+    }
+
+    final generation = _webrtc.bumpIceGeneration();
     try {
       final offer = await _webrtc.createOffer(iceRestart: true);
-      final peer = _remoteUserId;
-      if (peer == null) {
-        _isIceRestarting = false;
-        return;
-      }
-      _apiClient.sendSocketEvent(SocketEvents.callRejoin, {
+      final sent = _apiClient.sendSocketEvent(SocketEvents.callRejoin, {
         'targetUserId': peer.toString(),
         'offer': {'sdp': offer.sdp, 'type': offer.type},
         'generation': generation,
         if (_currentCallId != null) 'callId': _currentCallId,
       });
+      debugPrint(
+        '[CallService] offre de reprise generation=$generation '
+        '${sent ? "émise" : "abandonnée (socket tombé entre-temps)"}',
+      );
+      return sent;
     } catch (e) {
       debugPrint('[CallService] ** ICE restart failed: $e');
-      _isIceRestarting = false;
-      if (_iceRestartCount >= CallService._maxIceRestarts) {
-        await endCall();
-      }
+      return false;
     }
+  }
+
+  /// Réémet l'offre de reprise tant que la reconnexion dure.
+  ///
+  /// Une offre disparaît sans que personne ne s'en aperçoive dans deux cas :
+  /// le socket local est à terre au moment de l'émission, ou l'appareil du
+  /// pair est absent — le serveur jette alors le `call_rejoin` en le
+  /// journalisant, sans rien dire à l'émetteur. Une tentative unique laissait
+  /// donc l'appel expirer au bout des 45 s, bloqué sur « Reconnexion… ».
+  /// Ces réémissions ne consomment pas le quota de `_maxIceRestarts`, qui
+  /// borne les restarts sur un lien vivant : ici c'est le timeout global qui
+  /// tranche.
+  void _armIceRestartRetry() {
+    if (_iceRestartRetryTimer != null) return;
+    _iceRestartRetryTimer = Timer.periodic(
+      CallService._iceRestartRetryInterval,
+      (_) async {
+        if (_status != CallStatus.reconnecting ||
+            !isRestartInitiator ||
+            _isEndingCall ||
+            _callEndedByUs) {
+          _cancelIceRestartRetry();
+          return;
+        }
+        if (_webrtc.isPcConnected) {
+          _onOneToOneMediaReconnected();
+          return;
+        }
+        if (await _emitIceRestartOffer()) _isIceRestarting = true;
+      },
+    );
+  }
+
+  void _cancelIceRestartRetry() {
+    _iceRestartRetryTimer?.cancel();
+    _iceRestartRetryTimer = null;
   }
 
   /// Appelé quand le PC redevient connected après rejoin answer.

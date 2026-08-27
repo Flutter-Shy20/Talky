@@ -136,7 +136,17 @@ extension CallOutgoingRestore on CallService {
 
     if (_status == CallStatus.reconnecting && !_isRestoringOutgoing) {
       if (isRestartInitiator) {
-        unawaited(_attemptIceRestart());
+        // `force` : l'offre marquée « en vol » est celle que la coupure réseau
+        // vient d'emporter. Sans lui, le verrou `_isIceRestarting` bloquait la
+        // seule tentative que le retour du socket rendait enfin possible.
+        unawaited(_attemptIceRestart(force: true));
+      } else {
+        // Côté appelé, rien à initier : c'est l'appelant qui réémet l'offre,
+        // dans les cinq secondes. Le socket vient de revenir, donc l'appel est
+        // bien vivant : on redonne une fenêtre pleine plutôt que de mourir sur
+        // le reliquat du compte à rebours entamé avant la coupure.
+        _cancelGlobalReconnectTimeout();
+        _armGlobalReconnectTimeout();
       }
       return;
     }
