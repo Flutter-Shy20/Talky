@@ -86,7 +86,7 @@ extension CallConference on CallService {
     } catch (e) {
       debugPrint('[CallService] ** acceptConferenceInvite: $e');
       await _releaseCallSession();
-      _terminateConference();
+      await _terminateConference();
     }
   }
 
@@ -138,7 +138,7 @@ extension CallConference on CallService {
     _markTerminalCallId(_confSessionId);
     await _ringtone.stop();
     await _callKit.endAll(callId: _confSessionId);
-    _terminateConference();
+    await _terminateConference();
   }
 
   String _addRejectionReason(String code) {
@@ -555,8 +555,11 @@ extension CallConference on CallService {
     debugPrint('[CallService] ↩ retour à l\'affichage à deux (pair=$remainingId)');
   }
 
-  void _terminateConference() {
+  Future<void> _terminateConference() async {
     speakingDetector.stop();
+    // Le média de la conférence est celui du lien 1-à-1 d'origine : sans
+    // dispose, quitter une conférence laissait micro et caméra capturés.
+    await _webrtc.dispose();
     _confSessionId = null;
     _confPendingInvitee = null;
     _confInvitedBy = null;

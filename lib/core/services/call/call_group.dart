@@ -70,6 +70,9 @@ extension CallGroup on CallService {
     } catch (e) {
       debugPrint('[CallService] Erreur createGroupCall: $e');
       await _releaseCallSession();
+      // _initLocalStream a pu réussir avant l'échec : sans dispose, le micro
+      // et la caméra restent capturés alors que l'appel n'a jamais démarré.
+      await _webrtc.dispose();
       _status = CallStatus.idle;
       notify();
     }
@@ -127,6 +130,7 @@ extension CallGroup on CallService {
     } catch (e) {
       debugPrint('[CallService] Erreur joinGroupCall: $e');
       await _releaseCallSession();
+      await _webrtc.dispose();
       _status = CallStatus.idle;
       notify();
     }
@@ -173,6 +177,11 @@ extension CallGroup on CallService {
     final wasConnected = _status == CallStatus.connected;
     speakingDetector.stop();
     _markTerminalCallId(_groupRoomId);
+    // Comme _clearAllGroupPeers : les compteurs de génération ICE survivaient à
+    // l'appel. Le group_offer du suivant repartait en génération 0 et se faisait
+    // rejeter comme périmé — ce pair-là ne se connectait plus jamais.
+    _cancelAllGroupPeerDisconnectGrace();
+    _clearGroupPeerReconnectState();
     for (final pc in _groupPeerConnections.values) {
       await pc.close();
     }

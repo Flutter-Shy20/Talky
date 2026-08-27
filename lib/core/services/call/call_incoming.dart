@@ -346,7 +346,7 @@ extension CallIncoming on CallService {
         _confSessionId = resolvedCallId;
       }
       _apiClient.sendSocketEvent(SocketEvents.callConfReject, {});
-      _terminateConference();
+      await _terminateConference();
       return;
     }
 
@@ -454,9 +454,13 @@ extension CallIncoming on CallService {
       return;
     }
 
+    // `reconnecting` compte comme un appel vivant : sans lui, un `call_ended`
+    // FCM reçu pendant une reconnexion tombait dans la branche générique, qui
+    // remet l'état à zéro sans libérer le micro, la caméra ni la session.
     if (_status == CallStatus.outgoing ||
         _status == CallStatus.connecting ||
-        _status == CallStatus.connected) {
+        _status == CallStatus.connected ||
+        _status == CallStatus.reconnecting) {
       if (id.isEmpty || id == _currentCallId) {
         await endCall();
       } else {

@@ -294,6 +294,12 @@ extension CallOneToOne on CallService {
       });
     }
 
+    // Atteint depuis le catch d'answerCall, donc après un init() qui a pu
+    // réussir : sans ces deux libérations, le micro restait chaud (et le
+    // service de premier plan debout) après un décrochage raté.
+    await _releaseCallSession();
+    await _webrtc.dispose();
+
     _resetCallState();
     _status = CallStatus.idle;
     notify();
