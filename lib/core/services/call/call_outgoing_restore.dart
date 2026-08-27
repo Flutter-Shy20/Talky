@@ -258,14 +258,18 @@ extension CallOutgoingRestore on CallService {
     }
 
     final snap = await PendingOutgoingCallStore.read();
-    if (snap != null && snap.remoteUserId == peerId) {
-      if (snap.serverCallId == serverCallId ||
-          snap.clientCallId == serverCallId ||
-          snap.serverCallId == null ||
-          snap.serverCallId!.isEmpty) {
-        if (!await EndedCallRegistry.isEnded(snap.clientCallId)) {
-          return true;
-        }
+    if (snap != null &&
+        snapshotMatchesResume(
+          snapServerCallId: snap.serverCallId,
+          snapClientCallId: snap.clientCallId,
+          snapPeerId: snap.remoteUserId,
+          snapStartedAtMs: snap.startedAtMs,
+          eventCallId: serverCallId,
+          eventPeerId: peerId,
+          nowMs: DateTime.now().millisecondsSinceEpoch,
+        )) {
+      if (!await EndedCallRegistry.isEnded(snap.clientCallId)) {
+        return true;
       }
     }
 

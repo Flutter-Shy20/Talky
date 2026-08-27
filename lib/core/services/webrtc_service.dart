@@ -653,9 +653,19 @@ class WebRTCService {
   }
 
   Future<void> switchCamera() async {
-    if (_localStream != null) {
-      final videoTrack = _localStream!.getVideoTracks().first;
-      await Helper.switchCamera(videoTrack);
+    // `.first` sans garde, alors que toggleCamera juste au-dessus vérifie
+    // `isNotEmpty` : permission caméra refusée sur un appel vidéo — `init()`
+    // continue alors en audio — puis appui sur « changer de caméra », et
+    // l'exception partait dans un Future ignoré par le callback.
+    final tracks = _localStream?.getVideoTracks();
+    if (tracks == null || tracks.isEmpty) {
+      debugPrint('[WebRTC] switchCamera ignoré (aucune piste vidéo)');
+      return;
+    }
+    try {
+      await Helper.switchCamera(tracks.first);
+    } catch (e) {
+      debugPrint('[WebRTC] ** switchCamera: $e');
     }
   }
 
