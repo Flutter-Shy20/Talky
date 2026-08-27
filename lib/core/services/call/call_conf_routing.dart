@@ -24,6 +24,45 @@ bool shouldMergeConfInvite({
   return confSessionId == incomingSessionId || currentCallId == incomingSessionId;
 }
 
+/// True si l'écran d'appel en cours peut être ouvert après une acceptation.
+///
+/// Les branches groupe et conférence poussaient l'écran inconditionnellement,
+/// alors que `joinGroupCall` et `acceptConferenceInvite` avalent leurs erreurs et
+/// repassent en `idle` ; seule la branche 1-à-1 vérifiait. Et l'écran d'appel n'a
+/// aucune garde sur `idle` : son écouteur n'est branché qu'après deux
+/// `initialize()` asynchrones, donc le passage à `idle` est déjà passé. On
+/// obtenait un « appel en cours » à 00:00, sans média, sans erreur affichée et
+/// sans fermeture automatique.
+bool shouldOpenOngoingScreen({
+  required String callStatusName,
+  String? errorMessage,
+}) {
+  if (errorMessage != null && errorMessage.isNotEmpty) return false;
+  return callStatusName != 'idle' && callStatusName != 'ended';
+}
+
+/// Participants à afficher dans la grille d'une session à trois.
+///
+/// La grille itérait sur les flux distants : un participant entré mais dont la
+/// PeerConnection n'a pas encore reçu de piste n'avait aucune tuile, alors que le
+/// roster le connaît — et le compte affiché était faux d'autant. On part donc du
+/// roster, en gardant l'ordre des flux pour ceux qui en ont déjà un.
+List<String> conferenceTileIds({
+  required Iterable<String> rosterIds,
+  required Iterable<String> streamIds,
+  String? myRosterId,
+}) {
+  final roster = rosterIds.where((id) => id != myRosterId).toSet();
+  final ordered = <String>[
+    for (final id in streamIds)
+      if (roster.contains(id)) id,
+  ];
+  for (final id in roster) {
+    if (!ordered.contains(id)) ordered.add(id);
+  }
+  return ordered;
+}
+
 /// Clé idempotente pour call_conf_ready (sessionId|peerId).
 String confReadyKey(String sessionId, String peerId) => '$sessionId|$peerId';
 

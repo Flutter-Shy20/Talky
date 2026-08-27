@@ -28,6 +28,27 @@ void main() {
     });
   });
 
+  group('pipChildKey', () {
+    test('same widget kind keeps its key across rebuilds', () {
+      // La clé valait identityHashCode(child) : l'enfant étant reconstruit à
+      // chaque build, elle changeait à chaque image et l'AnimatedSwitcher
+      // rejouait sa transition sans fin.
+      const a = SizedBox(width: 1);
+      const b = SizedBox(width: 2);
+
+      expect(pipChildKey(a), pipChildKey(b));
+    });
+
+    test('changing the kind of child changes the key', () {
+      expect(
+        pipChildKey(const SizedBox()),
+        isNot(pipChildKey(const Placeholder())),
+        reason: 'passer de la vidéo à l\'avatar doit bien déclencher la '
+            'transition',
+      );
+    });
+  });
+
   group('clampPipOffset', () {
     test('keeps position inside normal bounds', () {
       final bounds = normalBounds();

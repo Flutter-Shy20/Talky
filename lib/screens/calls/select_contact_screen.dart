@@ -59,18 +59,28 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   }
 
   Future<void> _refreshPreferredFromServer(LocalCacheRepository cache) async {
-    final updated = await cache.syncAndGetPreferredContacts();
-    if (!mounted) return;
-    setState(() {
-      _allContacts = updated.map(localUserToUser).toList();
-      final query = _searchController.text.trim();
-      if (query.isEmpty) {
-        _filteredContacts = _allContacts;
-      } else if (query.isNotEmpty) {
-        _filteredContacts = filterUsersBySearch(_allContacts, query);
-      }
-      _isLoading = false;
-    });
+    // Lancée sans être attendue : une synchronisation qui échoue ne remettait
+    // jamais `_isLoading` à false, et le premier lancement hors ligne restait
+    // figé sur son indicateur. `AddToCallSheet._load` gère déjà le cas — c'est
+    // la référence recopiée ici.
+    try {
+      final updated = await cache.syncAndGetPreferredContacts();
+      if (!mounted) return;
+      setState(() {
+        _allContacts = updated.map(localUserToUser).toList();
+        final query = _searchController.text.trim();
+        if (query.isEmpty) {
+          _filteredContacts = _allContacts;
+        } else if (query.isNotEmpty) {
+          _filteredContacts = filterUsersBySearch(_allContacts, query);
+        }
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('[SelectContact] ** synchronisation des contacts: $e');
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
   }
 
   void _onSearchChanged() {

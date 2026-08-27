@@ -59,6 +59,19 @@ PipLayoutBounds computePipBounds({
 }
 
 /// Position par défaut : coin supérieur droit.
+/// Clé de l'enfant du PiP, pour l'`AnimatedSwitcher`.
+///
+/// Elle valait `ValueKey(identityHashCode(child))`, or l'enfant est reconstruit
+/// à chaque build : la clé changeait donc à chaque image. La transition se
+/// rejouait sans fin et le rendu vidéo était détruit puis recréé en boucle —
+/// avec un `notify()` par seconde pour la durée et un autre toutes les 350 ms
+/// pour le détecteur de locuteur, le PiP clignotait en permanence.
+///
+/// Ce qui doit déclencher la transition, c'est le *changement de nature* de
+/// l'enfant — passer de la vidéo à l'avatar quand la caméra se coupe — pas sa
+/// réinstanciation.
+Key pipChildKey(Widget child) => ValueKey(child.runtimeType);
+
 Offset defaultPipOffset(PipLayoutBounds bounds) {
   return Offset(bounds.maxX, bounds.minY);
 }
@@ -169,7 +182,7 @@ class _DraggableVideoPiPState extends State<DraggableVideoPiP> {
           child: AnimatedSwitcher(
             duration: AppDurations.fast,
             child: _PipFrame(
-              key: ValueKey(identityHashCode(widget.child)),
+              key: pipChildKey(widget.child),
               child: widget.child,
             ),
           ),

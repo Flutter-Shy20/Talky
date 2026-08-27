@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../../core/services/call/call_conf_routing.dart';
 import '../../core/services/call_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
@@ -232,9 +233,17 @@ class CallGroupGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final callUi = context.callUi;
-    final remoteEntries = streams.entries.toList();
+    // La grille itérait sur les flux : un participant entré dont la
+    // PeerConnection n'a pas encore reçu de piste n'avait aucune tuile, alors
+    // que le roster le connaît. Pendant toute la négociation, il était donc
+    // invisible — et le compte affiché était faux d'autant.
+    final remoteIds = conferenceTileIds(
+      rosterIds: roster.keys,
+      streamIds: streams.keys,
+      myRosterId: localUserId,
+    );
     final hasLocal = localUserId != null && localUserId!.isNotEmpty;
-    final itemCount = remoteEntries.length +
+    final itemCount = remoteIds.length +
         (hasLocal ? 1 : 0) +
         (pendingInvitee != null ? 1 : 0);
 
@@ -311,21 +320,23 @@ class CallGroupGrid extends StatelessWidget {
             index -= 1;
           }
 
-          if (index < remoteEntries.length) {
-            final e = remoteEntries[index];
-            final info = roster[e.key];
+          if (index < remoteIds.length) {
+            final id = remoteIds[index];
+            final info = roster[id];
+            // `stream` peut être nul : la tuile affiche alors l'avatar, ce
+            // qu'elle sait déjà faire pour une caméra coupée.
             return CallParticipantTile(
-              key: ValueKey('remote_${e.key}'),
-              userId: e.key,
-              stream: e.value,
+              key: ValueKey('remote_$id'),
+              userId: id,
+              stream: streams[id],
               name: info?.name ?? context.l10n.participantFallback,
               photoUrl: info?.photo,
-              isSpeaking: activeSpeakers.contains(e.key),
+              isSpeaking: activeSpeakers.contains(id),
               isMuted: info?.isMuted ?? false,
               isVideoOn: info?.isVideoOn ?? true,
               onTap: onParticipantTap == null
                   ? null
-                  : () => onParticipantTap!(e.key),
+                  : () => onParticipantTap!(id),
             );
           }
 

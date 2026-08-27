@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/call_ui_theme.dart';
+import '../../core/services/call/call_conf_routing.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/calls/call_audio_backdrop.dart';
@@ -577,8 +578,17 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
           // n'a pas : ils s'affichent désormais en plus d'elle, pas à sa place.
           final isPlainConnected =
               !cs.isTransferInitiator && cs.status == CallStatus.connected;
+          // Compter les flux donnait un total faux pendant la négociation :
+          // c'est le roster qui dit qui est entré. Même règle que la grille.
           final groupCountLabel = isGroup
-              ? context.l10n.participantsCount(cs.groupRemoteStreams.length + 1)
+              ? context.l10n.participantsCount(
+                  conferenceTileIds(
+                        rosterIds: cs.groupRoster.keys,
+                        streamIds: cs.groupRemoteStreams.keys,
+                        myRosterId: cs.myRosterId,
+                      ).length +
+                      1,
+                )
               : '';
           final topBarStatus = !isPlainConnected && statusLabel.isNotEmpty
               ? statusLabel
