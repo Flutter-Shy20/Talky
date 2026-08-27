@@ -27,6 +27,8 @@ class RingtoneService {
   AudioSession? _audioSession;
 
   _ActiveSound _active = _ActiveSound.none;
+  /// Focus audio transitoire pris pour la sonnerie, à rendre à l'arrêt.
+  bool _holdsAudioFocus = false;
   Timer? _vibrationTimer;
 
   Future<void> init() async {
@@ -124,6 +126,28 @@ class RingtoneService {
     } catch (e) {
       debugPrint('[RingtoneService] ** Stop: $e');
     }
+
+    // Le focus audio pris par `_configureCallAudioSession` est transitoire
+    // (`gainTransient`) mais n'était jamais rendu : après un appel manqué ou
+    // refusé, la musique de l'utilisateur restait en pause indéfiniment.
+    // `CallSessionGuard` a sa contrepartie depuis toujours — c'est
+    // `AudioHelper.releaseCallAudio()`. Ne pas relâcher pendant un appel
+    // décroché : la session d'appel a pris le relais entre-temps.
+    if (wasActive != _ActiveSound.none) {
+      await _releaseRingtoneAudioFocus();
+    }
+  }
+
+  Future<void> _releaseRingtoneAudioFocus() async {
+    final session = _audioSession;
+    if (session == null || !_holdsAudioFocus) return;
+    _holdsAudioFocus = false;
+    try {
+      await session.setActive(false);
+      debugPrint('[RingtoneService] Focus audio de sonnerie relâché');
+    } catch (e) {
+      debugPrint('[RingtoneService] ** Relâche du focus: $e');
+    }
   }
 
   Future<void> dispose() async {
@@ -149,6 +173,7 @@ class RingtoneService {
       androidWillPauseWhenDucked: false,
     ));
     await session.setActive(true);
+    _holdsAudioFocus = true;
   }
 
   void _startVibrationLoop() {
