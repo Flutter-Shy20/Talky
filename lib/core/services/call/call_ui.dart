@@ -2,15 +2,8 @@
 part of '../call_service.dart';
 
 extension CallUi on CallService {
-  /// `reconnecting` en fait partie : l'appel n'est pas perdu, il se rétablit.
-  /// L'omettre faisait disparaître la bannière et rendait l'écran d'appel
-  /// impossible à rouvrir pendant toute la reconnexion.
-  bool get isCallActive =>
-      _status == CallStatus.outgoing ||
-      _status == CallStatus.connecting ||
-      _status == CallStatus.connected ||
-      _status == CallStatus.reconnecting ||
-      _status == CallStatus.joining;
+  /// Voir `isActiveCallStatus` — la décision est extraite pour être testée.
+  bool get isCallActive => isActiveCallStatus(_status.name);
 
   bool get isCallUiMinimized => _isCallUiMinimized;
 

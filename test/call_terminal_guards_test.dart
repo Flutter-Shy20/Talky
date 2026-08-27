@@ -2,6 +2,37 @@ import 'package:talky_flutter/core/services/call/call_terminal_guards.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('statuts d\'un appel vivant (B10)', () {
+    test('reconnecting compte comme vivant', () {
+      expect(
+        isActiveCallStatus('reconnecting'),
+        isTrue,
+        reason: 'l\'omettre faisait disparaître la bannière et rendait '
+            'l\'écran impossible à rouvrir pendant toute la reconnexion',
+      );
+    });
+
+    test('les autres statuts vivants', () {
+      for (final s in ['outgoing', 'connecting', 'connected', 'joining']) {
+        expect(isActiveCallStatus(s), isTrue, reason: s);
+      }
+    });
+
+    test('un appel entrant qui sonne n\'est pas encore actif', () {
+      expect(isActiveCallStatus('incoming'), isFalse);
+    });
+
+    test('les statuts terminaux ne le sont pas', () {
+      for (final s in ['idle', 'ended']) {
+        expect(isActiveCallStatus(s), isFalse, reason: s);
+      }
+    });
+
+    test('un statut inconnu ne rend pas un appel vivant', () {
+      expect(isActiveCallStatus('wat'), isFalse);
+    });
+  });
+
   group('call_ended ordinaire (B3)', () {
     test('termine l\'appel qu\'il désigne', () {
       expect(

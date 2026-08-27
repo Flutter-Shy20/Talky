@@ -9,6 +9,25 @@
 /// depuis toujours le statut avant d'agir.
 library;
 
+/// True si ce statut décrit un appel encore vivant.
+///
+/// `reconnecting` en fait partie : l'appel n'est pas perdu, il se rétablit.
+/// L'omettre faisait disparaître la bannière d'appel minimisé et rendait
+/// l'écran impossible à rouvrir pendant toute la reconnexion — au moment
+/// précis où l'utilisateur veut voir ce qui se passe.
+bool isActiveCallStatus(String callStatusName) {
+  switch (callStatusName) {
+    case 'outgoing':
+    case 'connecting':
+    case 'connected':
+    case 'reconnecting':
+    case 'joining':
+      return true;
+    default:
+      return false;
+  }
+}
+
 /// `call_ended` ordinaire : ne termine que l'appel qu'il désigne.
 ///
 /// Un identifiant absent vaut acceptation — c'est le comportement historique,
