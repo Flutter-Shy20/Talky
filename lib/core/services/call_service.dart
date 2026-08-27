@@ -255,15 +255,22 @@ class CallService extends ChangeNotifier {
   Timer? _reconnectGraceTimer;
   Timer? _globalReconnectTimer;
   Timer? _iceRestartRetryTimer;
+  DateTime? _lastRestartOfferAt;
   bool _isIceRestarting = false;
   int _iceRestartCount = 0;
   static const Duration _reconnectGraceDuration = Duration(seconds: 4);
   static const Duration _globalReconnectTimeout = Duration(seconds: 45);
   static const int _maxIceRestarts = 3;
-  /// Cadence de réémission de l'offre de reprise pendant une reconnexion.
+  /// Cadence de vérification pendant une reconnexion.
   /// Une offre peut se perdre sans que personne ne le sache : socket local à
   /// terre, ou appareil du pair absent. Le verdict reste au timeout global.
   static const Duration _iceRestartRetryInterval = Duration(seconds: 5);
+
+  /// Délai laissé à une offre de reprise déjà partie avant d'en réémettre une.
+  /// Réémettre repart d'une génération neuve et purge les candidats ICE en
+  /// cours de route : le faire trop tôt empêche la négociation d'aboutir, et
+  /// l'appel se rétablit en apparence sans qu'aucun média ne passe.
+  static const Duration _iceRestartOfferTimeout = Duration(seconds: 12);
 
   /// Hook optionnel après fin d'appel local (ex. resync historique).
   Future<void> Function()? onCallTerminatedHook;

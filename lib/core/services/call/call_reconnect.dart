@@ -175,6 +175,7 @@ extension CallReconnect on CallService {
         '[CallService] offre de reprise generation=$generation '
         '${sent ? "émise" : "abandonnée (socket tombé entre-temps)"}',
       );
+      if (sent) _lastRestartOfferAt = DateTime.now();
       return sent;
     } catch (e) {
       debugPrint('[CallService] ** ICE restart failed: $e');
@@ -189,6 +190,15 @@ extension CallReconnect on CallService {
   /// pair est absent — le serveur jette alors le `call_rejoin` en le
   /// journalisant, sans rien dire à l'émetteur. Une tentative unique laissait
   /// donc l'appel expirer au bout des 45 s, bloqué sur « Reconnexion… ».
+  ///
+  /// Mais réémettre est loin d'être gratuit : chaque offre repart d'une
+  /// génération neuve, ce qui purge les candidats ICE en vol et invalide ceux
+  /// que le pair envoie encore. Réémettre toutes les cinq secondes revenait à
+  /// redémarrer la négociation avant qu'elle ait pu aboutir — le lien se
+  /// rétablissait en apparence, sans qu'aucun média ne passe. On laisse donc
+  /// à une offre déjà partie le temps de vivre, et on ne réémet que si elle
+  /// est restée sans effet.
+  ///
   /// Ces réémissions ne consomment pas le quota de `_maxIceRestarts`, qui
   /// borne les restarts sur un lien vivant : ici c'est le timeout global qui
   /// tranche.
@@ -208,6 +218,12 @@ extension CallReconnect on CallService {
           _onOneToOneMediaReconnected();
           return;
         }
+        final last = _lastRestartOfferAt;
+        if (last != null &&
+            DateTime.now().difference(last) <
+                CallService._iceRestartOfferTimeout) {
+          return; // une offre est en vol : la laisser négocier
+        }
         if (await _emitIceRestartOffer()) _isIceRestarting = true;
       },
     );
@@ -216,10 +232,34 @@ extension CallReconnect on CallService {
   void _cancelIceRestartRetry() {
     _iceRestartRetryTimer?.cancel();
     _iceRestartRetryTimer = null;
+    _lastRestartOfferAt = null;
   }
 
   /// Appelé quand le PC redevient connected après rejoin answer.
   void _markIceRestartComplete() {
     _isIceRestarting = false;
+  }
+
+  /// La renégociation a abouti — côté signalisation seulement.
+  ///
+  /// Un SDP échangé ne prouve pas que le média repasse : ICE a encore ses
+  /// candidats à rassembler et ses chemins à tester, et il peut échouer.
+  /// Déclarer l'appel rétabli ici faisait disparaître « Reconnexion… » et
+  /// repartir le chrono sur un lien mort, sans plus rien pour le rattraper :
+  /// le timeout global venait d'être annulé. On attend donc l'état de la
+  /// PeerConnection, seul témoin du média — `_onOneToOneConnectionState` est
+  /// déjà branché pour ça et appellera `_onOneToOneMediaReconnected` le moment
+  /// venu. Si le lien n'était jamais tombé, il est déjà connecté : rien à
+  /// attendre.
+  void _onRejoinNegotiated() {
+    _markIceRestartComplete();
+    if (_webrtc.isPcConnected) {
+      _onOneToOneMediaReconnected();
+      return;
+    }
+    debugPrint(
+      '[CallService] renégociation aboutie — média en attente '
+      '(pc=${_webrtc.connectionState})',
+    );
   }
 }

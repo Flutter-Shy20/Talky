@@ -396,8 +396,7 @@ extension CallOutgoingRestore on CallService {
         _completeOutgoingRestore();
       } else if (_status == CallStatus.connected ||
           _status == CallStatus.reconnecting) {
-        _onOneToOneMediaReconnected();
-        debugPrint('[CallService] Renégociation rejoin terminée');
+        _onRejoinNegotiated();
       }
     } catch (e) {
       debugPrint('[CallService] call_rejoin_offer échoué: $e');
@@ -433,11 +432,11 @@ extension CallOutgoingRestore on CallService {
           answerMap['type']?.toString() ?? 'answer',
         ),
       );
-      _markIceRestartComplete();
       if (_isRestoringOutgoing || _status == CallStatus.connecting) {
+        _markIceRestartComplete();
         _completeOutgoingRestore();
       } else {
-        _onOneToOneMediaReconnected();
+        _onRejoinNegotiated();
       }
     } catch (e) {
       debugPrint('[CallService] call_rejoin_answer échoué: $e');
