@@ -477,13 +477,18 @@ extension CallSignaling on CallService {
       final userId = data['userId'].toString();
       final userName = (data['userName'] as String?) ?? '';
       final userPhoto = data['userPhoto'] as String?;
+      final known = _groupRoster[userId];
       _groupRoster[userId] = GroupParticipantInfo(
         id: userId,
         name: userName.isNotEmpty
             ? userName
             : LocaleController.instance.l10n.participantFallback,
         photo: userPhoto,
+        isMuted: known?.isMuted ?? false,
+        isVideoOn: known?.isVideoOn ?? true,
       );
+      // Même trou que côté conférence : l'arrivant ignore mes états média.
+      _broadcastMyMediaState();
       notify();
       if (_groupPeerConnections.containsKey(userId)) return;
       await _createGroupPeerAndOffer(userId);

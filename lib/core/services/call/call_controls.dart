@@ -45,6 +45,26 @@ extension CallControls on CallService {
     await _webrtc.switchCamera();
   }
 
+  /// Réémet mes états micro et caméra vers la salle.
+  ///
+  /// Rien ne transporte ces états à l'entrée d'un participant : `call_conf_peers`
+  /// et `call_conf_joined` ne portent que l'identité, et les cartes de roster
+  /// naissent « micro ouvert, caméra allumée ». Celui qui rejoignait voyait donc
+  /// tout le monde non muet, et les autres le voyaient non muet lui aussi, quels
+  /// que soient les états réels. Chacun réaffirme les siens à chaque arrivée.
+  void _broadcastMyMediaState() {
+    final roomId = _groupRoomId;
+    if (roomId == null) return;
+    _apiClient.sendSocketEvent(SocketEvents.groupMuteState, {
+      'roomId': roomId,
+      'isMuted': _isMuted,
+    });
+    _apiClient.sendSocketEvent(SocketEvents.groupVideoState, {
+      'roomId': roomId,
+      'isVideoOn': _isVideoOn,
+    });
+  }
+
   Future<void> toggleSpeaker() async {
     _isSpeakerOn = !_isSpeakerOn;
     await audio.AudioHelper.setSpeakerphoneOn(_isSpeakerOn);

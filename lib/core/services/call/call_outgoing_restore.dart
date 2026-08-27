@@ -111,6 +111,23 @@ extension CallOutgoingRestore on CallService {
     });
     debugPrint('[CallService] call_resume_ack callId=$serverCallId peer=$peerId');
 
+    // Session à trois ou appel de groupe : le média passe par le maillage
+    // (group_offer + génération), pas par la PeerConnection 1-à-1.
+    //
+    // Celle de l'invité n'a jamais rien négocié — `_initLocalStream` la crée,
+    // puis tout se joue sur `_groupPeerConnections`. Son `connectionState` reste
+    // donc nul, ce qui rend `isPcUsable` faux : la branche « PC morte » ci-dessous
+    // le basculait en `reconnecting`. Et pour lui, ce statut n'a aucune sortie —
+    // seul le handler 1-à-1 repasse en `connected`, et il n'est branché que par
+    // `initiateCall` / `answerCall` / la restauration d'un sortant. L'invité
+    // restait donc sur « Reconnexion… » jusqu'au raccrochage par le timeout
+    // global, et les autres le voyaient quitter la session. L'ack suffit ici :
+    // le maillage a ses propres reprises.
+    if (_groupRoomId != null) {
+      debugPrint('[CallService] call_resume en session de groupe → ack seul');
+      return;
+    }
+
     // Déjà en communication : ack suffit sauf si PC morte → rejoin.
     if (_status == CallStatus.connected && !_isRestoringOutgoing) {
       if (_currentCallId == null || _currentCallId!.isEmpty) {
