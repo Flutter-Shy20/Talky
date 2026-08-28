@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/backend_url.dart';
 import '../utils/conversation_display.dart';
+import 'media_cache_service.dart';
 import 'notification_navigation.dart';
 import 'notifications/notification_dedup_store.dart';
 import 'notifications/notification_diagnostics.dart';
@@ -111,6 +113,44 @@ const AndroidBitmap<Object> kNotificationLargeIcon =
 
 /// Couleur d'accent (bleu du logo) qui teinte la petite icône monochrome.
 const Color kNotificationAccentColor = Color(0xFF114B86);
+
+/// Plafond de téléchargement d'un avatar mis en cache pour les notifications.
+const int _kAvatarMaxBytes = 4 * 1024 * 1024;
+
+/// Chemins locaux des avatars DÉJÀ en cache, pour un lot d'URLs.
+///
+/// Volontairement sans réseau : cette fonction est sur le chemin d'affichage,
+/// qui ne doit jamais attendre un téléchargement. Les URLs manquantes sont
+/// récupérées en tâche de fond par [_prefetchAvatars] et seront disponibles au
+/// message suivant.
+Future<Map<String, String>> _cachedAvatarPaths(Iterable<String> urls) async {
+  final wanted = urls.where((u) => u.isNotEmpty).toSet();
+  if (wanted.isEmpty) return const {};
+  final cache = MediaCacheService();
+  final resolved = <String, String>{};
+  for (final url in wanted) {
+    try {
+      final path = await cache.cachedPathFor(url);
+      if (path != null) resolved[url] = path;
+    } catch (_) {
+      // Un cache illisible n'empêche pas d'afficher la notification.
+    }
+  }
+  return resolved;
+}
+
+/// Met en cache les avatars absents, sans bloquer l'affichage en cours.
+void _prefetchAvatars(Iterable<String> urls, Map<String, String> alreadyCached) {
+  final missing =
+      urls.where((u) => u.isNotEmpty && !alreadyCached.containsKey(u)).toSet();
+  if (missing.isEmpty) return;
+  final cache = MediaCacheService();
+  for (final url in missing) {
+    // Sans await : l'affichage qui suit ne l'attend pas. Ce téléchargement
+    // prépare le message suivant, il ne sert pas celui-ci.
+    cache.ensureCached(url, maxBytes: _kAvatarMaxBytes).catchError((_) => null);
+  }
+}
 
 /// Helper partagé foreground / background pour les notifications locales.
 class LocalNotificationHelper {
@@ -255,20 +295,42 @@ class LocalNotificationHelper {
     final displayBody =
         NotificationPrefsCache.sanitizeBodyForDisplay(messageBody);
 
+    // `normalizeAvatarUrl` neutralise les sentinelles (« NON DEFINI ») et
+    // réécrit l'ancien hôte. Le serveur assainit déjà, mais ce chemin sert aussi
+    // les notifications construites localement depuis le socket.
+    final senderAvatar = normalizeAvatarUrl(data['senderAvatar']?.toString());
+    final groupAvatar = normalizeAvatarUrl(data['groupAvatar']?.toString());
+
     final buffer = await NotificationBufferStore.append(
       conversationId: conversationId,
       sender: senderName,
       body: displayBody,
+      avatar: senderAvatar,
     );
 
     final payload = encodeNotificationPayload(data);
     final threadId = 'conv_$conversationId';
 
+    final avatarUrls = <String>{
+      for (final m in buffer) m['avatar'] ?? '',
+      groupAvatar,
+    }..removeWhere((u) => u.isEmpty);
+    final avatarPaths = await _cachedAvatarPaths(avatarUrls);
+    _prefetchAvatars(avatarUrls, avatarPaths);
+
     final style = _buildMessagingStyle(
       messages: buffer,
       isGroup: isGroup,
       groupName: groupName,
+      avatarPaths: avatarPaths,
     );
+
+    // Grande icône réservée au groupe, dont le titre est le nom du groupe. En
+    // tête-à-tête, c'est le Person du MessagingStyle qui porte le visage.
+    final groupAvatarPath = isGroup ? avatarPaths[groupAvatar] : null;
+    final largeIcon = groupAvatarPath != null
+        ? FilePathAndroidBitmap(groupAvatarPath)
+        : kNotificationLargeIcon;
 
     final fallbackBody = bufferedDisplayBody(buffer, isGroup: isGroup);
 
@@ -293,7 +355,13 @@ class LocalNotificationHelper {
         displayTitle,
         displayBody,
         NotificationDetails(
-          android: _androidMessageDetails(conversationId, convTag, style, visibility: visibility),
+          android: _androidMessageDetails(
+            conversationId,
+            convTag,
+            style,
+            visibility: visibility,
+            largeIcon: largeIcon,
+          ),
           iOS: iosDetails,
         ),
         payload: payload,
@@ -616,6 +684,7 @@ class LocalNotificationHelper {
     String tag,
     StyleInformation styleInformation, {
     NotificationVisibility visibility = NotificationVisibility.public,
+    AndroidBitmap<Object>? largeIcon,
   }) {
     // Pas de groupKey / résumé global : chaque conversation = une bulle
     // indépendante (évite qu'un résumé unique « écrase » les autres notifs).
@@ -627,7 +696,9 @@ class LocalNotificationHelper {
       priority: Priority.high,
       icon: kNotificationIcon,
       color: kNotificationAccentColor,
-      largeIcon: kNotificationLargeIcon,
+      // Le logo de l'app reste le défaut : sans photo en cache, la notification
+      // est exactement celle d'avant.
+      largeIcon: largeIcon ?? kNotificationLargeIcon,
       tag: tag,
       visibility: visibility,
       styleInformation: styleInformation,
@@ -640,6 +711,7 @@ class LocalNotificationHelper {
     required List<Map<String, String>> messages,
     required bool isGroup,
     required String groupName,
+    Map<String, String> avatarPaths = const {},
   }) {
     final styleMessages = messages.map((m) {
       final ts = DateTime.tryParse(m['ts'] ?? '') ?? DateTime.now();
@@ -649,6 +721,7 @@ class LocalNotificationHelper {
       final text = isGroup && !isLocalUser
           ? NotificationBody.stripLeadingSenderPrefix(sender, raw)
           : raw;
+      final avatarPath = avatarPaths[m['avatar'] ?? ''];
       return Message(
         text,
         ts,
@@ -656,6 +729,11 @@ class LocalNotificationHelper {
             ? null
             : Person(
                 name: sender.isNotEmpty ? sender : resolveL10n().appTitle,
+                // Renseignée seulement si la photo est déjà sur le disque : ce
+                // constructeur est synchrone, rien ici ne doit toucher au réseau.
+                icon: avatarPath != null
+                    ? BitmapFilePathAndroidIcon(avatarPath)
+                    : null,
               ),
       );
     }).toList();

@@ -34,6 +34,7 @@ class NotificationBufferStore {
     required int conversationId,
     required String sender,
     required String body,
+    String avatar = '',
   }) async {
     final completer = Completer<List<Map<String, String>>>();
     final previous = _appendChain;
@@ -44,6 +45,7 @@ class NotificationBufferStore {
             conversationId: conversationId,
             sender: sender,
             body: body,
+            avatar: avatar,
           ),
         );
       } catch (e, st) {
@@ -57,12 +59,17 @@ class NotificationBufferStore {
     required int conversationId,
     required String sender,
     required String body,
+    String avatar = '',
   }) async {
     final messages = await read(conversationId);
     messages.add({
       'sender': sender,
       'body': body,
       'ts': DateTime.now().toUtc().toIso8601String(),
+      // Photo de l'auteur de CETTE ligne : en groupe, chaque ligne a la sienne.
+      // Clé omise si vide — les entrées écrites avant cette version se relisent
+      // donc sans changement.
+      if (avatar.isNotEmpty) 'avatar': avatar,
     });
     final trimmed = messages.length > _maxMessages
         ? messages.sublist(messages.length - _maxMessages)
