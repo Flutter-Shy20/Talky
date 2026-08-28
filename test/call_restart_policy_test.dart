@@ -249,4 +249,73 @@ void main() {
       });
     }
   });
+
+  group('purge du roster au vu de la liste serveur', () {
+    test('retire ceux que le serveur ne liste plus', () {
+      // Ils sont partis pendant ma coupure : leur group_user_left s'est perdu
+      // avec ma socket, et rien ne l'aurait jamais rejoué.
+      expect(
+        rosterEntriesToDrop(
+          serverIds: ['10', '20'],
+          localIds: ['10', '20', '30'],
+          myId: '10',
+        ),
+        {'30'},
+      );
+    });
+
+    test('ne me retire jamais moi-même', () {
+      // Je me place au roster avant d'émettre join_group_call : la liste
+      // serveur peut me précéder.
+      expect(
+        rosterEntriesToDrop(
+          serverIds: ['20'],
+          localIds: ['10', '20'],
+          myId: '10',
+        ),
+        isEmpty,
+      );
+    });
+
+    test('ne retire rien quand tout le monde est là', () {
+      expect(
+        rosterEntriesToDrop(
+          serverIds: ['10', '20', '30'],
+          localIds: ['10', '20', '30'],
+          myId: '10',
+        ),
+        isEmpty,
+      );
+    });
+
+    test('une liste serveur vide ne purge rien', () {
+      // Un payload malformé ne doit pas vider la grille.
+      expect(
+        rosterEntriesToDrop(
+          serverIds: const [],
+          localIds: ['10', '20'],
+          myId: '10',
+        ),
+        isEmpty,
+      );
+    });
+
+    test('plusieurs partants d\'un coup', () {
+      expect(
+        rosterEntriesToDrop(
+          serverIds: ['10'],
+          localIds: ['10', '20', '30', '40'],
+          myId: '10',
+        ),
+        {'20', '30', '40'},
+      );
+    });
+
+    test('sans identité locale connue, on ne purge que les absents', () {
+      expect(
+        rosterEntriesToDrop(serverIds: ['20'], localIds: ['20', '30']),
+        {'30'},
+      );
+    });
+  });
 }

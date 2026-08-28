@@ -574,6 +574,18 @@ extension CallSignaling on CallService {
       if (data is! Map) return;
       final participants = (data['participants'] as List?)?.map((e) => e.toString()).toList() ?? [];
       _groupParticipants = participants;
+      // Le serveur fait foi : qui n'y figure plus est parti pendant mon absence,
+      // et son `group_user_left` s'est perdu avec ma socket.
+      for (final id in rosterEntriesToDrop(
+        serverIds: participants,
+        localIds: _groupRoster.keys.toList(),
+        myId: _myRosterId,
+      )) {
+        debugPrint('[CallService] roster purgé de $id (absent de group_participants)');
+        _groupRoster.remove(id);
+        _pendingGroupMedia.forget(id);
+        _removeGroupPeer(id);
+      }
       // Je viens d'entrer : les autres ne savent pas si mon micro est coupé.
       //
       // La branche conférence fait ce geste depuis toujours, dans le handler

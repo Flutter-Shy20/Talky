@@ -103,3 +103,25 @@ bool shouldRejoinGroupRoom({
       callStatusName == 'reconnecting' ||
       callStatusName == 'joining';
 }
+
+/// Entrées de roster à retirer au vu de la liste que le serveur vient d'envoyer.
+///
+/// `group_participants` arrive à chaque entrée dans la salle — y compris au
+/// retour après une coupure. Le handler ne faisait qu'ajouter : quelqu'un
+/// réellement parti pendant mon absence gardait sa tuile jusqu'à la fin de
+/// l'appel, puisque son `group_user_left` s'est perdu avec ma socket. La grâce
+/// de quinze secondes allonge précisément ces absences.
+///
+/// Mon propre identifiant n'est jamais retiré : je me place moi-même au roster
+/// avant d'émettre `join_group_call`, et la liste serveur peut me précéder.
+Set<String> rosterEntriesToDrop({
+  required Iterable<String> serverIds,
+  required Iterable<String> localIds,
+  String? myId,
+}) {
+  final vus = serverIds.toSet();
+  if (vus.isEmpty) return const <String>{};
+  return localIds
+      .where((id) => id != myId && !vus.contains(id))
+      .toSet();
+}
