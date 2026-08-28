@@ -852,10 +852,24 @@ class CallService extends ChangeNotifier {
 
   @override
   void dispose() {
+    // Seul `_durationTimer` était annulé : sept autres minuteries survivaient à
+    // la destruction du service. Portée limitée en production — le service vit
+    // aussi longtemps que l'application — mais toute réinstanciation, en test
+    // ou au redémarrage à chaud, laissait derrière elle des rappels armés sur
+    // un objet détruit.
     _durationTimer?.cancel();
+    _cancelOutgoingTimeout();
+    _cancelAwaitingOfferTimeout();
+    _cancelIncomingRingSafety();
+    _cancelOutgoingRestoreTimeout();
+    _cancelAllReconnectTimers();
+    _cancelAllGroupPeerDisconnectGrace();
+    _clearTransferCountdown();
+    _stopWatchingAudioOutputs();
+
     speakingDetector.dispose();
-    _webrtc.dispose();
-    _ringtone.stop();
+    unawaited(_webrtc.dispose());
+    unawaited(_ringtone.stop());
     for (final pc in _groupPeerConnections.values) {
       pc.close();
     }

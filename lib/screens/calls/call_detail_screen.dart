@@ -128,7 +128,10 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
       }
       if (mounted) setState(() => _isFavorite = next);
     } catch (e) {
-      _snack(context.l10n.actionFailedWithError('$e'), error: true);
+      // `_snack` vérifie `mounted`, mais `context.l10n` était évalué avant lui :
+      // l'écran fermé pendant la requête, et la lecture partait sur un contexte
+      // démonté.
+      if (mounted) _snack(context.l10n.actionFailedWithError('$e'), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

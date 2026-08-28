@@ -534,10 +534,17 @@ class _CallsScreenState extends State<CallsScreen> {
     try {
       final date = DateTime.parse(dateStr).toLocal();
       final now = DateTime.now();
+      final hm = '${date.hour.toString().padLeft(2, '0')}:'
+          '${date.minute.toString().padLeft(2, '0')}';
       if (date.day == now.day && date.month == now.month && date.year == now.year) {
-        return context.l10n.todayTimeShort('${date.hour}:${date.minute.toString().padLeft(2, '0')}');
+        return context.l10n.todayTimeShort(hm);
       }
-      return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+      // L'année manquait, et l'heure n'avait pas son zéro de tête : un appel
+      // de mars 2025 était indistinguable d'un appel de mars 2026, et
+      // « 3/3 9:05 » ne s'alignait pas avec « 3/3 14:05 ». L'écran de détail
+      // utilise déjà `dateAtTimeFull` — c'est la même donnée, elle mérite la
+      // même forme.
+      return context.l10n.dateAtTimeFull(date.day, date.month, date.year, hm);
     } catch (_) {
       return context.l10n.recently;
     }

@@ -182,6 +182,14 @@ extension CallGroup on CallService {
     // rejeter comme périmé — ce pair-là ne se connectait plus jamais.
     _cancelAllGroupPeerDisconnectGrace();
     _clearGroupPeerReconnectState();
+    // Désarmer avant de fermer, comme le fait `_clearAllGroupPeers` dont le
+    // commentaire explique le piège : si le PC 1-à-1 partagé se retrouve dans
+    // le maillage, sa fermeture déclenche `onConnectionFailure` — donc un
+    // `endCall()` concurrent, et un `end_call` parasite vers le pair. Le chemin
+    // n'est pas atteignable aujourd'hui (l'écran route les conférences vers
+    // endCall d'abord), mais il le deviendra au premier ajout de chemin.
+    _webrtc.onConnectionFailure = null;
+    _webrtc.onConnectionStateChanged = null;
     for (final pc in _groupPeerConnections.values) {
       await pc.close();
     }

@@ -32,11 +32,20 @@ class _KeypadScreenState extends State<KeypadScreen> {
   bool _loadingSuggestions = false;
   bool _addingContact = false;
   String _currentQuery = '';
+  /// Anti-rebond de la recherche serveur — annulable, contrairement au
+  /// `Future.delayed` qu'il remplace.
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
     _loadContacts();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   // ── Données ──────────────────────────────────────────────────────────
@@ -119,7 +128,11 @@ class _KeypadScreenState extends State<KeypadScreen> {
       return;
     }
     if (AlanyaPhoneFormatter.validate(_phoneDigits) == null) {
-      Future.delayed(const Duration(milliseconds: 400), () {
+      // `Future.delayed` ne s'annule pas : chaque frappe en armait un de plus,
+      // et tous survivaient à la fermeture de l'écran — seule la comparaison de
+      // la requête les rendait inoffensifs. Un Timer se remplace et se range.
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 400), () {
         if (_currentQuery == _phoneDigits && mounted) {
           _searchServer(_phoneDigits);
         }
