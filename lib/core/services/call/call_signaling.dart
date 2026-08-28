@@ -194,6 +194,23 @@ extension CallSignaling on CallService {
         _startDurationTimer();
         _startSpeakingDetection(groupMode: false);
         final serverCallId = data['callId']?.toString();
+        // Adopter l'identifiant du serveur. Côté appelant, `_currentCallId`
+        // n'était qu'un horodatage fabriqué pour ouvrir la session CallKit :
+        // aucune des treize affectations ne le remplaçait au décrochage. Toutes
+        // les comparaisons `callId == _currentCallId` étaient donc fausses de ce
+        // côté, et `EndedCallRegistry` écrivait une clé que personne ne
+        // relisait — la protection anti-appel-fantôme entre isolates ne
+        // protégeait que l'appelé. CallKit, lui, garde `_callKitCallId`.
+        if (shouldAdoptServerCallId(
+          serverCallId: serverCallId,
+          currentCallId: _currentCallId,
+        )) {
+          debugPrint(
+            '[CallService] callId serveur adopté: $_currentCallId → $serverCallId '
+            '(CallKit reste sur $_callKitCallId)',
+          );
+          _currentCallId = serverCallId;
+        }
         unawaited(persistOutgoingSnapshot(
           phase: 'connected',
           serverCallId: serverCallId,

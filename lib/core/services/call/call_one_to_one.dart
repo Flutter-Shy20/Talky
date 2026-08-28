@@ -289,7 +289,7 @@ extension CallOneToOne on CallService {
     _markTerminalCallId(_currentCallId);
 
     await _ringtone.stop();
-    await _callKit.endAll(callId: _currentCallId);
+    await _callKit.endAll(callId: _callKitCallId ?? _currentCallId);
 
     if (_remoteUserId != null) {
       _apiClient.sendSocketEvent(SocketEvents.rejectCall, {
@@ -411,7 +411,7 @@ extension CallOneToOne on CallService {
       _webrtc.onConnectionFailure = null;
       _webrtc.onConnectionStateChanged = null;
       _clearAllGroupPeers(disarmOriginFailure: true);
-      await _callKit.endAll(callId: _currentCallId);
+      await _callKit.endAll(callId: _callKitCallId ?? _currentCallId);
       await _webrtc.dispose();
       _durationTimer?.cancel();
       // Après la libération de la session audio : le son part sur le canal
@@ -445,6 +445,7 @@ extension CallOneToOne on CallService {
     _outgoingIceOutbox.clear();
     _pendingOffer = null;
     _currentCallId = null;
+    _callKitCallId = null;
     _callDuration = 0;
     _isMuted = false;
     _isVideoOn = true;

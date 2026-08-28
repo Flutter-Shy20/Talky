@@ -461,7 +461,9 @@ extension CallIncoming on CallService {
         _status == CallStatus.connecting ||
         _status == CallStatus.connected ||
         _status == CallStatus.reconnecting) {
-      if (id.isEmpty || id == _currentCallId) {
+      // `id` peut venir du serveur (FCM call_ended) comme de CallKit : sur un
+      // appel sortant ce sont deux identifiants différents.
+      if (id.isEmpty || _matchesCurrentCallId(id)) {
         await endCall();
       } else {
         _markTerminalCallId(id);

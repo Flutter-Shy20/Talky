@@ -89,3 +89,57 @@ bool resolveOutgoingCaller({
   if (serverRole == 'callee') return false;
   return current;
 }
+
+/// Vrai si [candidate] désigne l'appel en cours, quel que soit celui de ses
+/// deux identifiants qu'on présente.
+///
+/// Un appel sortant en porte deux : celui fabriqué localement pour ouvrir la
+/// session CallKit, et celui du serveur, adopté au décrochage. CallKit et la
+/// couche native ne connaissent que le premier ; le serveur et l'isolate FCM
+/// ne parlent que du second. Ne comparer qu'un seul rendait faux, selon le
+/// sens, soit la fin d'appel venue du push, soit la restauration après kill.
+bool matchesCallIdentity({
+  required String? candidate,
+  String? currentCallId,
+  String? callKitCallId,
+}) {
+  if (candidate == null || candidate.isEmpty) return false;
+  return candidate == currentCallId || candidate == callKitCallId;
+}
+
+/// Vrai si [candidate] désigne l'appel sortant encore en cours — la garde de
+/// `shouldPreserveOutgoingCallKit` et de `restoreOutgoingFromColdStart`, qui
+/// reçoivent toutes deux l'identifiant porté par l'entrée CallKit.
+bool matchesActiveOutgoingCall({
+  required String? candidate,
+  required String callStatusName,
+  String? currentCallId,
+  String? callKitCallId,
+}) {
+  if (!matchesCallIdentity(
+    candidate: candidate,
+    currentCallId: currentCallId,
+    callKitCallId: callKitCallId,
+  )) {
+    return false;
+  }
+  // `joining` est exclu : c'est une entrée en conférence, pas un sortant 1-à-1
+  // dont on aurait un instantané à restaurer.
+  return callStatusName == 'outgoing' ||
+      callStatusName == 'connecting' ||
+      callStatusName == 'connected' ||
+      callStatusName == 'reconnecting';
+}
+
+/// Vrai s'il faut adopter l'identifiant que le serveur renvoie au décrochage.
+///
+/// Sans adoption, `_currentCallId` reste l'horodatage fabriqué côté appelant et
+/// aucune comparaison avec un événement serveur ne peut aboutir. Un identifiant
+/// vide n'apprend rien : on garde le local.
+bool shouldAdoptServerCallId({
+  required String? serverCallId,
+  String? currentCallId,
+}) {
+  if (serverCallId == null || serverCallId.trim().isEmpty) return false;
+  return serverCallId != currentCallId;
+}

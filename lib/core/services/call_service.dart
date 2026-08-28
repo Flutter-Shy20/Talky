@@ -102,6 +102,18 @@ class CallService extends ChangeNotifier {
   Map<String, dynamic>? _pendingOffer; // offer reçu avant réponse
   String? _currentCallId;   // callId backend, utilisé pour synchroniser CallKit
 
+  /// Identifiant sous lequel CallKit et `CallSessionGuard` ont été démarrés.
+  ///
+  /// Sur un appel sortant, la session CallKit est acquise avant que le serveur
+  /// n'ait attribué son identifiant : `_ensureCallId()` en fabrique un à partir
+  /// de l'horloge. `_currentCallId` adopte ensuite l'identifiant serveur reçu
+  /// dans `call_answered` — sans quoi toutes les comparaisons de callId étaient
+  /// fausses de ce côté, et `EndedCallRegistry` écrivait une clé que personne ne
+  /// relisait, rendant inopérante la protection anti-appel-fantôme entre
+  /// isolates. Mais CallKit, lui, ne connaît que l'identifiant fabriqué : il est
+  /// donc conservé ici, et c'est lui qu'on lui présente pour fermer l'entrée.
+  String? _callKitCallId;
+
   bool _callEndedByUs = false;
 
   /// Teardown en cours (endCall / terminate) — empêche un 2ᵉ `end_call`
@@ -598,13 +610,24 @@ class CallService extends ChangeNotifier {
   }
 
   /// Vrai si une session d'appel sortant/en cours correspond au [callId] CallKit.
-  bool matchesActiveOutgoingSession(String callId) {
-    if (callId.isEmpty || _currentCallId != callId) return false;
-    return _status == CallStatus.outgoing ||
-        _status == CallStatus.connecting ||
-        _status == CallStatus.connected ||
-        _status == CallStatus.reconnecting;
-  }
+  /// True si [id] désigne l'appel en cours, quel que soit celui de ses deux
+  /// identifiants qu'on lui présente.
+  ///
+  /// À utiliser dès que l'identifiant vient de CallKit ou de la couche native :
+  /// eux ne connaissent que celui qui a ouvert la session, alors que le serveur
+  /// et l'isolate FCM parlent du sien.
+  bool _matchesCurrentCallId(String? id) => matchesCallIdentity(
+        candidate: id,
+        currentCallId: _currentCallId,
+        callKitCallId: _callKitCallId,
+      );
+
+  bool matchesActiveOutgoingSession(String callId) => matchesActiveOutgoingCall(
+        candidate: callId,
+        callStatusName: _status.name,
+        currentCallId: _currentCallId,
+        callKitCallId: _callKitCallId,
+      );
 
   bool _alreadyHandledIncomingCallId(String? callId) {
     if (callId == null || callId.isEmpty) return false;
@@ -618,6 +641,17 @@ class CallService extends ChangeNotifier {
   /// Mémorise un callId ayant atteint un état terminal (accepté/refusé/terminé)
   /// pour ignorer un `incoming_call` rejoué et un FCM `call` tardif.
   void _markTerminalCallId(String? callId) {
+    _markOneTerminalCallId(callId);
+    // Un appel sortant porte deux identifiants : celui du serveur, et celui
+    // fabriqué avec lequel CallKit a été ouvert. L'isolate FCM et la couche
+    // native peuvent parler de l'un ou de l'autre — marquer les deux, sinon la
+    // protection anti-appel-fantôme rate la moitié des cas.
+    if (_callKitCallId != null && _callKitCallId != callId) {
+      _markOneTerminalCallId(_callKitCallId);
+    }
+  }
+
+  void _markOneTerminalCallId(String? callId) {
     if (callId == null || callId.isEmpty) return;
     final now = DateTime.now();
     _handledTerminalCallIds.removeWhere((_, ts) => now.difference(ts).inSeconds > 120);

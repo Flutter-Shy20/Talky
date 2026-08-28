@@ -281,7 +281,7 @@ extension CallOutgoingRestore on CallService {
         if (activeId == serverCallId) return true;
         if (activeCaller == peerId.toString() &&
             (activeId.isEmpty ||
-                activeId == _currentCallId ||
+                _matchesCurrentCallId(activeId) ||
                 (snap != null && activeId == snap.clientCallId))) {
           return true;
         }

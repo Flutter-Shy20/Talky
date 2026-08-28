@@ -2,10 +2,14 @@
 part of '../call_service.dart';
 
 extension CallSession on CallService {
+  /// Identifiant présenté à CallKit, fabriqué si le serveur n'a pas encore
+  /// donné le sien. Il est mémorisé à part : `_currentCallId` adoptera
+  /// l'identifiant serveur au décrochage, alors que CallKit gardera celui-ci.
   String _ensureCallId() {
     if (_currentCallId == null || _currentCallId!.isEmpty) {
       _currentCallId = '${DateTime.now().millisecondsSinceEpoch}';
     }
+    _callKitCallId = _currentCallId;
     return _currentCallId!;
   }
 
