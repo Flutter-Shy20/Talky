@@ -82,6 +82,36 @@ extension CallGroup on CallService {
   ///
   /// [callerInfo] (optionnel) ajoute l'appelant au roster (utile si on n'a
   /// pas reçu l'event `groupCallInvite` qui le peuple normalement).
+  /// Redemande sa place dans la salle après une reconnexion du socket.
+  ///
+  /// Rejouer `join_group_call` est sans danger : le serveur ne refuse pas une
+  /// salle pleine à quelqu'un qui y figure déjà, et depuis que la déconnexion
+  /// oublie l'appareil au lieu de le marquer parti, la revendication aboutit.
+  /// Les autres reçoivent un `group_user_joined` qui remet le revenant à leur
+  /// roster, et lui reçoit `group_participants`, qui remet le leur.
+  void _rejoinGroupRoomIfNeeded() {
+    if (!shouldRejoinGroupRoom(
+      groupRoomId: _groupRoomId,
+      callStatusName: _status.name,
+      isConference: isConference,
+      isEndingCall: _isEndingCall || _callEndedByUs,
+    )) {
+      return;
+    }
+    final myId = _localUserId ?? int.tryParse(_myRosterId ?? '');
+    if (myId == null) {
+      debugPrint('[CallService] 🛡 rejoin salle impossible: identité locale inconnue');
+      return;
+    }
+    debugPrint('[CallService] 🔄 socket revenu → rejoin salle $_groupRoomId');
+    _apiClient.sendSocketEvent(SocketEvents.joinGroupCall, {
+      'roomId': _groupRoomId,
+      'userId': myId.toString(),
+      'userName': _localUserName,
+      'userPhoto': _localUserPhoto,
+    });
+  }
+
   Future<void> joinGroupCall({
     required String roomId,
     required int myId,
@@ -165,6 +195,7 @@ extension CallGroup on CallService {
     await _ringtone.stop();
     await _callKit.endAll(callId: _groupRoomId);
     _groupRoster.clear();
+    _pendingGroupMedia.clear();
     _groupRoomId = null;
     // Reset canonique complet (identité, offre, flags, timers) pour ne pas
     // laisser d'état résiduel qui contaminerait le prochain appel.
@@ -199,6 +230,7 @@ extension CallGroup on CallService {
     _groupPendingIce.clear();
     _groupRemoteDescSet.clear();
     _groupRoster.clear();
+    _pendingGroupMedia.clear();
     await _releaseCallSession();
     await _callKit.endAll(callId: _groupRoomId);
     await _webrtc.dispose();
@@ -504,6 +536,7 @@ extension CallGroup on CallService {
     _groupPendingIce.clear();
     _groupRemoteDescSet.clear();
     _groupRoster.clear();
+    _pendingGroupMedia.clear();
   }
 
   Future<void> _flushGroupPendingIce(String userId) async {

@@ -157,4 +157,96 @@ void main() {
       );
     });
   });
+
+  group('rejoin de la salle de groupe après reconnexion', () {
+    test('en communication : on redemande sa place', () {
+      expect(
+        shouldRejoinGroupRoom(
+          groupRoomId: 'room_7',
+          callStatusName: 'connected',
+          isConference: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('pendant la reconnexion aussi — c\'est même le cas nominal', () {
+      expect(
+        shouldRejoinGroupRoom(
+          groupRoomId: 'room_7',
+          callStatusName: 'reconnecting',
+          isConference: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('et pendant l\'entrée dans la salle', () {
+      expect(
+        shouldRejoinGroupRoom(
+          groupRoomId: 'room_7',
+          callStatusName: 'joining',
+          isConference: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('hors appel de groupe : rien à rejoindre', () {
+      expect(
+        shouldRejoinGroupRoom(
+          groupRoomId: null,
+          callStatusName: 'connected',
+          isConference: false,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldRejoinGroupRoom(
+          groupRoomId: '',
+          callStatusName: 'connected',
+          isConference: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('session à trois : ses participants ne sont pas dans la salle', () {
+      // Tout leur est adressé par appareil ; un join_group_call les inscrirait
+      // dans une salle de groupe qui n'a rien à voir avec leur session.
+      expect(
+        shouldRejoinGroupRoom(
+          groupRoomId: 'session_9',
+          callStatusName: 'connected',
+          isConference: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('raccrochage en cours : ne pas se réinviter', () {
+      expect(
+        shouldRejoinGroupRoom(
+          groupRoomId: 'room_7',
+          callStatusName: 'connected',
+          isConference: false,
+          isEndingCall: true,
+        ),
+        isFalse,
+      );
+    });
+
+    for (final statut in ['idle', 'ended', 'incoming', 'outgoing']) {
+      test('$statut : aucune salle à reprendre', () {
+        expect(
+          shouldRejoinGroupRoom(
+            groupRoomId: 'room_7',
+            callStatusName: statut,
+            isConference: false,
+          ),
+          isFalse,
+        );
+      });
+    }
+  });
 }

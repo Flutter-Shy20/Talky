@@ -585,6 +585,7 @@ extension CallConference on CallService {
     _pendingConfReady.clear();
     _pendingConfJoinSessionId = null;
     _groupRoster.clear();
+    _pendingGroupMedia.clear();
     _groupRoomId = null;
     _resetCallState();
     _status = CallStatus.idle;

@@ -430,6 +430,7 @@ extension CallSignaling on CallService {
       _flushPendingRejects();
       _flushPendingConfJoin();
       _flushPendingConfReady();
+      _rejoinGroupRoomIfNeeded();
     });
 
     _apiClient.onSocketEvent(SocketEvents.callResume, (data) async {
@@ -560,6 +561,7 @@ extension CallSignaling on CallService {
         isMuted: known?.isMuted ?? false,
         isVideoOn: known?.isVideoOn ?? true,
       );
+      _applyPendingGroupStates(userId);
       // Même trou que côté conférence : l'arrivant ignore mes états média.
       _broadcastMyMediaState();
       notify();
@@ -590,6 +592,7 @@ extension CallSignaling on CallService {
                     : LocaleController.instance.l10n.participantFallback),
             photo: u['avatar_url'] as String?,
           );
+          _applyPendingGroupStates(id);
           notify();
         }).catchError((e) {
           debugPrint('[CallService] roster getUserById($id) failed: $e');
@@ -601,6 +604,16 @@ extension CallSignaling on CallService {
     _apiClient.onSocketEvent(SocketEvents.groupUserLeft, (data) {
       if (data is! Map) return;
       final userId = data['userId'].toString();
+      // Le roster doit être purgé ici, et seulement ici : c'est le serveur qui
+      // dit qu'il est parti. `_removeGroupPeer` sert aussi quand le lien média
+      // local lâche — le participant est alors toujours dans l'appel, et lui
+      // retirer son entrée le ferait disparaître de la grille à tort.
+      //
+      // Depuis que la grille part du roster plutôt que des flux, l'oubli se
+      // voyait dans l'autre sens : le partant gardait sa tuile et restait
+      // compté jusqu'à la fin de l'appel.
+      _groupRoster.remove(userId);
+      _pendingGroupMedia.forget(userId);
       _removeGroupPeer(userId);
     });
 
@@ -874,11 +887,11 @@ extension CallSignaling on CallService {
       final isMuted = data['isMuted'] == true;
       if (userId == null) return;
       debugPrint('[CallService] 🎙 Group mute state: userId=$userId isMuted=$isMuted');
-      if (_groupRoster.containsKey(userId)) {
-        _groupRoster[userId]!.isMuted = isMuted;
-        speakingDetector.setSpeakerMuted(userId, isMuted);
-        notify();
-      }
+      // Un état reçu avant l'entrée de roster était perdu sans retour : le
+      // serveur ne le réémet pas, et l'émetteur n'a aucun moyen de savoir
+      // qu'on l'a jeté. On le garde de côté jusqu'à ce que le roster arrive.
+      _pendingGroupMedia.recordMuted(userId, isMuted);
+      _applyPendingGroupStates(userId);
     });
 
     // État caméra groupe : un participant a coupé/activé sa caméra
@@ -888,10 +901,24 @@ extension CallSignaling on CallService {
       final isVideoOn = data['isVideoOn'] != false;
       if (userId == null) return;
       debugPrint('[CallService] 📹 Group video state: userId=$userId isVideoOn=$isVideoOn');
-      if (_groupRoster.containsKey(userId)) {
-        _groupRoster[userId]!.isVideoOn = isVideoOn;
-        notify();
-      }
+      _pendingGroupMedia.recordVideoOn(userId, isVideoOn);
+      _applyPendingGroupStates(userId);
     });
+  }
+
+  /// Applique à [userId] les états micro/caméra reçus, s'il est au roster.
+  ///
+  /// Appelé à la réception de l'état comme à la création de l'entrée : selon
+  /// l'ordre d'arrivée, c'est l'un ou l'autre qui déclenche.
+  void _applyPendingGroupStates(String userId) {
+    final info = _groupRoster[userId];
+    if (info == null) return;
+    final etat = _pendingGroupMedia.take(userId);
+    if (etat.isMuted != null) {
+      info.isMuted = etat.isMuted!;
+      speakingDetector.setSpeakerMuted(userId, etat.isMuted!);
+    }
+    if (etat.isVideoOn != null) info.isVideoOn = etat.isVideoOn!;
+    if (etat.isMuted != null || etat.isVideoOn != null) notify();
   }
 }

@@ -29,6 +29,7 @@ import 'call/call_audio_routes.dart';
 import 'call/call_restart_policy.dart';
 import 'call/call_restart_roles.dart';
 import 'call/call_terminal_guards.dart';
+import 'call/call_group_media_states.dart';
 import 'call/incoming_presentation.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
@@ -167,6 +168,13 @@ class CallService extends ChangeNotifier {
 
   // Roster de l'appel de groupe (userId → infos d'affichage).
   final Map<String, GroupParticipantInfo> _groupRoster = {};
+
+  /// États micro/caméra reçus pour quelqu'un qui n'est pas encore au roster.
+  ///
+  /// Le serveur ne les réémet pas et l'émetteur ne sait pas qu'on les a jetés :
+  /// sans ce report, un état arrivé une fraction de seconde trop tôt restait
+  /// faux jusqu'à la prochaine bascule du micro d'en face.
+  final PendingGroupMediaStates _pendingGroupMedia = PendingGroupMediaStates();
 
   //  « Ajouter à l'appel » — session à trois (join / transfer)
   //

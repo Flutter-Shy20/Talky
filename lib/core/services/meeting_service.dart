@@ -42,6 +42,9 @@ class MeetingService extends ChangeNotifier {
   final Map<String, List<RTCIceCandidate>> _pendingIceByPeer = {};
   final Set<String> _remoteDescSetForPeer = <String>{};
 
+  /// Pairs à qui les pistes locales ont déjà été attachées.
+  final Set<String> _tracksAddedForPeer = <String>{};
+
   // Contrôles
   bool _isMuted = false;
   bool _isVideoOff = false;
@@ -205,6 +208,20 @@ class MeetingService extends ChangeNotifier {
 
 
   void _setupSocketListeners() {
+    // Reprise après une coupure réseau.
+    //
+    // À l'authentification, le serveur ne remet la socket que dans `user_<id>`
+    // et dans la room de son appareil : celle de la réunion meurt avec la
+    // socket tombée. Les relais média restent adressés à l'utilisateur et
+    // continuent de passer, ce qui donne le change — mais arrivées, départs,
+    // micro, caméra, messages et fin de réunion sont diffusés à la salle, et
+    // n'atteignaient plus personne. Pendant ce temps la grâce de quinze
+    // secondes armée côté serveur expirait, et les autres voyaient partir
+    // quelqu'un qui se croyait toujours là.
+    _apiClient.onSocketEvent(SocketEvents.authVerified, (_) {
+      _rejoinMeetingRoomIfNeeded();
+    });
+
     // Confirmation que la room a été rejointe (inclut snapshot muteStates)
     _apiClient.onSocketEvent(SocketEvents.meetingRoomJoined, (data) {
       debugPrint('[MeetingService] Room rejointe: $data');
@@ -371,6 +388,29 @@ class MeetingService extends ChangeNotifier {
         'states=$_remoteVideoStates',
       );
       notifyListeners();
+    });
+  }
+
+  /// Redemande sa place dans la salle après une reconnexion.
+  ///
+  /// Rejouer `meeting:join_room` est le geste attendu par le serveur : il
+  /// annule la grâce encore armée, ou reprend la place si elle a déjà expiré,
+  /// et prévient les autres par `meeting:user_joined` — ceux qui avaient déjà
+  /// retiré le partant refont alors leur lien avec lui.
+  void _rejoinMeetingRoomIfNeeded() {
+    final reunion = _currentMeeting;
+    final myId = _myId;
+    if (reunion == null || myId == null) return;
+    if (_status != MeetingStatus.connected && _status != MeetingStatus.joining) {
+      return;
+    }
+    debugPrint('[MeetingService] 🔄 socket revenu → rejoin réunion ${reunion.idMeeting}');
+    _apiClient.sendSocketEvent(SocketEvents.meetingJoinRoom, {
+      'meetingID': reunion.idMeeting,
+      'userID': int.tryParse(myId) ?? myId,
+      'userName': _participantRoster[myId] ?? '',
+      'isMuted': _isMuted,
+      'isVideoOff': _isVideoOff,
     });
   }
 
@@ -816,9 +856,7 @@ class MeetingService extends ChangeNotifier {
   Future<void> _createPeerAndOffer(String userId) async {
     final pc = await _createPeerConnection(userId);
 
-    _localStream?.getTracks().forEach((track) {
-      pc.addTrack(track, _localStream!);
-    });
+    _addLocalTracksOnce(pc, userId);
 
     final offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
@@ -831,6 +869,20 @@ class MeetingService extends ChangeNotifier {
     });
   }
 
+  /// Ajoute les pistes locales une seule fois par pair.
+  ///
+  /// `_createPeerConnection` rend la connexion existante quand il y en a une :
+  /// une renégociation — offre reçue d'un pair qui, lui, est reparti d'une
+  /// connexion neuve — repassait alors ici et rajoutait micro et caméra à des
+  /// émetteurs qui les portaient déjà. La réponse partait avec des `m=` en
+  /// double et la piste distante changeait d'index en cours de réunion.
+  void _addLocalTracksOnce(RTCPeerConnection pc, String userId) {
+    if (!_tracksAddedForPeer.add(userId)) return;
+    _localStream?.getTracks().forEach((track) {
+      pc.addTrack(track, _localStream!);
+    });
+  }
+
   Future<void> _handleOffer(String fromUserId, Map offer) async {
     final pc = await _createPeerConnection(fromUserId);
 
@@ -840,9 +892,7 @@ class MeetingService extends ChangeNotifier {
     _remoteDescSetForPeer.add(fromUserId);
     await _flushPendingIce(fromUserId);
 
-    _localStream?.getTracks().forEach((track) {
-      pc.addTrack(track, _localStream!);
-    });
+    _addLocalTracksOnce(pc, fromUserId);
 
     final answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
@@ -898,6 +948,7 @@ class MeetingService extends ChangeNotifier {
   void _removePeer(String userId) {
     _peerConnections[userId]?.close();
     _peerConnections.remove(userId);
+    _tracksAddedForPeer.remove(userId);
     _remoteStreams.remove(userId);
     _pendingIceByPeer.remove(userId);
     _remoteDescSetForPeer.remove(userId);
@@ -988,6 +1039,7 @@ class MeetingService extends ChangeNotifier {
     _remoteStreams.clear();
     _pendingIceByPeer.clear();
     _remoteDescSetForPeer.clear();
+    _tracksAddedForPeer.clear();
     _chatMessages.clear();
     _unreadChatCount = 0;
     _isMeetingChatOpen = false;

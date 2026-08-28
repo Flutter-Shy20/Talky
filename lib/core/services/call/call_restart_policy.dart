@@ -75,3 +75,31 @@ bool isStaleRejoinOffer({
   if (offerGeneration == null) return false;
   return offerGeneration < localGeneration;
 }
+
+/// Faut-il redemander sa place dans la salle de groupe après une reconnexion ?
+///
+/// À l'authentification, le serveur ne remet la socket que dans `user_<id>` et
+/// dans la room de son appareil. La salle de groupe, elle, meurt avec la socket
+/// tombée, et rien ne l'y remet — alors que la déconnexion, côté serveur, retire
+/// aussitôt le participant de la salle et annonce son départ aux autres.
+///
+/// Les relais média sont adressés à l'appareil : ils continuent de passer, ce
+/// qui donne le change. Mais tout ce qui est diffusé à la salle — arrivées,
+/// départs, micro, caméra, et jusqu'à la fin de l'appel — n'atteint plus
+/// personne. Le revenant reste sur un appel que rien ne viendra plus terminer,
+/// pendant que les autres l'ont déjà vu partir.
+///
+/// Les sessions à trois sont exclues : leurs participants ne rejoignent jamais
+/// `group_<roomId>`, tout leur est adressé par appareil.
+bool shouldRejoinGroupRoom({
+  required String? groupRoomId,
+  required String callStatusName,
+  required bool isConference,
+  bool isEndingCall = false,
+}) {
+  if (groupRoomId == null || groupRoomId.isEmpty) return false;
+  if (isConference || isEndingCall) return false;
+  return callStatusName == 'connected' ||
+      callStatusName == 'reconnecting' ||
+      callStatusName == 'joining';
+}
