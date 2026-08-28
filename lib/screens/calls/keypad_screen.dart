@@ -186,6 +186,10 @@ class _KeypadScreenState extends State<KeypadScreen> {
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final userData = await apiClient.getUserByPhone(_phoneDigits);
+      // La recherche part sur un numéro complet et l'utilisateur peut quitter
+      // le pavé avant sa réponse — les trois autres méthodes asynchrones du
+      // fichier posent déjà cette garde.
+      if (!mounted) return;
       setState(() {
         _foundUser = userData.isNotEmpty
             ? User.fromJson(userData[0] as Map<String, dynamic>)
@@ -193,15 +197,14 @@ class _KeypadScreenState extends State<KeypadScreen> {
         _isSearching = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _foundUser = null;
         _isSearching = false;
       });
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.userNotFound)),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.userNotFound)),
+      );
     }
   }
 
