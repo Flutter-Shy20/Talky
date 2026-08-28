@@ -574,6 +574,20 @@ extension CallSignaling on CallService {
       if (data is! Map) return;
       final participants = (data['participants'] as List?)?.map((e) => e.toString()).toList() ?? [];
       _groupParticipants = participants;
+      // Je viens d'entrer : les autres ne savent pas si mon micro est coupé.
+      //
+      // La branche conférence fait ce geste depuis toujours, dans le handler
+      // jumeau `call_conf_peers` ; celle du groupe ne l'a jamais fait. Les
+      // autres me plaçaient donc à leur roster avec les valeurs par défaut de
+      // `group_user_joined` — micro ouvert, caméra allumée — quel que soit mon
+      // état réel. Et l'oubli était invisible, puisque `group_participants` ne
+      // sortait jamais du serveur.
+      //
+      // C'est aussi ce qui rend la reprise après coupure honnête : au rejoin,
+      // les autres reconstruisent ma carte à partir de `group_user_joined`, et
+      // sans cette réaffirmation je leur apparaîtrais micro ouvert alors que je
+      // l'ai coupé pendant l'appel.
+      _broadcastMyMediaState();
       notify();
       // Pour les IDs sans entrée roster, on résout le nom/photo via l'API.
       for (final id in participants) {
