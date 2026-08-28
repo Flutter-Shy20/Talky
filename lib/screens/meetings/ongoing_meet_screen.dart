@@ -160,6 +160,13 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     for (final key in newKeys.difference(currentKeys)) {
       final renderer = RTCVideoRenderer();
       await renderer.initialize();
+      // Quitter l'écran pendant qu'un participant arrive : `dispose()` a déjà
+      // parcouru la table, et ce renderer-là y serait entré après — sa texture
+      // native n'aurait plus jamais été rendue.
+      if (!mounted) {
+        await renderer.dispose();
+        return;
+      }
       final stream = remoteStreams[key] as MediaStream?;
       renderer.srcObject = stream;
       // Rebuild quand la 1re trame / la taille change (reprise caméra),
