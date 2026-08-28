@@ -270,16 +270,19 @@ extension CallReconnect on CallService {
   /// sont sans effet : WebRTC ignore un candidat déjà connu.
   void _replayOutgoingIce() {
     if (_outgoingIceOutbox.isEmpty) return;
-    final generation = _webrtc.iceGeneration;
-    var sent = 0;
-    for (final entry in _outgoingIceOutbox) {
-      if (entry.generation != generation) continue;
-      if (_apiClient.sendSocketEvent(SocketEvents.iceCandidate, entry.payload)) {
-        sent += 1;
-      }
-    }
-    debugPrint('[CallService] 🧊 $sent candidat(s) ICE rejoué(s) au décrochage');
-    _outgoingIceOutbox.clear();
+    final r = replayOutgoingIce(
+      outbox: _outgoingIceOutbox,
+      generation: _webrtc.iceGeneration,
+      send: (payload) =>
+          _apiClient.sendSocketEvent(SocketEvents.iceCandidate, payload),
+    );
+    debugPrint(
+      '[CallService] 🧊 ${r.sent} candidat(s) ICE rejoué(s), '
+      '${r.remaining.length} en attente',
+    );
+    _outgoingIceOutbox
+      ..clear()
+      ..addAll(r.remaining);
   }
 
   /// La renégociation a abouti — côté signalisation seulement.

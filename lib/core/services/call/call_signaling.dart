@@ -431,6 +431,9 @@ extension CallSignaling on CallService {
       _flushPendingConfJoin();
       _flushPendingConfReady();
       _rejoinGroupRoomIfNeeded();
+      // Le socket est revenu : ce que le rejeu du décrochage n'avait pas pu
+      // émettre peut enfin partir.
+      _replayOutgoingIce();
     });
 
     _apiClient.onSocketEvent(SocketEvents.callResume, (data) async {
