@@ -96,7 +96,12 @@ object MessageNotificationHelper {
         } else {
             rawBody
         }
-        val buffer = appendBuffer(context, convId, senderName, displayBody, msgID)
+        // Le serveur a déjà assaini ces deux URLs (sanitizeAvatarUrl) : ce qui
+        // arrive ici est soit une URL https utilisable, soit une chaîne vide.
+        val senderAvatar = data["senderAvatar"]?.trim().orEmpty()
+        val groupAvatar = data["groupAvatar"]?.trim().orEmpty()
+
+        val buffer = appendBuffer(context, convId, senderName, displayBody, msgID, avatar = senderAvatar)
         val listSound = resolveListMessageSound(context, data["senderId"].orEmpty())
         val channelId = ensureMessageChannel(context, listSound)
         if (listSound?.customPath != null) {
@@ -111,6 +116,10 @@ object MessageNotificationHelper {
             "groupName" to groupName,
             "msgID" to (data["msgID"] ?: ""),
             "senderId" to (data["senderId"] ?: ""),
+            // Mémorisés pour que la réécriture après réponse rapide retrouve la
+            // photo du groupe : `appendOutgoing` ne reçoit aucune donnée FCM.
+            "senderAvatar" to senderAvatar,
+            "groupAvatar" to groupAvatar,
         )
         // Conservés pour qu'une réécriture après réponse rapide n'appauvrisse pas
         // les extras du PendingIntent de contenu.
@@ -125,8 +134,41 @@ object MessageNotificationHelper {
             buffer,
             openExtras,
             channelId = channelId,
+            groupAvatar = groupAvatar,
         )
         NotificationDedupHelper.markShown(context, msgID, eventId)
+
+        // La notification est déjà affichée. Si une photo manque au cache, on la
+        // télécharge en arrière-plan et on RÉÉCRIT la même notification —
+        // `alertOnce` empêche de re-sonner. Rien n'attend le réseau : sans
+        // connexion, l'utilisateur garde la notification postée à l'instant.
+        val avatars = listOf(senderAvatar, groupAvatar).filter { it.isNotEmpty() }
+        if (avatars.isNotEmpty() && AvatarCache.needsFetch(context, avatars)) {
+            val appContext = context.applicationContext
+            AvatarCache.prefetch(appContext, avatars) {
+                // Le buffer est RELU ici, jamais réutilisé depuis la capture :
+                // le téléchargement a pu durer le temps qu'un autre message
+                // arrive (on écraserait la ligne la plus récente) ou que
+                // l'utilisateur ouvre la conversation (on ressusciterait une
+                // notification qu'il vient de faire disparaître — buffer vidé
+                // par `cancelConversation`).
+                val fresh = readBuffer(appContext, convId)
+                if (fresh.isEmpty()) return@prefetch
+                postNotification(
+                    appContext,
+                    convId,
+                    isGroup,
+                    groupName,
+                    senderName,
+                    fresh.last().body,
+                    fresh,
+                    openExtras,
+                    alertOnce = true,
+                    channelId = channelId,
+                    groupAvatar = groupAvatar,
+                )
+            }
+        }
     }
 
     /**
@@ -147,6 +189,7 @@ object MessageNotificationHelper {
         senderName: String,
     ) {
         val buffer = appendBuffer(context, convId, LOCAL_USER_NAME, text, isOutgoing = true)
+        val openExtras = readOpenExtras(context, convId, isGroup, groupName, senderName)
         postNotification(
             context,
             convId,
@@ -155,8 +198,11 @@ object MessageNotificationHelper {
             senderName,
             text,
             buffer,
-            readOpenExtras(context, convId, isGroup, groupName, senderName),
+            openExtras,
             alertOnce = true,
+            // Sans cette relecture, répondre depuis la notification effaçait la
+            // photo du groupe : la réécriture repartait avec la valeur par défaut.
+            groupAvatar = openExtras["groupAvatar"].orEmpty(),
         )
     }
 
@@ -184,6 +230,7 @@ object MessageNotificationHelper {
         openExtras: Map<String, String> = emptyMap(),
         alertOnce: Boolean = false,
         channelId: String = CHANNEL_ID,
+        groupAvatar: String = "",
     ) {
         ensureChannel(context)
         val notifId = notificationIdForConversation(convId)
@@ -202,7 +249,12 @@ object MessageNotificationHelper {
             val person = if (entry.isOutgoing) {
                 null
             } else {
-                Person.Builder().setName(entry.sender).build()
+                Person.Builder()
+                    .setName(entry.sender)
+                    // Uniquement si la photo est DÉJÀ en cache : `icon` ne touche
+                    // pas au réseau, sinon on bloquerait le fil d'affichage.
+                    .apply { AvatarCache.icon(context, entry.avatar)?.let { setIcon(it) } }
+                    .build()
             }
             // File locale : anciennes lignes encore préfixées par le client.
             val line = if (isGroup && !entry.isOutgoing) {
@@ -244,6 +296,15 @@ object MessageNotificationHelper {
             .setContentTitle(title)
             .setContentText(latestLine)
             .setStyle(style)
+            // Grande icône réservée au groupe : le titre est alors le nom du
+            // groupe, la photo doit correspondre. En tête-à-tête, c'est le
+            // Person du MessagingStyle qui porte déjà le visage — y ajouter une
+            // grande icône ferait doublon.
+            .apply {
+                if (isGroup && groupAvatar.isNotEmpty()) {
+                    AvatarCache.bitmap(context, groupAvatar)?.let { setLargeIcon(it) }
+                }
+            }
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
@@ -435,6 +496,12 @@ object MessageNotificationHelper {
         val msgID: Int = 0,
         /** Ma propre réponse rapide : rendue sans Person, donc alignée à droite. */
         val isOutgoing: Boolean = false,
+        /**
+         * Photo de l'expéditeur de CETTE ligne. Portée par entrée et non par
+         * conversation : dans un groupe, chaque ligne du MessagingStyle a son
+         * propre auteur.
+         */
+        val avatar: String = "",
     )
 
     private fun appendBuffer(
@@ -444,6 +511,7 @@ object MessageNotificationHelper {
         body: String,
         msgID: Int = 0,
         isOutgoing: Boolean = false,
+        avatar: String = "",
     ): List<BufferEntry> {
         synchronized(bufferLock) {
             val list = readBufferUnlocked(context, convId).toMutableList()
@@ -451,7 +519,7 @@ object MessageNotificationHelper {
                 Log.d(TAG, "buffer skip duplicate msgID=$msgID conv=$convId")
                 return list
             }
-            list.add(BufferEntry(sender, body, System.currentTimeMillis(), msgID, isOutgoing))
+            list.add(BufferEntry(sender, body, System.currentTimeMillis(), msgID, isOutgoing, avatar))
             val deduped = dedupeBufferEntries(list)
             val trimmed = if (deduped.size > MAX_BUFFER) deduped.takeLast(MAX_BUFFER) else deduped
             persistBufferUnlocked(context, convId, trimmed)
@@ -548,12 +616,20 @@ object MessageNotificationHelper {
             o.put("ts", e.timestamp)
             if (e.msgID > 0) o.put("msgID", e.msgID)
             if (e.isOutgoing) o.put("out", true)
+            if (e.avatar.isNotEmpty()) o.put("avatar", e.avatar)
             arr.put(o)
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_BUFFER_PREFIX + convId, arr.toString())
             .commit()
+    }
+
+    /** Lecture verrouillée du buffer, pour les appelants hors `appendBuffer`. */
+    private fun readBuffer(context: Context, convId: Int): List<BufferEntry> {
+        synchronized(bufferLock) {
+            return readBufferUnlocked(context, convId)
+        }
     }
 
     private fun readBufferUnlocked(context: Context, convId: Int): List<BufferEntry> {
@@ -571,6 +647,9 @@ object MessageNotificationHelper {
                             timestamp = o.optLong("ts", System.currentTimeMillis()),
                             msgID = o.optInt("msgID", 0),
                             isOutgoing = o.optBoolean("out", false),
+                            // `optString` avec défaut : les entrées écrites par
+                            // une version antérieure repassent sans avatar.
+                            avatar = o.optString("avatar", ""),
                         ),
                     )
                 }
