@@ -9,7 +9,6 @@ import '../core/services/media_expiry_policy.dart';
 import '../core/services/video_thumbnail_service.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_dimens.dart';
-import '../l10n/app_localizations.dart';
 
 /// Aperçu image dans les bulles / grilles.
 ///
@@ -130,28 +129,18 @@ class ImageMessagePreview extends StatelessWidget {
   /// est DÉFINITIF. Une icône cassée laisse croire à un incident passager et
   /// invite à réessayer ; ici il n'y a plus rien à attendre, et le dire
   /// clairement vaut mieux qu'un carré vide.
+  /// Repli « média expiré » : une horloge, rien d'autre.
+  ///
+  /// Sert quand il n'y a même pas de vignette à flouter. Le libellé complet
+  /// appartient à l'alerte déclenchée par l'appui, jamais au fil : répété sur
+  /// chaque média ancien d'une conversation, il deviendrait du bruit.
   Widget _expiredBox(Color fallback, Color iconColor, BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     return ColoredBox(
       color: fallback,
       child: SizedBox(
         width: expandToFill ? double.infinity : 200,
         height: expandToFill ? double.infinity : 160,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.hourglass_disabled_outlined, size: 40, color: iconColor),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                l10n?.mediaExpired ?? 'Média expiré',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: iconColor),
-              ),
-            ),
-          ],
-        ),
+        child: Icon(Icons.history_toggle_off_rounded, size: 44, color: iconColor),
       ),
     );
   }

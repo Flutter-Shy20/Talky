@@ -6,6 +6,7 @@ import 'contact_payload.dart';
 import 'location_payload.dart';
 import 'media_album.dart';
 import '../theme/locale_controller.dart';
+import '../services/media_expiry_policy.dart';
 
 class ForwardResult {
   const ForwardResult({
@@ -39,10 +40,18 @@ bool canForwardMessage(LocalMessage message) {
     return ContactPayload.tryParse(message.content) != null;
   }
 
-  final url = message.mediaUrl;
-  if (url != null && url.isNotEmpty) return true;
+  // Une copie locale suffit toujours : elle sera renvoyée depuis l'appareil.
+  if (_localMediaPath(message) != null) return true;
 
-  return _localMediaPath(message) != null;
+  final url = message.mediaUrl;
+  if (url == null || url.isEmpty) return false;
+
+  // Un média expiré côté serveur ne DOIT pas être transférable, même si son
+  // adresse est toujours en base — le stockage partitionné ne l'efface jamais.
+  // Sans ce test, transférer produirait chez le destinataire un message
+  // pointant vers un fichier supprimé : il verrait « média non disponible »
+  // sans avoir jamais eu la moindre chance de l'ouvrir.
+  return !MediaExpiryPolicy.isExpired(url);
 }
 
 /// Indique si le transfert peut être délégué au batch serveur (médias déjà hébergés).

@@ -70,7 +70,16 @@
   "mediaSaveAgain": "Save again",
   "mediaSaveFailed": "Could not save this media",
   "mediaExpired": "Media expired",
-  "mediaExpiredHint": "This media is no longer available on the server",
+  "mediaExpiredAskSender": "Ask {name} to send it again",
+  "@mediaExpiredAskSender": {
+    "description": "Expired media alert: suggested action when the media came from someone else",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaExpiredResendYourself": "Send it again from your gallery if you still have it",
   "settingsCalls": "Calls",
   "settingsRingtone": "Call ringtone",
   "ringtoneScreenTitle": "Call ringtone",

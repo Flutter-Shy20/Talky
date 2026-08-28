@@ -2092,18 +2092,84 @@ extension _ChatActions on _ChatDetailScreenState {
   /// jours, cf. `mediaRetention.js`) : `mediaUrl` a été vidée, il n'y a donc
   /// plus rien à récupérer — contrairement à `_needsMediaDownload`, retenter
   /// un téléchargement ne peut pas aboutir.
+  /// « Ce média n'est plus récupérable » — la question que pose l'interface.
+  ///
+  /// Deux situations distinctes y répondent oui, et il a fallu les réunir : ce
+  /// prédicat ne testait que la PREMIÈRE, ce qui le rendait aveugle au
+  /// fonctionnement actuel du serveur.
+  ///
+  ///  1. `mediaUrl` est vide — l'adresse a été effacée en base. C'est le cas
+  ///     d'un média « vue unique » consommé, et celui des médias qu'avait vidés
+  ///     l'ancienne purge référentielle.
+  ///  2. L'adresse existe mais désigne une tranche de 24 h que le serveur a
+  ///     supprimée. Le stockage partitionné **ne vide jamais `mediaUrl`** — la
+  ///     conception a délibérément écarté un `UPDATE` de masse sur `message` —
+  ///     donc le premier test ne peut plus jamais être vrai pour ces médias-là.
+  ///     Sans ce second cas, vidéos, audios et fichiers restaient muets.
+  ///
+  /// L'ordre compte : une copie locale l'emporte sur tout le reste. Un média
+  /// déjà téléchargé reste ouvrable indéfiniment, même quand le serveur a
+  /// supprimé l'original — c'est la règle produit du chantier de rétention.
   bool _isExpiredMedia(LocalMessage msg) {
     if (msg.isViewOnce) return false;
     if (_hasLocal(msg)) return false;
-    if (msg.type != 1 && msg.type != 2 && msg.type != 4) return false;
+    if (msg.type != 1 && msg.type != 2 && msg.type != 3 && msg.type != 4) {
+      return false;
+    }
     final url = msg.mediaUrl;
-    return url == null || url.isEmpty;
+    if (url == null || url.isEmpty) return true;
+    return MediaExpiryPolicy.isExpired(url);
   }
 
-  void _showMediaExpiredSnackBar() {
+  /// Nom à citer dans l'alerte, ou `null` si le média vient de nous.
+  ///
+  /// Sur son propre média, « Demandez à X de vous le renvoyer » n'a aucun sens :
+  /// l'appelant bascule alors sur la formule qui s'adresse à l'utilisateur.
+  String? _expiredMediaSenderName(LocalMessage msg) {
+    if (msg.senderID == _myId) return null;
+    final nom = msg.senderNom?.trim();
+    if (nom != null && nom.isNotEmpty) return nom;
+    final pseudo = msg.senderPseudo?.trim();
+    if (pseudo != null && pseudo.isNotEmpty) return pseudo;
+    // En tête-à-tête, le titre de la conversation EST le correspondant.
+    if (!widget.isGroup) {
+      final titre = widget.userName.trim();
+      if (titre.isNotEmpty) return titre;
+    }
+    return null;
+  }
+
+  /// Alerte « ce média n'est plus là », avec ce qu'il reste à faire.
+  ///
+  /// Le constat seul — « Ce média n'est plus disponible » — se lit comme une
+  /// panne : l'utilisateur réessaie, change de réseau, s'interroge. La seconde
+  /// ligne ferme cette impasse en nommant la personne à solliciter. C'est le
+  /// parti de WhatsApp, et il vaut mieux qu'une explication du mécanisme :
+  /// l'utilisateur n'a pas besoin de savoir que le serveur garde trente jours,
+  /// il a besoin de savoir quoi faire maintenant.
+  void _showMediaExpiredSnackBar([LocalMessage? msg]) {
     if (!mounted) return;
+    final l10n = context.l10n;
+    final nom = msg == null ? null : _expiredMediaSenderName(msg);
+    final action = nom != null
+        ? l10n.mediaExpiredAskSender(nom)
+        : l10n.mediaExpiredResendYourself;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.mediaNoLongerAvailable)),
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.mediaNoLongerAvailable,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 2),
+            Text(action),
+          ],
+        ),
+      ),
     );
   }
 
@@ -2166,6 +2232,16 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
+  /// Pastille « média expiré », à la place exacte de l'icône de téléchargement.
+  ///
+  /// Une horloge, sans un mot. Elle occupe la même position et les mêmes
+  /// mesures que [_mediaDownloadBadge] : celui qui connaît la flèche comprend
+  /// qu'il se passe autre chose, sans qu'on ait à l'écrire.
+  ///
+  /// Le libellé complet appartient à l'alerte, déclenchée par l'appui — pas au
+  /// fil. Une conversation contenant dix médias anciens afficherait sinon dix
+  /// fois la même phrase, alors qu'une seule suffit, au moment où on la
+  /// demande.
   Widget _mediaExpiredBadge() {
     return Container(
       width: 44,
@@ -2198,7 +2274,7 @@ extension _ChatActions on _ChatDetailScreenState {
         ? null
         : items[initialIndex.clamp(0, items.length - 1)];
     if (target != null && _isExpiredMedia(target)) {
-      _showMediaExpiredSnackBar();
+      _showMediaExpiredSnackBar(target);
       return;
     }
     if (target != null && _needsMediaDownload(target)) {
@@ -2356,8 +2432,8 @@ extension _ChatActions on _ChatDetailScreenState {
             : null;
 
     if (path == null) {
-      if (msg.mediaUrl == null || msg.mediaUrl!.isEmpty) {
-        _showMediaExpiredSnackBar();
+      if (_isExpiredMedia(msg)) {
+        _showMediaExpiredSnackBar(msg);
         return;
       }
       if (_needsMediaDownload(msg)) {

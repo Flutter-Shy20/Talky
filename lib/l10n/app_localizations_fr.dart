@@ -226,8 +226,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mediaExpired => 'Média expiré';
 
   @override
-  String get mediaExpiredHint =>
-      'Ce média n’est plus disponible sur le serveur';
+  String mediaExpiredAskSender(String name) {
+    return 'Demandez à $name de vous le renvoyer';
+  }
+
+  @override
+  String get mediaExpiredResendYourself =>
+      'Renvoyez-le depuis votre galerie si vous l\'avez encore';
 
   @override
   String get settingsCalls => 'Appels';

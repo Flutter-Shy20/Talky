@@ -84,7 +84,16 @@
   "mediaSaveAgain": "Enregistrer à nouveau",
   "mediaSaveFailed": "Impossible d’enregistrer ce média",
   "mediaExpired": "Média expiré",
-  "mediaExpiredHint": "Ce média n’est plus disponible sur le serveur",
+  "mediaExpiredAskSender": "Demandez à {name} de vous le renvoyer",
+  "@mediaExpiredAskSender": {
+    "description": "Alerte média expiré : action proposée quand le média vient de quelqu'un d'autre",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaExpiredResendYourself": "Renvoyez-le depuis votre galerie si vous l'avez encore",
   "settingsCalls": "Appels",
   "settingsRingtone": "Sonnerie d'appel",
   "ringtoneScreenTitle": "Sonnerie d'appel",

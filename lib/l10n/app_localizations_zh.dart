@@ -223,7 +223,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mediaExpired => '媒体已过期';
 
   @override
-  String get mediaExpiredHint => '该媒体在服务器上已不再可用';
+  String mediaExpiredAskSender(String name) {
+    return '请让 $name 重新发送';
+  }
+
+  @override
+  String get mediaExpiredResendYourself => '如果还在相册中，请重新发送';
 
   @override
   String get settingsCalls => '通话';

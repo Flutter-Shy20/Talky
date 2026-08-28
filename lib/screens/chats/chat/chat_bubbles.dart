@@ -1781,7 +1781,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     return GestureDetector(
       onTap: () async {
         if (expired) {
-          _showMediaExpiredSnackBar();
+          _showMediaExpiredSnackBar(msg);
           return;
         }
         if (needsDl) {
@@ -1820,7 +1820,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     return GestureDetector(
       onTap: () async {
         if (expired) {
-          _showMediaExpiredSnackBar();
+          _showMediaExpiredSnackBar(msg);
           return;
         }
         if (needsDl) {

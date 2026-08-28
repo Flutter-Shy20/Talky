@@ -27,6 +27,7 @@ import '../../widgets/common/common.dart';
 import '../../widgets/video_message_preview.dart';
 import '../chats/forward_message_screen.dart';
 import '../chats/media_viewer_screen.dart';
+import '../../core/services/media_expiry_policy.dart';
 
 /// Miroir, pour l'avertissement de suppression uniquement, de
 /// `MEDIA_RETENTION_DAYS` côté serveur (`mediaRetentionPolicy.js`, défaut 30
@@ -1113,9 +1114,18 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
         ),
       );
     }
+    // Ni vignette, ni copie locale. Reste à distinguer deux absences que la
+    // même icône confondait : un aperçu simplement indisponible, et un média
+    // que le serveur a supprimé. L'horloge est le même signe que dans les
+    // bulles de conversation — l'appui ouvre le visionneur, qui l'explique.
+    final expire = item.localMediaPath == null &&
+        MediaExpiryPolicy.isExpired(item.mediaUrl);
     return Container(
       color: context.semantic.brandContainer,
-      child: Icon(Icons.image_outlined, color: context.colors.primary),
+      child: Icon(
+        expire ? Icons.history_toggle_off_rounded : Icons.image_outlined,
+        color: expire ? context.colors.onSurfaceVariant : context.colors.primary,
+      ),
     );
   }
 

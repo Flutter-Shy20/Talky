@@ -520,11 +520,17 @@ abstract class AppLocalizations {
   /// **'Média expiré'**
   String get mediaExpired;
 
-  /// No description provided for @mediaExpiredHint.
+  /// Alerte média expiré : action proposée quand le média vient de quelqu'un d'autre
   ///
   /// In fr, this message translates to:
-  /// **'Ce média n’est plus disponible sur le serveur'**
-  String get mediaExpiredHint;
+  /// **'Demandez à {name} de vous le renvoyer'**
+  String mediaExpiredAskSender(String name);
+
+  /// No description provided for @mediaExpiredResendYourself.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renvoyez-le depuis votre galerie si vous l\'avez encore'**
+  String get mediaExpiredResendYourself;
 
   /// No description provided for @settingsCalls.
   ///
