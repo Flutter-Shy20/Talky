@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, ChangeNotifier;
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'call/call_terminal_guards.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../screens/meetings/ongoing_meet_screen.dart';
 import '../../talky_api_client.dart';
@@ -293,7 +294,17 @@ class MeetingService extends ChangeNotifier {
     });
 
     // Réunion terminée par l'organisateur
-    _apiClient.onSocketEvent(SocketEvents.meetingEnded, (_) {
+    _apiClient.onSocketEvent(SocketEvents.meetingEnded, (data) {
+      final recu = data is Map ? data['meetingID'] : null;
+      if (!endsCurrentMeeting(
+        currentMeetingId: _currentMeeting?.idMeeting,
+        eventMeetingId: recu,
+        meetingStatusName: _status.name,
+      )) {
+        debugPrint('[MeetingService] 🛡 meeting:ended ignoré: reçu=$recu '
+            'courante=${_currentMeeting?.idMeeting} status=$_status');
+        return;
+      }
       _terminateMeeting(emitLeave: false);
     });
 
@@ -1043,9 +1054,21 @@ class MeetingService extends ChangeNotifier {
     _chatMessages.clear();
     _unreadChatCount = 0;
     _isMeetingChatOpen = false;
+    // Arrêter les pistes avant de disposer le flux : `dispose()` seul rend le
+    // flux, pas la caméra ni le micro, qui restaient capturés après la réunion.
+    // Le motif correct est celui de `releaseLocalMediaIfNotJoined` ci-dessus.
+    final pistes = _localStream?.getTracks() ?? const [];
+    for (final t in pistes) {
+      try {
+        await t.stop();
+      } catch (e) {
+        debugPrint('[MeetingService] arrêt de piste échoué: $e');
+      }
+    }
     await _localStream?.dispose();
     _localStream = null;
     _durationTimer?.cancel();
+    _durationTimer = null;
     _meetingDuration = 0;
     _currentMeeting = null;
     _participantRoster.clear();

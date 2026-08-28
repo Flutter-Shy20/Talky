@@ -143,3 +143,27 @@ bool shouldAdoptServerCallId({
   if (serverCallId == null || serverCallId.trim().isEmpty) return false;
   return serverCallId != currentCallId;
 }
+
+/// `meeting:ended` : ne termine que la réunion qu'il désigne.
+///
+/// Le handler ne lisait pas son payload et raccrochait quel que soit le
+/// statut. Même famille que `group_call_ended` avant sa garde : un événement
+/// tardif — une réunion précédente soldée pendant qu'on vient d'en rejoindre
+/// une autre — détruisait le média de celle en cours.
+///
+/// Un identifiant absent vaut acceptation, comme partout ailleurs ici : le
+/// serveur en porte un aujourd'hui, mais une instance plus ancienne peut ne
+/// pas le faire.
+bool endsCurrentMeeting({
+  required Object? currentMeetingId,
+  Object? eventMeetingId,
+  required String meetingStatusName,
+}) {
+  if (currentMeetingId == null) return false;
+  if (meetingStatusName == 'idle' || meetingStatusName == 'ended') return false;
+  final attendu = currentMeetingId.toString();
+  if (attendu.isEmpty) return false;
+  final recu = eventMeetingId?.toString();
+  if (recu == null || recu.isEmpty) return true;
+  return recu == attendu;
+}

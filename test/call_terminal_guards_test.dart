@@ -225,4 +225,75 @@ void main() {
       expect(resolveOutgoingCaller(serverRole: 'peer', current: true), isTrue);
     });
   });
+
+  group('meeting:ended ne solde que sa propre réunion', () {
+    test('la réunion en cours est bien terminée', () {
+      expect(
+        endsCurrentMeeting(
+          currentMeetingId: 42,
+          eventMeetingId: 42,
+          meetingStatusName: 'connected',
+        ),
+        isTrue,
+      );
+    });
+
+    test('les identifiants se comparent en chaîne', () {
+      // Le serveur renvoie tantôt un nombre, tantôt sa chaîne selon le chemin.
+      expect(
+        endsCurrentMeeting(
+          currentMeetingId: 42,
+          eventMeetingId: '42',
+          meetingStatusName: 'connected',
+        ),
+        isTrue,
+      );
+    });
+
+    test('une réunion précédente ne détruit pas celle en cours', () {
+      expect(
+        endsCurrentMeeting(
+          currentMeetingId: 42,
+          eventMeetingId: 41,
+          meetingStatusName: 'connected',
+        ),
+        isFalse,
+      );
+    });
+
+    test('sans identifiant, on accepte — comportement historique', () {
+      expect(
+        endsCurrentMeeting(
+          currentMeetingId: 42,
+          eventMeetingId: null,
+          meetingStatusName: 'connected',
+        ),
+        isTrue,
+      );
+    });
+
+    test('hors réunion, rien à terminer', () {
+      expect(
+        endsCurrentMeeting(
+          currentMeetingId: null,
+          eventMeetingId: 42,
+          meetingStatusName: 'connected',
+        ),
+        isFalse,
+      );
+    });
+
+    for (final statut in ['idle', 'ended']) {
+      test('$statut : plus rien à solder', () {
+        expect(
+          endsCurrentMeeting(
+            currentMeetingId: 42,
+            eventMeetingId: 42,
+            meetingStatusName: statut,
+          ),
+          isFalse,
+        );
+      });
+    }
+  });
 }
