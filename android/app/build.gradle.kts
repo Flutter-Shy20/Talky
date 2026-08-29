@@ -69,6 +69,11 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-messaging")
     implementation("androidx.core:core-ktx:1.15.0")
+    // Sonde de santé du magasin chiffré au démarrage (SecureStorageRepair).
+    // Même version que celle embarquée par flutter_secure_storage, qui la
+    // déclare en `implementation` : elle n'est donc pas sur notre classpath de
+    // compilation sans cette ligne.
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     // Tests JVM purs (aucun impact APK). `org.json:json` fournit la vraie
     // implémentation à la place des stubs android.jar, qui lèvent sinon
     // « not mocked » sur JSONArray/JSONObject.

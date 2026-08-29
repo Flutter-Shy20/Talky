@@ -20,3 +20,13 @@
 # WebRTC + CallKit
 -keep class org.webrtc.** { *; }
 -keep class com.hiennv.flutter_callkit_incoming.** { *; }
+
+# Tink / androidx.security-crypto (EncryptedSharedPreferences de
+# flutter_secure_storage et sonde SecureStorageRepair). Tink instancie ses
+# gestionnaires de clés par réflexion sur des classes protobuf générées : R8 les
+# élague sinon, et l'initialisation échoue en release uniquement — l'app
+# retombe alors sur le chiffrement hérité et toute lecture lève BAD_DECRYPT.
+-keep class com.google.crypto.tink.** { *; }
+-keep class androidx.security.crypto.** { *; }
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**

@@ -34,6 +34,13 @@ class TalkyApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // AVANT tout démarrage de Flutter : le plugin flutter_secure_storage
+        // bascule définitivement sur son chiffrement hérité si l'ouverture du
+        // magasin chiffré échoue au premier accès, et toute lecture lève alors
+        // BadPaddingException. Voir SecureStorageRepair.
+        if (SecureStorageRepair.verifyAndRepair(this)) {
+            Log.w(TAG, "magasin sécurisé réparé — la session précédente est perdue")
+        }
         callkitPrefs = getSharedPreferences(CALLKIT_PREFS, MODE_PRIVATE)
         activeCallsSnapshot = readActiveCalls()
         callkitPrefs.registerOnSharedPreferenceChangeListener(activeCallsListener)

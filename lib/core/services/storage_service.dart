@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../talky_models.dart';
 import 'call/pending_call_reject_store.dart';
 import 'notifications/notification_native_credentials_store.dart';
+import 'secure_storage_guard.dart';
 
 /// Stockage chiffré session (tokens + profil). Instance unique pour garantir
 /// que AuthProvider et TalkyApiClient lisent/écrivent le même fichier.
@@ -29,9 +30,7 @@ class StorageService {
   static const String _deviceIdKey = 'talky_device_id';
 
   static const FlutterSecureStorage _defaultSecureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
+    aOptions: kSecureStorageAndroidOptions,
   );
 
   final FlutterSecureStorage _secureStorage;
@@ -42,8 +41,16 @@ class StorageService {
     required String accessToken,
     required String refreshToken,
   }) async {
-    await _secureStorage.write(key: _accessTokenKey, value: accessToken);
-    await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
+    await SecureStorageGuard.writeString(
+      _secureStorage,
+      _accessTokenKey,
+      accessToken,
+    );
+    await SecureStorageGuard.writeString(
+      _secureStorage,
+      _refreshTokenKey,
+      refreshToken,
+    );
     await PendingCallRejectStore.syncNativeCredentials(
       accessToken,
       refreshToken: refreshToken,
@@ -53,15 +60,21 @@ class StorageService {
     await NotificationNativeCredentialsStore.purgeLegacyKeys();
   }
 
-  Future<String?> getAccessToken() => _secureStorage.read(key: _accessTokenKey);
-  Future<String?> getRefreshToken() => _secureStorage.read(key: _refreshTokenKey);
+  Future<String?> getAccessToken() =>
+      SecureStorageGuard.readString(_secureStorage, _accessTokenKey);
+  Future<String?> getRefreshToken() =>
+      SecureStorageGuard.readString(_secureStorage, _refreshTokenKey);
 
   Future<void> saveUser(User user) async {
-    await _secureStorage.write(key: _userKey, value: jsonEncode(user.toJson()));
+    await SecureStorageGuard.writeString(
+      _secureStorage,
+      _userKey,
+      jsonEncode(user.toJson()),
+    );
   }
 
   Future<User?> getUser() async {
-    final userStr = await _secureStorage.read(key: _userKey);
+    final userStr = await SecureStorageGuard.readString(_secureStorage, _userKey);
     if (userStr == null) return null;
     try {
       return User.fromJson(jsonDecode(userStr) as Map<String, dynamic>);
@@ -74,9 +87,9 @@ class StorageService {
   }
 
   Future<void> clearAll() async {
-    await _secureStorage.delete(key: _accessTokenKey);
-    await _secureStorage.delete(key: _refreshTokenKey);
-    await _secureStorage.delete(key: _userKey);
+    await SecureStorageGuard.deleteKey(_secureStorage, _accessTokenKey);
+    await SecureStorageGuard.deleteKey(_secureStorage, _refreshTokenKey);
+    await SecureStorageGuard.deleteKey(_secureStorage, _userKey);
     await PendingCallRejectStore.clearNativeCredentials();
     await NotificationNativeCredentialsStore.purgeLegacyKeys();
   }
@@ -85,10 +98,10 @@ class StorageService {
 
   /// Identifiant stable de l'installation (multi-device FCM / socket auth).
   Future<String> getOrCreateDeviceId() async {
-    var id = await _secureStorage.read(key: _deviceIdKey);
+    var id = await SecureStorageGuard.readString(_secureStorage, _deviceIdKey);
     if (id != null && id.isNotEmpty) return id;
     id = _generateDeviceId();
-    await _secureStorage.write(key: _deviceIdKey, value: id);
+    await SecureStorageGuard.writeString(_secureStorage, _deviceIdKey, id);
     return id;
   }
 
