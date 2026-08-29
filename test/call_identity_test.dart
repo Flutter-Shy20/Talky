@@ -135,4 +135,42 @@ void main() {
       );
     });
   });
+
+  group('sous quel identifiant l\'instantané sortant est enregistré', () {
+    test('celui de CallKit, pas celui du serveur', () {
+      // Les deux lecteurs de l\'instantané reçoivent l\'identifiant que porte
+      // l\'entrée CallKit : c\'est le seul qui survive à un kill.
+      expect(
+        outgoingSnapshotIdentity(callKitCallId: kit, currentCallId: serveur),
+        kit,
+      );
+    });
+
+    test('avant le décrochage les deux sont le même', () {
+      expect(
+        outgoingSnapshotIdentity(callKitCallId: kit, currentCallId: kit),
+        kit,
+      );
+    });
+
+    test('sans session CallKit, on retombe sur l\'identifiant courant', () {
+      // Le web n\'ouvre pas de session CallKit.
+      expect(
+        outgoingSnapshotIdentity(callKitCallId: null, currentCallId: serveur),
+        serveur,
+      );
+      expect(
+        outgoingSnapshotIdentity(callKitCallId: '  ', currentCallId: serveur),
+        serveur,
+      );
+    });
+
+    test('sans rien, rien à enregistrer', () {
+      expect(outgoingSnapshotIdentity(), isNull);
+      expect(
+        outgoingSnapshotIdentity(callKitCallId: '', currentCallId: ''),
+        isNull,
+      );
+    });
+  });
 }

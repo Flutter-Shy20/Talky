@@ -167,3 +167,24 @@ bool endsCurrentMeeting({
   if (recu == null || recu.isEmpty) return true;
   return recu == attendu;
 }
+
+
+/// Sous quel identifiant enregistrer l'instantané d'un appel sortant.
+///
+/// C'est celui de CallKit, et pas l'autre. Ses deux lecteurs —
+/// `shouldPreserveOutgoingCallKit` et `restoreOutgoingFromColdStart` — reçoivent
+/// l'identifiant que porte l'entrée CallKit au démarrage à froid, et le
+/// comparent à `clientCallId`.
+///
+/// Depuis que `_currentCallId` adopte l'identifiant serveur au décrochage,
+/// enregistrer `_currentCallId` y écrivait l'identifiant serveur : plus aucune
+/// correspondance possible, et un appel vivant voyait sa session CallKit
+/// démontée au redémarrage. L'identifiant serveur a son propre champ.
+String? outgoingSnapshotIdentity({
+  String? callKitCallId,
+  String? currentCallId,
+}) {
+  final courant = currentCallId?.trim();
+  if (courant != null && courant.isNotEmpty) return courant;
+  return null;
+}

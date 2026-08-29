@@ -45,7 +45,13 @@ extension CallOutgoingRestore on CallService {
     required String phase,
     String? serverCallId,
   }) async {
-    final callId = _currentCallId;
+    // L'instantané s'indexe sur l'identifiant de CallKit : c'est lui que la
+    // restauration après kill retrouvera. `_currentCallId` porte celui du
+    // serveur depuis le décrochage, et il a son propre champ.
+    final callId = outgoingSnapshotIdentity(
+      callKitCallId: _callKitCallId,
+      currentCallId: _currentCallId,
+    );
     final remoteId = _remoteUserId;
     if (callId == null || callId.isEmpty || remoteId == null) return;
 
