@@ -36,14 +36,24 @@ extension CallOneToOne on CallService {
     notify();
 
     try {
-      final iceServers = await _apiClient.fetchIceServers(force: true);
-      await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
+      final type = isVideo ? CallType.video : CallType.audio;
       _webrtc.onLocalStream  = (_) { notify(); };
       _webrtc.onRemoteStream = (_) { notify(); };
+
+      // Capture et serveurs ICE sont indépendants : les lancer de front met le
+      // micro en route sans attendre le réseau. Voir `answerCall` pour le
+      // détail du raisonnement — c'est là que le décalage se voyait le plus.
+      final mediaFuture = _webrtc.acquireLocalMedia(type);
+      final iceFuture = _apiClient.fetchIceServers();
+
+      await mediaFuture;
+      notify();
 
       // Sortie audio : un casque déjà connecté l'emporte, sinon haut-parleur
       // en vidéo et écouteur en audio, comme avant.
       await _initAudioRoute(isVideo: isVideo);
+
+      await _webrtc.buildPeerConnection(type, iceServers: await iceFuture);
 
       // ICE candidates envoyés au destinataire. Ils sont aussi conservés :
       // tant que le téléphone d'en face sonne, le serveur n'a pas d'appareil
@@ -182,28 +192,51 @@ extension CallOneToOne on CallService {
 
     await _ringtone.stop();
     _errorMessage = null;
-    final socketReady = await _apiClient.ensureSocketReady();
-    if (!socketReady) {
-      debugPrint('[CallService] ** Socket non prêt après 5s (connected=${_apiClient.isSocketConnected})');
-      _errorMessage = LocaleController.instance.l10n.socketNotConnected;
-      // Teardown complet (au lieu d'un simple idle) : ferme CallKit, coupe la
-      // sonnerie et réinitialise l'état pour ne pas laisser d'écran/état fantôme.
-      // Le nettoyage côté appelant est assuré par le timeout serveur (no-answer).
-      await _terminateCall();
-      return;
-    }
-    debugPrint('[CallService] !! Socket connecté, envoi answer');
 
     final offer = _pendingOffer!;
     _pendingOffer = null;
 
     try {
-      final iceServers = await _apiClient.fetchIceServers(force: true);
-      await _webrtc.init(_isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
+      final type = _isVideo ? CallType.video : CallType.audio;
       _webrtc.onLocalStream  = (_) { notify(); };
       _webrtc.onRemoteStream = (_) { notify(); };
 
+      // Le micro d'abord, le réseau ensuite.
+      //
+      // Ces trois attentes sont indépendantes, et elles étaient enchaînées :
+      // l'attente du socket (jusqu'à 5 s au réveil par push), puis un
+      // aller-retour HTTPS vers `/turn/credentials`, puis seulement
+      // `getUserMedia`. La capture ne dépend pourtant ni du socket ni des
+      // serveurs ICE — c'est ce qui faisait s'allumer le micro plusieurs
+      // secondes après le décrochage, là où WhatsApp paraît instantané parce
+      // que rien n'est placé entre le tap et l'ouverture du périphérique.
+      //
+      // `fetchIceServers` ne lève jamais : elle retombe sur les STUN publics
+      // en interne. `ensureSocketReady` est neutralisée par prudence — si
+      // l'acquisition média échoue la première, plus personne ne l'attendrait.
+      final mediaFuture = _webrtc.acquireLocalMedia(type);
+      final iceFuture = _apiClient.fetchIceServers();
+      final socketFuture =
+          _apiClient.ensureSocketReady().catchError((_) => false);
+
+      await mediaFuture;
+      notify();
+
       await _initAudioRoute(isVideo: _isVideo);
+
+      if (!await socketFuture) {
+        debugPrint('[CallService] ** Socket non prêt après 5s (connected=${_apiClient.isSocketConnected})');
+        _errorMessage = LocaleController.instance.l10n.socketNotConnected;
+        // Teardown complet (au lieu d'un simple idle) : ferme CallKit, coupe la
+        // sonnerie et réinitialise l'état pour ne pas laisser d'écran/état
+        // fantôme — et libère la capture qu'on vient tout juste d'ouvrir.
+        // Le nettoyage côté appelant est assuré par le timeout serveur.
+        await _terminateCall();
+        return;
+      }
+      debugPrint('[CallService] !! Socket connecté, envoi answer');
+
+      await _webrtc.buildPeerConnection(type, iceServers: await iceFuture);
 
       _webrtc.onIceCandidate = (candidate) {
         _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {

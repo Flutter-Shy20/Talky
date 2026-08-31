@@ -85,6 +85,19 @@ extension CallSignaling on CallService {
       _status = CallStatus.incoming;
       debugPrint('[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
 
+      // Préchauffage : la sonnerie dure plusieurs secondes, autant s'en servir.
+      //
+      // Ni l'un ni l'autre ne touche à un périphérique — aucun témoin de
+      // confidentialité ne s'allume ici, la capture reste pour le décrochage.
+      // On ne fait que mettre en cache ce que `answerCall` attendait jusqu'ici
+      // en série après le tap : les identifiants TURN (un aller-retour HTTPS)
+      // et l'accord sur micro/caméra (une boîte de dialogue système au tout
+      // premier appel). Les deux relectures y seront alors immédiates.
+      unawaited(_apiClient.fetchIceServers());
+      unawaited(
+        CallPermissionsHelper.ensureCallMediaPermissions(isVideo: _isVideo),
+      );
+
       _ensureRemoteIdentityResolved();
 
       // Owner UI avant notify : FG → Flutter, BG → CallKit (pas IncomingCallScreen).

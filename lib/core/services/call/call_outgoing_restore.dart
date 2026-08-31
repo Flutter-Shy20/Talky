@@ -354,7 +354,7 @@ extension CallOutgoingRestore on CallService {
     required bool isVideo,
     bool asOutgoingCaller = true,
   }) async {
-    final iceServers = await _apiClient.fetchIceServers(force: true);
+    final iceServers = await _apiClient.fetchIceServers();
     await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
     _webrtc.onLocalStream = (_) { notify(); };
     _webrtc.onRemoteStream = (_) { notify(); };
