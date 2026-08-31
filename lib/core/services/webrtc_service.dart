@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'call/call_ice_constraints.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -379,7 +380,7 @@ class WebRTCService {
     debugPrint('[WebRTC]  Création offre SDP iceRestart=$iceRestart...');
     try {
       final offer = iceRestart
-          ? await _peerConnection!.createOffer({'iceRestart': true})
+          ? await _peerConnection!.createOffer(iceRestartOfferConstraints)
           : await _peerConnection!.createOffer();
       debugPrint('[WebRTC] !! Offre créée: type=${offer.type}, sdp_length=${offer.sdp?.length}');
       

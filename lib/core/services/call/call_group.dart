@@ -267,7 +267,7 @@ extension CallGroup on CallService {
         : (_groupPeerIceGeneration[userId] ??= 0);
 
     final offer = iceRestart
-        ? await pc.createOffer({'iceRestart': true})
+        ? await pc.createOffer(iceRestartOfferConstraints)
         : await pc.createOffer();
     await pc.setLocalDescription(offer);
 

@@ -32,6 +32,7 @@ import 'call/call_restart_roles.dart';
 import 'call/call_terminal_guards.dart';
 import 'call/call_group_media_states.dart';
 import 'call/call_ice_outbox.dart';
+import 'call/call_ice_constraints.dart';
 import 'call/incoming_presentation.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
