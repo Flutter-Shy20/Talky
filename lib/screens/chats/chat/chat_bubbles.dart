@@ -918,10 +918,6 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final status = call.status;
     final answered = callWasAnswered(status);
     final rejected = status == 2;
-    // `missed` ne retenait que le statut 0 : les appels soldés par le timeout
-    // sans réponse, qui portent le statut 3, tombaient dans le libellé de repli.
-    // Les deux statuts disent la même chose — voir callWasNotAnswered.
-    final missed = !answered && !rejected;
     final isVideo = call.type == 1;
     final colors = context.colors;
     final titleColor = outgoing ? colors.onPrimaryContainer : colors.onSurface;
@@ -941,6 +937,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final label = isVideo
         ? (outgoing ? l10n.videoCallOutgoing : l10n.videoCallIncoming)
         : (outgoing ? l10n.voiceCallOutgoing : l10n.voiceCallIncoming);
+    // Le « sans réponse » ne se lisait que sur le statut 0 : les appels soldés
+    // par le timeout, qui portent le statut 3, tombaient dans un libellé de
+    // repli. Les deux statuts disent la même chose — voir callWasNotAnswered.
     final statusLabel = answered
         ? l10n.answered
         : (rejected ? l10n.rejected : l10n.noAnswer2);
