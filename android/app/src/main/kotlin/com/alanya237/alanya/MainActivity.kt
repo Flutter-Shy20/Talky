@@ -2,6 +2,7 @@ package com.alanya237.alanya
 
 import android.content.ContentValues
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -139,6 +140,7 @@ class MainActivity : FlutterFragmentActivity() {
         CallNativeBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         CallMediaBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         ProximityBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
+        PipBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         TripLocationBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         SecureStorageBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
 
@@ -167,7 +169,27 @@ class MainActivity : FlutterFragmentActivity() {
      */
     override fun onDestroy() {
         ProximityBridge.disable()
+        PipBridge.detach()
         super.onDestroy()
+    }
+
+    /**
+     * Dernier instant où Android accepte d'ouvrir un Picture-in-Picture :
+     * passé `onPause`, la demande est refusée.
+     */
+    override fun onUserLeaveHint() {
+        PipBridge.onUserLeaveHint(this)
+        super.onUserLeaveHint()
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        // Flutter ne peut pas le déduire du cycle de vie : en PiP l'activité est
+        // en pause tout en restant visible.
+        PipBridge.notifyModeChanged(isInPictureInPictureMode)
     }
 
     /**

@@ -13,8 +13,10 @@ import '../../core/services/voice_playback_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/call/system_pip.dart';
 import '../../screens/chats/chat_detail_screen.dart';
 import 'session_video_window.dart';
+import 'system_pip_layout.dart';
 
 /// Hauteur du bandeau compact (hors status bar / encoche).
 const double kActiveSessionTopBarHeight = 44.0;
@@ -30,6 +32,22 @@ class ActiveSessionChrome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: SystemPip.instance,
+      builder: (context, _) {
+        // En vignette système, c'est l'activité entière qui est réduite : tout
+        // ce qui n'est pas l'image du correspondant devient du bruit dans un
+        // rectangle de quelques centimètres. On remplace donc l'application,
+        // et non on superpose.
+        if (SystemPip.instance.isInPipMode) {
+          return const SystemPipLayout();
+        }
+        return _buildChrome(context);
+      },
+    );
+  }
+
+  Widget _buildChrome(BuildContext context) {
     return Consumer3<CallService, MeetingService, VoicePlaybackService>(
       builder: (context, callService, meetingService, voiceService, _) {
         final overlays = activeSessionOverlays(

@@ -40,6 +40,10 @@ extension CallSession on CallService {
     );
 
     await _bindSessionRenderers();
+    // L'éligibilité au PiP se déclare à l'ouverture, pas au moment de sortir :
+    // Android n'accepte l'entrée que depuis `onUserLeaveHint`, quand il est
+    // trop tard pour poser la question.
+    await SystemPip.instance.setEligible(isVideo);
   }
 
   /// Ouvre les rendus vidéo pour la durée de la session.
@@ -70,6 +74,7 @@ extension CallSession on CallService {
     if (kIsWeb) return;
     // Avant le garde : la fenêtre flottante disparaît avec la session, et rien
     // ne doit rester branché sur des rendus en cours de libération.
+    await SystemPip.instance.reset();
     await SessionVideoRenderers.instance.release();
     await CallSessionGuard.instance.release();
   }
