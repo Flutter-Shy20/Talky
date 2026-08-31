@@ -6,6 +6,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'audio_helper.dart';
+import 'call/call_audio_routes.dart';
 import 'callkit_service.dart';
 
 enum SessionMode { audio, video }
@@ -21,11 +22,21 @@ class CallSessionGuard with WidgetsBindingObserver {
 
   static const _callMediaChannel =
       MethodChannel('com.alanya237.alanya/call_media');
+  static const _proximityChannel =
+      MethodChannel('com.alanya237.alanya/proximity');
 
   int _refCount = 0;
   SessionMode? _mode;
   String? _callId;
   bool _wakelockEnabled = false;
+  bool _proximityEnabled = false;
+
+  /// Dernière sortie audio connue, tenue à jour même hors session.
+  ///
+  /// `_initAudioRoute` choisit la sortie AVANT que la session ne soit acquise :
+  /// sans mémoire, la première route serait perdue et l'écran ne s'éteindrait
+  /// qu'au premier changement manuel.
+  CallAudioRoute _route = CallAudioRoute.earpiece;
   bool _videoPausedByLifecycle = false;
   bool _audioTrackEnded = false;
   bool _mediaFgsStarted = false;
@@ -81,11 +92,7 @@ class CallSessionGuard with WidgetsBindingObserver {
       );
     }
 
-    if (mode == SessionMode.video) {
-      await WakelockPlus.enable();
-      _wakelockEnabled = true;
-      debugPrint('[CallSessionGuard] Wakelock activé (vidéo)');
-    }
+    await _applyScreenPolicy();
 
     _watchAudioTrack();
 
@@ -105,10 +112,9 @@ class CallSessionGuard with WidgetsBindingObserver {
 
     WidgetsBinding.instance.removeObserver(this);
 
-    if (_wakelockEnabled) {
-      await WakelockPlus.disable();
-      _wakelockEnabled = false;
-    }
+    // Avant tout le reste : un écran resté noir parce que le verrou de
+    // proximité a survécu à l'appel ne se distingue pas d'un téléphone en panne.
+    await _applyScreenPolicy();
 
     await _stopMediaForegroundService();
 
@@ -234,6 +240,75 @@ class CallSessionGuard with WidgetsBindingObserver {
     tracks.first.enabled = true;
     _videoPausedByLifecycle = false;
     debugPrint('[CallSessionGuard] Vidéo locale reprise');
+  }
+
+  /// Signale la sortie audio courante — et donc si le téléphone est à l'oreille.
+  ///
+  /// Appelée par `setAudioRoute`, l'entonnoir unique par lequel passent le choix
+  /// d'ouverture, le bouton de la barre de contrôle et les branchements de
+  /// casque détectés en cours d'appel. La politique d'écran suit ainsi la sortie
+  /// sans que rien d'autre n'ait à y penser.
+  Future<void> updateAudioRoute(CallAudioRoute route) async {
+    if (kIsWeb) return;
+    if (_route == route) return;
+    _route = route;
+    await _applyScreenPolicy();
+  }
+
+  /// Applique les deux règles d'écran à partir de l'état courant.
+  ///
+  /// Un seul endroit décide, et il est rejoué à chaque changement : acquisition,
+  /// changement de sortie audio, libération. Les règles elles-mêmes sont pures
+  /// et testées — voir `proximityBlankingApplies` et `screenWakelockApplies`.
+  Future<void> _applyScreenPolicy() async {
+    final callActive = _refCount > 0;
+
+    final wantProximity = proximityBlankingApplies(
+      route: _route,
+      callActive: callActive,
+    );
+    if (wantProximity != _proximityEnabled) {
+      await _setProximityBlanking(wantProximity);
+    }
+
+    final wantWakelock = screenWakelockApplies(
+      isVideo: _mode == SessionMode.video,
+      route: _route,
+      callActive: callActive,
+    );
+    if (wantWakelock != _wakelockEnabled) {
+      try {
+        wantWakelock
+            ? await WakelockPlus.enable()
+            : await WakelockPlus.disable();
+        _wakelockEnabled = wantWakelock;
+        debugPrint('[CallSessionGuard] Wakelock=$wantWakelock');
+      } catch (e) {
+        debugPrint('[CallSessionGuard] ** Wakelock: $e');
+      }
+    }
+  }
+
+  Future<void> _setProximityBlanking(bool enabled) async {
+    try {
+      if (enabled) {
+        // Le natif répond false quand l'appareil n'a pas de capteur : ne pas
+        // retenir un état actif qu'aucun verrou ne soutient, sinon la remise à
+        // zéro suivante serait sautée.
+        final ok = await _proximityChannel.invokeMethod<bool>('enable');
+        _proximityEnabled = ok ?? false;
+      } else {
+        await _proximityChannel.invokeMethod('disable');
+        _proximityEnabled = false;
+      }
+      debugPrint('[CallSessionGuard] Proximité=$_proximityEnabled');
+    } on MissingPluginException {
+      // Web, tests, ou build sans le pont natif : l'appel continue sans.
+      _proximityEnabled = false;
+    } catch (e) {
+      debugPrint('[CallSessionGuard] ** Proximité: $e');
+      _proximityEnabled = false;
+    }
   }
 
   bool get _isAndroid =>

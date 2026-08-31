@@ -81,6 +81,11 @@ extension CallControls on CallService {
     _audioRoute = route;
     _isSpeakerOn = speakerphoneForRoute(route);
     await audio.AudioHelper.applyAudioRoute(route);
+    // La sortie audio dit où est le téléphone : sur l'écouteur interne, il est
+    // contre l'oreille et l'écran doit s'éteindre à l'approche. Ce point de
+    // passage est unique — choix d'ouverture, bouton, casque branché en cours
+    // d'appel y aboutissent tous —, donc c'est le seul endroit à prévenir.
+    await CallSessionGuard.instance.updateAudioRoute(route);
     debugPrint('[CallService] 🔊 Sortie audio: ${route.name}');
     notify();
   }

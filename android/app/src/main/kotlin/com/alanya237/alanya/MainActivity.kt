@@ -138,6 +138,7 @@ class MainActivity : FlutterFragmentActivity() {
 
         CallNativeBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         CallMediaBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
+        ProximityBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         TripLocationBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         SecureStorageBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
 
@@ -156,6 +157,17 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Filet pour le verrou de proximité : un écran qui reste noir parce qu'un
+     * verrou a survécu à l'activité serait indistinguable d'un téléphone en
+     * panne. La fin d'appel le relâche déjà ; ceci couvre le cas où l'activité
+     * disparaît sans que Flutter ait pu jouer sa clôture.
+     */
+    override fun onDestroy() {
+        ProximityBridge.disable()
+        super.onDestroy()
     }
 
     /**

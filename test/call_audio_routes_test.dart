@@ -222,4 +222,75 @@ void main() {
       }
     });
   });
+
+  group('extinction par proximité', () {
+    test('l\'écouteur interne éteint l\'écran', () {
+      expect(
+        proximityBlankingApplies(
+          route: CallAudioRoute.earpiece,
+          callActive: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('toute autre sortie le laisse allumé', () {
+      for (final r in [
+        CallAudioRoute.speaker,
+        CallAudioRoute.wired,
+        CallAudioRoute.bluetooth,
+      ]) {
+        expect(
+          proximityBlankingApplies(route: r, callActive: true),
+          isFalse,
+          reason: '${r.name} : on regarde l\'écran à distance, une main qui '
+              'passe devant le capteur ne doit pas l\'éteindre',
+        );
+      }
+    });
+
+    test('hors appel, jamais', () {
+      expect(
+        proximityBlankingApplies(
+          route: CallAudioRoute.earpiece,
+          callActive: false,
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('wakelock écran', () {
+    bool wakelock({
+      bool isVideo = true,
+      CallAudioRoute route = CallAudioRoute.speaker,
+      bool callActive = true,
+    }) =>
+        screenWakelockApplies(
+          isVideo: isVideo,
+          route: route,
+          callActive: callActive,
+        );
+
+    test('une vidéo sur haut-parleur tient l\'écran allumé', () {
+      expect(wakelock(), isTrue);
+    });
+
+    test('la voix n\'a pas besoin du wakelock', () {
+      expect(wakelock(isVideo: false), isFalse);
+    });
+
+    test('une vidéo basculée sur l\'écouteur laisse la proximité gagner', () {
+      expect(
+        wakelock(route: CallAudioRoute.earpiece),
+        isFalse,
+        reason: 'les deux s\'opposent : l\'un force l\'écran allumé pendant '
+            'que l\'autre veut l\'éteindre',
+      );
+    });
+
+    test('hors appel, jamais', () {
+      expect(wakelock(callActive: false), isFalse);
+    });
+  });
 }

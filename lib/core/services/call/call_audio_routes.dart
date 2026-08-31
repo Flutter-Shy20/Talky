@@ -103,3 +103,36 @@ CallAudioRoute resolveAudioRouteAfterChange({
 /// haut-parleur est coupé.
 bool speakerphoneForRoute(CallAudioRoute route) =>
     route == CallAudioRoute.speaker;
+
+/// True si l'écran doit s'éteindre quand le téléphone approche du visage.
+///
+/// Le critère est la **sortie audio**, pas le type d'appel : c'est l'écouteur
+/// interne qui dit qu'on tient le téléphone contre l'oreille. Sur haut-parleur,
+/// sur casque filaire ou en Bluetooth, on le regarde à distance — éteindre
+/// l'écran parce qu'une main passe devant le capteur serait un défaut.
+///
+/// Fonder la règle sur `isVideo` aurait le même effet dans le cas courant, la
+/// vidéo s'ouvrant sur le haut-parleur, mais raterait les deux bascules que
+/// l'utilisateur peut faire en cours d'appel : une vidéo basculée sur l'écouteur
+/// doit éteindre, une voix passée en haut-parleur doit rallumer.
+bool proximityBlankingApplies({
+  required CallAudioRoute route,
+  required bool callActive,
+}) =>
+    callActive && route == CallAudioRoute.earpiece;
+
+/// True si le wakelock doit tenir l'écran allumé.
+///
+/// Il existe pour la vidéo, qu'on regarde sans toucher l'écran et qui s'éteignait
+/// donc toute seule. Il s'oppose frontalement au capteur de proximité : l'un
+/// force l'écran allumé pendant que l'autre veut l'éteindre. Quand les deux
+/// s'appliqueraient, la proximité gagne — un téléphone porté à l'oreille n'est
+/// plus un téléphone qu'on regarde.
+bool screenWakelockApplies({
+  required bool isVideo,
+  required CallAudioRoute route,
+  required bool callActive,
+}) =>
+    callActive &&
+    isVideo &&
+    !proximityBlankingApplies(route: route, callActive: callActive);

@@ -254,7 +254,44 @@ private enum VoipCallHandler {
     GeneratedPluginRegistrant.register(with: self)
     NotificationActionHandler.registerCategories()
     registerVoipPush()
+    attachProximityChannel()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// Extinction de l'écran à l'approche du visage, pendant un appel.
+  /// Canal : `com.alanya237.alanya/proximity` (enable / disable).
+  ///
+  /// iOS fait tout à partir d'un seul drapeau : activé, le système éteint
+  /// l'écran quand le capteur est couvert et le rallume quand il se dégage.
+  /// Il n'y a rien à écouter côté Flutter, et le pendant Android
+  /// (`PROXIMITY_SCREEN_OFF_WAKE_LOCK`) fonctionne exactement pareil — d'où le
+  /// même canal et les deux mêmes méthodes.
+  private func attachProximityChannel() {
+    guard let controller = window?.rootViewController as? FlutterViewController else {
+      NSLog("[Proximity] FlutterViewController introuvable — canal non attaché")
+      return
+    }
+
+    let channel = FlutterMethodChannel(
+      name: "com.alanya237.alanya/proximity",
+      binaryMessenger: controller.binaryMessenger
+    )
+
+    channel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "enable":
+        let device = UIDevice.current
+        device.isProximityMonitoringEnabled = true
+        // iOS refuse silencieusement sur un appareil sans capteur : relire le
+        // drapeau est le seul moyen de savoir si la demande a pris.
+        result(device.isProximityMonitoringEnabled)
+      case "disable":
+        UIDevice.current.isProximityMonitoringEnabled = false
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 
   override func userNotificationCenter(
