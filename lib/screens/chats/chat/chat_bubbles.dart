@@ -916,9 +916,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
   Widget _buildCallBubble(LocalCall call) {
     final outgoing = call.idCaller == _myId;
     final status = call.status;
-    final answered = status == 1;
-    final missed = status == 0;
+    final answered = callWasAnswered(status);
     final rejected = status == 2;
+    // `missed` ne retenait que le statut 0 : les appels soldés par le timeout
+    // sans réponse, qui portent le statut 3, tombaient dans le libellé de repli.
+    // Les deux statuts disent la même chose — voir callWasNotAnswered.
+    final missed = !answered && !rejected;
     final isVideo = call.type == 1;
     final colors = context.colors;
     final titleColor = outgoing ? colors.onPrimaryContainer : colors.onSurface;
@@ -940,7 +943,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
         : (outgoing ? l10n.voiceCallOutgoing : l10n.voiceCallIncoming);
     final statusLabel = answered
         ? l10n.answered
-        : (missed ? l10n.noAnswer2 : (rejected ? l10n.rejected : l10n.missed));
+        : (rejected ? l10n.rejected : l10n.noAnswer2);
 
     final t = call.createdAt.toLocal();
     two(int n) => n.toString().padLeft(2, '0');

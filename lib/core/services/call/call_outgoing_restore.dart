@@ -129,6 +129,25 @@ extension CallOutgoingRestore on CallService {
     // restait donc sur « Reconnexion… » jusqu'au raccrochage par le timeout
     // global, et les autres le voyaient quitter la session. L'ack suffit ici :
     // le maillage a ses propres reprises.
+    // Le socket est revenu ET le serveur confirme que l'appel est vivant : on
+    // redonne une fenêtre pleine de reconnexion.
+    //
+    // Sans cela, les 45 secondes couraient depuis la coupure — temps hors
+    // réseau compris. Une coupure de trente secondes ne laissait donc qu'une
+    // quinzaine de secondes pour un redémarrage ICE qui demande un aller-retour
+    // socket, une collecte de candidats et des tests de connectivité : l'appel
+    // restait sur « Reconnexion… » puis mourait sur le reliquat, quelques
+    // secondes après avoir enfin pu réémettre.
+    //
+    // Seul l'appelé le faisait, et jamais en session de groupe, dont la branche
+    // sort juste en dessous — ce qui explique que les deux configurations
+    // échouaient de la même façon.
+    if (_status == CallStatus.reconnecting) {
+      _cancelGlobalReconnectTimeout();
+      _armGlobalReconnectTimeout();
+      debugPrint('[CallService] ⏱ fenêtre de reconnexion redonnée (call_resume)');
+    }
+
     if (_groupRoomId != null) {
       debugPrint('[CallService] call_resume en session de groupe → ack seul');
       return;
@@ -169,14 +188,10 @@ extension CallOutgoingRestore on CallService {
         // vient d'emporter. Sans lui, le verrou `_isIceRestarting` bloquait la
         // seule tentative que le retour du socket rendait enfin possible.
         unawaited(_attemptIceRestart(force: true));
-      } else {
-        // Côté appelé, rien à initier : c'est l'appelant qui réémet l'offre,
-        // dans les cinq secondes. Le socket vient de revenir, donc l'appel est
-        // bien vivant : on redonne une fenêtre pleine plutôt que de mourir sur
-        // le reliquat du compte à rebours entamé avant la coupure.
-        _cancelGlobalReconnectTimeout();
-        _armGlobalReconnectTimeout();
       }
+      // Côté appelé, rien d'autre à initier : c'est l'appelant qui réémet
+      // l'offre, dans les cinq secondes. La fenêtre a déjà été redonnée
+      // ci-dessus, pour les deux rôles.
       return;
     }
 

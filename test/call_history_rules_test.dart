@@ -74,6 +74,43 @@ void main() {
     });
   });
 
+  group('appel abouti ou non', () {
+    test('seul le statut 1 atteste d\'un décrochage', () {
+      expect(callWasAnswered(1), isTrue);
+      expect(callWasAnswered(0), isFalse);
+      expect(callWasAnswered(2), isFalse);
+      expect(callWasAnswered(3), isFalse);
+    });
+
+    test('le statut 0 est un appel sans réponse, pas un appel en cours', () {
+      expect(
+        callWasNotAnswered(0),
+        isTrue,
+        reason: 'une annulation pendant la sonnerie laissait la ligne à 0 sans '
+            'que rien ne la reclasse — 454 lignes en base, affichées en vert '
+            'comme des appels aboutis et absentes du badge',
+      );
+    });
+
+    test('refus et timeout sans réponse comptent aussi', () {
+      expect(callWasNotAnswered(2), isTrue);
+      expect(callWasNotAnswered(3), isTrue);
+    });
+
+    test('un appel décroché n\'est pas manqué', () {
+      expect(callWasNotAnswered(1), isFalse);
+    });
+
+    test('un statut inconnu vaut « non abouti » plutôt que « décroché »', () {
+      expect(
+        callWasNotAnswered(9),
+        isTrue,
+        reason: 'le décrochage doit être prouvé, pas supposé : c\'est lui qui '
+            'autorise l\'affichage d\'une durée',
+      );
+    });
+  });
+
   group('sens de l\'appel (A4)', () {
     test('un appel manqué reste manqué, quel que soit le sens', () {
       expect(

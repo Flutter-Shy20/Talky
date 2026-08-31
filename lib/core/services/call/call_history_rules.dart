@@ -5,6 +5,31 @@ library;
 /// Sens d'un appel dans le journal.
 enum CallDirection { incoming, outgoing, missed }
 
+/// True si l'appel a été décroché.
+///
+/// `status == 1` est le seul témoin d'un décrochage : c'est `answer_call` qui
+/// l'écrit côté serveur, avec `start_time`. Tout le reste — 0, 2, 3 — désigne
+/// un appel qui n'a jamais abouti.
+bool callWasAnswered(int status) => status == 1;
+
+/// True si l'appel n'a jamais abouti : sonnerie sans réponse ou refus.
+///
+/// La règle vit ici parce qu'elle vivait ailleurs en **trois exemplaires
+/// divergents** : le modèle `Call` retenait 2 et 3, le badge d'appels manqués
+/// de l'accueil en gardait une copie manuelle identique, et la bulle du fil de
+/// discussion ne reconnaissait que 0. Chacune ratait une partie des appels.
+///
+/// Le statut 0 en fait partie, et c'est le point important. Deux conventions
+/// ont cohabité : le schéma de `callHistory` déclare `0 = missed`, tandis que
+/// le handler socket écrit 3 au timeout sans réponse et laisse 0 aux appels
+/// annulés pendant la sonnerie. Reconnaître les deux, c'est classer
+/// correctement les lignes à venir **et** celles déjà en base — 454 au
+/// 31/08/2026, soit 22 % du journal — sans avoir à les réécrire.
+///
+/// Un appel réellement en cours n'est pas un contre-exemple : il est à
+/// l'écran, pas dans le journal.
+bool callWasNotAnswered(int status) => !callWasAnswered(status);
+
 /// True si le curseur `before` doit accompagner la requête.
 ///
 /// Le garde d'origine était `before > 0`, ce qui confond un `idCall` valant 0

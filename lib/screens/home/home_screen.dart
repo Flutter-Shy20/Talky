@@ -12,6 +12,7 @@ import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/realtime_sync_service.dart';
 import '../../core/services/call_service.dart';
+import '../../core/services/call/call_history_rules.dart';
 import '../../core/services/call/ended_call_registry.dart';
 import '../../core/services/callkit_service.dart';
 import '../../core/services/local_notification_helper.dart';
@@ -519,8 +520,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _missedCallsSinceVisit(List<LocalCall> calls) {
     final since = _callsLastVisit ?? DateTime.fromMillisecondsSinceEpoch(0);
     return calls.where((c) {
-      final missed = c.status == 2 || c.status == 3; // Call.isMissed
-      return missed && c.createdAt.isAfter(since);
+      // Cette ligne était une copie manuelle de `Call.isMissed`, et elle
+      // manquait le statut 0 — celui des appels annulés pendant la sonnerie,
+      // que rien ne reclassait. Le badge sous-comptait 454 appels.
+      return callWasNotAnswered(c.status) && c.createdAt.isAfter(since);
     }).length;
   }
 
