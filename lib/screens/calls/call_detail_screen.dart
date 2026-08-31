@@ -284,7 +284,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
             iconColor: context.colors.onSurfaceVariant,
             label: _formatDate(c.createdAt),
           ),
-          if (c.duree != null && c.duree! > 0) ...[
+          if (c.hasDuration) ...[
             AppSpacing.vGapSm,
             _infoRow(
               icon: Icons.timer_outlined,

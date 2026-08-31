@@ -465,7 +465,7 @@ class _CallsScreenState extends State<CallsScreen> {
                   Flexible(
                     child: Text(
                       '${_formatDate(call.createdAt)} • ${isVideo ? context.l10n.video2 : context.l10n.audio2}'
-                      '${call.duree != null && call.duree! > 0 ? " • ${call.formattedDuration}" : ""}',
+                      '${call.hasDuration ? " • ${call.formattedDuration}" : ""}',
                       style: context.text.bodyMedium,
                       overflow: TextOverflow.ellipsis,
                     ),

@@ -983,6 +983,19 @@ class Call {
   bool get isMissed => status == 3 || status == 2;
   bool get isOngoing => status == 0;
 
+  /// True si cet appel a une durée à montrer.
+  ///
+  /// Le statut compte autant que la valeur. `callHistory.start_time` a
+  /// longtemps été posé à la sonnerie et non au décrochage : tout appel sans
+  /// réponse soldé par `end_call` s'est vu attribuer son temps de sonnerie
+  /// comme durée. Le serveur ne le fait plus, mais les lignes déjà écrites —
+  /// en base comme dans `local_calls` — gardent leur fausse durée.
+  ///
+  /// Seul `status == 1` atteste d'un décrochage : c'est `answer_call` qui
+  /// l'écrit. Un appel refusé (2), manqué (3) ou resté « en cours » (0) n'a
+  /// pas de durée, quoi qu'en dise la colonne.
+  bool get hasDuration => status == 1 && (duree ?? 0) > 0;
+
   String get statusLabel {
     switch (status) {
       case 0: return LocaleController.instance.l10n.inProgress;
