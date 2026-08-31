@@ -9,6 +9,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/call_ui_theme.dart';
 import '../../core/services/call/call_conf_routing.dart';
+import '../../core/services/call/session_video_renderers.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/calls/call_audio_backdrop.dart';
@@ -32,14 +33,21 @@ class OngoingCallScreen extends StatefulWidget {
 
 class _OngoingCallScreenState extends State<OngoingCallScreen>
     with SingleTickerProviderStateMixin {
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  /// Les rendus appartiennent à la **session**, pas à l'écran.
+  ///
+  /// Ils étaient des champs de cet État, donc détruits en même temps que lui.
+  /// La fenêtre flottante doit continuer à montrer l'appel après que l'écran a
+  /// été quitté : cet écran les lit désormais, et ne les libère jamais — voir
+  /// [SessionVideoRenderers].
+  SessionVideoRenderers get _renderers => SessionVideoRenderers.instance;
+  RTCVideoRenderer? get _localRenderer => _renderers.local;
+  RTCVideoRenderer? get _remoteRenderer => _renderers.remote;
+  bool get _renderersReady => _renderers.isReady;
 
   /// Résolu dans initState : `Provider.of` lève dans `dispose()`, l'élément
   /// étant déjà démonté (Element.unmount vide `_widget` avant `state.dispose`).
   /// Le nettoyage qui suivait était donc silencieusement sauté.
   late final CallService _callService;
-  bool _renderersReady = false;
   bool _closing = false;
   bool _localIsMainView = false;
   Offset? _pipOffset;
@@ -87,19 +95,31 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   }
 
   Future<void> _initRenderers() async {
-    await _localRenderer.initialize();
-    await _remoteRenderer.initialize();
+    // Idempotent : la session les a normalement déjà ouverts. L'écran peut
+    // toutefois être monté avant `_acquireCallSession` (entrant accepté depuis
+    // CallKit), d'où cet appel qui ne coûte rien quand ils existent.
+    await _renderers.ensureInitialized();
     if (!mounted) return;
 
     final cs = Provider.of<CallService>(context, listen: false);
 
-    _localRenderer.srcObject = cs.localStream;
-    _remoteRenderer.srcObject = cs.activeRemoteStream;
+    _renderers.syncMain(
+      localStream: cs.localStream,
+      remoteStream: cs.activeRemoteStream,
+    );
     _watchVideoTracks(cs.localStream);
     _watchVideoTracks(cs.activeRemoteStream);
     cs.addListener(_onCallChanged);
+    // Les rendus prêts arrivent par ce canal : c'est lui qui remplace
+    // l'ancien `setState(() => _renderersReady = true)`.
+    _renderers.addListener(_onRenderersChanged);
 
-    setState(() => _renderersReady = true);
+    setState(() {});
+  }
+
+  void _onRenderersChanged() {
+    if (_closing || !mounted) return;
+    setState(() {});
   }
 
   /// Ouvre la feuille de sélection et lance l'invitation sur le contact choisi.
@@ -234,12 +254,13 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
 
     setState(() {
       if (_renderersReady) {
-        if (_localRenderer.srcObject != cs.localStream) {
-          _localRenderer.srcObject = cs.localStream;
-        }
-        if (_remoteRenderer.srcObject != cs.activeRemoteStream) {
-          _remoteRenderer.srcObject = cs.activeRemoteStream;
-        }
+        // Le porteur de session tient déjà `srcObject` à jour de son côté ;
+        // le rejouer ici couvre l'écran monté avant l'ouverture de session, et
+        // ne fait rien quand rien n'a changé.
+        _renderers.syncMain(
+          localStream: cs.localStream,
+          remoteStream: cs.activeRemoteStream,
+        );
         _watchVideoTracks(cs.localStream);
         _watchVideoTracks(cs.activeRemoteStream);
       }
@@ -290,10 +311,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     final cs = Provider.of<CallService>(context, listen: false);
     cs.removeListener(_onCallChanged);
     cs.markCallUiClosed();
-    if (_renderersReady) {
-      _localRenderer.srcObject = null;
-      _remoteRenderer.srcObject = null;
-    }
+    // Les flux ne sont plus détachés ici : les rendus survivent à l'écran et la
+    // fenêtre flottante peut les afficher. Leur libération appartient à la fin
+    // de session (`_releaseCallSession`).
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -302,10 +322,6 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     _closing = true;
     final cs = Provider.of<CallService>(context, listen: false);
     cs.removeListener(_onCallChanged);
-    if (_renderersReady) {
-      _localRenderer.srcObject = null;
-      _remoteRenderer.srcObject = null;
-    }
     // Session à trois : raccrocher ne fait que me retirer, l'appel continue
     // sans moi. Le serveur interprète end_call en ce sens — surtout pas
     // leaveGroupCall, qui viserait une room d'appel de groupe inexistante.
@@ -324,12 +340,10 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     _countdownTicker?.cancel();
     _pulseCtrl.dispose();
     _callService.removeListener(_onCallChanged);
-    if (_renderersReady) {
-      _localRenderer.srcObject = null;
-      _remoteRenderer.srcObject = null;
-      _localRenderer.dispose();
-      _remoteRenderer.dispose();
-    }
+    _renderers.removeListener(_onRenderersChanged);
+    // Aucune libération de rendu ici : ils appartiennent à la session, qui peut
+    // très bien continuer sans cet écran — c'est tout l'objet de la fenêtre
+    // flottante.
     super.dispose();
   }
 
@@ -366,24 +380,26 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     }
   }
 
-  bool _rendererShowsVideo(RTCVideoRenderer renderer, MediaStream? stream) {
+  bool _rendererShowsVideo(RTCVideoRenderer? renderer, MediaStream? stream) {
     if (!_streamHasActiveVideo(stream)) return false;
-    if (!_renderersReady) return true;
+    if (renderer == null || !_renderersReady) return true;
     return renderer.videoWidth > 0;
   }
 
   bool _hasRemoteVideo(CallService cs, bool isGroup) {
     if (isGroup || !cs.isVideo || !cs.isRemoteVideoOn) return false;
-    final stream = _remoteRenderer.srcObject;
-    if (stream == null) return false;
-    return _rendererShowsVideo(_remoteRenderer, stream);
+    final renderer = _remoteRenderer;
+    final stream = renderer?.srcObject;
+    if (renderer == null || stream == null) return false;
+    return _rendererShowsVideo(renderer, stream);
   }
 
   bool _hasLocalVideo(CallService cs) {
     if (!cs.isVideoOn) return false;
-    final stream = _localRenderer.srcObject;
-    if (stream == null) return false;
-    return _rendererShowsVideo(_localRenderer, stream);
+    final renderer = _localRenderer;
+    final stream = renderer?.srcObject;
+    if (renderer == null || stream == null) return false;
+    return _rendererShowsVideo(renderer, stream);
   }
 
   bool _isConnecting(CallService cs) {
@@ -404,14 +420,14 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
 
     if (isGroup) {
       if (_hasLocalVideo(cs)) {
-        return _PipVideo(renderer: _localRenderer, mirror: true);
+        return _PipVideo(renderer: _localRenderer!, mirror: true);
       }
       return _PipAvatar(name: localName, photoUrl: localPhoto);
     }
 
     if (_localIsMainView) {
       if (_hasRemoteVideo(cs, false)) {
-        return _PipVideo(renderer: _remoteRenderer);
+        return _PipVideo(renderer: _remoteRenderer!);
       }
       return _PipAvatar(
         name: cs.remoteUserName ?? context.l10n.unknownSender,
@@ -420,7 +436,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     }
 
     if (_hasLocalVideo(cs)) {
-      return _PipVideo(renderer: _localRenderer, mirror: true);
+      return _PipVideo(renderer: _localRenderer!, mirror: true);
     }
     return _PipAvatar(name: localName, photoUrl: localPhoto);
   }
@@ -475,7 +491,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     if (_localIsMainView) {
       if (_hasLocalVideo(cs)) {
         return RTCVideoView(
-          _localRenderer,
+          _localRenderer!,
           mirror: true,
           objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
         );
@@ -490,7 +506,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
 
     if (hasRemoteVideo) {
       return RTCVideoView(
-        _remoteRenderer,
+        _remoteRenderer!,
         objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
       );
     }

@@ -38,6 +38,27 @@ extension CallSession on CallService {
         );
       },
     );
+
+    await _bindSessionRenderers();
+  }
+
+  /// Ouvre les rendus vidéo pour la durée de la session.
+  ///
+  /// Ils appartenaient à l'écran plein, qui les créait à l'ouverture et les
+  /// libérait à la fermeture. La fenêtre flottante doit continuer à montrer
+  /// l'appel une fois l'écran quitté : la propriété remonte donc ici, aux
+  /// bornes de la session.
+  Future<void> _bindSessionRenderers() async {
+    if (!isVideo) return;
+    final renderers = SessionVideoRenderers.instance;
+    await renderers.ensureInitialized();
+    renderers.bind(this, () {
+      renderers.syncMain(
+        localStream: localStream,
+        remoteStream: activeRemoteStream,
+      );
+      unawaited(renderers.syncGroup(groupRemoteStreams));
+    });
   }
 
   Future<void> _markCallSessionConnected() async {
@@ -47,6 +68,9 @@ extension CallSession on CallService {
 
   Future<void> _releaseCallSession() async {
     if (kIsWeb) return;
+    // Avant le garde : la fenêtre flottante disparaît avec la session, et rien
+    // ne doit rester branché sur des rendus en cours de libération.
+    await SessionVideoRenderers.instance.release();
     await CallSessionGuard.instance.release();
   }
 }
