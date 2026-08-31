@@ -184,6 +184,8 @@ String? outgoingSnapshotIdentity({
   String? callKitCallId,
   String? currentCallId,
 }) {
+  final kit = callKitCallId?.trim();
+  if (kit != null && kit.isNotEmpty) return kit;
   final courant = currentCallId?.trim();
   if (courant != null && courant.isNotEmpty) return courant;
   return null;
