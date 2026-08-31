@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../theme/locale_controller.dart';
+import 'call/call_permissions_helper.dart';
 
 enum CallType { audio, video }
 
@@ -58,27 +58,11 @@ class WebRTCService {
   /// l'extérieur de ce service.
   RTCPeerConnection? get peerConnection => _peerConnection;
 
-  Future<bool> _requestMicrophonePermission() async {
-    // Sur web, les permissions sont gérées par le navigateur
-    if (kIsWeb) return true;
+  // Les demandes de permission micro/caméra vivent désormais dans
+  // `CallPermissionsHelper.ensureCallMediaPermissions` : elles lisent le statut
+  // avant de demander, et sont jouées dès la sonnerie plutôt qu'entre le tap
+  // sur « Répondre » et l'ouverture de la capture.
 
-    final status = await Permission.microphone.request();
-    debugPrint('[WebRTC] Permission microphone: ${status.toString()}');
-
-    return status.isGranted;
-  }
-
-  /// Vérifier et demander les permissions caméra pour Android/iOS
-  Future<bool> _requestCameraPermission() async {
-    // Sur web, les permissions sont gérées par le navigateur  
-    if (kIsWeb) return true;
-
-    final status = await Permission.camera.request();
-    debugPrint('[WebRTC] Permission caméra: ${status.toString()}');
-
-    return status.isGranted;
-  }
- 
   /// Ferme la pile média précédente s'il en reste une.
   ///
   /// Contrairement à [dispose], ne touche ni aux callbacks ni au flux distant
@@ -126,27 +110,74 @@ class WebRTCService {
     }
   }
 
+  /// Initialisation complète : capture puis pile de transport.
+  ///
+  /// Conservée pour les appelants qui n'ont rien à gagner à séparer les deux
+  /// phases (conférence, restauration d'un sortant, réunions). Le décrochage
+  /// 1-à-1, lui, appelle [acquireLocalMedia] et [buildPeerConnection]
+  /// séparément afin de lancer la capture sans attendre le réseau.
   Future<void> init(CallType type, {List<Map<String, dynamic>>? iceServers}) async {
+    await acquireLocalMedia(type);
+    await buildPeerConnection(type, iceServers: iceServers);
+  }
+
+  /// Ouvre le micro (et la caméra en vidéo). Ne touche pas au transport.
+  ///
+  /// C'est ici, et nulle part ailleurs, que le témoin de confidentialité
+  /// s'allume. La capture ne dépend ni des serveurs ICE ni de la
+  /// `PeerConnection` : les enchaîner plaçait l'ouverture du micro derrière un
+  /// aller-retour HTTPS vers `/turn/credentials` et une construction native,
+  /// d'où les quelques secondes de décalage après le décrochage.
+  Future<MediaStream> acquireLocalMedia(CallType type) async {
     try {
-      debugPrint('[WebRTC] ========== Initialisation WebRTC ==========');
+      debugPrint('[WebRTC] ========== Acquisition média ==========');
       debugPrint('[WebRTC] isWeb: $kIsWeb, Platform: ${kIsWeb ? "WEB" : (_isAndroid ? "ANDROID" : "iOS")}');
       debugPrint('[WebRTC] Call Type: $type');
 
-      // !! Sur mobile, demander les permissions
+      // La pile précédente est fermée ICI, et surtout pas dans
+      // [buildPeerConnection] : `_disposeCurrentStack` ferme aussi
+      // `_localStream`, elle détruirait donc le flux qu'on vient d'acquérir.
+      await _disposeCurrentStack();
+
       if (!kIsWeb) {
-        final micGranted = await _requestMicrophonePermission();
+        // Normalement déjà acquise pendant la sonnerie : cet appel ne fait
+        // alors que relire un statut. S'il faut vraiment demander — préchauffage
+        // non joué, réveil par push — le comportement reste celui d'avant.
+        final micGranted = await CallPermissionsHelper.ensureCallMediaPermissions(
+          isVideo: type == CallType.video,
+        );
         if (!micGranted) {
           throw Exception(LocaleController.instance.l10n.microphonePermissionDenied);
         }
-
-        if (type == CallType.video) {
-          final cameraGranted = await _requestCameraPermission();
-          if (!cameraGranted) {
-            debugPrint('[WebRTC] ** Permission caméra refusée — continuant avec audio uniquement');
-          }
-        }
       } else {
         debugPrint('[WebRTC] Plateforme WEB - Les permissions seront demandées par le navigateur via getUserMedia');
+      }
+
+      debugPrint('[WebRTC] Appel à _getUserMedia...');
+      _localStream = await _getUserMedia(type);
+      debugPrint('[WebRTC] !! Local stream obtenu: ${_localStream?.getTracks().length} track(s), ID=${_localStream?.id}');
+      onLocalStream?.call(_localStream!);
+      return _localStream!;
+    } catch (e) {
+      debugPrint('[WebRTC] ** Erreur lors de l\'acquisition média: $e');
+      await dispose();
+      rethrow;
+    }
+  }
+
+  /// Construit la `PeerConnection` et y attache le flux déjà acquis.
+  ///
+  /// Suppose [acquireLocalMedia] appelée au préalable.
+  Future<void> buildPeerConnection(
+    CallType type, {
+    List<Map<String, dynamic>>? iceServers,
+  }) async {
+    try {
+      final localStream = _localStream;
+      if (localStream == null) {
+        throw StateError(
+          'buildPeerConnection sans flux local : appeler acquireLocalMedia d\'abord',
+        );
       }
 
       final configuration = {
@@ -157,17 +188,10 @@ class WebRTCService {
             ],
       };
 
-      // Une pile précédente encore debout doit être soldée avant d'être
-      // remplacée. Sinon la PeerConnection orpheline garde `onConnectionState`
-      // branché sur le callback **partagé** du service : en passant Failed ou
-      // Closed, elle déclenche un ICE restart parasite — ou un endCall — contre
-      // l'appel courant. Et les pistes du stream orphelin ne sont jamais
-      // arrêtées : micro et caméra restent capturés.
-      //
-      // Trois des quatre appelants testaient déjà `peerConnection == null` ; la
-      // garde vit désormais ici, où elle ne peut plus être oubliée.
-      await _disposeCurrentStack();
-
+      // La pile précédente a déjà été soldée par [acquireLocalMedia]. Ne PAS
+      // la refermer ici : `_disposeCurrentStack` arrête aussi les pistes de
+      // `_localStream`, et le flux qu'on s'apprête à attacher est justement
+      // celui qu'elle vient d'ouvrir.
       debugPrint('[WebRTC] Création du PeerConnection avec ${(configuration['iceServers'] as List).length} iceServer(s)...');
       _peerConnection = await createPeerConnection(configuration);
       debugPrint('[WebRTC] PeerConnection créé avec succès');
@@ -238,17 +262,12 @@ class WebRTCService {
         }
       };
 
-      debugPrint('[WebRTC] Appel à _getUserMedia...');
-      _localStream = await _getUserMedia(type);
-      debugPrint('[WebRTC] !! Local stream obtenu: ${_localStream?.getTracks().length} track(s), ID=${_localStream?.id}');
-      onLocalStream?.call(_localStream!);
-
       debugPrint('[WebRTC] Ajout des tracks au PeerConnection...');
-      _localStream!.getTracks().forEach((track) {
+      localStream.getTracks().forEach((track) {
         debugPrint('[WebRTC] ➕ Ajout track: kind=${track.kind}, enabled=${track.enabled}, label="${track.label}", id=${track.id}');
-        _peerConnection!.addTrack(track, _localStream!);
+        _peerConnection!.addTrack(track, localStream);
       });
-      debugPrint('[WebRTC] Local stream setup: Audio=${_localStream?.getAudioTracks().length}, Video=${_localStream?.getVideoTracks().length}');
+      debugPrint('[WebRTC] Local stream setup: Audio=${localStream.getAudioTracks().length}, Video=${localStream.getVideoTracks().length}');
        
       if (_isAndroid) {
         debugPrint('[WebRTC] Configuration des transceivers pour Android...');
