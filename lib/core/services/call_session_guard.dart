@@ -6,6 +6,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'audio_helper.dart';
+import 'call/background_media_rules.dart';
 import 'call/call_audio_routes.dart';
 import 'callkit_service.dart';
 
@@ -40,6 +41,26 @@ class CallSessionGuard with WidgetsBindingObserver {
   bool _videoPausedByLifecycle = false;
   bool _audioTrackEnded = false;
   bool _mediaFgsStarted = false;
+
+  /// Le Picture-in-Picture système est ouvert (renseigné par le pont natif).
+  ///
+  /// Indispensable, et pas seulement informatif : en PiP Android, l'activité
+  /// est en pause tout en restant visible, donc le seul cycle de vie ne suffit
+  /// pas à décider du sort de la caméra.
+  bool _systemPipActive = false;
+
+  /// Dernier état connu du cycle de vie. Mémorisé parce que la décision sur la
+  /// caméra se rejoue aussi à l'ouverture et à la fermeture du PiP, en dehors
+  /// de tout changement de cycle de vie.
+  bool _appBackgrounded = false;
+
+  /// True quand la plateforme autorise la capture caméra en arrière-plan.
+  ///
+  /// Android l'accorde tant qu'un service de premier plan de type `camera`
+  /// tourne — d'où la lecture de `_mediaFgsStarted` plutôt qu'un simple test
+  /// de plateforme : sans le service, l'autorisation n'existe pas. iOS le
+  /// refuse tant que `multitasking-camera-access` n'est pas accordée.
+  bool get _cameraAllowedInBackground => _isAndroid && _mediaFgsStarted;
 
   MediaStream? Function()? _getLocalStream;
   bool Function()? _isVideoOn;
@@ -138,6 +159,8 @@ class CallSessionGuard with WidgetsBindingObserver {
     _onReplaceAudioNeeded = null;
     _videoPausedByLifecycle = false;
     _audioTrackEnded = false;
+    _systemPipActive = false;
+    _appBackgrounded = false;
 
     debugPrint('[CallSessionGuard] Session relâchée');
   }
@@ -152,16 +175,47 @@ class CallSessionGuard with WidgetsBindingObserver {
         state == AppLifecycleState.inactive) {
       // Uniquement réactiver la track existante — jamais getUserMedia ici.
       _ensureAudioTrackActive();
-      if (_mode == SessionMode.video) {
-        _pauseLocalVideo();
-      }
+      _appBackgrounded = true;
+      _applyLocalVideoPolicy();
     } else if (state == AppLifecycleState.resumed) {
+      _appBackgrounded = false;
       AudioHelper.reactivateCallAudio();
       _ensureAudioTrackActive();
       _maybeReplaceAudioIfNeeded();
-      if (_mode == SessionMode.video && _videoPausedByLifecycle) {
-        _resumeLocalVideo();
-      }
+      _applyLocalVideoPolicy();
+    }
+  }
+
+  /// Signale l'ouverture ou la fermeture du Picture-in-Picture système.
+  ///
+  /// Appelée par le pont natif. Elle rejoue la décision caméra : fermer le PiP
+  /// alors que l'application reste en arrière-plan doit couper ce que son
+  /// ouverture avait laissé passer.
+  void setSystemPipActive(bool active) {
+    if (_systemPipActive == active) return;
+    _systemPipActive = active;
+    debugPrint('[CallSessionGuard] PiP système=$active');
+    if (_refCount == 0) return;
+    _applyLocalVideoPolicy();
+  }
+
+  /// Coupe ou rétablit la caméra locale selon [localVideoShouldPause].
+  ///
+  /// La caméra ne se coupe plus par principe en arrière-plan : c'était le
+  /// défaut à corriger. Elle continue d'émettre dès lors que la plateforme
+  /// l'autorise, ou que le Picture-in-Picture est ouvert.
+  void _applyLocalVideoPolicy() {
+    final shouldPause = localVideoShouldPause(
+      isVideo: _mode == SessionMode.video,
+      appBackgrounded: _appBackgrounded,
+      systemPipActive: _systemPipActive,
+      cameraAllowedInBackground: _cameraAllowedInBackground,
+    );
+
+    if (shouldPause) {
+      _pauseLocalVideo();
+    } else if (_videoPausedByLifecycle) {
+      _resumeLocalVideo();
     }
   }
 
