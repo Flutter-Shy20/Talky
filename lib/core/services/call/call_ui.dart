@@ -42,9 +42,29 @@ extension CallUi on CallService {
     final navigator = appNavigator;
     if (navigator == null) return;
 
-    await navigator.push(
-      MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
-    );
+    // Réservation **synchrone**, avant le push.
+    //
+    // `markCallUiVisible` ne pose le drapeau qu'au post-frame de l'écran — et
+    // il le faut : il appelle `notify()`, ce qui pendant la phase de
+    // construction ferait lever tous les `Consumer`. Mais la garde ci-dessus le
+    // teste avant de pousser : entre le `push` et ce post-frame, un second
+    // appel la franchissait et poussait un **deuxième écran**. Le chronomètre
+    // de la bannière traverse cette fenêtre chaque seconde.
+    //
+    // La réservation ne notifie pas — elle peut tomber pendant un build — et
+    // reste idempotente avec le `markCallUiVisible` qui la confirmera.
+    _isCallUiRouteOpen = true;
+    try {
+      await navigator.push(
+        MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
+      );
+    } catch (e) {
+      // Libération garantie : un push refusé verrouillerait sinon le drapeau,
+      // et plus aucun écran d'appel ne s'ouvrirait.
+      _isCallUiRouteOpen = false;
+      debugPrint('[CallService] ouverture de l\'écran d\'appel échouée: $e');
+      rethrow;
+    }
 
     markCallUiClosed();
     if (isCallActive && !_isCallUiMinimized) {
