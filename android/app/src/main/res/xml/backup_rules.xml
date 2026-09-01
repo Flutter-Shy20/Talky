@@ -2,18 +2,44 @@
 <!--
   Règles de sauvegarde automatique (Android 11 et antérieurs).
 
-  `FlutterSecureStorage.xml` est le magasin chiffré de flutter_secure_storage
-  (tokens de session, profil, identifiant d'appareil). Il est chiffré par une
-  clé du Keystore Android, qui ne quitte JAMAIS l'appareil et n'est donc pas
-  restaurée avec lui. Sauvegardé puis restauré (nouvel appareil, réinstallation,
-  transfert d'appareil à appareil), le fichier devient définitivement
-  indéchiffrable : chaque lecture lève
-  `BadPaddingException: BAD_DECRYPT` et bloque l'écran de connexion.
+  ── FlutterSecureStorage.xml ────────────────────────────────────────────────
+  Magasin chiffré de flutter_secure_storage (tokens de session, profil,
+  identifiant d'appareil). Il est chiffré par une clé du Keystore Android, qui
+  ne quitte JAMAIS l'appareil et n'est donc pas restaurée avec lui. Sauvegardé
+  puis restauré (nouvel appareil, réinstallation, transfert d'appareil à
+  appareil), le fichier devient définitivement indéchiffrable : chaque lecture
+  lève `BadPaddingException: BAD_DECRYPT` et bloque l'écran de connexion.
 
-  On l'exclut donc de la sauvegarde : une session n'est de toute façon pas
-  restaurable d'un appareil à l'autre, et l'utilisateur se reconnecte
-  normalement.
+  On l'exclut donc : une session n'est de toute façon pas restaurable d'un
+  appareil à l'autre, et l'utilisateur se reconnecte normalement.
+
+  ── FlutterSharedPreferences.xml ────────────────────────────────────────────
+  Ce fichier n'est pas chiffré, et il ne contient pas que des préférences.
+
+  `CallRejectHelper` y écrit `call_reject_access_token` et
+  `call_reject_refresh_token` **en clair** : le chemin natif du refus d'appel
+  s'exécute application tuée, sans moteur Flutter, donc sans accès au magasin
+  chiffré. `pending_notif_actions_v1` y garde en plus le **texte des réponses
+  rapides** en attente d'envoi.
+
+  L'exclusion Android est par fichier, pas par clé : on ne peut donc pas ne
+  sauver que les préférences. Ce qu'on perd à la restauration est cosmétique —
+  réglages d'interface, sonneries, conversations masquées, dont une partie se
+  resynchronise depuis le serveur. Quant aux files en attente, elles ne
+  **doivent** pas être restaurées sur un autre appareil : elles y rejoueraient
+  des refus d'appel et des accusés de réception qui n'ont plus lieu d'être.
+
+  Le vrai remède de fond reste un jeton d'action à portée réduite, délivré par
+  le serveur pour ce seul usage — le code le nomme déjà en commentaire.
+  L'exclusion coupe la fuite en attendant.
+
+  ── talky_native_notif.xml ──────────────────────────────────────────────────
+  `MessageNotificationHelper` y conserve le **corps des messages** par
+  conversation, pour reconstruire le fil MessagingStyle. Aucune raison qu'il
+  parte dans une sauvegarde cloud.
 -->
 <full-backup-content>
     <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+    <exclude domain="sharedpref" path="FlutterSharedPreferences.xml" />
+    <exclude domain="sharedpref" path="talky_native_notif.xml" />
 </full-backup-content>
