@@ -391,15 +391,8 @@ object MessageNotificationHelper {
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             val settings = JSONObject(prefs.getString("flutter.list_ringtone_settings_v1", "{}") ?: "{}")
             val members = JSONObject(prefs.getString("flutter.list_ringtone_members_v1", "{}") ?: "{}")
-            val priorityRaw = prefs.all["flutter.list_ringtone_priority_v1"]
-            val priority = when (priorityRaw) {
-                is Set<*> -> priorityRaw.map { it.toString() }
-                is String -> try {
-                    val array = JSONArray(priorityRaw)
-                    (0 until array.length()).map { array.getString(it) }
-                } catch (_: Exception) { emptyList() }
-                else -> emptyList()
-            }
+            val priority = FlutterSharedPreferencesCompat
+                .readStringList(prefs, "list_ringtone_priority_v1")
             val ordered = priority + settings.keys().asSequence().toList().filterNot { priority.contains(it) }
             for (listId in ordered) {
                 val listMembers = members.optJSONArray(listId) ?: continue
@@ -418,15 +411,8 @@ object MessageNotificationHelper {
                 if (optionId.startsWith("bundled_son")) {
                     return ListMessageSound(optionId, rawName = "rt_son${optionId.removePrefix("bundled_son")}")
                 }
-                val customRaw = prefs.all["flutter.call_ringtone_custom_list"]
-                val entries = when (customRaw) {
-                    is Set<*> -> customRaw.map { it.toString() }
-                    is String -> try {
-                        val array = JSONArray(customRaw)
-                        (0 until array.length()).map { array.getString(it) }
-                    } catch (_: Exception) { emptyList() }
-                    else -> emptyList()
-                }
+                val entries = FlutterSharedPreferencesCompat
+                    .readStringList(prefs, "call_ringtone_custom_list")
                 for (raw in entries) {
                     val item = JSONObject(raw)
                     if (item.optString("id") == optionId) {
