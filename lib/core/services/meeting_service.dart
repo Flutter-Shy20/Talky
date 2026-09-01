@@ -7,7 +7,9 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../screens/meetings/ongoing_meet_screen.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import 'call/session_video_renderers.dart';
 import 'call/speaking_detector.dart';
+import 'call/system_pip.dart';
 import 'call_session_guard.dart';
 import 'callkit_service.dart';
 import '../navigation/app_navigator.dart';
@@ -737,6 +739,7 @@ class MeetingService extends ChangeNotifier {
         isMuted: () => _isMuted,
       );
       await CallSessionGuard.instance.markConnected();
+      await _bindSessionRenderers(isVideo: isVideo);
     }
 
     notifyListeners();
@@ -1019,11 +1022,31 @@ class MeetingService extends ChangeNotifier {
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
+  /// Ouvre les rendus vidéo pour la durée de la réunion.
+  ///
+  /// Même bascule que pour les appels : ils appartenaient à
+  /// `_OngoingMeetScreenState` et mouraient avec lui, ce qui interdisait toute
+  /// fenêtre survivant à l'écran.
+  Future<void> _bindSessionRenderers({required bool isVideo}) async {
+    if (!isVideo) return;
+    final renderers = SessionVideoRenderers.instance;
+    await renderers.ensureInitialized();
+    renderers.bind(this, () {
+      renderers.syncMain(localStream: _localStream);
+      unawaited(renderers.syncGroup(Map.of(_remoteStreams)));
+    });
+    await SystemPip.instance.setEligible(true);
+  }
+
   // CLEANUP
   Future<void> _cleanup() async {
     speakingDetector.stop();
     final meetingCallId = _currentMeeting != null ? 'meeting_${_currentMeeting!.idMeeting}' : null;
     if (!kIsWeb) {
+      // Avant le garde : la fenêtre flottante disparaît avec la réunion, et
+      // rien ne doit rester branché sur des rendus en cours de libération.
+      await SystemPip.instance.reset();
+      await SessionVideoRenderers.instance.release();
       await CallSessionGuard.instance.release();
       if (meetingCallId != null) {
         try {

@@ -81,13 +81,27 @@ class ActiveSessionChrome extends StatelessWidget {
               child: ActiveSessionBannerHost(),
             ),
             if (overlays.videoWindow)
-              SessionVideoWindow(
-                onExpand: () => callService.navigateToCallUi(),
-                onHangUp: () => _hangUpCall(callService),
-                fallbackName:
-                    callService.remoteUserName ?? context.l10n.unknownSender,
-                fallbackPhotoUrl: callService.remoteUserPhoto,
-              ),
+              // La fenêtre sert l'appel s'il y en a un, la réunion sinon — même
+              // priorité que le bandeau, décidée par `sessionOverlays`.
+              if (callService.isCallActive)
+                SessionVideoWindow(
+                  onExpand: () => callService.navigateToCallUi(),
+                  onHangUp: () => _hangUpCall(callService),
+                  fallbackName:
+                      callService.remoteUserName ?? context.l10n.unknownSender,
+                  fallbackPhotoUrl: callService.remoteUserPhoto,
+                )
+              else
+                SessionVideoWindow(
+                  onExpand: () => meetingService.navigateToMeetingUi(),
+                  onHangUp: () => meetingService.leaveMeeting(),
+                  fallbackName: meetingService.currentMeeting?.objet ??
+                      context.l10n.meeting,
+                  // En réunion, « le » flux distant n'existe pas : il y en a
+                  // autant que de participants. La vignette montre donc sa
+                  // propre caméra, seul repère qui ait un sens hors de l'écran.
+                  preferLocal: true,
+                ),
           ],
         );
       },
@@ -110,10 +124,9 @@ SessionOverlays activeSessionOverlays(
     callIsVideo: call.isVideo,
     meetingActive: meeting.isMeetingActive,
     meetingMinimized: meeting.isMeetingUiMinimized,
-    // Les réunions restent au bandeau : leurs rendus appartiennent encore à
-    // leur écran, une fenêtre n'aurait donc aucune image à montrer. Elles
-    // suivront avec la migration de `_OngoingMeetScreenState`.
-    meetingIsVideo: false,
+    // `typeMedia == 0` vaut audio+vidéo, 1 vaut audio seul — la convention de
+    // la table `meeting`, pas une inversion.
+    meetingIsVideo: meeting.currentMeeting?.typeMedia == 0,
     voicePlaying: voice.showMiniPlayer,
   );
 }
@@ -269,8 +282,10 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
         // le reprend pas, sinon les deux annonceraient le même appel.
         final showCall =
             callService.shouldShowCallBanner && !callService.isVideo;
-        final showMeeting =
-            !callService.isCallActive && meetingService.shouldShowMeetingBanner;
+        // Même règle que pour l'appel : une réunion vidéo passe à la fenêtre.
+        final showMeeting = !callService.isCallActive &&
+            meetingService.shouldShowMeetingBanner &&
+            meetingService.currentMeeting?.typeMedia != 0;
         final showVoice = !showCall && !showMeeting && voiceService.showMiniPlayer;
         final visible = showCall || showMeeting || showVoice;
 

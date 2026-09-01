@@ -44,6 +44,15 @@ class SessionVideoRenderers extends ChangeNotifier {
 
   RTCVideoRenderer? groupRenderer(String id) => _group[id];
 
+  /// La première trame arrive, ou la taille change — une caméra qu'on rallume,
+  /// typiquement.
+  ///
+  /// Sans cette notification, la tuile restait figée sur l'avatar après une
+  /// reprise : rien n'annonçait à l'interface qu'il y avait de nouveau une
+  /// image à montrer. Le branchement vit ici depuis que les rendus y vivent,
+  /// et sert du même coup l'écran d'appel, celui de réunion et les fenêtres.
+  void _onRendererResize() => notifyListeners();
+
   /// Prépare les deux rendus principaux. Idempotent et sûr en concurrence :
   /// l'écran plein et la fenêtre flottante peuvent l'appeler en même temps.
   Future<void> ensureInitialized() async {
@@ -54,6 +63,8 @@ class SessionVideoRenderers extends ChangeNotifier {
       final remote = RTCVideoRenderer();
       await local.initialize();
       await remote.initialize();
+      local.onResize = _onRendererResize;
+      remote.onResize = _onRendererResize;
       _local = local;
       _remote = remote;
       _ready = true;
@@ -156,6 +167,7 @@ class SessionVideoRenderers extends ChangeNotifier {
         debugPrint('[SessionVideoRenderers] ** rendu $id: $e');
         continue;
       }
+      renderer.onResize = _onRendererResize;
       _group[id] = renderer;
     }
 

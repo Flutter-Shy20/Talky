@@ -4,6 +4,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/services/call/session_video_renderers.dart';
 import '../../core/services/meeting_service.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
@@ -28,22 +29,22 @@ class OngoingMeetScreen extends StatefulWidget {
 }
 
 class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
-  final Map<String, RTCVideoRenderer> _remoteRenderers = {};
+  /// Les rendus appartiennent à la **session**, pas à l'écran — même bascule
+  /// que pour l'écran d'appel, et pour la même raison : la fenêtre flottante
+  /// doit continuer à montrer la réunion une fois cet écran quitté. Voir
+  /// [SessionVideoRenderers], qui porte aussi l'alignement des tuiles distantes
+  /// et les notifications de première trame.
+  SessionVideoRenderers get _renderers => SessionVideoRenderers.instance;
+  RTCVideoRenderer? get _localRenderer => _renderers.local;
+  Map<String, RTCVideoRenderer> get _remoteRenderers => _renderers.group;
 
   /// Résolu dans initState : `Provider.of` lève dans `dispose()`, l'élément
   /// étant déjà démonté (Element.unmount vide `_widget` avant `state.dispose`).
   /// Le nettoyage qui suivait était donc silencieusement sauté.
   late final MeetingService _meetingService;
-  final Map<String, String> _remoteStreamSignatures = {};
-  bool _localRendererReady = false;
+  bool get _localRendererReady => _renderers.isReady;
   bool _closing = false;
   final Set<String> _watchedVideoTrackIds = {};
-
-  String _streamSignature(dynamic stream) {
-    if (stream is! MediaStream) return '';
-    return '${stream.id}:v${stream.getVideoTracks().length}:a${stream.getAudioTracks().length}';
-  }
 
   @override
   void initState() {
@@ -72,22 +73,26 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   Future<void> _setupRenderer() async {
     final meetingService =
         Provider.of<MeetingService>(context, listen: false);
-    await _localRenderer.initialize();
+    // Idempotent : la session les a normalement déjà ouverts.
+    await _renderers.ensureInitialized();
     if (!mounted) return;
 
-    _localRenderer.onResize = () {
-      if (mounted) setState(() {});
-    };
-    setState(() {
-      _localRendererReady = true;
-      _localRenderer.srcObject = meetingService.localStream;
-    });
+    _renderers.syncMain(localStream: meetingService.localStream);
     _watchVideoTracks(meetingService.localStream);
 
     await _syncRemoteRenderers(meetingService.remoteStreams);
     if (!mounted) return;
 
     meetingService.addListener(_onMeetingServiceChanged);
+    // Première trame, changement de taille, arrivée d'une tuile : le porteur
+    // notifie, l'écran se redessine.
+    _renderers.addListener(_onRenderersChanged);
+    setState(() {});
+  }
+
+  void _onRenderersChanged() {
+    if (_closing || !mounted) return;
+    setState(() {});
   }
 
   void _onMeetingServiceChanged() {
@@ -103,8 +108,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     }
 
     if (_localRendererReady &&
-        _localRenderer.srcObject != meetingService.localStream) {
-      _localRenderer.srcObject = meetingService.localStream;
+        _localRenderer?.srcObject != meetingService.localStream) {
+      _renderers.syncMain(localStream: meetingService.localStream);
       _watchVideoTracks(meetingService.localStream);
     }
 
@@ -129,7 +134,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     if (meetingService.isVideoOff || !_localRendererReady) return false;
     final stream = meetingService.localStream;
     if (stream == null || stream.getVideoTracks().isEmpty) return false;
-    return _localRenderer.srcObject != null;
+    return _localRenderer?.srcObject != null;
   }
 
   bool _remoteTileShowsVideo(
@@ -146,59 +151,36 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     return renderer.srcObject != null;
   }
 
+  /// Aligne les tuiles distantes sur les flux présents.
+  ///
+  /// La création, la libération et le rebranchement vivent désormais dans
+  /// [SessionVideoRenderers] : le comptage des clés y est une fonction pure
+  /// testée, et la course « quitter l'écran pendant qu'un participant arrive »
+  /// disparaît d'elle-même — les rendus ne sont plus liés au montage de cet
+  /// écran. Il ne reste ici que la surveillance des pistes, qui est de
+  /// l'affichage.
   Future<void> _syncRemoteRenderers(
       Map<String, dynamic> remoteStreams) async {
-    final currentKeys = Set<String>.from(_remoteRenderers.keys);
-    final newKeys = Set<String>.from(remoteStreams.keys);
+    final streams = <String, MediaStream>{};
+    remoteStreams.forEach((key, value) {
+      if (value is MediaStream) streams[key] = value;
+    });
 
-    for (final key in currentKeys.difference(newKeys)) {
-      await _remoteRenderers[key]?.dispose();
-      _remoteRenderers.remove(key);
-      _remoteStreamSignatures.remove(key);
-    }
+    await _renderers.syncGroup(streams);
+    if (!mounted) return;
 
-    for (final key in newKeys.difference(currentKeys)) {
-      final renderer = RTCVideoRenderer();
-      await renderer.initialize();
-      // Quitter l'écran pendant qu'un participant arrive : `dispose()` a déjà
-      // parcouru la table, et ce renderer-là y serait entré après — sa texture
-      // native n'aurait plus jamais été rendue.
-      if (!mounted) {
-        await renderer.dispose();
-        return;
-      }
-      final stream = remoteStreams[key] as MediaStream?;
-      renderer.srcObject = stream;
-      // Rebuild quand la 1re trame / la taille change (reprise caméra),
-      // sinon la tuile pouvait rester figée sur l'avatar.
-      renderer.onResize = () {
-        if (mounted) setState(() {});
-      };
-      _remoteRenderers[key] = renderer;
-      _remoteStreamSignatures[key] = _streamSignature(stream);
+    for (final stream in streams.values) {
       _watchVideoTracks(stream);
     }
-
-    for (final key in newKeys.intersection(currentKeys)) {
-      final sig = _streamSignature(remoteStreams[key]);
-      if (_remoteStreamSignatures[key] != sig) {
-        final stream = remoteStreams[key] as MediaStream?;
-        _remoteRenderers[key]?.srcObject = stream;
-        _remoteStreamSignatures[key] = sig;
-        _watchVideoTracks(stream);
-      }
-    }
-
-    if (mounted) setState(() {});
+    setState(() {});
   }
 
   @override
   void dispose() {
     _meetingService.removeListener(_onMeetingServiceChanged);
-    _localRenderer.dispose();
-    for (final r in _remoteRenderers.values) {
-      r.dispose();
-    }
+    _renderers.removeListener(_onRenderersChanged);
+    // Aucune libération ici : les rendus appartiennent à la session, qui
+    // continue sans cet écran quand la réunion est minimisée.
     super.dispose();
   }
 
@@ -474,7 +456,10 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
 
   Widget _buildVideoTile({
     required String label,
-    required RTCVideoRenderer renderer,
+    // Nullable depuis que les rendus appartiennent à la session : la tuile peut
+    // être construite avant leur ouverture. Elle retombe alors sur l'avatar,
+    // ce qu'elle sait déjà faire pour une caméra coupée.
+    required RTCVideoRenderer? renderer,
     required bool showVideo,
     required bool isMuted,
     required bool isSpeaking,
@@ -483,7 +468,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     bool mirror = false,
   }) {
     final showVideoView =
-        showVideo && !isVideoOff && renderer.srcObject != null;
+        showVideo && !isVideoOff && renderer != null && renderer.srcObject != null;
 
     return SpeakingIndicatorBorder(
       isSpeaking: isSpeaking && !isMuted,
