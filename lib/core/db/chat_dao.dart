@@ -767,6 +767,18 @@ class ChatDao {
   /// Messages locaux correspondant à des msgID (ceux affichés dans Mes médias,
   /// pour transférer la sélection). Un média dont la conversation n'est plus
   /// en cache local n'a pas de ligne : la liste renvoyée peut être plus courte.
+  /// Un message par sa clé primaire.
+  ///
+  /// La récupération d'un média absent pendant un export part du manifeste,
+  /// qui porte `clientId` et non `msgID` — ce dernier vaut 0 tant que le
+  /// serveur n'a pas confirmé.
+  Future<LocalMessage?> messageByClientId(String clientId) {
+    return (db.select(db.localMessages)
+          ..where((m) => m.clientId.equals(clientId))
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
   Future<List<LocalMessage>> messagesByIds(List<int> msgIDs) {
     if (msgIDs.isEmpty) return Future.value(const []);
     return (db.select(db.localMessages)
@@ -774,8 +786,35 @@ class ChatDao {
         .get();
   }
 
+  /// Renseigne la taille d'un média mesurée sur le disque.
+  ///
+  /// Rattrapage : `mediaSize` est nul pour tous les médias envoyés avant que
+  /// l'app ne relève la taille des fichiers. Tant qu'il l'est, « Mes médias »
+  /// les compte pour zéro octet — le total affiché est faux et le tri « Plus
+  /// lourds » les relègue en fin de liste, c'est-à-dire qu'il cache
+  /// précisément ce qu'il est censé faire remonter.
+  ///
+  /// Clé sur `clientId` et non sur `msgID` : c'est la clé primaire, et elle
+  /// est stable dès l'origine.
+  Future<void> setMediaSize(String clientId, int bytes) {
+    return (db.update(db.localMessages)
+          ..where((m) => m.clientId.equals(clientId)))
+        .write(LocalMessagesCompanion(mediaSize: Value(bytes)));
+  }
+
   Future<void> setLocalMediaPath(int msgID, String path) {
     return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
+        .write(LocalMessagesCompanion(localMediaPath: Value(path)));
+  }
+
+  /// Variante de [setLocalMediaPath] clée sur `clientId`.
+  ///
+  /// La récupération d'un média absent pendant un export part du manifeste,
+  /// qui porte `clientId` — la clé primaire, stable dès l'origine — plutôt que
+  /// `msgID`, qui vaut 0 tant que le serveur n'a pas confirmé.
+  Future<void> setLocalMediaPathByClientId(String clientId, String path) {
+    return (db.update(db.localMessages)
+          ..where((m) => m.clientId.equals(clientId)))
         .write(LocalMessagesCompanion(localMediaPath: Value(path)));
   }
 
@@ -803,6 +842,52 @@ class ChatDao {
   /// [until] est une borne **exclusive** (typiquement le lendemain minuit du
   /// dernier jour voulu) : un média envoyé le 31 mars à 14 h doit être compris
   /// dans « jusqu'au 31 mars ».
+  /// Socle commun des requêtes « Mes médias » et « exporter cette période ».
+  ///
+  /// Ce qu'il exclut ne dépend d'aucun filtre choisi par l'utilisateur : un
+  /// message effacé, un message masqué pour moi, un type sans fichier, et un
+  /// média à vue unique reçu — jamais de copie persistante côté destinataire,
+  /// donc jamais dans une grille ni dans une archive. Un média à vue unique
+  /// que **j'ai envoyé** reste, lui, à moi.
+  ///
+  /// [requireLocalFile] sépare les deux usages : la grille ne montre que ce
+  /// qui est sur le disque, l'export doit aussi voir ce qui manque pour
+  /// pouvoir le dire.
+  Expression<bool> _mediaScope(
+    int myId, {
+    required List<int> types,
+    required bool requireLocalFile,
+    bool? mineOnly,
+    int? conversationID,
+    DateTime? from,
+    DateTime? until,
+  }) {
+    var where = db.localMessages.isDeleted.equals(false) &
+        (db.localMessages.deletedForID.isNull() |
+            db.localMessages.deletedForID.equals(myId).not()) &
+        db.localMessages.type.isIn(types.isEmpty ? kMyMediaTypes : types) &
+        (db.localMessages.isViewOnce.equals(false) |
+            db.localMessages.senderID.equals(myId));
+    if (requireLocalFile) {
+      where = where & db.localMessages.localMediaPath.isNotNull();
+    }
+    if (mineOnly == true) {
+      where = where & db.localMessages.senderID.equals(myId);
+    } else if (mineOnly == false) {
+      where = where & db.localMessages.senderID.equals(myId).not();
+    }
+    if (conversationID != null) {
+      where = where & db.localMessages.conversationID.equals(conversationID);
+    }
+    if (from != null) {
+      where = where & db.localMessages.sendAt.isBiggerOrEqualValue(from);
+    }
+    if (until != null) {
+      where = where & db.localMessages.sendAt.isSmallerThanValue(until);
+    }
+    return where;
+  }
+
   Stream<List<LocalMediaRow>> watchLocalMedia(
     int myId, {
     bool? mineOnly,
@@ -816,28 +901,15 @@ class ChatDao {
         db.localUsers,
         db.localUsers.alanyaID.equalsExp(db.localMessages.senderID),
       ),
-    ])
-      ..where(db.localMessages.isDeleted.equals(false) &
-          (db.localMessages.deletedForID.isNull() |
-              db.localMessages.deletedForID.equals(myId).not()) &
-          db.localMessages.type.isIn(types.isEmpty ? kMyMediaTypes : types) &
-          db.localMessages.localMediaPath.isNotNull() &
-          (db.localMessages.isViewOnce.equals(false) |
-              db.localMessages.senderID.equals(myId)));
-    if (mineOnly == true) {
-      query.where(db.localMessages.senderID.equals(myId));
-    } else if (mineOnly == false) {
-      query.where(db.localMessages.senderID.equals(myId).not());
-    }
-    if (conversationID != null) {
-      query.where(db.localMessages.conversationID.equals(conversationID));
-    }
-    if (from != null) {
-      query.where(db.localMessages.sendAt.isBiggerOrEqualValue(from));
-    }
-    if (until != null) {
-      query.where(db.localMessages.sendAt.isSmallerThanValue(until));
-    }
+    ])..where(_mediaScope(
+        myId,
+        types: types,
+        requireLocalFile: true,
+        mineOnly: mineOnly,
+        conversationID: conversationID,
+        from: from,
+        until: until,
+      ));
     query
       ..orderBy([
         OrderingTerm(
@@ -854,6 +926,60 @@ class ChatDao {
           return LocalMediaRow(
               msg, (name == null || name.isEmpty) ? null : name);
         }).toList());
+  }
+
+  /// Périmètre d'une exportation de période : **tous** les médias qui entrent
+  /// dans les filtres, téléchargés ou non.
+  ///
+  /// Différence avec [watchLocalMedia], et c'est tout l'intérêt : la grille ne
+  /// montre que ce qui est sur le disque, l'archive doit aussi connaître ce
+  /// qui manque. Une archive incomplète qui le dit vaut infiniment mieux
+  /// qu'une archive incomplète qui se tait — l'inscrit ne découvrirait le trou
+  /// que le jour où il chercherait la photo.
+  ///
+  /// Instantané et non flux : un export porte sur un périmètre figé au moment
+  /// où l'inscrit appuie. Un média qui arrive pendant l'assemblage n'a pas à
+  /// s'y inviter.
+  ///
+  /// Ordre chronologique **croissant** ici, à l'inverse de la grille : une
+  /// archive se lit du plus ancien au plus récent.
+  Future<List<LocalMediaRow>> mediaForExport(
+    int myId, {
+    bool? mineOnly,
+    int? conversationID,
+    DateTime? from,
+    DateTime? until,
+    List<int> types = kMyMediaTypes,
+  }) async {
+    final query = db.select(db.localMessages).join([
+      leftOuterJoin(
+        db.localUsers,
+        db.localUsers.alanyaID.equalsExp(db.localMessages.senderID),
+      ),
+    ])
+      ..where(_mediaScope(
+        myId,
+        types: types,
+        requireLocalFile: false,
+        mineOnly: mineOnly,
+        conversationID: conversationID,
+        from: from,
+        until: until,
+      ))
+      ..orderBy([
+        OrderingTerm(
+            expression: db.localMessages.sendAt, mode: OrderingMode.asc),
+      ]);
+
+    final rows = await query.get();
+    return rows.map((row) {
+      final msg = row.readTable(db.localMessages);
+      final user = row.readTableOrNull(db.localUsers);
+      final name = user == null
+          ? null
+          : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+      return LocalMediaRow(msg, (name == null || name.isEmpty) ? null : name);
+    }).toList();
   }
 
   /// Les conversations qui ont au moins un média téléchargé sur l'appareil.

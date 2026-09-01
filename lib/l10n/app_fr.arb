@@ -2988,6 +2988,116 @@
       }
     }
   },
+  "settingsBackup": "Sauvegarde",
+  "settingsBackupSubtitle": "Vos messages et réglages, chiffrés",
+  "backupTitle": "Sauvegarde",
+  "backupSubtitle": "Vos messages et réglages, chiffrés",
+  "backupFrequencyLabel": "Fréquence",
+  "backupFrequencyDaily": "Quotidienne",
+  "backupFrequencyWeekly": "Hebdomadaire",
+  "backupFrequencyMonthly": "Mensuelle",
+  "backupFrequencyNever": "Jamais",
+  "backupLastNever": "Aucune sauvegarde pour l'instant",
+  "backupLastAt": "Dernière sauvegarde : {when} · {size}",
+  "@backupLastAt": {
+    "placeholders": { "when": { "type": "String" }, "size": { "type": "String" } }
+  },
+  "backupCounts": "{messages} messages · {conversations} discussions",
+  "@backupCounts": {
+    "placeholders": { "messages": { "type": "int" }, "conversations": { "type": "int" } }
+  },
+  "backupRunNow": "Sauvegarder maintenant",
+  "backupRunning": "Sauvegarde en cours…",
+  "backupSucceeded": "Sauvegarde terminée",
+  "backupFailed": "La sauvegarde a échoué",
+  "backupStaleWarning": "Aucune sauvegarde n'a abouti depuis plusieurs jours. Vérifiez votre connexion et l'espace disponible.",
+  "backupDestinationLabel": "Destination",
+  "backupDestinationDrive": "Google Drive {account}",
+  "@backupDestinationDrive": {"placeholders": {"account": {"type": "String"}}},
+  "backupDestinationDriveUnlinked": "Google Drive — aucun compte connecté sur cet appareil",
+  "backupDestinationDevice": "Sur cet appareil",
+  "backupChangeAccount": "Changer de compte Google",
+  "backupConnectDrive": "Connecter Google Drive",
+  "backupUseDevice": "Sauvegarder sur cet appareil",
+  "backupDriveConnected": "Google Drive connecté. Vos prochaines sauvegardes y seront déposées.",
+  "backupDriveRefused": "Connexion à Google annulée. Rien n'a changé.",
+  "backupFellBack": "Drive était injoignable : la sauvegarde a été faite sur cet appareil.",
+  "backupFellBackAt": "Drive était injoignable. Une sauvegarde a été faite sur cet appareil le {when}.",
+  "@backupFellBackAt": {"placeholders": {"when": {"type": "String"}}},
+  "backupLocalRisksTitle": "Sauvegarde sur cet appareil",
+  "backupLocalRisksBody": "Votre sauvegarde est sur ce téléphone, dans Téléchargements › Alanya › Sauvegardes.\n\n✓ Elle survit à une réinstallation d'Alanya.\n✗ Elle ne survit pas à la perte, au vol ou à la casse du téléphone.\n✗ Elle ne survit pas à un effacement complet de l'appareil.\n\nPour mettre vos données à l'abri hors du téléphone, connectez Google Drive.",
+  "backupWhatIsSaved": "Sont sauvegardés : messages, discussions, contacts et réglages. Les photos, vidéos et fichiers ne le sont pas — utilisez « Exporter cette période » depuis Mes médias pour les conserver.",
+  "backupNotEndToEnd": "La sauvegarde est chiffrée. Alanya peut techniquement la déchiffrer pour vous la restaurer ; personne d'autre ne le peut.",
+  "backupRestoreEntry": "Restaurer une sauvegarde",
+  "backupRestoreEntryHint": "Depuis Google Drive ou un fichier de votre téléphone",
+  "restoreTitle": "Restaurer vos données",
+  "restoreFound": "Une sauvegarde du {when} a été trouvée ({size}).",
+  "@restoreFound": {
+    "placeholders": { "when": { "type": "String" }, "size": { "type": "String" } }
+  },
+  "restoreExplain": "Vos messages et réglages seront remis en place. Les photos et vidéos de plus de 30 jours ne reviendront pas : elles ne sont pas dans la sauvegarde.",
+  "restoreAction": "Restaurer",
+  "restoreConnectGoogle": "Se connecter à Google Drive",
+  "restoreGoogleRefused": "Connexion à Google annulée",
+  "restoreGoogleEmpty": "Aucune sauvegarde dans ce compte Google",
+  "restorePickFile": "Choisir un fichier de sauvegarde",
+  "restorePickHint": "Si votre sauvegarde ne s'affiche pas — après une réinstallation, par exemple — désignez le fichier .enc dans Téléchargements › Alanya › Sauvegardes.",
+  "restorePickCancelled": "Aucun fichier choisi",
+  "restorePickWrongFile": "Ce fichier n'est pas une sauvegarde Alanya",
+  "restoreSkip": "Ignorer et continuer",
+  "restoreRunning": "Restauration en cours…",
+  "restoreCloseApp": "Fermer Alanya",
+  "restoreDoneRestart": "Restauration prête. Fermez Alanya, puis rouvrez-la : vos données seront en place au démarrage.",
+  "restoreFailedMessage": "La restauration a échoué. Vous pouvez réessayer depuis les réglages.",
+  "restoreKeyUnknown": "Cette sauvegarde a été chiffrée avec une clé que nous ne reconnaissons plus.",
+  "restoreTooRecent": "Cette sauvegarde vient d'une version plus récente d'Alanya. Mettez l'application à jour.",
+  "restoreInterrupted": "Une restauration précédente a été interrompue. Elle va être reprise depuis le début.",
+  "exportPeriodAction": "Exporter cette période",
+  "exportSheetTitle": "Exporter cette période",
+  "exportSheetSummary": "{count, plural, =0{Aucun élément} =1{1 élément · {size}} other{{count} éléments · {size}}}",
+  "@exportSheetSummary": {
+    "placeholders": { "count": { "type": "int" }, "size": { "type": "String" } }
+  },
+  "exportSheetNothing": "Aucun média à exporter pour ces filtres",
+  "exportMissingRecoverable": "{count, plural, =1{1 élément manquant peut être récupéré ({size})} other{{count} éléments manquants peuvent être récupérés ({size})}}",
+  "@exportMissingRecoverable": {
+    "placeholders": { "count": { "type": "int" }, "size": { "type": "String" } }
+  },
+  "exportMissingRecoverableEstimate": "{count, plural, =1{Jusqu'à 1 élément manquant peut être récupéré} other{Jusqu'à {count} éléments manquants peuvent être récupérés}}",
+  "@exportMissingRecoverableEstimate": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "exportMissingEstimateHint": "Le serveur n'a pas pu être consulté : certains de ces éléments n'y sont peut-être plus.",
+  "exportDoneWithMissing": "Archive prête : {size} · {missing} élément(s) indisponible(s)",
+  "@exportDoneWithMissing": {
+    "placeholders": { "size": { "type": "String" }, "missing": { "type": "int" } }
+  },
+  "exportMissingRecoverableHint": "Coché, ces éléments seront téléchargés avant l'assemblage. Décoché, aucune donnée mobile n'est consommée.",
+  "exportMissingLost": "{count, plural, =1{1 élément n'est plus disponible sur les serveurs} other{{count} éléments ne sont plus disponibles sur les serveurs}}",
+  "@exportMissingLost": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "exportMissingLostHint": "Ils sont signalés dans l'archive, mais leur contenu est définitivement perdu.",
+  "exportDestinationShare": "Partager",
+  "exportDestinationDownloads": "Enregistrer dans Téléchargements",
+  "exportPhaseScanning": "Inventaire…",
+  "exportPhaseRecovering": "Récupération {done} / {total}",
+  "@exportPhaseRecovering": {
+    "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } }
+  },
+  "exportPhaseAssembling": "Assemblage {done} / {total}",
+  "@exportPhaseAssembling": {
+    "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } }
+  },
+  "exportDone": "Archive prête : {size}",
+  "@exportDone": {
+    "placeholders": { "size": { "type": "String" } }
+  },
+  "exportFailedGeneric": "L'exportation a échoué",
+  "exportNoSpace": "Espace insuffisant sur l'appareil pour cette archive",
+  "exportSaveUnsupported": "Cette destination n'est pas disponible sur cet appareil",
+  "exportSavedToDownloads": "Archive enregistrée dans Téléchargements/Alanya",
+  "exportCancelled": "Exportation annulée",
   "myMediaFilters": "Filtres",
   "myMediaFilterDiscussion": "Discussion",
   "myMediaAllDiscussions": "Toutes les discussions",

@@ -17,6 +17,7 @@ import 'network_data_screen.dart';
 import 'notification_settings_screen.dart';
 import 'ringtone_settings_screen.dart';
 import 'playback_speed_screen.dart';
+import 'backup_screen.dart';
 import 'storage_screen.dart';
 import '../../core/services/ringtone_preferences.dart';
 import '../../core/services/translation/translation_languages.dart';
@@ -120,6 +121,15 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const StorageScreen()),
+                  ),
+                ),
+                SettingsNavTile(
+                  icon: Icons.backup_outlined,
+                  title: l10n.settingsBackup,
+                  subtitle: l10n.settingsBackupSubtitle,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BackupScreen()),
                   ),
                 ),
                 SettingsNavTile(

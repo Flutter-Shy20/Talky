@@ -15,6 +15,13 @@ import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/db/app_database.dart';
+import 'dart:convert';
+import 'core/services/backup/restore_state.dart';
+import 'screens/profile/restore_screen.dart';
+import 'core/services/backup/backup_target.dart';
+import 'core/services/backup/backup_runner.dart';
+import 'core/services/backup/server_backup_key_provider.dart';
+import 'core/services/backup/restore_service.dart';
 import 'core/db/chat_dao.dart';
 import 'core/services/translation/message_translation_service.dart';
 import 'core/services/translation/translation_settings.dart';
@@ -146,6 +153,51 @@ void main() async {
   // Précharge les sons de messagerie (envoi/réception). Non bloquant : assets
   // embarqués, aucune dépendance réseau.
   unawaited(MessageSoundService.instance.init());
+
+  // Mise en place d'une base restaurée, s'il y en a une en attente.
+  //
+  // **Ici et nulle part ailleurs.** `AppDatabase` est un champ `late final` de
+  // `TalkyApp` : une fois l'arbre construit, on ne remplace plus son instance,
+  // et fermer la connexion ne suffirait pas — tout ce qui la détient
+  // continuerait de pointer sur un objet fermé. À ce point du démarrage, rien
+  // n'a encore ouvert le fichier : l'échange ne peut se heurter à personne.
+  // Voir `RestoreService.stagePending`, qui a posé le fichier au lancement
+  // précédent.
+  try {
+    const restoreState = RestoreStateStore();
+
+    // Restauration interrompue en pleine écriture : la base contiendrait des
+    // messages pour CERTAINES conversations seulement. Le rattrapage de
+    // synchronisation les prendrait alors pour complètes et les sauterait
+    // définitivement — les trous deviendraient permanents et silencieux.
+    // Repartir d'une base vide coûte un rapatriement complet ; c'est
+    // infiniment préférable à un historique troué sans que personne le sache.
+    if (await restoreState.needsRecoveryAfterCrash()) {
+      debugPrint('[Main] ** Restauration interrompue → purge et nouvelle offre');
+      await RestoreService(
+        closeDatabase: () async {},
+        applyPrefs: (_) async {},
+      ).wipe(await appDatabaseFile());
+      await restoreState.setStage(RestoreStage.unknown);
+    }
+
+    if (await RestoreService.applyPendingSwap(await appDatabaseFile())) {
+      debugPrint('[Main] Base restaurée mise en place');
+      await restoreState.setStage(RestoreStage.done);
+    } else if (await restoreState.hasPendingSwap()) {
+      // Marqué « en attente » mais rien à mettre en place : le fichier déposé a
+      // disparu, ou il était illisible et a été écarté. Laisser cet état
+      // condamnerait la restauration en silence — elle ne serait plus jamais
+      // reproposée, et l'inscrit n'aurait aucun moyen de le savoir. On repart
+      // donc de zéro, quitte à reposer la question.
+      debugPrint('[Main] ** Dépôt de restauration introuvable → remise à zéro');
+      await restoreState.setStage(RestoreStage.unknown);
+    }
+  } catch (e) {
+    // Un échec ici ne doit pas empêcher l'application de démarrer : la base
+    // en place reste utilisable, et l'écran de restauration reproposera.
+    debugPrint('[Main] ** Mise en place de la base restaurée échouée: $e');
+  }
 
   runApp(TalkyApp(biometricLock: biometricLock));
 }
@@ -378,6 +430,8 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   AuthProvider? _authProvider;
   int? _boundUserId;
+
+
   /// Sérialise logout → login : évite qu'un re-login rapide (même compte)
   /// soit ignoré pendant que le vidage local est encore en cours.
   Future<void> _sessionBindingsChain = Future.value();
@@ -446,7 +500,185 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       await auth.refreshSessionOnResume();
       if (!mounted || !auth.isLoggedIn) return;
       await _ensureSocketReadyOnResume();
+      // Sauvegarde automatique : la politique est temporelle, donc il suffit
+      // de lui demander son avis au retour au premier plan. Elle ne fait rien
+      // si ce n'est pas dû, si le réseau est mesuré, ou si l'inscrit a choisi
+      // « Jamais ». Voir `BackupRunner` pour la raison de ce choix plutôt
+      // qu'une tâche de fond.
+      await _maybeRunBackup();
     }());
+  }
+
+  /// Demande au planificateur si une sauvegarde est due, et la lance le cas
+  /// échéant. Silencieux de bout en bout : une sauvegarde automatique qui
+  /// échoue ne doit jamais interrompre l'inscrit, l'écran de réglages en rend
+  /// compte et la politique décide s'il faut en parler.
+  /// Empile l'écran de restauration par-dessus tout ce qui est affiché.
+  ///
+  /// **Par la navigation, et non par le `build`.** La question se pose au
+  /// milieu d'une séquence asynchrone, pas à la reconstruction d'un widget :
+  /// la faire passer par un drapeau consulté dans `build` obligerait à
+  /// synchroniser les deux, pour un écran qui n'apparaît qu'une fois dans la
+  /// vie d'un appareil.
+  ///
+  /// `fullscreenDialog` et l'absence de bouton retour font le reste : l'inscrit
+  /// tranche, il ne contourne pas.
+  void _offerRestore(BackupAnnouncement announcement) {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) {
+      debugPrint('[Restore] ** aucun navigateur disponible → écran non empilé');
+      return;
+    }
+    // Après la trame en cours : `LoginScreen` vient de faire un
+    // `pushAndRemoveUntil`, et empiler pendant qu'une transition de route est
+    // en vol peut se perdre sans le moindre message.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('[Restore] empilement de l\'écran de restauration');
+      _pushRestore(navigator, announcement);
+    });
+  }
+
+  void _pushRestore(NavigatorState navigator, BackupAnnouncement announcement) {
+    navigator.push(MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (routeContext) => _restoreScreenFor(
+        routeContext,
+        announcement,
+        onSettled: () {
+          if (navigator.canPop()) navigator.pop();
+          _onRestoreSettled();
+        },
+      ),
+    ));
+  }
+
+  /// Écran bloquant de restauration.
+  ///
+  /// Il reçoit tout en paramètres — base, clés, destination — plutôt que d'aller
+  /// les chercher lui-même : c'est ce qui rend ses scénarios d'échec jouables
+  /// en test, et ce qui permettra de remplacer le stockage local par Drive sans
+  /// le toucher.
+  ///
+  /// Le contexte vient de la route elle-même, jamais de l'`AuthWrapper`. Les
+  /// fournisseurs sont déclarés au-dessus du `MaterialApp`, donc visibles
+  /// depuis n'importe quelle route ; et cet écran cesse ainsi de dépendre de la
+  /// durée de vie d'un état qui ne le concerne pas.
+  Widget _restoreScreenFor(
+    BuildContext context,
+    BackupAnnouncement announcement, {
+    required VoidCallback onSettled,
+  }) {
+    final chat = Provider.of<ChatProvider>(context, listen: false);
+    final api = Provider.of<TalkyApiClient>(context, listen: false);
+    return FutureBuilder<BackupTarget>(
+      future: BackupRunner.readTarget(),
+      builder: (context, snapshot) {
+        final target = snapshot.data;
+        if (target == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return RestoreScreen(
+          db: chat.repository.dao.db,
+          target: target,
+          keys: ServerBackupKeyProvider((path) async {
+            final kid = path.startsWith('/backup/key/')
+                ? int.tryParse(path.substring('/backup/key/'.length))
+                : null;
+            return jsonEncode(await api.fetchBackupKey(kid: kid));
+          }),
+          announcement: announcement,
+          onSkip: onSettled,
+        );
+      },
+    );
+  }
+
+  /// Demande au serveur s'il connaît une sauvegarde pour ce compte.
+  ///
+  /// Retourne `true` si l'écran de restauration doit prendre la main — auquel
+  /// cas l'appelant s'arrête là et ne lie rien.
+  ///
+  /// Silencieux en cas d'échec : un serveur injoignable ne doit pas empêcher
+  /// d'entrer dans l'application. On repose la question au prochain démarrage.
+  Future<bool> _shouldOfferRestore(TalkyApiClient api) async {
+    try {
+      if (!await const RestoreStateStore().shouldOffer()) {
+        debugPrint('[Restore] déjà tranché sur cet appareil → pas de proposition');
+        return false;
+      }
+      final json = await api.fetchBackupMeta();
+      // Tracé explicitement : sans ça, « aucune proposition » est indiscernable
+      // de « le serveur ne connaît pas de sauvegarde », et on ne peut que
+      // deviner lequel des deux maillons casse.
+      debugPrint('[Restore] réponse du serveur : $json');
+      final announcement = BackupAnnouncement.fromJson(json);
+      if (announcement == null) return false;
+
+      // Pas de garde `mounted` : rien sur ce trajet ne dépend plus de l'état de
+      // l'`AuthWrapper`. L'empilement passe par la clé de navigation globale,
+      // et l'écran lit ses fournisseurs depuis le contexte de sa propre route.
+      // Un abandon silencieux ici serait indiagnosticable.
+      _offerRestore(announcement);
+      return true;
+    } catch (e) {
+      debugPrint('[AuthWrapper] proposition de restauration ignorée: $e');
+      return false;
+    }
+  }
+
+  /// L'inscrit a refusé, ou la restauration est prête et il rouvrira
+  /// l'application. On reprend la liaison normale des fournisseurs.
+  void _onRestoreSettled() {
+    // `_syncSessionBindings` s'était arrêté net pour laisser la base tranquille
+    // pendant la restauration. Le relancer est ce qui lie enfin la messagerie,
+    // le socket et la présence : sans cet appel, l'application resterait une
+    // coquille. Il aboutit parce que cet état est toujours monté — ce qui n'est
+    // vrai que depuis la suppression des `pushAndRemoveUntil((route) => false)`
+    // du chemin de connexion.
+    if (!mounted) return;
+
+    _sessionBindingsChain =
+        _sessionBindingsChain.then((_) => _syncSessionBindings());
+  }
+
+  Future<void> _maybeRunBackup() async {
+    if (!mounted) return;
+    try {
+      final chat = Provider.of<ChatProvider>(context, listen: false);
+      final api = Provider.of<TalkyApiClient>(context, listen: false);
+      // Sert uniquement à pré-sélectionner le bon compte Google : connaître
+      // l'adresse n'ouvre évidemment aucun droit sur le Drive.
+      final email =
+          Provider.of<AuthProvider>(context, listen: false).currentUser?.email;
+      // Le service passe par son fournisseur : `ConnectivityService` n'est pas
+      // dans l'arbre, et le chercher directement lèverait — silencieusement
+      // avalé par le `catch` ci-dessous, la sauvegarde ne tournerait jamais.
+      final connectivity =
+          Provider.of<ConnectivityProvider>(context, listen: false).service;
+      final myId = chat.repository.myId;
+      if (myId == 0) return;
+
+      await BackupRunner(
+        db: chat.repository.dao.db,
+        connectivity: connectivity,
+        accountEmail: email,
+        keys: ServerBackupKeyProvider((path) async {
+          final kid = path.startsWith('/backup/key/')
+              ? int.tryParse(path.substring('/backup/key/'.length))
+              : null;
+          return jsonEncode(await api.fetchBackupKey(kid: kid));
+        }),
+        onSucceeded: (meta) => api.publishBackupMeta(
+          bytes: meta.bytes,
+          kid: meta.kid,
+          messageCount: meta.messageCount,
+        ),
+      ).maybeRun(alanyaID: myId);
+    } catch (e) {
+      debugPrint('[Main] sauvegarde automatique ignorée: $e');
+    }
   }
 
   Future<void> _ensureSocketReadyOnResume() async {
@@ -956,6 +1188,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     unawaited(_loadNotificationPrefs(apiClient));
     unawaited(_syncAccountSettings(apiClient));
 
+    // Une sauvegarde à restaurer ? La question se pose ICI, avant de lier quoi
+    // que ce soit. Le serveur répond sans qu'aucun compte Google ne soit
+    // demandé : c'est la métadonnée déclarée à chaque sauvegarde réussie.
+    if (await _shouldOfferRestore(apiClient)) return;
+
     try {
       await chatProvider.bind(myId);
       if (mounted) {
@@ -1104,7 +1341,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
-        debugPrint('[AuthWrapper] build - isInitialized=${auth.isInitialized}, isLoggedIn=${auth.isLoggedIn}');
+        debugPrint('[AuthWrapper] build - isInitialized=${auth.isInitialized}, '
+            'isLoggedIn=${auth.isLoggedIn}');
         if (!auth.isInitialized) {
           // Couverture blanche le temps du cache local ; le splash natif
           // reste affiché grâce à FlutterNativeSplash.preserve (pas de spinner).
@@ -1116,6 +1354,9 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         return BiometricLockOverlay(
           sessionActive: auth.isLoggedIn,
           child: auth.isLoggedIn
+              // L'écran de restauration ne passe pas par ici mais par la
+              // navigation, voir `_offerRestore` : la question se pose au
+              // milieu d'une séquence asynchrone, pas à la reconstruction.
               ? PostAuthGate(key: ValueKey(auth.currentUser?.alanyaID ?? 0))
               : const LoginScreen(),
         );

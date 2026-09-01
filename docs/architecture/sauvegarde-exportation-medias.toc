@@ -1,0 +1,61 @@
+\babel@toc {french}{}\relax 
+\contentsline {chapter}{Avant-propos}{1}{chapter*.1}%
+\contentsline {part}{I\hspace {1em}Ce que l'inscrit voit}{4}{part.1}%
+\contentsline {chapter}{\numberline {1}Le problème posé}{5}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Deux horloges qui ne tournent pas à la même vitesse}{5}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Ce que la note demande}{5}{section.1.2}%
+\contentsline {section}{\numberline {1.3}La réponse retenue : deux mécanismes, jamais confondus}{5}{section.1.3}%
+\contentsline {chapter}{\numberline {2}Exporter une période}{7}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Le parcours}{7}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Ce que contient l'archive}{7}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Les éléments manquants}{7}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Le dépôt sur Drive}{8}{section.2.4}%
+\contentsline {chapter}{\numberline {3}Sauvegarder et restaurer}{9}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Ce qui est sauvegardé}{9}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Où, et sous quelle forme}{11}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Deux sauvegardes, jamais une seule}{11}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Quand elle se déclenche}{11}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Quand elle échoue}{11}{section.3.5}%
+\contentsline {section}{\numberline {3.6}L'inscrit sans compte Google}{11}{section.3.6}%
+\contentsline {section}{\numberline {3.7}La restauration sur un nouveau téléphone}{12}{section.3.7}%
+\contentsline {section}{\numberline {3.8}Suppression du compte}{12}{section.3.8}%
+\contentsline {part}{II\hspace {1em}Comment on le construit}{13}{part.2}%
+\contentsline {chapter}{\numberline {4}Le format d'archive}{14}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Le manifeste}{14}{section.4.1}%
+\contentsline {section}{\numberline {4.2}L'assemblage, et pourquoi il ne compresse pas}{15}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Reprise après interruption}{15}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Le service de premier plan et sa limite de six heures}{15}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Mesurer avant d'annoncer}{16}{section.4.5}%
+\contentsline {chapter}{\numberline {5}La sauvegarde}{17}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Fabriquer l'instantané}{17}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Le tri : ce qui monte, ce qui reste}{17}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Les colonnes à neutraliser}{17}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Les préférences : une liste blanche, jamais une liste noire}{18}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}Le garde-fou : un test qui refuse les clés non classées}{19}{subsection.5.2.3}%
+\contentsline {section}{\numberline {5.3}La clé, et son numéro de version}{20}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Le jour où le secret doit tourner}{20}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Deux points d'accès, une table qu'on n'efface jamais}{20}{subsection.5.3.2}%
+\contentsline {subsection}{\numberline {5.3.3}Deux compléments à poser en même temps}{20}{subsection.5.3.3}%
+\contentsline {section}{\numberline {5.4}Rattachement : un Drive par compte Alanya}{21}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Restaurer une base plus ancienne que l'application}{21}{section.5.5}%
+\contentsline {chapter}{\numberline {6}La restauration}{22}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Le vrai risque n'est pas celui qu'on croit}{22}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Deux bonnes nouvelles dans le code existant}{22}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Quand demande-t-on le compte Google ?}{22}{section.6.3}%
+\contentsline {section}{\numberline {6.4}La solution : un ordre, pas un verrou}{23}{section.6.4}%
+\contentsline {section}{\numberline {6.5}L'état de restauration, et pourquoi il est indispensable}{23}{section.6.5}%
+\contentsline {section}{\numberline {6.6}Les cinq répétitions à écrire avant le code}{24}{section.6.6}%
+\contentsline {subsection}{\numberline {6.6.1}Ces répétitions imposent une contrainte d'architecture}{24}{subsection.6.6.1}%
+\contentsline {chapter}{\numberline {7}Ce qui reste à lever}{26}{chapter.7}%
+\contentsline {section}{\numberline {7.1}L'inconnue qui conditionne l'architecture}{26}{section.7.1}%
+\contentsline {subsection}{\numberline {7.1.1}Isoler d'abord}{26}{subsection.7.1.1}%
+\contentsline {subsection}{\numberline {7.1.2}Tester ensuite --- et deux variantes, jamais une seule}{27}{subsection.7.1.2}%
+\contentsline {section}{\numberline {7.2}Les points désormais tranchés}{27}{section.7.2}%
+\contentsline {chapter}{\numberline {8}Impact sur le code}{28}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Ce qui existe et se réutilise}{28}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Ce qu'il faut ajouter}{28}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Fichiers à créer}{28}{section.8.3}%
+\contentsline {section}{\numberline {8.4}Côté serveur}{29}{section.8.4}%
+\contentsline {chapter}{\numberline {9}Décisions arrêtées}{30}{chapter.9}%
+\contentsline {section}{\numberline {9.1}Hors périmètre de ce lot}{31}{section.9.1}%
+\contentsline {section}{\numberline {9.2}Dépendances : état réel}{31}{section.9.2}%

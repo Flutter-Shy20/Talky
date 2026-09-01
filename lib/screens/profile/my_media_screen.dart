@@ -27,6 +27,7 @@ import '../../widgets/common/common.dart';
 import '../../widgets/video_message_preview.dart';
 import '../chats/forward_message_screen.dart';
 import '../chats/media_viewer_screen.dart';
+import 'export_period_sheet.dart';
 import '../../core/services/media_expiry_policy.dart';
 
 /// Miroir, pour l'avertissement de suppression uniquement, de
@@ -228,6 +229,11 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
   /// l'app (nettoyage du système, gestionnaire de fichiers…). Un fichier
   /// manquant est désynchronisé de la base plutôt que laissé à pointer dans
   /// le vide.
+  ///
+  /// La même visite du disque sert à **rattraper les tailles manquantes**
+  /// (voir [ChatDao.setMediaSize]) : un `stat` renseigne l'existence et le
+  /// poids d'un seul appel système, là où le contrôle d'existence seul en
+  /// coûtait déjà autant. Le rattrapage est donc gratuit.
   void _onRows(List<LocalMediaRow> rows) {
     final dao = context.read<ChatProvider>().repository.dao;
     final myId = context.read<ChatProvider>().repository.myId;
@@ -235,9 +241,19 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
     for (final row in rows) {
       final msg = row.message;
       final path = msg.localMediaPath;
-      if (path == null || !File(path).existsSync()) {
-        if (path != null) unawaited(dao.clearLocalMediaPath(msg.msgID));
+      if (path == null) continue;
+      final stat = FileStat.statSync(path);
+      if (stat.type == FileSystemEntityType.notFound) {
+        unawaited(dao.clearLocalMediaPath(msg.msgID));
         continue;
+      }
+      // Taille connue de la base, ou mesurée ici puis réécrite pour que la
+      // grille, le tri par poids et le total cessent définitivement de
+      // compter ce média pour zéro octet.
+      var size = msg.mediaSize;
+      if (size == null || size <= 0) {
+        size = stat.size;
+        unawaited(dao.setMediaSize(msg.clientId, size));
       }
       items.add(MyMediaItem(
         msgID: msg.msgID,
@@ -250,7 +266,10 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
         mediaName: msg.mediaName,
         mediaThumb: msg.mediaThumb,
         mediaDuration: msg.mediaDuration,
-        mediaSize: msg.mediaSize,
+        // Taille mesurée, pas celle de la base : l'écriture de rattrapage est
+        // asynchrone, attendre son retour par le flux ferait clignoter un
+        // « 0 o » le temps d'un aller-retour.
+        mediaSize: size,
         sendAt: msg.sendAt,
         localMediaPath: path,
       ));
@@ -639,6 +658,10 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
             if (_working) const LinearProgressIndicator(minHeight: 2),
             _header(l10n),
             Expanded(child: _body(l10n)),
+            // Hors du mode sélection : la barre du bas y porte déjà des
+            // actions, en ajouter une troisième créerait une ambiguïté sur ce
+            // qui serait exporté — la sélection, ou la période ?
+            if (!_selecting) _exportBar(l10n),
           ],
         ),
       ),
@@ -928,6 +951,62 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
             child: Text(l10n.myMediaResetFilters),
           ),
       ],
+    );
+  }
+
+  /// Barre d'action basse, comme sur la maquette. Elle porte sur **la période
+  /// filtrée**, pas sur une sélection : c'est l'écran entier, tel qu'il est
+  /// affiché, que l'inscrit emporte.
+  Widget _exportBar(AppLocalizations l10n) => Material(
+        color: context.colors.surface,
+        elevation: 8,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.archive_outlined, size: 18),
+                label: Text(l10n.exportPeriodAction),
+                // Désactivé quand la grille est vide : la feuille n'aurait
+                // rien à annoncer.
+                onPressed: _items.isEmpty || _working ? null : _openExport,
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Future<void> _openExport() async {
+    final chat = context.read<ChatProvider>();
+    final period = _period;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.colors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.sheetTop),
+      builder: (_) => ExportPeriodSheet(
+        dao: chat.repository.dao,
+        repository: chat.repository,
+        request: ExportRequest(
+          myId: chat.repository.myId,
+          mineOnly: switch (_owner) {
+            _MediaOwner.sent => true,
+            _MediaOwner.received => false,
+            _MediaOwner.all => null,
+          },
+          conversationID: _discussion?.conversationID,
+          conversationName: _discussion?.label,
+          from: period == null ? null : _startOfDay(period.start),
+          // Même borne exclusive que la grille, pour que l'archive contienne
+          // exactement ce que l'écran montrait.
+          until: period == null
+              ? null
+              : _startOfDay(period.end).add(const Duration(days: 1)),
+          types: _kind.types,
+        ),
+      ),
     );
   }
 

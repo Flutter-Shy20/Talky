@@ -2106,6 +2106,116 @@
       }
     }
   },
+  "settingsBackup": "Backup",
+  "settingsBackupSubtitle": "Your messages and settings, encrypted",
+  "backupTitle": "Backup",
+  "backupSubtitle": "Your messages and settings, encrypted",
+  "backupFrequencyLabel": "Frequency",
+  "backupFrequencyDaily": "Daily",
+  "backupFrequencyWeekly": "Weekly",
+  "backupFrequencyMonthly": "Monthly",
+  "backupFrequencyNever": "Never",
+  "backupLastNever": "No backup yet",
+  "backupLastAt": "Last backup: {when} \u00b7 {size}",
+  "@backupLastAt": {
+    "placeholders": { "when": { "type": "String" }, "size": { "type": "String" } }
+  },
+  "backupCounts": "{messages} messages \u00b7 {conversations} chats",
+  "@backupCounts": {
+    "placeholders": { "messages": { "type": "int" }, "conversations": { "type": "int" } }
+  },
+  "backupRunNow": "Back up now",
+  "backupRunning": "Backing up\u2026",
+  "backupSucceeded": "Backup complete",
+  "backupFailed": "The backup failed",
+  "backupStaleWarning": "No backup has succeeded for several days. Check your connection and available space.",
+  "backupDestinationLabel": "Destination",
+  "backupDestinationDrive": "Google Drive {account}",
+  "@backupDestinationDrive": {"placeholders": {"account": {"type": "String"}}},
+  "backupDestinationDriveUnlinked": "Google Drive — no account connected on this device",
+  "backupDestinationDevice": "On this device",
+  "backupChangeAccount": "Change Google account",
+  "backupConnectDrive": "Connect Google Drive",
+  "backupUseDevice": "Back up to this device",
+  "backupDriveConnected": "Google Drive connected. Your next backups will go there.",
+  "backupDriveRefused": "Google sign-in cancelled. Nothing changed.",
+  "backupFellBack": "Drive was unreachable: the backup was made on this device.",
+  "backupFellBackAt": "Drive was unreachable. A backup was made on this device on {when}.",
+  "@backupFellBackAt": {"placeholders": {"when": {"type": "String"}}},
+  "backupLocalRisksTitle": "Backup on this device",
+  "backupLocalRisksBody": "Your backup is on this phone, in Downloads › Alanya › Sauvegardes.\n\n✓ It survives reinstalling Alanya.\n✗ It does not survive losing, breaking or having the phone stolen.\n✗ It does not survive a full device wipe.\n\nTo keep your data safe off the phone, connect Google Drive.",
+  "backupWhatIsSaved": "Backed up: messages, chats, contacts and settings. Photos, videos and files are not \u2014 use \u201cExport this period\u201d from My media to keep them.",
+  "backupNotEndToEnd": "The backup is encrypted. Alanya can technically decrypt it to restore it for you; nobody else can.",
+  "backupRestoreEntry": "Restore a backup",
+  "backupRestoreEntryHint": "From Google Drive or a file on your phone",
+  "restoreTitle": "Restore your data",
+  "restoreFound": "A backup from {when} was found ({size}).",
+  "@restoreFound": {
+    "placeholders": { "when": { "type": "String" }, "size": { "type": "String" } }
+  },
+  "restoreExplain": "Your messages and settings will be put back. Photos and videos older than 30 days will not return: they are not in the backup.",
+  "restoreAction": "Restore",
+  "restoreConnectGoogle": "Connect to Google Drive",
+  "restoreGoogleRefused": "Google sign-in cancelled",
+  "restoreGoogleEmpty": "No backup in this Google account",
+  "restorePickFile": "Choose a backup file",
+  "restorePickHint": "If your backup does not show up \u2014 after a reinstall, for instance \u2014 point to the .enc file in Downloads \u203a Alanya \u203a Sauvegardes.",
+  "restorePickCancelled": "No file chosen",
+  "restorePickWrongFile": "This file is not an Alanya backup",
+  "restoreSkip": "Skip and continue",
+  "restoreRunning": "Restoring\u2026",
+  "restoreCloseApp": "Close Alanya",
+  "restoreDoneRestart": "Restore ready. Close Alanya, then open it again: your data will be in place on startup.",
+  "restoreFailedMessage": "The restore failed. You can try again from settings.",
+  "restoreKeyUnknown": "This backup was encrypted with a key we no longer recognise.",
+  "restoreTooRecent": "This backup comes from a newer version of Alanya. Please update the app.",
+  "restoreInterrupted": "A previous restore was interrupted. It will start again from the beginning.",
+  "exportPeriodAction": "Export this period",
+  "exportSheetTitle": "Export this period",
+  "exportSheetSummary": "{count, plural, =0{No items} =1{1 item \u00b7 {size}} other{{count} items \u00b7 {size}}}",
+  "@exportSheetSummary": {
+    "placeholders": { "count": { "type": "int" }, "size": { "type": "String" } }
+  },
+  "exportSheetNothing": "No media to export for these filters",
+  "exportMissingRecoverable": "{count, plural, =1{1 missing item can be recovered ({size})} other{{count} missing items can be recovered ({size})}}",
+  "@exportMissingRecoverable": {
+    "placeholders": { "count": { "type": "int" }, "size": { "type": "String" } }
+  },
+  "exportMissingRecoverableEstimate": "{count, plural, =1{Up to 1 missing item can be recovered} other{Up to {count} missing items can be recovered}}",
+  "@exportMissingRecoverableEstimate": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "exportMissingEstimateHint": "The server could not be reached: some of these items may no longer be there.",
+  "exportDoneWithMissing": "Archive ready: {size} \u00b7 {missing} item(s) unavailable",
+  "@exportDoneWithMissing": {
+    "placeholders": { "size": { "type": "String" }, "missing": { "type": "int" } }
+  },
+  "exportMissingRecoverableHint": "If ticked, these items are downloaded before assembly. If not, no mobile data is used.",
+  "exportMissingLost": "{count, plural, =1{1 item is no longer available on the servers} other{{count} items are no longer available on the servers}}",
+  "@exportMissingLost": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "exportMissingLostHint": "They are listed in the archive, but their content is permanently lost.",
+  "exportDestinationShare": "Share",
+  "exportDestinationDownloads": "Save to Downloads",
+  "exportPhaseScanning": "Taking stock\u2026",
+  "exportPhaseRecovering": "Recovering {done} / {total}",
+  "@exportPhaseRecovering": {
+    "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } }
+  },
+  "exportPhaseAssembling": "Assembling {done} / {total}",
+  "@exportPhaseAssembling": {
+    "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } }
+  },
+  "exportDone": "Archive ready: {size}",
+  "@exportDone": {
+    "placeholders": { "size": { "type": "String" } }
+  },
+  "exportFailedGeneric": "The export failed",
+  "exportNoSpace": "Not enough space on the device for this archive",
+  "exportSaveUnsupported": "This destination is not available on this device",
+  "exportSavedToDownloads": "Archive saved to Downloads/Alanya",
+  "exportCancelled": "Export cancelled",
   "myMediaFilters": "Filters",
   "myMediaFilterDiscussion": "Chat",
   "myMediaAllDiscussions": "All chats",

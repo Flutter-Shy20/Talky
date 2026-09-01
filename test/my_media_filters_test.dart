@@ -149,6 +149,30 @@ void main() {
     expect((await ids(types: const [])).length, 4);
   });
 
+  test('setMediaSize rattrape une taille manquante, en clé sur clientId',
+      () async {
+    // `mediaSize` est nul pour tous les médias antérieurs à la collecte des
+    // tailles. Tant qu'il l'est, la grille les compte pour zéro octet et le
+    // tri « Plus lourds » les relègue en fin de liste.
+    final before = await (db.select(db.localMessages)
+          ..where((m) => m.clientId.equals('photo_conv1_mars10')))
+        .getSingle();
+    expect(before.mediaSize, isNull);
+
+    await dao.setMediaSize('photo_conv1_mars10', 2841233);
+
+    final after = await (db.select(db.localMessages)
+          ..where((m) => m.clientId.equals('photo_conv1_mars10')))
+        .getSingle();
+    expect(after.mediaSize, 2841233);
+
+    // Le voisin n'a pas bougé : l'écriture porte bien sur une seule ligne.
+    final other = await (db.select(db.localMessages)
+          ..where((m) => m.clientId.equals('video_conv1_mars31')))
+        .getSingle();
+    expect(other.mediaSize, isNull);
+  });
+
   test('conversationIdsWithLocalMedia ne liste que les discussions '
       'qui ont un média sur l\'appareil', () async {
     await db.into(db.localMessages).insert(LocalMessagesCompanion.insert(

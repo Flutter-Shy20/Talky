@@ -84,6 +84,11 @@ dependencies:
   audio_waveforms: ^2.0.2             # Waveform réelle des messages vocaux
   emoji_picker_flutter: ^3.1.0        # Sélecteur d'émojis
   open_filex: ^4.5.0                  # Ouvrir un fichier (PDF, doc…) avec l'app système
+  archive: ^4.0.9                     # Assemblage des archives d'export (zip, mode stocké)
+  cryptography: ^2.7.0                # AES-GCM des sauvegardes chiffrées
+  google_sign_in: ^6.2.1              # Connexion au compte Google (portée drive.file)
+  googleapis: ^13.2.0                 # API Drive v3
+  extension_google_sign_in_as_googleapis_auth: ^2.0.12  # Pont auth → client googleapis
   url_launcher: ^6.3.0                 # Ouverture des liens cliquables dans le navigateur
   html: ^0.15.4                        # Parsing des métadonnées Open Graph (aperçu de liens)
   pdfx: ^2.6.0                         # Aperçu et visionneuse PDF intégrée

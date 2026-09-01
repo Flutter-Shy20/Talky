@@ -13,7 +13,6 @@ import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/account/warning_banner.dart';
 import '../../widgets/common/common.dart';
-import '../authentification/login_screen.dart';
 
 /// Tous les appareils sur lesquels le compte est ouvert — pas seulement ceux
 /// ajoutés par QR — avec déconnexion à distance ligne par ligne.
@@ -167,11 +166,11 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
     _afficher(message, AppColors.brandPrimary);
     await context.read<AuthProvider>().logout();
     if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
+    // `AuthWrapper` rend deja `LoginScreen` des que la session se ferme. Cet
+    // ecran est empile au-dessus de lui : il suffit de depiler. Empiler un
+    // second `LoginScreen` avec `(route) => false` effacerait la page racine,
+    // et la connexion suivante n'aurait plus personne pour lier la session.
+    Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   void _afficher(String message, Color fond) {

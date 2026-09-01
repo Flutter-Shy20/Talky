@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.StatFs
 import android.provider.MediaStore
 import android.provider.Settings
 import android.app.NotificationManager
@@ -62,6 +63,45 @@ class MainActivity : FlutterFragmentActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaExportChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    // Espace libre du volume portant un chemin donné.
+                    //
+                    // `dart:io` n'expose pas `statfs` : la mesure ne peut venir
+                    // que d'ici. Sans elle, un export de plusieurs gigaoctets
+                    // pourrait remplir le téléphone à ras bord — et le laisser
+                    // dans un état pire que celui d'où l'on partait, alors que
+                    // l'export sert justement à faire de la place.
+                    "freeSpaceBytes" -> {
+                        try {
+                            val path = call.argument<String>("path")
+                            if (path.isNullOrBlank()) {
+                                result.error("bad_args", "path requis", null)
+                                return@setMethodCallHandler
+                            }
+                            result.success(freeSpaceBytes(path))
+                        } catch (e: Exception) {
+                            result.error("statfs_failed", e.message, null)
+                        }
+                    }
+                    // Pilotage du service de premier plan pendant l'assemblage
+                    // d'une archive : sans lui, Android tue le processus dès que
+                    // l'inscrit bascule sur autre chose, et l'archive à moitié
+                    // écrite est perdue.
+                    "startExportService" -> {
+                        ExportForegroundService.start(applicationContext)
+                        result.success(true)
+                    }
+                    "updateExportService" -> {
+                        ExportForegroundService.update(
+                            applicationContext,
+                            call.argument<Int>("done") ?: 0,
+                            call.argument<Int>("total") ?: 0,
+                        )
+                        result.success(true)
+                    }
+                    "stopExportService" -> {
+                        ExportForegroundService.stop(applicationContext)
+                        result.success(true)
+                    }
                     "saveToDownloads" -> {
                         try {
                             val path = call.argument<String>("path")
@@ -198,6 +238,20 @@ class MainActivity : FlutterFragmentActivity() {
         } else {
             pendingNotificationOpen = payload
         }
+    }
+
+    /// Octets disponibles sur le volume qui porte [path].
+    ///
+    /// On remonte au premier répertoire existant : le fichier d'archive
+    /// n'existe pas encore au moment où on pose la question, et `StatFs` exige
+    /// un chemin réel.
+    private fun freeSpaceBytes(path: String): Long {
+        var dir = File(path)
+        while (!dir.exists()) {
+            dir = dir.parentFile ?: return -1L
+        }
+        val stat = StatFs(dir.absolutePath)
+        return stat.availableBlocksLong * stat.blockSizeLong
     }
 
     private fun saveToDownloads(

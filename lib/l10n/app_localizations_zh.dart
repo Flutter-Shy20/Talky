@@ -4643,6 +4643,280 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get settingsBackup => '备份';
+
+  @override
+  String get settingsBackupSubtitle => '您的消息与设置，已加密';
+
+  @override
+  String get backupTitle => '备份';
+
+  @override
+  String get backupSubtitle => '您的消息与设置，已加密';
+
+  @override
+  String get backupFrequencyLabel => '频率';
+
+  @override
+  String get backupFrequencyDaily => '每天';
+
+  @override
+  String get backupFrequencyWeekly => '每周';
+
+  @override
+  String get backupFrequencyMonthly => '每月';
+
+  @override
+  String get backupFrequencyNever => '从不';
+
+  @override
+  String get backupLastNever => '尚无备份';
+
+  @override
+  String backupLastAt(String when, String size) {
+    return '上次备份：$when · $size';
+  }
+
+  @override
+  String backupCounts(int messages, int conversations) {
+    return '$messages 条消息 · $conversations 个聊天';
+  }
+
+  @override
+  String get backupRunNow => '立即备份';
+
+  @override
+  String get backupRunning => '正在备份…';
+
+  @override
+  String get backupSucceeded => '备份完成';
+
+  @override
+  String get backupFailed => '备份失败';
+
+  @override
+  String get backupStaleWarning => '已数天没有成功备份。请检查网络和可用空间。';
+
+  @override
+  String get backupDestinationLabel => '备份位置';
+
+  @override
+  String backupDestinationDrive(String account) {
+    return 'Google Drive $account';
+  }
+
+  @override
+  String get backupDestinationDriveUnlinked => 'Google Drive — 本机未连接账号';
+
+  @override
+  String get backupDestinationDevice => '本机';
+
+  @override
+  String get backupChangeAccount => '更换 Google 账号';
+
+  @override
+  String get backupConnectDrive => '连接 Google Drive';
+
+  @override
+  String get backupUseDevice => '备份到本机';
+
+  @override
+  String get backupDriveConnected => '已连接 Google Drive。后续备份将保存在那里。';
+
+  @override
+  String get backupDriveRefused => '已取消 Google 登录，未做任何更改。';
+
+  @override
+  String get backupFellBack => '无法连接 Drive：备份已保存在本机。';
+
+  @override
+  String backupFellBackAt(String when) {
+    return '无法连接 Drive。已于 $when 在本机创建备份。';
+  }
+
+  @override
+  String get backupLocalRisksTitle => '本机备份';
+
+  @override
+  String get backupLocalRisksBody =>
+      '您的备份保存在本机的“下载 › Alanya › Sauvegardes”中。\n\n✓ 重新安装 Alanya 后依然存在。\n✗ 手机丢失、被盗或损坏后将无法找回。\n✗ 设备被完全清除后将无法找回。\n\n如需将数据保存在手机之外，请连接 Google Drive。';
+
+  @override
+  String get backupWhatIsSaved => '备份内容：消息、聊天、联系人和设置。照片、视频和文件不包含在内。';
+
+  @override
+  String get backupNotEndToEnd => '备份已加密。Alanya 在技术上可以为您解密以便恢复；其他人则不能。';
+
+  @override
+  String get backupRestoreEntry => '恢复备份';
+
+  @override
+  String get backupRestoreEntryHint => '从 Google 云端硬盘或手机上的文件';
+
+  @override
+  String get restoreTitle => '恢复您的数据';
+
+  @override
+  String restoreFound(String when, String size) {
+    return '找到 $when 的备份（$size）。';
+  }
+
+  @override
+  String get restoreExplain => '您的消息和设置将被恢复。超过 30 天的照片和视频不会回来。';
+
+  @override
+  String get restoreAction => '恢复';
+
+  @override
+  String get restoreConnectGoogle => '连接到 Google 云端硬盘';
+
+  @override
+  String get restoreGoogleRefused => '已取消 Google 登录';
+
+  @override
+  String get restoreGoogleEmpty => '此 Google 账号中没有备份';
+
+  @override
+  String get restorePickFile => '选择备份文件';
+
+  @override
+  String get restorePickHint =>
+      '如果没有显示您的备份（例如重装之后），请在“下载 › Alanya › Sauvegardes”中指定 .enc 文件。';
+
+  @override
+  String get restorePickCancelled => '未选择文件';
+
+  @override
+  String get restorePickWrongFile => '此文件不是 Alanya 备份';
+
+  @override
+  String get restoreSkip => '跳过并继续';
+
+  @override
+  String get restoreRunning => '正在恢复…';
+
+  @override
+  String get restoreCloseApp => '关闭 Alanya';
+
+  @override
+  String get restoreDoneRestart => '恢复已就绪。请关闭 Alanya 后重新打开：您的数据将在启动时就位。';
+
+  @override
+  String get restoreFailedMessage => '恢复失败。您可以在设置中重试。';
+
+  @override
+  String get restoreKeyUnknown => '此备份使用了我们不再识别的密钥。';
+
+  @override
+  String get restoreTooRecent => '此备份来自更新版本的 Alanya。请升级应用。';
+
+  @override
+  String get restoreInterrupted => '上次恢复被中断，将从头开始。';
+
+  @override
+  String get exportPeriodAction => '导出此时间段';
+
+  @override
+  String get exportSheetTitle => '导出此时间段';
+
+  @override
+  String exportSheetSummary(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个项目 · $size',
+      zero: '没有项目',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exportSheetNothing => '没有符合筛选条件的媒体可导出';
+
+  @override
+  String exportMissingRecoverable(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个缺失项目可恢复（$size）',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String exportMissingRecoverableEstimate(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最多可恢复 $count 个缺失项目',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exportMissingEstimateHint => '无法联系服务器：其中部分项目可能已不存在。';
+
+  @override
+  String exportDoneWithMissing(String size, int missing) {
+    return '存档已就绪：$size · $missing 个项目不可用';
+  }
+
+  @override
+  String get exportMissingRecoverableHint => '勾选后，这些项目会在打包前下载。不勾选则不消耗移动数据。';
+
+  @override
+  String exportMissingLost(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个项目在服务器上已不可用',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exportMissingLostHint => '它们会在存档中标注，但内容已永久丢失。';
+
+  @override
+  String get exportDestinationShare => '分享';
+
+  @override
+  String get exportDestinationDownloads => '保存到下载';
+
+  @override
+  String get exportPhaseScanning => '正在清点…';
+
+  @override
+  String exportPhaseRecovering(int done, int total) {
+    return '正在恢复 $done / $total';
+  }
+
+  @override
+  String exportPhaseAssembling(int done, int total) {
+    return '正在打包 $done / $total';
+  }
+
+  @override
+  String exportDone(String size) {
+    return '存档已就绪：$size';
+  }
+
+  @override
+  String get exportFailedGeneric => '导出失败';
+
+  @override
+  String get exportNoSpace => '设备空间不足，无法创建此存档';
+
+  @override
+  String get exportSaveUnsupported => '此设备不支持该目标位置';
+
+  @override
+  String get exportSavedToDownloads => '存档已保存到 Downloads/Alanya';
+
+  @override
+  String get exportCancelled => '导出已取消';
+
+  @override
   String get myMediaFilters => '筛选';
 
   @override

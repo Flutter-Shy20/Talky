@@ -21,6 +21,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
+    <!-- Export d'archives : l'assemblage d'un zip de plusieurs gigaoctets doit
+         survivre au passage de l'application en arrière-plan. Android 15
+         plafonne ce type de service à six heures par tranche de 24 h, ce qui
+         est très au-delà de ce qu'un export demande — et le travail est de
+         toute façon reprenable. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <!-- Trajets de confiance. ACCESS_BACKGROUND_LOCATION n'est PAS requis :
          un service de type "location" démarré pendant que l'application est
          visible suffit, et n'impose aucune déclaration au Play Store. -->
@@ -167,6 +173,11 @@
             android:name=".TripLocationForegroundService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <service
+            android:name=".ExportForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <receiver
             android:name=".NotificationActionReceiver"
             android:exported="false" />

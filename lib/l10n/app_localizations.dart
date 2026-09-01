@@ -8434,6 +8434,456 @@ abstract class AppLocalizations {
   /// **'De {name}'**
   String myMediaFrom(String name);
 
+  /// No description provided for @settingsBackup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde'**
+  String get settingsBackup;
+
+  /// No description provided for @settingsBackupSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos messages et réglages, chiffrés'**
+  String get settingsBackupSubtitle;
+
+  /// No description provided for @backupTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde'**
+  String get backupTitle;
+
+  /// No description provided for @backupSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos messages et réglages, chiffrés'**
+  String get backupSubtitle;
+
+  /// No description provided for @backupFrequencyLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fréquence'**
+  String get backupFrequencyLabel;
+
+  /// No description provided for @backupFrequencyDaily.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quotidienne'**
+  String get backupFrequencyDaily;
+
+  /// No description provided for @backupFrequencyWeekly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hebdomadaire'**
+  String get backupFrequencyWeekly;
+
+  /// No description provided for @backupFrequencyMonthly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mensuelle'**
+  String get backupFrequencyMonthly;
+
+  /// No description provided for @backupFrequencyNever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jamais'**
+  String get backupFrequencyNever;
+
+  /// No description provided for @backupLastNever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune sauvegarde pour l\'instant'**
+  String get backupLastNever;
+
+  /// No description provided for @backupLastAt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dernière sauvegarde : {when} · {size}'**
+  String backupLastAt(String when, String size);
+
+  /// No description provided for @backupCounts.
+  ///
+  /// In fr, this message translates to:
+  /// **'{messages} messages · {conversations} discussions'**
+  String backupCounts(int messages, int conversations);
+
+  /// No description provided for @backupRunNow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarder maintenant'**
+  String get backupRunNow;
+
+  /// No description provided for @backupRunning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde en cours…'**
+  String get backupRunning;
+
+  /// No description provided for @backupSucceeded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde terminée'**
+  String get backupSucceeded;
+
+  /// No description provided for @backupFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'La sauvegarde a échoué'**
+  String get backupFailed;
+
+  /// No description provided for @backupStaleWarning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune sauvegarde n\'a abouti depuis plusieurs jours. Vérifiez votre connexion et l\'espace disponible.'**
+  String get backupStaleWarning;
+
+  /// No description provided for @backupDestinationLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Destination'**
+  String get backupDestinationLabel;
+
+  /// No description provided for @backupDestinationDrive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Google Drive {account}'**
+  String backupDestinationDrive(String account);
+
+  /// No description provided for @backupDestinationDriveUnlinked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Google Drive — aucun compte connecté sur cet appareil'**
+  String get backupDestinationDriveUnlinked;
+
+  /// No description provided for @backupDestinationDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur cet appareil'**
+  String get backupDestinationDevice;
+
+  /// No description provided for @backupChangeAccount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer de compte Google'**
+  String get backupChangeAccount;
+
+  /// No description provided for @backupConnectDrive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connecter Google Drive'**
+  String get backupConnectDrive;
+
+  /// No description provided for @backupUseDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarder sur cet appareil'**
+  String get backupUseDevice;
+
+  /// No description provided for @backupDriveConnected.
+  ///
+  /// In fr, this message translates to:
+  /// **'Google Drive connecté. Vos prochaines sauvegardes y seront déposées.'**
+  String get backupDriveConnected;
+
+  /// No description provided for @backupDriveRefused.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion à Google annulée. Rien n\'a changé.'**
+  String get backupDriveRefused;
+
+  /// No description provided for @backupFellBack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Drive était injoignable : la sauvegarde a été faite sur cet appareil.'**
+  String get backupFellBack;
+
+  /// No description provided for @backupFellBackAt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Drive était injoignable. Une sauvegarde a été faite sur cet appareil le {when}.'**
+  String backupFellBackAt(String when);
+
+  /// No description provided for @backupLocalRisksTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde sur cet appareil'**
+  String get backupLocalRisksTitle;
+
+  /// No description provided for @backupLocalRisksBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre sauvegarde est sur ce téléphone, dans Téléchargements › Alanya › Sauvegardes.\n\n✓ Elle survit à une réinstallation d\'Alanya.\n✗ Elle ne survit pas à la perte, au vol ou à la casse du téléphone.\n✗ Elle ne survit pas à un effacement complet de l\'appareil.\n\nPour mettre vos données à l\'abri hors du téléphone, connectez Google Drive.'**
+  String get backupLocalRisksBody;
+
+  /// No description provided for @backupWhatIsSaved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sont sauvegardés : messages, discussions, contacts et réglages. Les photos, vidéos et fichiers ne le sont pas — utilisez « Exporter cette période » depuis Mes médias pour les conserver.'**
+  String get backupWhatIsSaved;
+
+  /// No description provided for @backupNotEndToEnd.
+  ///
+  /// In fr, this message translates to:
+  /// **'La sauvegarde est chiffrée. Alanya peut techniquement la déchiffrer pour vous la restaurer ; personne d\'autre ne le peut.'**
+  String get backupNotEndToEnd;
+
+  /// No description provided for @backupRestoreEntry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restaurer une sauvegarde'**
+  String get backupRestoreEntry;
+
+  /// No description provided for @backupRestoreEntryHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Depuis Google Drive ou un fichier de votre téléphone'**
+  String get backupRestoreEntryHint;
+
+  /// No description provided for @restoreTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restaurer vos données'**
+  String get restoreTitle;
+
+  /// No description provided for @restoreFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une sauvegarde du {when} a été trouvée ({size}).'**
+  String restoreFound(String when, String size);
+
+  /// No description provided for @restoreExplain.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos messages et réglages seront remis en place. Les photos et vidéos de plus de 30 jours ne reviendront pas : elles ne sont pas dans la sauvegarde.'**
+  String get restoreExplain;
+
+  /// No description provided for @restoreAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restaurer'**
+  String get restoreAction;
+
+  /// No description provided for @restoreConnectGoogle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se connecter à Google Drive'**
+  String get restoreConnectGoogle;
+
+  /// No description provided for @restoreGoogleRefused.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion à Google annulée'**
+  String get restoreGoogleRefused;
+
+  /// No description provided for @restoreGoogleEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune sauvegarde dans ce compte Google'**
+  String get restoreGoogleEmpty;
+
+  /// No description provided for @restorePickFile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un fichier de sauvegarde'**
+  String get restorePickFile;
+
+  /// No description provided for @restorePickHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Si votre sauvegarde ne s\'affiche pas — après une réinstallation, par exemple — désignez le fichier .enc dans Téléchargements › Alanya › Sauvegardes.'**
+  String get restorePickHint;
+
+  /// No description provided for @restorePickCancelled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun fichier choisi'**
+  String get restorePickCancelled;
+
+  /// No description provided for @restorePickWrongFile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier n\'est pas une sauvegarde Alanya'**
+  String get restorePickWrongFile;
+
+  /// No description provided for @restoreSkip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ignorer et continuer'**
+  String get restoreSkip;
+
+  /// No description provided for @restoreRunning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restauration en cours…'**
+  String get restoreRunning;
+
+  /// No description provided for @restoreCloseApp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer Alanya'**
+  String get restoreCloseApp;
+
+  /// No description provided for @restoreDoneRestart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restauration prête. Fermez Alanya, puis rouvrez-la : vos données seront en place au démarrage.'**
+  String get restoreDoneRestart;
+
+  /// No description provided for @restoreFailedMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'La restauration a échoué. Vous pouvez réessayer depuis les réglages.'**
+  String get restoreFailedMessage;
+
+  /// No description provided for @restoreKeyUnknown.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette sauvegarde a été chiffrée avec une clé que nous ne reconnaissons plus.'**
+  String get restoreKeyUnknown;
+
+  /// No description provided for @restoreTooRecent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette sauvegarde vient d\'une version plus récente d\'Alanya. Mettez l\'application à jour.'**
+  String get restoreTooRecent;
+
+  /// No description provided for @restoreInterrupted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une restauration précédente a été interrompue. Elle va être reprise depuis le début.'**
+  String get restoreInterrupted;
+
+  /// No description provided for @exportPeriodAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exporter cette période'**
+  String get exportPeriodAction;
+
+  /// No description provided for @exportSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exporter cette période'**
+  String get exportSheetTitle;
+
+  /// No description provided for @exportSheetSummary.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun élément} =1{1 élément · {size}} other{{count} éléments · {size}}}'**
+  String exportSheetSummary(int count, String size);
+
+  /// No description provided for @exportSheetNothing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun média à exporter pour ces filtres'**
+  String get exportSheetNothing;
+
+  /// No description provided for @exportMissingRecoverable.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 élément manquant peut être récupéré ({size})} other{{count} éléments manquants peuvent être récupérés ({size})}}'**
+  String exportMissingRecoverable(int count, String size);
+
+  /// No description provided for @exportMissingRecoverableEstimate.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Jusqu\'à 1 élément manquant peut être récupéré} other{Jusqu\'à {count} éléments manquants peuvent être récupérés}}'**
+  String exportMissingRecoverableEstimate(int count);
+
+  /// No description provided for @exportMissingEstimateHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur n\'a pas pu être consulté : certains de ces éléments n\'y sont peut-être plus.'**
+  String get exportMissingEstimateHint;
+
+  /// No description provided for @exportDoneWithMissing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Archive prête : {size} · {missing} élément(s) indisponible(s)'**
+  String exportDoneWithMissing(String size, int missing);
+
+  /// No description provided for @exportMissingRecoverableHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coché, ces éléments seront téléchargés avant l\'assemblage. Décoché, aucune donnée mobile n\'est consommée.'**
+  String get exportMissingRecoverableHint;
+
+  /// No description provided for @exportMissingLost.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 élément n\'est plus disponible sur les serveurs} other{{count} éléments ne sont plus disponibles sur les serveurs}}'**
+  String exportMissingLost(int count);
+
+  /// No description provided for @exportMissingLostHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ils sont signalés dans l\'archive, mais leur contenu est définitivement perdu.'**
+  String get exportMissingLostHint;
+
+  /// No description provided for @exportDestinationShare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager'**
+  String get exportDestinationShare;
+
+  /// No description provided for @exportDestinationDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer dans Téléchargements'**
+  String get exportDestinationDownloads;
+
+  /// No description provided for @exportPhaseScanning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inventaire…'**
+  String get exportPhaseScanning;
+
+  /// No description provided for @exportPhaseRecovering.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récupération {done} / {total}'**
+  String exportPhaseRecovering(int done, int total);
+
+  /// No description provided for @exportPhaseAssembling.
+  ///
+  /// In fr, this message translates to:
+  /// **'Assemblage {done} / {total}'**
+  String exportPhaseAssembling(int done, int total);
+
+  /// No description provided for @exportDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Archive prête : {size}'**
+  String exportDone(String size);
+
+  /// No description provided for @exportFailedGeneric.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'exportation a échoué'**
+  String get exportFailedGeneric;
+
+  /// No description provided for @exportNoSpace.
+  ///
+  /// In fr, this message translates to:
+  /// **'Espace insuffisant sur l\'appareil pour cette archive'**
+  String get exportNoSpace;
+
+  /// No description provided for @exportSaveUnsupported.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette destination n\'est pas disponible sur cet appareil'**
+  String get exportSaveUnsupported;
+
+  /// No description provided for @exportSavedToDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Archive enregistrée dans Téléchargements/Alanya'**
+  String get exportSavedToDownloads;
+
+  /// No description provided for @exportCancelled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exportation annulée'**
+  String get exportCancelled;
+
   /// No description provided for @myMediaFilters.
   ///
   /// In fr, this message translates to:
