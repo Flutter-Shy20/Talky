@@ -3,20 +3,30 @@ package com.alanya237.alanya
 import android.app.ActivityManager
 import android.app.KeyguardManager
 import android.content.Context
-import android.content.Intent
-import android.os.Parcel
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import io.flutter.plugins.firebase.messaging.ContextHolder
-import io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingBackgroundService
-import io.flutter.plugins.firebase.messaging.FlutterFirebaseRemoteMessageLiveData
 
 /**
  * Couche Android propriétaire (Phase 4) — activée via manifest placeholder
  * `talkyNotificationNativeV2=true`.
  *
- * Messages : MessagingStyle natif. Appels / meetings : délégués à Flutter FCM.
+ * Messages : MessagingStyle natif. Appels / meetings : traités par Flutter.
+ *
+ * **Ce service ne transmet rien à Flutter, et n'a pas à le faire.** Le plugin
+ * `firebase_messaging` déclare son propre `FlutterFirebaseMessagingReceiver`
+ * sur `com.google.android.c2dm.intent.RECEIVE` — une diffusion distincte de
+ * celle qui nous amène ici. Ce receiver reçoit donc *chaque* message de son
+ * côté et fait déjà tout le travail : `LiveData` au premier plan,
+ * `enqueueMessageProcessing` en arrière-plan, et la mise en réserve des
+ * messages à bloc `notification` qui alimente `getInitialMessage` et
+ * `onMessageOpenedApp`.
+ *
+ * Un `forwardToFlutter` reproduisait exactement ce chemin : le handler Dart
+ * s'exécutait deux fois. Au premier plan, `qr_contact_scanned` ouvrait ainsi
+ * **deux fois** la boîte « ajouter en retour », et une notification générique
+ * alertait deux fois sur un même identifiant.
  */
 class TalkyFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -24,10 +34,9 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
         ensureFlutterContext()
 
         val data = message.data
-        val type = data["type"] ?: run {
-            forwardToFlutter(message)
-            return
-        }
+        // Sans type, rien de natif à faire : le receiver Flutter a déjà pris
+        // le message en charge de son côté.
+        val type = data["type"] ?: return
 
         when (type) {
             "message" -> {
@@ -54,8 +63,8 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
             "call", "group_call" -> {
                 if (isApplicationForeground(this)) {
                     // Premier plan : Flutter + socket (IncomingCallScreen + sonnerie).
-                    Log.d(TAG, "call foreground → forward Flutter callId=${data["callId"] ?: data["roomId"]}")
-                    forwardToFlutter(message)
+                    // Le receiver a déjà posté le message dans la LiveData.
+                    Log.d(TAG, "call foreground → Flutter callId=${data["callId"] ?: data["roomId"]}")
                 } else {
                     Log.d(TAG, "call native show callId=${data["callId"] ?: data["roomId"]}")
                     CallIncomingHelper.showIncoming(this, data)
@@ -64,11 +73,10 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
             "call_ended" -> {
                 Log.d(TAG, "call native end callId=${data["callId"]}")
                 CallIncomingHelper.endCall(this, data)
-                forwardToFlutter(message)
             }
-            "meeting_invite", "meeting_reminder", "status_view",
-            -> forwardToFlutter(message)
-            else -> forwardToFlutter(message)
+            // meeting_invite, meeting_reminder, status_view, qr_contact_scanned,
+            // broadcast… : rien de natif, le receiver Flutter s'en charge seul.
+            else -> Unit
         }
     }
 
@@ -80,28 +88,6 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
         if (ContextHolder.getApplicationContext() == null) {
             ContextHolder.setApplicationContext(applicationContext)
         }
-    }
-
-    private fun forwardToFlutter(message: RemoteMessage) {
-        val context: Context = applicationContext
-        if (isApplicationForeground(context)) {
-            FlutterFirebaseRemoteMessageLiveData.getInstance().postRemoteMessage(message)
-            return
-        }
-        val intent = Intent(context, FlutterFirebaseMessagingBackgroundService::class.java)
-        val parcel = Parcel.obtain()
-        try {
-            message.writeToParcel(parcel, 0)
-            // Même clé que FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE ("notification").
-            intent.putExtra(FLUTTER_REMOTE_MESSAGE_EXTRA, parcel.marshall())
-        } finally {
-            parcel.recycle()
-        }
-        FlutterFirebaseMessagingBackgroundService.enqueueMessageProcessing(
-            context,
-            intent,
-            message.originalPriority == RemoteMessage.PRIORITY_HIGH,
-        )
     }
 
     /** Copie de la logique FlutterFirebaseMessagingUtils (classe package-private). */
@@ -126,6 +112,5 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
         private const val TAG = "TalkyFcmService"
-        private const val FLUTTER_REMOTE_MESSAGE_EXTRA = "notification"
     }
 }
