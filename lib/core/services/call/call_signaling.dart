@@ -482,12 +482,28 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] 🛡 ice_candidate génération périmée gen=$gen');
         return;
       }
-      final c = data['candidate'] as Map;
+      // `as String` non nullable levait ici sur un candidat sans chaîne — or
+      // l'émetteur relaie le champ brut, et `webrtc_service` le traite lui-même
+      // comme nullable. L'exception remontait dans un écouteur socket, où
+      // personne ne l'attrape : le candidat était perdu sans un mot, sur le
+      // chemin le plus tendu de l'établissement de l'appel. Un candidat vide se
+      // jette explicitement — c'est la marque de fin de collecte.
+      final c = data['candidate'];
+      if (c is! Map) {
+        debugPrint('[CallService] 🧊 ice_candidate sans candidat exploitable');
+        return;
+      }
+      final ligne = c['candidate']?.toString();
+      if (ligne == null || ligne.isEmpty) {
+        debugPrint('[CallService] 🧊 ice_candidate vide (fin de collecte)');
+        return;
+      }
+      final index = c['sdpMLineIndex'];
       _webrtc.addIceCandidate(
         RTCIceCandidate(
-          c['candidate'] as String,
-          c['sdpMid'] as String?,
-          c['sdpMLineIndex'] as int?,
+          ligne,
+          c['sdpMid']?.toString(),
+          index is int ? index : int.tryParse(index?.toString() ?? ''),
         ),
         generation: gen,
       );

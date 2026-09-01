@@ -52,7 +52,16 @@ class _CallParticipantTileState extends State<CallParticipantTile> {
   }
 
   Future<void> _init() async {
-    await _renderer.initialize();
+    // `initialize()` échoue — plateforme saturée, texture indisponible — et sans
+    // garde l'exception part dans un `initState` où personne ne l'attrape :
+    // la tuile reste vide à vie, sans un mot. `SessionVideoRenderers` protège
+    // déjà le même appel ; ici un participant disparaissait de la mosaïque.
+    try {
+      await _renderer.initialize();
+    } catch (e) {
+      debugPrint('[CallParticipantTile] ** initialisation du rendu: $e');
+      return;
+    }
     if (!mounted) return;
     _renderer.srcObject = widget.stream;
     setState(() => _ready = true);
