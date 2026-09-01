@@ -35,14 +35,23 @@ class ActiveSessionChrome extends StatelessWidget {
     return ListenableBuilder(
       listenable: SystemPip.instance,
       builder: (context, _) {
-        // En vignette système, c'est l'activité entière qui est réduite : tout
+        // En vignette système, c'est l'activité entière qu'Android réduit : tout
         // ce qui n'est pas l'image du correspondant devient du bruit dans un
-        // rectangle de quelques centimètres. On remplace donc l'application,
-        // et non on superpose.
-        if (SystemPip.instance.isInPipMode) {
-          return const SystemPipLayout();
-        }
-        return _buildChrome(context);
+        // rectangle de quelques centimètres. La vignette recouvre donc
+        // l'application.
+        //
+        // `Offstage` et non un remplacement : rendre un autre arbre démonterait
+        // le `Navigator` et l'état de tous les écrans ouverts, qui seraient
+        // reconstruits à la sortie du PiP — l'utilisateur retrouverait
+        // l'application à son point de départ, appel compris. Offstage cesse de
+        // peindre sans rien démonter.
+        final inPip = SystemPip.instance.isInPipMode;
+        return Stack(
+          children: [
+            Offstage(offstage: inPip, child: _buildChrome(context)),
+            if (inPip) const SystemPipLayout(),
+          ],
+        );
       },
     );
   }
