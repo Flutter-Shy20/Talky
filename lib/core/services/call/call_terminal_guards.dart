@@ -190,3 +190,31 @@ String? outgoingSnapshotIdentity({
   if (courant != null && courant.isNotEmpty) return courant;
   return null;
 }
+
+/// Le statut local autorise-t-il à confirmer une reprise d'appel ?
+///
+/// `incoming` en fait partie, et son absence coûtait cher : au démarrage à
+/// froid sur un appel déjà en communication, le point d'entrée CallKit repose
+/// l'état à `incoming` en armant l'auto-réponse — le serveur, lui, n'envoie plus
+/// `incoming_call` mais `call_resume`. Le statut n'étant pas reconnu, le client
+/// répondait `call_resume_reject`, c'est-à-dire qu'il demandait lui-même au
+/// serveur de raccrocher un appel parfaitement vivant. L'application tuée puis
+/// rouverte en pleine conversation coupait donc la communication des deux côtés.
+bool acceptsResumeForLocalStatus({
+  required String callStatusName,
+  bool awaitingAutoAnswer = false,
+}) {
+  switch (callStatusName) {
+    case 'connecting':
+    case 'connected':
+    case 'reconnecting':
+    case 'outgoing':
+      return true;
+    case 'incoming':
+      // Seulement si une entrée CallKit acceptée nous a remis dans cet état :
+      // un entrant qui sonne encore n'a rien à reprendre.
+      return awaitingAutoAnswer;
+    default:
+      return false;
+  }
+}

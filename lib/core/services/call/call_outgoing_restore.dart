@@ -270,10 +270,10 @@ extension CallOutgoingRestore on CallService {
       return true;
     }
 
-    if ((_status == CallStatus.connecting ||
-            _status == CallStatus.connected ||
-            _status == CallStatus.reconnecting ||
-            _status == CallStatus.outgoing) &&
+    if (acceptsResumeForLocalStatus(
+          callStatusName: _status.name,
+          awaitingAutoAnswer: _autoAnswerOnNextIncoming || _isAutoAnsweringFromPush,
+        ) &&
         (_remoteUserId == peerId || _currentCallId == serverCallId)) {
       return true;
     }

@@ -296,4 +296,41 @@ void main() {
       });
     }
   });
+
+  group('quel statut local autorise une reprise', () {
+    for (final st in ['connecting', 'connected', 'reconnecting', 'outgoing']) {
+      test('$st : la reprise est légitime', () {
+        expect(acceptsResumeForLocalStatus(callStatusName: st), isTrue);
+      });
+    }
+
+    test('incoming avec auto-réponse armée : c\'est un retour, pas une sonnerie', () {
+      // Démarrage à froid sur une entrée CallKit acceptée : le serveur envoie
+      // call_resume, jamais incoming_call. Refuser ici revenait à lui demander
+      // de raccrocher un appel vivant.
+      expect(
+        acceptsResumeForLocalStatus(
+          callStatusName: 'incoming',
+          awaitingAutoAnswer: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('incoming qui sonne encore : rien à reprendre', () {
+      expect(
+        acceptsResumeForLocalStatus(callStatusName: 'incoming'),
+        isFalse,
+      );
+    });
+
+    for (final st in ['idle', 'ended', 'joining']) {
+      test('$st : aucune reprise', () {
+        expect(
+          acceptsResumeForLocalStatus(callStatusName: st, awaitingAutoAnswer: true),
+          isFalse,
+        );
+      });
+    }
+  });
 }
