@@ -12,6 +12,35 @@ import 'callkit_service.dart';
 
 enum SessionMode { audio, video }
 
+/// Ce que vaut une acquisition de la session média.
+enum SessionAcquisition {
+  /// Personne ne tenait la session : on la configure.
+  fraiche,
+
+  /// Le même appel la tient déjà — imbrication légitime, on compte.
+  imbriquee,
+
+  /// Un AUTRE appel la tient. On ne compte pas, et on le dit.
+  conflit,
+}
+
+/// Décide du sort d'un `acquire`, sans rien toucher.
+///
+/// Extraite parce que la version précédente incrémentait le compteur dans les
+/// trois cas puis sortait sans rien configurer dans les deux derniers : le
+/// `release()` d'en face ne redescendait alors jamais à zéro, et le verrou de
+/// veille, le capteur de proximité, le service au premier plan, le focus audio
+/// et l'entrée CallKit restaient tenus indéfiniment.
+SessionAcquisition classerAcquisition({
+  required int refCount,
+  required String? tenuPar,
+  required String callId,
+}) {
+  if (refCount <= 0) return SessionAcquisition.fraiche;
+  if (tenuPar == callId) return SessionAcquisition.imbriquee;
+  return SessionAcquisition.conflit;
+}
+
 /// Maintient micro + foreground service actifs pendant appels/réunions (Android).
 /// Vidéo : wakelock écran + pause caméra en veille.
 ///
@@ -69,7 +98,23 @@ class CallSessionGuard with WidgetsBindingObserver {
 
   bool get isActive => _refCount > 0;
 
-  Future<void> acquire({
+  /// Prend la session média, et **dit si elle est bien à cet appel-ci**.
+  ///
+  /// Le compteur de références sert à imbriquer plusieurs acquisitions du MÊME
+  /// appel — `answerCall` après `acceptIncomingCallFromPush`, par exemple. Il
+  /// incrémentait aussi pour un `callId` DIFFÉRENT, en sortant aussitôt sans
+  /// rien configurer : `_callId` et le mode restaient ceux de la session
+  /// précédente, et le `release()` d'en face ne pouvait plus redescendre à zéro.
+  ///
+  /// Le chemin est banal — rejoindre une réunion pendant un appel. La réunion
+  /// n'obtenait aucune entrée CallKit, celle de l'appel était marquée
+  /// « connectée », et à la fin de l'appel la notification restait affichée,
+  /// chronomètre en marche, pour toute la durée de la réunion. Avec elle : le
+  /// verrou de veille, le capteur de proximité, le service au premier plan et
+  /// le focus audio, tous jamais rendus.
+  ///
+  /// Un conflit ne compte donc plus, et se voit.
+  Future<bool> acquire({
     required SessionMode mode,
     required String callId,
     required String displayName,
@@ -81,13 +126,32 @@ class CallSessionGuard with WidgetsBindingObserver {
     bool Function()? isMuted,
     Future<void> Function()? onReplaceAudioNeeded,
   }) async {
-    if (kIsWeb) return;
+    // Le web n'a ni service au premier plan ni CallKit : rien à tenir, et donc
+    // aucun échec à signaler.
+    if (kIsWeb) return true;
+
+    switch (classerAcquisition(
+      refCount: _refCount,
+      tenuPar: _callId,
+      callId: callId,
+    )) {
+      case SessionAcquisition.imbriquee:
+        _refCount++;
+        debugPrint(
+          '[CallSessionGuard] Déjà actif pour cet appel (ref=$_refCount)',
+        );
+        return true;
+      case SessionAcquisition.conflit:
+        debugPrint(
+          '[CallSessionGuard] ⛔ conflit : session tenue par $_callId, '
+          'refus de $callId — le compteur ne bouge pas',
+        );
+        return false;
+      case SessionAcquisition.fraiche:
+        break;
+    }
 
     _refCount++;
-    if (_refCount > 1) {
-      debugPrint('[CallSessionGuard] Déjà actif (ref=$_refCount)');
-      return;
-    }
 
     _mode = mode;
     _callId = callId;
@@ -118,6 +182,7 @@ class CallSessionGuard with WidgetsBindingObserver {
     _watchAudioTrack();
 
     debugPrint('[CallSessionGuard] Session acquise mode=$mode callId=$callId');
+    return true;
   }
 
   Future<void> markConnected() async {

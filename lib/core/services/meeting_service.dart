@@ -728,7 +728,7 @@ class MeetingService extends ChangeNotifier {
 
     if (!kIsWeb && _currentMeeting != null) {
       final isVideo = _currentMeeting!.typeMedia == 0;
-      await CallSessionGuard.instance.acquire(
+      final pris = await CallSessionGuard.instance.acquire(
         mode: isVideo ? SessionMode.video : SessionMode.audio,
         callId: 'meeting_${_currentMeeting!.idMeeting}',
         displayName: _currentMeeting!.objet,
@@ -738,8 +738,16 @@ class MeetingService extends ChangeNotifier {
         isVideoOn: () => !_isVideoOff,
         isMuted: () => _isMuted,
       );
-      await CallSessionGuard.instance.markConnected();
-      await _bindSessionRenderers(isVideo: isVideo);
+      if (pris) {
+        await CallSessionGuard.instance.markConnected();
+        await _bindSessionRenderers(isVideo: isVideo);
+      } else {
+        // Un appel tient déjà la session. `markConnected` aurait marqué
+        // « connectée » l'entrée CallKit de CET appel, pas celle de la réunion.
+        debugPrint(
+          '[MeetingService] ⛔ session média refusée — un appel est en cours',
+        );
+      }
     }
 
     notifyListeners();

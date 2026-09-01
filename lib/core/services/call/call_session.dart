@@ -21,7 +21,7 @@ extension CallSession on CallService {
   }) async {
     if (kIsWeb) return;
     final callId = _ensureCallId();
-    await CallSessionGuard.instance.acquire(
+    final pris = await CallSessionGuard.instance.acquire(
       mode: isVideo ? SessionMode.video : SessionMode.audio,
       callId: callId,
       displayName: displayName,
@@ -38,6 +38,12 @@ extension CallSession on CallService {
         );
       },
     );
+    if (!pris) {
+      // Une autre session tient déjà le garde. On ne lie pas les rendus et on
+      // ne réclame pas le mode image dans l'image : ils appartiennent à l'autre.
+      debugPrint('[CallService] ⛔ session média refusée pour $callId');
+      return;
+    }
 
     await _bindSessionRenderers();
     // L'éligibilité au PiP se déclare à l'ouverture, pas au moment de sortir :
