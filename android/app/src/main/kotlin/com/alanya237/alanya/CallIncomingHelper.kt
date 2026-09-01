@@ -291,12 +291,15 @@ object CallIncomingHelper {
             // Sous le NO_ANSWER_MS serveur (45 s) : la notification doit expirer
             // AVANT que le serveur classe l'appel « sans réponse », jamais après.
             "duration" to 40000L,
-            "textAccept" to "Accepter",
-            "textDecline" to "Refuser",
             "extra" to extra,
             "android" to hashMapOf(
                 "isCustomNotification" to true,
                 "isShowLogo" to false,
+                // Depuis la 3.x, `Data` lit ces libellés dans `android` et non
+                // plus à la racine : les y laisser rendait les boutons de la
+                // notification aux valeurs par défaut du plugin, en anglais.
+                "textAccept" to "Accepter",
+                "textDecline" to "Refuser",
                 // Résolu par l'appelant : nom de ressource res/raw compilée
                 // ('ringback', 'system_ringtone_default'), ou 'silence' quand on
                 // joue nous-mêmes un fichier importé (voir CustomRingtonePlayer).
