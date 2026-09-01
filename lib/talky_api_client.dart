@@ -107,8 +107,22 @@ class TalkyApiClient {
 
   /// ID d'installation stable (FCM multi-appareil + auth socket).
   Future<String> ensureStableDeviceId() {
-    _stableDeviceIdFuture ??= StorageService().getOrCreateDeviceId();
-    return _stableDeviceIdFuture!;
+    final memo = _stableDeviceIdFuture;
+    if (memo != null) return memo;
+    final f = StorageService().getOrCreateDeviceId();
+    _stableDeviceIdFuture = f;
+    // Un ÉCHEC ne doit pas rester en cache pour la vie du processus.
+    //
+    // `??=` ne teste que la nullité de la référence : un Future rejeté restait
+    // mémorisé, et chaque appel suivant renvoyait la même erreur. Comme
+    // `_emitSocketAuthLogin` l'attend avant d'émettre `auth:login`, et qu'il est
+    // lancé en `unawaited` depuis `onConnect`, la panne était totale et
+    // silencieuse : socket connecté, aucun indicateur hors-ligne, et plus aucun
+    // appel entrant routé — y compris après un redémarrage de l'application.
+    unawaited(f.then((_) {}, onError: (_) {
+      if (identical(_stableDeviceIdFuture, f)) _stableDeviceIdFuture = null;
+    }));
+    return f;
   }
 
   /// Identifiant matériel du téléphone (`device_ID`) à envoyer au

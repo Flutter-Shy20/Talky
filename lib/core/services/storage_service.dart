@@ -97,11 +97,31 @@ class StorageService {
   Future<bool> isLoggedIn() async => (await getAccessToken()) != null;
 
   /// Identifiant stable de l'installation (multi-device FCM / socket auth).
+  /// Identifiant d'installation stable, ou à défaut un identifiant de session.
+  ///
+  /// `writeString` relance délibérément : pour un jeton, se croire enregistré à
+  /// tort serait pire qu'un échec visible. Mais cette règle ne vaut pas ici. Un
+  /// identifiant non persisté est dégradé — le serveur verra un nouvel appareil
+  /// au prochain lancement — alors qu'une absence d'identifiant est fatale :
+  /// `auth:login` n'est jamais émis, et **plus aucun appel entrant n'est routé**,
+  /// sans le moindre signe extérieur.
+  ///
+  /// Le cas se produit quand le Keystore est invalidé en cours de route, ce que
+  /// `SecureStorageGuard` documente : l'utilisateur ajoute ou retire son
+  /// verrouillage d'écran. On garde donc l'identifiant généré pour la session,
+  /// et la persistance retentera au prochain démarrage.
   Future<String> getOrCreateDeviceId() async {
     var id = await SecureStorageGuard.readString(_secureStorage, _deviceIdKey);
     if (id != null && id.isNotEmpty) return id;
     id = _generateDeviceId();
-    await SecureStorageGuard.writeString(_secureStorage, _deviceIdKey, id);
+    try {
+      await SecureStorageGuard.writeString(_secureStorage, _deviceIdKey, id);
+    } catch (e) {
+      debugPrint(
+        '[StorageService] identifiant d\'appareil non persisté ($e) — '
+        'conservé pour cette session',
+      );
+    }
     return id;
   }
 
