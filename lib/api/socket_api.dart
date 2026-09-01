@@ -125,6 +125,27 @@ extension SocketApi on TalkyApiClient {
     });
   }
 
+  /// Rejoue `auth:login` après un refus passager, avec un recul croissant.
+  void _scheduleAuthRetry() {
+    _authRetryTimer?.cancel();
+    final attente = socketAuthRetryDelay(_authRetryCount);
+    _authRetryCount += 1;
+    debugPrint(
+      '[Socket] ré-authentification dans ${attente.inSeconds}s '
+      '(tentative $_authRetryCount)',
+    );
+    _authRetryTimer = Timer(attente, () {
+      if (_accessToken == null || isSocketReady) return;
+      _teardownSocketInstance();
+      connectSocket();
+    });
+  }
+
+  void _cancelAuthRetry() {
+    _authRetryTimer?.cancel();
+    _authRetryTimer = null;
+  }
+
   void _cancelSocketReconnectWatchdog() {
     _socketReconnectWatchdog?.cancel();
     _socketReconnectWatchdog = null;
@@ -181,6 +202,8 @@ extension SocketApi on TalkyApiClient {
       _recordEvent();
       debugPrint('[Socket] Authentifié: ${data['alanyaID']}');
       _isSocketAuthVerified = true;
+      _authRetryCount = 0;
+      _cancelAuthRetry();
       _cancelSocketReconnectWatchdog();
       final external = _socketListeners[SocketEvents.authVerified];
       if (external == null || external.isEmpty) {
@@ -204,8 +227,24 @@ extension SocketApi on TalkyApiClient {
       // Sans ça, après une reconnexion avec un token périmé le socket reste
       // connecté mais NON authentifié → plus aucun `message:received` (temps
       // réel mort jusqu'à un appel HTTP qui rafraîchit le token par hasard).
-      if (code == 'TOKEN_EXPIRED' && _refreshToken != null) {
-        _refreshSocketAuth();
+      switch (socketAuthRecovery(
+        code: code,
+        hasRefreshToken: _refreshToken != null,
+        attempts: _authRetryCount,
+      )) {
+        case SocketAuthRecovery.refreshToken:
+          _authRetryCount = 0;
+          _refreshSocketAuth();
+        case SocketAuthRecovery.retryLater:
+          // Connecté mais jamais authentifié est un état sans issue : ni
+          // `ensureSocketReady` — qui ne recrée l'instance que si elle est
+          // déconnectée — ni le chien de garde — qui exige des messages en
+          // attente — n'en sortent. Un hoquet du MySQL distant y menait, et
+          // tout le temps réel restait mort jusqu'au redémarrage de l'app.
+          _scheduleAuthRetry();
+        case SocketAuthRecovery.giveUp:
+          debugPrint('[Socket] auth:error définitif (code=$code) — pas de reprise');
+          _cancelAuthRetry();
       }
     });
 

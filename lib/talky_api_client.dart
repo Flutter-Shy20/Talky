@@ -23,6 +23,7 @@ import 'core/theme/locale_controller.dart';
 import 'core/services/call/call_history_rules.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/app_log.dart';
+import 'api/socket_auth_recovery.dart';
 
 part 'api/auth_api.dart';
 part 'api/users_api.dart';
@@ -53,6 +54,12 @@ class TalkyApiClient {
 
   // Callbacks Socket globaux (pour CallService, MeetingService)
   final Map<String, List<void Function(dynamic)>> _socketListeners = {};
+
+  /// Tentatives de ré-authentification consécutives du socket, remises à zéro
+  /// dès qu'une authentification aboutit. Déclarées ici et non dans l'extension
+  /// `SocketApi` : une extension Dart ne peut pas porter de champ.
+  int _authRetryCount = 0;
+  Timer? _authRetryTimer;
 
   /// Vrai uniquement après que le serveur a confirmé `auth:verified`. Le simple
   /// `_socket.connected` ne suffit pas : émettre avant l'auth fait silencieusement
