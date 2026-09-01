@@ -9,5 +9,19 @@
 	<!-- Phase 5.1 : remplacer development par production dans l'IPA Release via Xcode -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Capture caméra en arrière-plan pendant un appel vidéo (iOS 16+).
+
+	     Sans elle, iOS suspend la caméra dès que l'application quitte le premier
+	     plan : on continue de recevoir l'image du correspondant en
+	     Picture-in-Picture, mais on cesse d'émettre la sienne. C'est ce que
+	     `localVideoShouldPause` traduit par `cameraAllowedInBackground = false`
+	     côté Dart.
+
+	     ⚠ Elle N'EST PAS accordée par sa simple présence ici : Apple la délivre
+	     sur demande motivée (formulaire « Multitasking Camera Access »), et le
+	     profil de provisionnement doit ensuite la porter. Tant que ce n'est pas
+	     fait, cette clé est inerte — elle ne casse rien, elle attend. -->
+	<key>com.apple.developer.avfoundation.multitasking-camera-access</key>
+	<true/>
 </dict>
 </plist>
