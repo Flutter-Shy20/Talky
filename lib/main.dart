@@ -258,7 +258,12 @@ class _TalkyAppState extends State<TalkyApp> {
         ),
         // Déclaré avant CallService, qui s'y abonne dans son `create`.
         ChangeNotifierProvider(create: (_) => VoicePlaybackService()),
-        ChangeNotifierProvider(create: (ctx) {
+        // `lazy: false` : au démarrage à froid derrière un « Accepter », le
+        // premier accès au service est `_bootstrap`, et il ne doit pas être le
+        // moment de le construire — l'identité locale et l'écoute de la
+        // lecture vocale se posent ici. En pratique la bannière de session le
+        // construisait déjà à la première frame, mais rien ne le garantissait.
+        ChangeNotifierProvider(lazy: false, create: (ctx) {
           final call = CallService(apiClient: _apiClient);
           final voice = ctx.read<VoicePlaybackService>();
 
@@ -559,8 +564,24 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         // Toujours retirer le splash : sinon écran figé si init échoue.
         FlutterNativeSplash.remove();
       }
-      await _syncSessionBindings();
-
+      // ── Le CallKit d'abord, les liaisons de session ensuite ──────────────
+      //
+      // `_syncSessionBindings` attend `chatProvider.bind`, qui attend lui-même
+      // un rafraîchissement HTTP des conversations **et** un vidage complet de
+      // l'outbox — dont les téléversements ont des délais de garde de 30 à 600
+      // secondes. Taper « Accepter » sur une notification d'appel, application
+      // tuée, n'ouvrait donc l'appel qu'une fois la messagerie synchronisée.
+      //
+      // Rien de ce que ces liaisons attendent n'est nécessaire à un appel : les
+      // jetons sont en mémoire depuis `authProvider.init`, et
+      // `acceptIncomingCallFromPush` monte le socket lui-même. L'auteur avait
+      // déjà vu le défaut sous une autre forme — le commentaire ci-dessous
+      // explique que `PushService.init` a été déplacé après le dispatch pour
+      // cette raison exacte. Il restait la dépendance lourde.
+      //
+      // Le socket, lui, ne remonte pas : `chat_repository.bind` documente que
+      // ses écouteurs doivent être posés avant la connexion, et les chemins
+      // d'appel appellent `connectSocket` de leur côté.
       // Actions CallKit dispatchées AVANT PushService.init : un accept depuis
       // la notification (app tuée) doit atteindre CallService dès que la
       // session locale est restaurée. PushService.init fait du réseau
@@ -651,6 +672,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         }
       }
 
+      await _queueSessionBindings();
+
       if (!mounted) return;
       // Refus CallKit persistés (app tuée) : rejouer dès que possible.
       if (authProvider.isLoggedIn) {
@@ -682,15 +705,31 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     }
   }
 
-  /// Appelé sur chaque changement d'AuthProvider (login, logout, refresh user).
-  /// Déclenche un bind/unbind des providers dépendants de l'identité.
-  void _onAuthChanged() {
+  /// Met les liaisons de session à la queue, et rend l'attente de CE tour.
+  ///
+  /// Les deux appelants doivent partager la même chaîne. `_onAuthChanged` est
+  /// posé en écouteur d'`AuthProvider` **avant** que `_bootstrap` ne tourne :
+  /// la notification d'`authProvider.init()` en programme donc déjà un, en même
+  /// temps que celui du démarrage. `_syncSessionBindings` se garde par
+  /// `_boundUserId`, mais deux exécutions concurrentes peuvent franchir la
+  /// garde avant que l'une ait écrit — et refaire tout le bind en double.
+  ///
+  /// La course préexistait ; remonter le CallKit avant les liaisons a élargi
+  /// la fenêtre, ce qui achève de la rendre inacceptable.
+  Future<void> _queueSessionBindings() {
     _sessionBindingsChain = _sessionBindingsChain.then((_) async {
       if (!mounted) return;
       await _syncSessionBindings();
     }).catchError((Object e, StackTrace st) {
       debugPrint('[AuthWrapper] _syncSessionBindings échoué: $e');
     });
+    return _sessionBindingsChain;
+  }
+
+  /// Appelé sur chaque changement d'AuthProvider (login, logout, refresh user).
+  /// Déclenche un bind/unbind des providers dépendants de l'identité.
+  void _onAuthChanged() {
+    unawaited(_queueSessionBindings());
   }
 
   /// Aligne l'état des providers (chat, status, admin) sur l'utilisateur
@@ -1019,12 +1058,17 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     // Réservé aux comptes admin : /admin/stats déclenche ~10 agrégations
     // lourdes côté serveur (dont des COUNT(*) sur `message`). Appelé sans
     // garde, chaque login utilisateur payait ce coût pour un 403 avalé.
+    //
+    // Sans `unawaited`, ces agrégations retardaient la fin des liaisons de
+    // session — et tout ce qui les suit — alors que personne n'attend leur
+    // résultat : l'écran d'administration lit le provider quand il s'ouvre.
     if (AdminProvider.isAdmin(authProvider.currentUser)) {
-      try {
-        await adminProvider.loadStats();
-      } catch (e) {
-        debugPrint('[AuthWrapper] AdminProvider.loadStats échoué: $e');
-      }
+      unawaited(
+        adminProvider.loadStats().catchError(
+          (Object e) =>
+              debugPrint('[AuthWrapper] AdminProvider.loadStats échoué: $e'),
+        ),
+      );
     }
 
     IncomingShareService.instance.onSessionReady();
