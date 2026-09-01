@@ -591,12 +591,21 @@ extension CallIncoming on CallService {
     _pendingEndCalls.clear();
     for (final payload in pending) {
       debugPrint('[CallService] 🔁 Rejeu end_call en file → $payload');
-      try {
-        _apiClient.sendSocketEvent(SocketEvents.endCall, payload);
-      } catch (e) {
-        debugPrint('[CallService] rejeu end_call échoué: $e');
-        _pendingEndCalls.add(payload);
-      }
+      // Accusé ici aussi : un rejeu perdu se perd définitivement, puisque
+      // c'est déjà le filet. Sans accusé il repartait sur le socket fraîchement
+      // authentifié en espérant qu'il tienne.
+      unawaited(
+        _apiClient
+            .sendSocketEventAcked(SocketEvents.endCall, payload)
+            .then((accuse) {
+          if (accuse) return;
+          debugPrint('[CallService] rejeu end_call sans accusé → remis en file');
+          _pendingEndCalls.add(payload);
+        }).catchError((e) {
+          debugPrint('[CallService] rejeu end_call échoué: $e');
+          _pendingEndCalls.add(payload);
+        }),
+      );
     }
   }
 }

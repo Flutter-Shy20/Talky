@@ -56,12 +56,53 @@ extension CallReconnect on CallService {
       debugPrint('[CallService] status=reconnecting ($reason)');
     }
     _armGlobalReconnectTimeout();
+    _armSocketAudit();
+  }
+
+  /// Vérifie, une fois, que le socket sert encore à quelque chose.
+  ///
+  /// La reconnexion est le moment où le socket compte le plus — c'est par lui
+  /// que passent les offres de reprise et les candidats — et c'est aussi celui
+  /// où il peut être mort sans le dire. Depuis que la messagerie ne le démonte
+  /// plus en pleine conversation, plus rien d'autre ne le reconstruirait.
+  ///
+  /// L'audit est volontairement passif : il ne touche au socket que si celui-ci
+  /// n'a plus rien livré. Voir `shouldRebuildSocketDuringReconnect`.
+  void _armSocketAudit() {
+    if (_socketAuditTimer != null || _socketRebuiltForReconnect) return;
+    _socketAuditTimer = Timer(CallService._socketAuditDelay, () {
+      _socketAuditTimer = null;
+      final dernier = _apiClient.lastEventReceivedAt;
+      if (!shouldRebuildSocketDuringReconnect(
+        stillReconnecting: _status == CallStatus.reconnecting,
+        alreadyRebuilt: _socketRebuiltForReconnect,
+        sinceLastSocketEvent:
+            dernier == null ? null : DateTime.now().difference(dernier),
+        silenceThreshold: CallService._socketSilenceThreshold,
+      )) {
+        return;
+      }
+      _socketRebuiltForReconnect = true;
+      debugPrint(
+        '[CallService] 🔌 socket muet pendant la reconnexion '
+        '→ reconstruction (une seule fois)',
+      );
+      unawaited(_apiClient.forceReconnect());
+    });
+  }
+
+  void _cancelSocketAudit() {
+    _socketAuditTimer?.cancel();
+    _socketAuditTimer = null;
   }
 
   void _onOneToOneMediaReconnected() {
     _cancelDisconnectGrace();
     _cancelGlobalReconnectTimeout();
     _cancelIceRestartRetry();
+    _cancelSocketAudit();
+    // L'épisode est clos : le prochain aura droit à sa propre reconstruction.
+    _socketRebuiltForReconnect = false;
     _iceRestartCount = 0;
     _isIceRestarting = false;
     if (_status == CallStatus.reconnecting) {
@@ -110,6 +151,8 @@ extension CallReconnect on CallService {
     _cancelDisconnectGrace();
     _cancelGlobalReconnectTimeout();
     _cancelIceRestartRetry();
+    _cancelSocketAudit();
+    _socketRebuiltForReconnect = false;
     _isIceRestarting = false;
   }
 

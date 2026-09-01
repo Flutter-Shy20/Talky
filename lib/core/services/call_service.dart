@@ -292,6 +292,10 @@ class CallService extends ChangeNotifier {
 
   Timer? _reconnectGraceTimer;
   Timer? _globalReconnectTimer;
+
+  /// Audit du socket pendant une reconnexion — voir `_armSocketAudit`.
+  Timer? _socketAuditTimer;
+  bool _socketRebuiltForReconnect = false;
   Timer? _iceRestartRetryTimer;
   DateTime? _lastRestartOfferAt;
   /// Chaîne d'exécution des offres de reprise : elles se traitent une à une.
@@ -309,6 +313,13 @@ class CallService extends ChangeNotifier {
   /// Une offre peut se perdre sans que personne ne le sache : socket local à
   /// terre, ou appareil du pair absent. Le verdict reste au timeout global.
   static const Duration _iceRestartRetryInterval = Duration(seconds: 5);
+
+  /// Délai avant d'auditer le socket quand un appel entre en reconnexion, et
+  /// silence au-delà duquel on le tient pour mort. Huit secondes laissent le
+  /// temps à une reprise normale d'aboutir, et gardent trente-sept secondes
+  /// avant le délai global pour qu'un socket neuf serve à quelque chose.
+  static const Duration _socketAuditDelay = Duration(seconds: 8);
+  static const Duration _socketSilenceThreshold = Duration(seconds: 8);
 
   /// Délai laissé à une offre de reprise déjà partie avant d'en réémettre une.
   /// Réémettre repart d'une génération neuve et purge les candidats ICE en

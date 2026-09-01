@@ -450,6 +450,59 @@ extension SocketApi on TalkyApiClient {
     return true;
   }
 
+  /// Émet un événement et **attend l'accusé du serveur**.
+  ///
+  /// `sendSocketEvent` ne peut rendre qu'une chose : que l'émission a été
+  /// tentée. C'est insuffisant pour un socket zombie — TCP mort, mais
+  /// Socket.IO ne le constate qu'au bout de son ping (25 s d'intervalle, 20 s
+  /// de patience). Pendant ces quarante-cinq secondes, `isSocketReady` répond
+  /// `true` et le paquet part dans le vide sans un mot.
+  ///
+  /// Pour un message de discussion, ce n'est qu'un retard : l'outbox le
+  /// rejouera. Pour un raccrochage, c'est le pair qui reste sur
+  /// « Reconnexion… » jusqu'à son propre délai, alors que l'appel est fini
+  /// depuis longtemps de ce côté-ci. Et le cas est d'autant plus probable que
+  /// l'appel a duré — plus de temps pour que la connexion meure sans le dire.
+  ///
+  /// Rend `true` seulement si le serveur a répondu `ok` dans [timeout].
+  Future<bool> sendSocketEventAcked(
+    String event,
+    dynamic data, {
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    if (!isSocketReady) {
+      debugPrint(
+        '[Socket] ** emit accusé "$event" abandonné (socket non prêt)',
+      );
+      return false;
+    }
+    final accuse = Completer<bool>();
+    // Arité imposée par le serveur : `Function.apply` passe exactement les
+    // arguments de l'accusé. Des paramètres optionnels acceptent les deux
+    // formes sans lever à l'intérieur de la bibliothèque.
+    void onAck([dynamic reponse, dynamic _]) {
+      if (accuse.isCompleted) return;
+      final ok = reponse is Map ? reponse['ok'] != false : true;
+      accuse.complete(ok);
+    }
+
+    try {
+      _socket!.emitWithAck(event, data, ack: onAck);
+    } catch (e) {
+      debugPrint('[Socket] ** emit accusé "$event" a levé: $e');
+      return false;
+    }
+    final timer = Timer(timeout, () {
+      if (!accuse.isCompleted) accuse.complete(false);
+    });
+    final ok = await accuse.future;
+    timer.cancel();
+    if (!ok) {
+      debugPrint('[Socket] ** "$event" sans accusé — socket probablement mort');
+    }
+    return ok;
+  }
+
   void onSocketEvent(String event, void Function(dynamic) callback) {
     // Registre pour ré-attacher au prochain `connectSocket()` (cas logout/login
     // où `_socket` est recréé). socket.io conserve ses listeners au travers des

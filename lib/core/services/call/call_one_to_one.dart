@@ -377,21 +377,53 @@ extension CallOneToOne on CallService {
     }
   }
 
+  /// Le raccrochage n'attend pas : on rend la main tout de suite et le sort de
+  /// l'émission se règle en arrière-plan.
   void _emitEndCallOrEnqueue(Map<String, dynamic> payload) {
-    if (_apiClient.isSocketReady) {
-      try {
-        _apiClient.sendSocketEvent(SocketEvents.endCall, payload);
-      } catch (e) {
-        debugPrint('[CallService] endCall socket error: $e');
-        _pendingEndCalls.add(payload);
-      }
-    } else {
+    unawaited(_emettreRaccrochage(payload));
+  }
+
+  /// Émet le raccrochage, et **le remet en file s'il n'est pas accusé**.
+  ///
+  /// `isSocketReady` ne prouve rien sur un socket zombie : le TCP est mort,
+  /// mais Socket.IO ne le constate qu'au bout de son ping — 25 s d'intervalle,
+  /// 20 s de patience. Pendant ces quarante-cinq secondes, le raccrochage part
+  /// dans le vide sans un mot, et le pair reste sur « Reconnexion… » jusqu'à
+  /// son propre délai alors que l'appel est fini de ce côté-ci. Le cas est
+  /// d'autant plus probable que l'appel a duré.
+  ///
+  /// Un accusé tranche. Sans lui, la mise en file seule ne suffirait pas : le
+  /// rejeu attend `auth:verified`, qui n'arrivera jamais tant que personne ne
+  /// reconstruit le socket. Ici l'appel est déjà terminé localement — il n'y a
+  /// plus de signalisation à couper, c'est donc le moment de le faire.
+  ///
+  /// Réémettre est sans danger : le serveur traite un second `end_call` par sa
+  /// sortie « déjà hors appel », qui ne touche à rien.
+  Future<void> _emettreRaccrochage(Map<String, dynamic> payload) async {
+    if (!_apiClient.isSocketReady) {
       debugPrint('[CallService] ⏳ Socket non prêt → end_call mis en file');
       _pendingEndCalls.add(payload);
       if (!_apiClient.isSocketConnected) {
         _apiClient.connectSocket();
       }
+      return;
     }
+
+    bool accuse;
+    try {
+      accuse =
+          await _apiClient.sendSocketEventAcked(SocketEvents.endCall, payload);
+    } catch (e) {
+      debugPrint('[CallService] endCall socket error: $e');
+      accuse = false;
+    }
+    if (accuse) return;
+
+    debugPrint(
+      '[CallService] ** end_call sans accusé → file + reconstruction du socket',
+    );
+    _pendingEndCalls.add(payload);
+    unawaited(_apiClient.forceReconnect());
   }
 
   /// [fromEndCall] : true si déjà sous la garde `_isEndingCall` de [endCall].

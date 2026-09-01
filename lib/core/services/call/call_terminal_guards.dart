@@ -218,3 +218,35 @@ bool acceptsResumeForLocalStatus({
       return false;
   }
 }
+
+/// Faut-il reconstruire le socket pendant qu'un appel est en reconnexion ?
+///
+/// Un socket peut être mort sans que rien ne le dise : le TCP est tombé, mais
+/// Socket.IO ne le constate qu'au bout de son ping — 25 s d'intervalle, 20 s de
+/// patience. Pendant ces quarante-cinq secondes, `isSocketReady` répond `true`,
+/// les offres de reprise partent dans le vide, et l'appel reste sur
+/// « Reconnexion… » jusqu'au délai global, où il se coupe tout seul. C'est le
+/// symptôme exact rapporté sur les appels longs — plus l'appel dure, plus la
+/// connexion a de temps pour mourir sans le dire.
+///
+/// Le signal retenu est le **silence** : pendant une reconnexion, le socket est
+/// normalement le canal le plus bavard qui soit — candidats ICE, offres et
+/// réponses de reprise. S'il n'a plus rien apporté depuis [silenceThreshold],
+/// il ne sert plus à rien et le démonter ne coûte rien. À l'inverse, un socket
+/// qui livre encore des événements est peut-être notre seule chance de reprise :
+/// on n'y touche pas, même si le média, lui, est à terre.
+///
+/// **Une seule fois par épisode.** Reconstruire en boucle relancerait la
+/// signalisation toutes les huit secondes et aucune négociation n'aurait jamais
+/// le temps d'aboutir.
+bool shouldRebuildSocketDuringReconnect({
+  required bool stillReconnecting,
+  required bool alreadyRebuilt,
+  required Duration? sinceLastSocketEvent,
+  required Duration silenceThreshold,
+}) {
+  if (!stillReconnecting || alreadyRebuilt) return false;
+  // Jamais rien reçu : il n'y a rien à préserver.
+  if (sinceLastSocketEvent == null) return true;
+  return sinceLastSocketEvent >= silenceThreshold;
+}
