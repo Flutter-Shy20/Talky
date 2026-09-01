@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import '../theme/locale_controller.dart';
+import 'call/call_terminal_guards.dart';
 import 'call/ended_call_registry.dart';
 import 'ringtone_preferences.dart';
 
@@ -60,12 +61,57 @@ class CallKitService {
   /// FCM + socket en arrière-plan).
   String? _lastShownCallId;
 
+  /// callId dont CallKit présente **réellement** un entrant, ou `null`.
+  ///
+  /// À ne pas confondre avec [_lastShownCallId], qui ne retient que ce que
+  /// *Dart* a demandé d'afficher. Sur Android V2 — le mode par défaut — ce
+  /// n'est presque jamais Dart : le handler FCM sort avant d'afficher, et c'est
+  /// `CallIncomingHelper` qui pose la notification côté Kotlin. Aucun code Dart
+  /// ne le savait, et l'arbitrage de présentation était donc aveugle au cas le
+  /// plus fréquent — d'où des écrans et des sonneries en double.
+  ///
+  /// La source est l'état que le plugin persiste dans ses préférences, lu par
+  /// [getActiveCall]. Il est durable : il survit à la mort du processus, ce que
+  /// ne fait aucun drapeau en mémoire, de part ni d'autre de la frontière.
+  String? _nativeIncomingCallId;
+
+  /// Voir [_nativeIncomingCallId].
+  String? get nativeIncomingCallId => _nativeIncomingCallId;
+
+  /// CallKit présente-t-il déjà un entrant pour [callId] ?
+  ///
+  /// Alimente le paramètre `isCallKitActive` de `decideIncomingPresentation`.
+  bool isShowingIncoming(String? callId) {
+    final id = callId?.trim() ?? '';
+    if (id.isEmpty) return false;
+    return id == _nativeIncomingCallId;
+  }
+
+  /// Relit l'état CallKit persisté et met [_nativeIncomingCallId] à jour.
+  ///
+  /// Appelée à l'initialisation et à chaque retour au premier plan : ce sont
+  /// les deux instants où Dart peut avoir manqué un affichage natif.
+  Future<void> refreshNativeIncomingState() async {
+    if (kIsWeb) return;
+    final active = await getActiveCall();
+    final id = (active?['callId'] as String? ?? '').trim();
+    // Un appel déjà accepté n'est plus un entrant à présenter.
+    final accepted = active?['isAccepted'] == true;
+    final next = (id.isNotEmpty && !accepted) ? id : null;
+    if (next == _nativeIncomingCallId) return;
+    _nativeIncomingCallId = next;
+    debugPrint('[CallKit] entrant natif = ${next ?? "aucun"}');
+  }
+
   static const _nativeCallChannel = MethodChannel('com.alanya/call_native');
 
-  bool _isAppForeground() {
-    final state = WidgetsBinding.instance.lifecycleState;
-    return state == null || state == AppLifecycleState.resumed;
-  }
+  /// Même règle que `CallService._isAppForeground`, et la même correction :
+  /// un état encore inconnu est un arrière-plan. Ici l'enjeu est l'inverse du
+  /// sien — `showIncoming` sort quand l'application est au premier plan, donc
+  /// l'ancienne réponse faisait **taire** CallKit au démarrage à froid, sur
+  /// tout chemin qui ne passe pas par l'affichage natif Android.
+  bool _isAppForeground() =>
+      appIsForeground(WidgetsBinding.instance.lifecycleState?.name);
 
   void setVoipTokenListener(void Function(String token)? listener) {
     _onVoipTokenUpdated = listener;
@@ -106,6 +152,15 @@ class CallKitService {
     _eventSub ??= FlutterCallkitIncoming.onEvent.listen((event) {
       if (event != null) _handleEvent(event);
     });
+
+    // Semer l'état natif : au démarrage à froid derrière un push, la
+    // notification CallKit est déjà posée quand Dart démarre.
+    //
+    // Sans l'attendre — `init()` est sur le chemin critique du lancement, et un
+    // canal de plateforme pas encore prêt le bloquerait. L'arbitrage du
+    // démarrage à froid ne dépend pas de ce cache : `prepareIncomingFromCallKit`
+    // sait par construction que CallKit possède l'entrée et le dit lui-même.
+    unawaited(refreshNativeIncomingState());
   }
 
   Future<void> showIncoming({
@@ -144,7 +199,10 @@ class CallKitService {
       );
       await endCall(_lastShownCallId!);
     }
-    if (id.isNotEmpty) _lastShownCallId = id;
+    if (id.isNotEmpty) {
+      _lastShownCallId = id;
+      _nativeIncomingCallId = id;
+    }
 
     final l10n = resolveL10n();
     final params = CallKitParams(
@@ -230,6 +288,7 @@ class CallKitService {
       }
     }
     if (id == _lastShownCallId) _lastShownCallId = null;
+    if (id == _nativeIncomingCallId) _nativeIncomingCallId = null;
     try {
       await FlutterCallkitIncoming.endCall(id);
     } catch (e) {
@@ -301,6 +360,9 @@ class CallKitService {
       if (id == _lastShownCallId) {
         _lastShownCallId = null;
       }
+      if (id == _nativeIncomingCallId) {
+        _nativeIncomingCallId = null;
+      }
     }
     await _markProgrammaticDismissNative([id]);
     try {
@@ -336,6 +398,7 @@ class CallKitService {
       await EndedCallRegistry.markEnded(id);
     }
     _lastShownCallId = null;
+    _nativeIncomingCallId = null;
     // endAllCalls retire TOUTES les entrées ACTIVE_CALLS : marquer chacune
     // comme retrait programmatique, pas seulement [callId].
     final toMark = <String>{if (id.isNotEmpty) id};

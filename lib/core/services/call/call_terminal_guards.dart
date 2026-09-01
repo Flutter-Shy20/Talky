@@ -250,3 +250,38 @@ bool shouldRebuildSocketDuringReconnect({
   if (sinceLastSocketEvent == null) return true;
   return sinceLastSocketEvent >= silenceThreshold;
 }
+
+/// L'application est-elle au premier plan ?
+///
+/// [lifecycleStateName] est `WidgetsBinding.instance.lifecycleState?.name`, et
+/// `null` signifie qu'**aucun événement de cycle de vie n'est encore arrivé**.
+/// Le getter rendait alors `true`, en traitant cet inconnu comme un premier
+/// plan. C'est précisément le cas d'un réveil par push derrière l'écran
+/// verrouillé : l'application revendiquait la présentation Flutter et lançait
+/// sa propre sonnerie pendant que la notification CallKit sonnait nativement.
+/// Une des causes directes des doubles sonneries et des doubles écrans.
+///
+/// L'inconnu est donc traité comme un arrière-plan : c'est CallKit qui
+/// présente, et il rendra la main dès que l'accueil sera monté. Le prix est une
+/// courte fenêtre au lancement normal où un appel serait présenté par CallKit
+/// plutôt que par l'écran Flutter — l'accueil bascule aussitôt.
+///
+/// La chaîne est passée en nom plutôt qu'en `AppLifecycleState` pour garder ce
+/// fichier sans dépendance à Flutter, comme le reste de ses gardes.
+bool appIsForeground(String? lifecycleStateName) =>
+    lifecycleStateName == 'resumed';
+
+/// Une invitation de groupe est-elle assez complète pour être présentée ?
+///
+/// Sans identifiant de salon, il n'y a rien à présenter et rien à rejoindre —
+/// mais poser quand même le statut « entrant » suffisait à **rendre l'appareil
+/// sourd** : la revendication de présentation était refusée faute
+/// d'identifiant, aucune interface ne s'ouvrait, aucun filet temporel n'était
+/// armé, et tous les points d'entrée refusent un entrant tant que le statut
+/// n'est pas `idle`. Plus aucun appel ne pouvait arriver, et la seule sortie
+/// était un `call_ended` de forme 1-à-1 venu du serveur.
+///
+/// La règle générale dont ceci est un cas : ne jamais poser un statut dont
+/// aucune horloge locale ne peut répondre.
+bool groupInviteIsPresentable(String? roomId) =>
+    (roomId?.trim() ?? '').isNotEmpty;

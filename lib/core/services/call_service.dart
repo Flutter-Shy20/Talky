@@ -523,13 +523,14 @@ class CallService extends ChangeNotifier {
     }
   }
 
-  /// Vrai si l'app est au premier plan (ou état inconnu au tout début du boot).
-  /// Sert à choisir la source de sonnerie entrante : RingtoneService en
-  /// foreground, CallKit en background/app fermée (source unique).
-  bool get _isAppForeground {
-    final state = WidgetsBinding.instance.lifecycleState;
-    return state == null || state == AppLifecycleState.resumed;
-  }
+  /// Vrai si l'app est au premier plan. Sert à choisir la source de sonnerie
+  /// entrante : RingtoneService au premier plan, CallKit en arrière-plan ou
+  /// application fermée — source unique.
+  ///
+  /// Voir `appIsForeground` : un état de cycle de vie encore inconnu compte
+  /// désormais comme un arrière-plan, et non l'inverse.
+  bool get _isAppForeground =>
+      appIsForeground(WidgetsBinding.instance.lifecycleState?.name);
 
   bool get isAppInForeground => _isAppForeground;
 
@@ -619,6 +620,88 @@ class CallService extends ChangeNotifier {
       );
     }
     return result.changed || !result.ignored;
+  }
+
+  /// Arbitre la présentation d'un entrant, l'applique, et **rend l'action**.
+  ///
+  /// Quatre sites recopiaient à la main `if (_isAppForeground) flutter else
+  /// native`, puis un second `if (!_isAppForeground)` juste en dessous décidait
+  /// l'affichage CallKit et la sonnerie. Deux aiguillages pour une seule
+  /// question, qui pouvaient diverger — et qui divergeaient : ni le groupe ni
+  /// la conférence n'avaient de branche « premier plan », donc ils ne sonnaient
+  /// pas.
+  ///
+  /// `decideIncomingPresentation` prenait déjà exactement ces décisions, et
+  /// n'était appelée que par son propre test. C'est elle qui tranche désormais,
+  /// et l'action rendue pilote la suite chez l'appelant.
+  ///
+  /// [callKitActive] n'est à passer que si l'appelant sait mieux que le cache —
+  /// le chemin `prepareFromCallKit`, par construction, est appelé alors que
+  /// CallKit possède l'entrée.
+  IncomingPresentationAction _resolveIncomingPresentation({
+    required String? callId,
+    required IncomingPresentationIntent intent,
+    bool? callKitActive,
+  }) {
+    final id = callId?.trim() ?? '';
+    final action = decideIncomingPresentation(
+      callId: id,
+      appForeground: _isAppForeground,
+      currentOwner: _incomingPresentation.owner,
+      currentOwnerCallId: _incomingPresentation.callId,
+      isAutoAnsweringFromPush: _isAutoAnsweringFromPush,
+      isTerminal: _isTerminalCallId(id),
+      intent: intent,
+      isCallKitActive: callKitActive ?? _callKit.isShowingIncoming(id),
+    );
+    switch (action) {
+      case IncomingPresentationAction.showFlutterIncoming:
+      case IncomingPresentationAction.handoffToFlutter:
+        _claimIncomingPresentation(
+          id,
+          IncomingPresentationOwner.flutterScreen,
+          explicitHandoff:
+              action == IncomingPresentationAction.handoffToFlutter,
+        );
+      case IncomingPresentationAction.showNativeCallKit:
+      case IncomingPresentationAction.handoffToNative:
+        _claimIncomingPresentation(
+          id,
+          IncomingPresentationOwner.nativeCallKit,
+          explicitHandoff: action == IncomingPresentationAction.handoffToNative,
+        );
+      case IncomingPresentationAction.mergeOnly:
+        // Auto-réponse depuis un push : il n'y a aucun entrant à présenter,
+        // seulement un appel à établir. On libère plutôt que de laisser un
+        // propriétaire derrière soi — c'est ce que faisait déjà le site 1-à-1.
+        if (_isAutoAnsweringFromPush) _clearIncomingPresentation(callId: id);
+      case IncomingPresentationAction.ignore:
+        break;
+    }
+    debugPrint('[CallService] 🎬 présentation $intent → $action (id=$id)');
+    return action;
+  }
+
+  /// Sonnerie Flutter et retrait d'une entrée CallKit résiduelle, pour un
+  /// entrant que Flutter présente — quel que soit le genre de session.
+  ///
+  /// Existait en clair sur le seul chemin 1-à-1 : `startIncomingRingtone` n'a
+  /// jamais eu d'appelant côté groupe ni côté conférence. Une invitation de
+  /// groupe reçue application ouverte affichait donc l'écran **en silence**.
+  /// L'asymétrie le prouvait : passer en arrière-plan puis revenir *faisait*
+  /// sonner la même invitation, parce que `resumeForegroundIncoming` ne fait
+  /// pas cette distinction.
+  void _startFlutterIncomingRinging(String presentationId) {
+    unawaited(_dismissStrayIncomingCallKit(presentationId));
+    _ringtone
+        .startIncomingRingtone(
+          override: _remoteUserId == null
+              ? null
+              : ListRingtonePreferences.resolveCall(_remoteUserId!),
+        )
+        .catchError((Object e) {
+      debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
+    });
   }
 
   void _clearIncomingPresentation({String? callId}) {
@@ -716,7 +799,12 @@ class CallService extends ChangeNotifier {
       if (_status != CallStatus.incoming) return;
       debugPrint('[CallService] ⏰ Sonnerie entrante sans réponse → arrêt de sécurité');
       await _ringtone.stop();
-      await notifyCallEndedFromExternal(callId: _currentCallId);
+      // `_currentCallId` est nul pour une invitation de groupe : le filet se
+      // déclenchait alors sans rien débloquer. `_activeIncomingPresentationCallId`
+      // retombe sur `_groupRoomId`, comme partout ailleurs.
+      await notifyCallEndedFromExternal(
+        callId: _activeIncomingPresentationCallId,
+      );
     });
   }
 
@@ -729,13 +817,20 @@ class CallService extends ChangeNotifier {
     final presentationId = _activeIncomingPresentationCallId;
     if (presentationId == null || presentationId.isEmpty) return;
 
-    _claimIncomingPresentation(
-      presentationId,
-      IncomingPresentationOwner.nativeCallKit,
-      explicitHandoff: true,
-    );
-
+    // Couper la sonnerie Dart d'abord, et sans condition : quoi que décide
+    // l'arbitrage, l'application part en arrière-plan et cette sonnerie-là ne
+    // doit pas y continuer.
     await _ringtone.stop();
+
+    if (_resolveIncomingPresentation(
+          callId: presentationId,
+          intent: IncomingPresentationIntent.handoffToNative,
+        ) !=
+        IncomingPresentationAction.handoffToNative) {
+      debugPrint('[CallService] 🛡 bascule vers CallKit refusée: $presentationId');
+      return;
+    }
+
     final callerId = _remoteUserId?.toString() ?? '';
     final isGroup = _groupRoomId != null && _groupRoomId!.isNotEmpty;
     if (!isGroup && callerId.isEmpty) return;
@@ -768,11 +863,14 @@ class CallService extends ChangeNotifier {
     final presentationId = _activeIncomingPresentationCallId;
     if (presentationId == null || presentationId.isEmpty) return;
 
-    _claimIncomingPresentation(
-      presentationId,
-      IncomingPresentationOwner.flutterScreen,
-      explicitHandoff: true,
-    );
+    if (_resolveIncomingPresentation(
+          callId: presentationId,
+          intent: IncomingPresentationIntent.handoffToFlutter,
+        ) !=
+        IncomingPresentationAction.handoffToFlutter) {
+      debugPrint('[CallService] 🛡 bascule vers Flutter refusée: $presentationId');
+      return;
+    }
 
     await dismissIncomingCallKitForForeground();
     if (_status == CallStatus.incoming && !_isAutoAnsweringFromPush) {

@@ -100,20 +100,16 @@ extension CallSignaling on CallService {
 
       _ensureRemoteIdentityResolved();
 
-      // Owner UI avant notify : FG → Flutter, BG → CallKit (pas IncomingCallScreen).
-      if (_isAutoAnsweringFromPush) {
-        _clearIncomingPresentation(callId: incomingCallId);
-      } else if (_isAppForeground) {
-        _claimIncomingPresentation(
-          incomingCallId,
-          IncomingPresentationOwner.flutterScreen,
-        );
-      } else {
-        _claimIncomingPresentation(
-          incomingCallId,
-          IncomingPresentationOwner.nativeCallKit,
-        );
-      }
+      // Une seule autorité décide qui présente — voir
+      // `_resolveIncomingPresentation`. L'action rendue pilote aussi
+      // l'affichage CallKit et la sonnerie, plus bas.
+      final presentation = _resolveIncomingPresentation(
+        callId: incomingCallId,
+        intent: IncomingPresentationIntent.signal,
+      );
+      // Aucun entrant ne doit rester posé sans horloge locale : c'est le seul
+      // recours si ni CallKit ni le serveur ne concluent.
+      _armIncomingRingSafety();
       notify();
 
       if (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId) {
@@ -132,14 +128,11 @@ extension CallSignaling on CallService {
         return;
       }
 
-      // Politique sonnerie / UI hors app :
-      //  - auto-réponse depuis push → pas de sonnerie.
-      //  - app en arrière-plan → CallKit (UI système + sonnerie), même si FCM
-      //    n'est pas encore arrivé / a échoué.
-      //  - app au premier plan → RingtoneService (IncomingCallScreen).
-      if (_isAutoAnsweringFromPush) {
-        debugPrint('[CallService] 🔇 Sonnerie entrante ignorée: auto-réponse en cours');
-      } else if (!_isAppForeground) {
+      // La politique tient dans l'action rendue : CallKit possède l'entrant
+      // (interface système et sonnerie), Flutter le possède (IncomingCallScreen
+      // et RingtoneService), ou personne ne le présente — auto-réponse en cours,
+      // ou entrant déjà présenté pour ce même identifiant.
+      if (presentation == IncomingPresentationAction.showNativeCallKit) {
         if (_nativeAndroidHandlesIncomingCallUi) {
           debugPrint(
             '[CallService] 📲 CallKit natif Android (socket ignoré pour UI): '
@@ -162,16 +155,13 @@ extension CallSignaling on CallService {
             }),
           );
         }
+      } else if (presentation ==
+          IncomingPresentationAction.showFlutterIncoming) {
+        _startFlutterIncomingRinging(incomingCallId ?? '');
       } else {
-        unawaited(_dismissStrayIncomingCallKit(incomingCallId));
-        _ringtone
-            .startIncomingRingtone(
-              override: ListRingtonePreferences.resolveCall(_remoteUserId!),
-            )
-            .catchError((e) {
-          debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
-        });
-        _armIncomingRingSafety();
+        debugPrint(
+          '[CallService] 🔇 Sonnerie entrante ignorée (présentation=$presentation)',
+        );
       }
     });
 
@@ -521,11 +511,27 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] 🛡 group_call_invite ignoré: réunion active');
         return;
       }
+      // Sans identifiant de salon, il n'y a rien à présenter et rien à
+      // rejoindre — mais poser le statut « entrant » suffisait à rendre
+      // l'appareil sourd : la revendication était refusée (identifiant vide),
+      // aucune interface ne s'ouvrait, aucun filet n'était armé, et tous les
+      // points d'entrée refusent un entrant tant que `_status != idle`. Plus
+      // aucun appel ne pouvait arriver, sauf un `call_ended` de forme 1-à-1
+      // venu du serveur. On refuse d'entrer dans cet état.
+      final roomId = (data['roomId'] as String?)?.trim() ?? '';
+      if (!groupInviteIsPresentable(roomId)) {
+        debugPrint(
+          '[CallService] 🛡 group_call_invite sans roomId → ignoré '
+          '(ne pas bloquer l\'appareil)',
+        );
+        return;
+      }
+
       _remoteUserId = int.tryParse(data['callerId'].toString());
       _remoteUserName = data['callerName'] as String?;
       _remoteUserPhoto = normalizeBackendUrl(data['callerPhoto']?.toString());
       _isVideo = data['isVideo'] == true;
-      _groupRoomId = data['roomId'] as String?;
+      _groupRoomId = roomId;
       // Le caller est notre seule info connue à l'instant T → on le pose dans le roster
       final callerId = data['callerId']?.toString();
       if (callerId != null && callerId.isNotEmpty) {
@@ -538,20 +544,14 @@ extension CallSignaling on CallService {
         );
       }
       _status = CallStatus.incoming;
-      if (_isAppForeground) {
-        _claimIncomingPresentation(
-          _groupRoomId,
-          IncomingPresentationOwner.flutterScreen,
-        );
-      } else {
-        _claimIncomingPresentation(
-          _groupRoomId,
-          IncomingPresentationOwner.nativeCallKit,
-        );
-      }
+      final presentation = _resolveIncomingPresentation(
+        callId: roomId,
+        intent: IncomingPresentationIntent.signal,
+      );
+      _armIncomingRingSafety();
       notify();
 
-      if (!_isAppForeground) {
+      if (presentation == IncomingPresentationAction.showNativeCallKit) {
         if (_nativeAndroidHandlesIncomingCallUi) {
           debugPrint(
             '[CallService] 📲 CallKit natif Android groupe (socket ignoré pour UI)',
@@ -574,6 +574,10 @@ extension CallSignaling on CallService {
             }),
           );
         }
+      } else if (presentation ==
+          IncomingPresentationAction.showFlutterIncoming) {
+        // Manquait entièrement : l'écran s'ouvrait en silence.
+        _startFlutterIncomingRinging(roomId);
       }
     });
 
@@ -758,20 +762,14 @@ extension CallSignaling on CallService {
 
       if (!sameSession) {
         _status = CallStatus.incoming;
-        if (_isAppForeground) {
-          _claimIncomingPresentation(
-            sessionId,
-            IncomingPresentationOwner.flutterScreen,
-          );
-        } else {
-          _claimIncomingPresentation(
-            sessionId,
-            IncomingPresentationOwner.nativeCallKit,
-          );
-        }
+        final presentation = _resolveIncomingPresentation(
+          callId: sessionId,
+          intent: IncomingPresentationIntent.signal,
+        );
+        _armIncomingRingSafety();
         notify();
 
-        if (!_isAppForeground) {
+        if (presentation == IncomingPresentationAction.showNativeCallKit) {
           if (_nativeAndroidHandlesIncomingCallUi) {
             debugPrint('[CallService] 📲 CallKit natif Android (session à trois)');
           } else {
@@ -793,6 +791,11 @@ extension CallSignaling on CallService {
               }),
             );
           }
+        } else if (presentation ==
+            IncomingPresentationAction.showFlutterIncoming) {
+          // Manquait entièrement, comme côté groupe : l'invitation à une
+          // session à trois s'affichait sans un son.
+          _startFlutterIncomingRinging(sessionId);
         }
       } else {
         debugPrint('[CallService] 🔀 call_conf_invite fusionné session=$sessionId');

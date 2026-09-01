@@ -204,19 +204,19 @@ extension CallIncoming on CallService {
 
     _status = CallStatus.incoming;
     _ensureRemoteIdentityResolved();
-    // CallKit possède déjà l'UI en BG ; en FG (tap notif / preview) → Flutter.
+    // Ce chemin n'existe que parce que CallKit a une entrée : c'est lui qui
+    // possède l'entrant, sauf si l'application est au premier plan. On le lui
+    // dit explicitement plutôt que de s'en remettre au cache — au démarrage à
+    // froid, `main.dart` vient tout juste de lire cette entrée.
     final presentationId = callId.isNotEmpty ? callId : (_groupRoomId ?? '');
-    if (_isAppForeground) {
-      _claimIncomingPresentation(
-        presentationId,
-        IncomingPresentationOwner.flutterScreen,
-      );
-    } else {
-      _claimIncomingPresentation(
-        presentationId,
-        IncomingPresentationOwner.nativeCallKit,
-      );
-    }
+    _resolveIncomingPresentation(
+      callId: presentationId,
+      intent: IncomingPresentationIntent.prepareFromCallKit,
+      callKitActive: true,
+    );
+    // Même règle que sur les chemins socket : jamais de statut « entrant »
+    // sans horloge locale pour le débloquer.
+    _armIncomingRingSafety();
     notify();
     // Filet anti-fantôme (1-à-1) : si l'offre WebRTC de confirmation n'arrive
     // jamais via le socket, on démonte au lieu de laisser un écran d'appel entrant
