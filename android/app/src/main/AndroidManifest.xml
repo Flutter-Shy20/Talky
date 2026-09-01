@@ -159,11 +159,17 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
-        <!-- Capture micro (± caméra) en arrière-plan pendant un appel VoIP. -->
+        <!-- Appel VoIP en cours. Type `phoneCall` et non `microphone|camera` :
+             ces deux-là sont soumis aux restrictions « while-in-use » et
+             `startForeground` lève depuis Android 14 quand l'application est en
+             arrière-plan — c'est-à-dire au décrochage depuis une notification,
+             application fermée. `phoneCall` en est exempté et ne demande que
+             MANAGE_OWN_CALLS, déjà déclarée. L'accès micro en arrière-plan
+             repose sur les API Telecom, que le plugin utilise depuis la 3.1.5. -->
         <service
             android:name=".CallMediaForegroundService"
             android:exported="false"
-            android:foregroundServiceType="microphone|camera" />
+            android:foregroundServiceType="phoneCall" />
         <!-- Maintient la localisation active pendant un trajet de confiance.
              Sans lui, Android 10+ coupe les mises à jour dès le passage en
              arrière-plan — c'est-à-dire au moment où le suivi sert. -->

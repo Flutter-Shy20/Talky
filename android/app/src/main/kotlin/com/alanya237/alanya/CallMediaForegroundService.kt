@@ -14,9 +14,23 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 
 /**
- * Foreground service micro (± caméra) pendant un appel VoIP.
- * Requis Android 14+ pour conserver l'accès capture en arrière-plan
- * (distinct du FGS CallKit phoneCall).
+ * Service au premier plan pendant un appel VoIP.
+ *
+ * Déclarait `microphone` et, en vidéo, `camera`. Ces deux types sont soumis aux
+ * restrictions « while-in-use » : depuis Android 14, `startForeground` lève une
+ * `SecurityException` si l'application est en arrière-plan. C'est exactement le
+ * décrochage depuis une notification, application fermée — le cas qui compte le
+ * plus.
+ *
+ * `phoneCall` en est exempté. Il ne demande aucune permission d'exécution,
+ * seulement `MANAGE_OWN_CALLS` au manifeste, déjà déclarée. Tout le calcul de
+ * type, la vérification de la permission caméra et le repli « micro seul »
+ * disparaissent avec.
+ *
+ * L'exemption d'accès au micro en arrière-plan vaut pour les applications VoIP
+ * **qui utilisent les API Telecom**. C'est le cas depuis la montée du plugin en
+ * 3.1.5 : il enregistre un `PhoneAccount` auto-géré et déclare chaque appel à
+ * Telecom, entrant comme sortant.
  */
 class CallMediaForegroundService : Service() {
 
@@ -61,48 +75,16 @@ class CallMediaForegroundService : Service() {
     }
 
     private fun startAsForeground(notification: Notification, isVideo: Boolean) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification)
             return
         }
-
-        // Le type CAMERA était déclaré dès que l'appel était vidéo. Or un appel
-        // vidéo tourne légitimement sans permission caméra : `WebRTCService.init`
-        // se contente d'un journal et continue en audio. Sur Android 14+,
-        // `startForeground` refuse alors un type dont la permission manque, la
-        // levée était rattrapée, et le service s'arrêtait — emportant avec lui
-        // le type MICROPHONE. Le micro se coupait donc dès le passage en
-        // arrière-plan, pour un appel qui n'avait rien demandé de tel.
-        val cameraAutorisee = ContextCompat.checkSelfPermission(
-            this,
-            android.Manifest.permission.CAMERA,
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-
-        val avecCamera = isVideo && cameraAutorisee
-        if (isVideo && !cameraAutorisee) {
-            Log.w(TAG, "appel vidéo sans permission caméra — FGS micro seul")
-        }
-
-        val type = if (avecCamera) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
-        } else {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-        }
-
-        try {
-            startForeground(NOTIFICATION_ID, notification, type)
-        } catch (e: Exception) {
-            // Deuxième filet : mieux vaut le micro seul que pas de service du
-            // tout. Un appel vidéo dont la caméra ne suit pas reste un appel.
-            if (!avecCamera) throw e
-            Log.w(TAG, "startForeground(micro+caméra) refusé (${e.message}) — repli micro seul")
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
-            )
-        }
+        Log.i(TAG, "startForeground(phoneCall) isVideo=$isVideo")
+        startForeground(
+            NOTIFICATION_ID,
+            notification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL,
+        )
     }
 
     private fun ensureChannel() {
