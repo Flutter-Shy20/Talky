@@ -64,6 +64,9 @@ class PendingCallRejectStore {
     if (cid.isEmpty) return;
     try {
       final prefs = await SharedPreferences.getInstance();
+      // Relire le disque avant de fusionner : ce read-modify-write écraserait
+      // sinon les refus écrits par `CallRejectHelper.kt`, application tuée.
+      await prefs.reload();
       final list = _read(prefs);
       final call = (callId ?? '').trim();
       list.removeWhere((e) =>
@@ -88,6 +91,13 @@ class PendingCallRejectStore {
   static Future<List<Map<String, String>>> list() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      // `SharedPreferences` est un cache mémoire par isolate. Sans cette
+      // relecture, le refus enfilé nativement — écran verrouillé, application
+      // tuée, par `CallRejectHelper.kt` — reste invisible à Flutter : le rejeu
+      // à la réouverture ne trouve rien, et l'appelant entend sonner jusqu'au
+      // délai serveur de 45 secondes. C'est exactement le piège que
+      // `EndedCallRegistry` documente, et il tombait ici sans un mot.
+      await prefs.reload();
       return _read(prefs)
           .map((e) => {
                 'callerId': (e['callerId'] ?? '').toString(),
@@ -110,6 +120,10 @@ class PendingCallRejectStore {
     if (cid.isEmpty) return;
     try {
       final prefs = await SharedPreferences.getInstance();
+      // Même raison qu'à l'enfilage : sans relecture, retirer un refus traité
+      // réécrirait la liste telle que cet isolate l'a connue, et ferait
+      // disparaître ceux que le natif vient d'ajouter.
+      await prefs.reload();
       final list = _read(prefs);
       final call = (callId ?? '').trim();
       final before = list.length;
