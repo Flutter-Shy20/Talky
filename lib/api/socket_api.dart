@@ -378,11 +378,19 @@ extension SocketApi on TalkyApiClient {
     _stopConditionalHealthCheck();
     _isSocketAuthVerified = false;
     _pendingMessagesCallback = null;
-    _socketCallbackWrappers.clear();
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
-    _socketListeners.clear();
+    // Ni `_socketListeners` ni `_socketCallbackWrappers` ne sont vidés : c'est
+    // exactement le registre que `connectSocket()` relit pour ré-attacher les
+    // écouteurs au socket suivant, et son commentaire nomme le cas
+    // logout/login. Les vider ici le rendait vide au moment d'être relu.
+    //
+    // CallService et MeetingService s'inscrivent une seule fois, dans leur
+    // constructeur, et vivent aussi longtemps que l'application : personne ne
+    // les réinscrivait. Après un logout puis un login sans redémarrer l'app,
+    // plus aucun événement d'appel ni de réunion n'était livré — ni entrant, ni
+    // réponse, ni fin.
   }
 
   /// Émet un événement, et **dit si l'émission a eu lieu**.

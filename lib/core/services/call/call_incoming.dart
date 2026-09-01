@@ -465,10 +465,23 @@ extension CallIncoming on CallService {
       // appel sortant ce sont deux identifiants différents.
       if (id.isEmpty || _matchesCurrentCallId(id)) {
         await endCall();
-      } else {
-        _markTerminalCallId(id);
-        await _terminateCall();
+        return;
       }
+      // Un `call_ended` qui désigne un AUTRE appel ne touche pas à celui-ci.
+      //
+      // Il tombait jusqu'ici dans un teardown complet : un push en retard —
+      // celui de l'appel précédent, que le serveur envoie sans priorité et avec
+      // une validité de 24 h — raccrochait la communication en cours. Même
+      // famille que `call_ended` de groupe et `meeting:ended`, qui ont leur
+      // garde depuis l'audit ; ce point d'entrée-là avait été manqué.
+      //
+      // On le marque terminal quand même : c'est ce qui empêche son écran
+      // fantôme de se rouvrir, et c'est tout ce qu'il y a à en faire.
+      debugPrint(
+        '[CallService] 🛡 call_ended ignoré: $id ne désigne pas l\'appel en cours',
+      );
+      _markOneTerminalCallId(id);
+      await _callKit.endAll(callId: id);
       return;
     }
 

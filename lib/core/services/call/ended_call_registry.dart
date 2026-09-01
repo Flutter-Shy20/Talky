@@ -19,6 +19,9 @@ class EndedCallRegistry {
     if (id.isEmpty) return;
     try {
       final prefs = await SharedPreferences.getInstance();
+      // Relire le disque avant de fusionner : sans quoi ce read-modify-write
+      // écraserait les entrées écrites par l'autre isolate.
+      await prefs.reload();
       final map = _read(prefs);
       final now = DateTime.now().millisecondsSinceEpoch;
       _prune(map, now);
@@ -36,6 +39,12 @@ class EndedCallRegistry {
     if (id.isEmpty) return false;
     try {
       final prefs = await SharedPreferences.getInstance();
+      // `SharedPreferences` est un cache mémoire chargé une fois PAR ISOLATE :
+      // l'écriture de l'isolate FCM d'arrière-plan reste invisible à l'isolate
+      // principal, qui relit sa copie périmée et répond « pas terminé ». C'était
+      // toute la raison d'être de cette classe qui tombait — la protection
+      // anti-appel-fantôme entre isolates ne protégeait rien.
+      await prefs.reload();
       final map = _read(prefs);
       final now = DateTime.now().millisecondsSinceEpoch;
       final expiry = map[id];
