@@ -827,6 +827,12 @@ class MessageSender {
     // `auth:verified` aura déclenché _onSocketReady.
     if (!_api.isSocketReady) {
       debugPrint('[MessageSender] _emitSend différé (socket non prêt) clientId=$clientId');
+      // Le watchdog est armé malgré l'emit avorté. Sans lui, une ligne déposée
+      // pendant que le socket est encore en cours d'authentification n'avait
+      // plus rien pour la relancer avant le flush périodique : l'horloge
+      // pouvait tenir 75 secondes alors que le message était joignable en HTTP
+      // dès la seconde suivante.
+      _ackWatchdog?.arm(clientId, conversationID);
       return;
     }
     MessagePathTracer.mark(clientId, 'socket_emit');

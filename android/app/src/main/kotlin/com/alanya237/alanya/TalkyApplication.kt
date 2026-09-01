@@ -110,9 +110,20 @@ class TalkyApplication : Application() {
             }
             if (stillThere) continue
 
-            // Appel retiré : annuler sa notification d'appel en cours si elle
-            // existe (accepté puis terminé) — évite la notif fantôme.
+            // Appel retiré : annuler ses DEUX notifications possibles.
+            //
+            // `cancelOngoingNotification` vise `("ongoing_$id").hashCode()` —
+            // l'appel en cours. La notification d'appel ENTRANT, elle, porte
+            // `id.hashCode()`, et personne ne l'annulait sur ce chemin :
+            // `CallkitIncomingBroadcastReceiver` s'en remet au gestionnaire du
+            // plugin, qui est nul tant qu'aucun moteur Flutter n'existe.
+            //
+            // Elle survivait donc au refus, jusqu'à son expiration de 40 s. Et
+            // pendant ces 40 s, retaper « Accepter » relançait toute la chaîne
+            // d'acceptation : l'application répondait automatiquement à un appel
+            // que l'utilisateur venait de refuser.
             CallIncomingHelper.cancelOngoingNotification(this, id)
+            CallIncomingHelper.clearIncomingNotification(this, id)
 
             if (CallDismissRegistry.consumeIfProgrammatic(id)) {
                 Log.i(TAG, "ACTIVE_CALLS: dismiss programmatique id=$id (pas de reject)")

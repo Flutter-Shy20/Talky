@@ -111,10 +111,23 @@ void main() async {
   //   debugPrint('[Main] ** Échec activation cert pinning: $e');
   // }
 
+  // CallKit d'abord, et surtout HORS du `try` de Firebase.
+  //
+  // `init()` n'ouvre qu'un abonnement à `FlutterCallkitIncoming.onEvent` et ne
+  // dépend en rien de Firebase — mais c'est son unique appelant. Enfermé dans ce
+  // `try`, un échec d'initialisation Firebase (services Google Play absents ou
+  // en cours de mise à jour) laissait l'abonnement nul pour toute la session :
+  // l'appel pouvait encore s'afficher, mais « Accepter » et « Refuser » ne
+  // produisaient plus rien.
+  try {
+    await CallKitService.instance.init();
+  } catch (e) {
+    debugPrint('[Main] ** Init CallKit échouée: $e');
+  }
+
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    await CallKitService.instance.init();
     debugPrint('[Main] Firebase + CallKit initialisés');
   } catch (e) {
     debugPrint('[Main] ** Init Firebase échouée — push désactivé: $e');

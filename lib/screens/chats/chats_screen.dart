@@ -714,7 +714,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
                       conv.lastMessage != null &&
                       !(isSelf && (conv.lastMessageStatus ?? 1) >= 1
                           && (conv.lastMessageStatus ?? 1) <= 3)) ...[
-                    _previewStatusIcon(conv.lastMessageStatus),
+                    _previewStatusIcon(
+                      conv.lastMessageStatus,
+                      pendingSince: conv.lastMessageAt,
+                    ),
                     AppSpacing.hGapXs,
                   ],
                   // Marqueur de mention non lue. Il précède le texte RÉEL du
@@ -811,8 +814,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   // Accusé affiché sur l'aperçu : ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge · !
-  Widget _previewStatusIcon(int? status) {
-    return MessageStatusIcon(status: status, size: 13, onBubble: false);
+  Widget _previewStatusIcon(int? status, {DateTime? pendingSince}) {
+    return MessageStatusIcon(
+      status: status,
+      size: 13,
+      onBubble: false,
+      pendingSince: pendingSince,
+    );
   }
 
   /// Ouvre la visionneuse sur les statuts du contact [authorId] (démarre au

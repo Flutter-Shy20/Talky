@@ -50,7 +50,13 @@ object CallRejectHelper {
             if (!callId.isNullOrBlank()) entry.put("callId", callId)
             entry.put("ts", System.currentTimeMillis())
             next.put(entry)
-            prefs.edit().putString(KEY_PENDING, next.toString()).apply()
+            // `commit()` et non `apply()`, pour la raison que `NotificationActionQueue`
+            // documente déjà : ce chemin s'exécute dans un receiver, et le processus
+            // peut être tué dès son retour. Le POST part sur un exécuteur détaché
+            // qui n'a rien pour retenir le processus ; si la file n'est pas écrite
+            // sur le disque avant, le refus est perdu des deux côtés — et l'appelant
+            // entend sonner jusqu'au délai serveur de 45 secondes.
+            prefs.edit().putString(KEY_PENDING, next.toString()).commit()
             Log.i(TAG, "enqueue callerId=$callerId callId=$callId")
         } catch (e: Exception) {
             Log.e(TAG, "enqueuePending failed", e)

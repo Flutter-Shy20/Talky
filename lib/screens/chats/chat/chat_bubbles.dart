@@ -547,6 +547,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
             readAt: msg.readAt,
             retryClientId: retryClientId ?? msg.clientId,
             failureCode: failureCode ?? msg.failureCode,
+            pendingSince: msg.clickSentAt ?? msg.sendAt,
           ),
         ],
       ],
@@ -1168,6 +1169,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
     /// Non nul = refus serveur définitif : réessayer échouerait à l'identique,
     /// on n'offre donc pas le bouton.
     String? failureCode,
+    /// Appui sur « envoyer » : laisse l'horloge se taire le temps qu'un accusé
+    /// rapide arrive (voir `MessageStatusIcon.pendingGrace`).
+    DateTime? pendingSince,
   }) {
     // Conversation avec soi-même : pas de destinataire, donc « envoyé /
     // distribué / lu » n'a aucun sens et resterait de toute façon figé sur ✓.
@@ -1180,6 +1184,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
       status: status,
       deliveredAt: deliveredAt,
       readAt: readAt,
+      pendingSince: pendingSince,
       size: status == 0 ? 11 : 12,
       onBubble: true,
       timeFormatter: _formatTime,
