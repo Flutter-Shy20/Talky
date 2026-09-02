@@ -46,7 +46,22 @@ extension CallOneToOne on CallService {
       final mediaFuture = _webrtc.acquireLocalMedia(type);
       final iceFuture = _apiClient.fetchIceServers();
 
-      await mediaFuture;
+      // Borner l'acquisition : entre le décrochage et l'envoi de la réponse,
+      // plus aucune horloge ne couvre l'appel — `_armAwaitingOfferTimeout` et
+      // `_armIncomingRingSafety` viennent d'être désarmés, et rien ne surveille
+      // l'état `connecting`. Or `acquireLocalMedia` demande la permission micro
+      // si elle n'a jamais été accordée : au démarrage à froid depuis l'écran
+      // verrouillé, MainActivity s'affiche par-dessus le verrou mais la boîte
+      // de dialogue système, elle, non — la réponse n'arrive qu'après
+      // déverrouillage, et l'attente ne se terminait jamais.
+      try {
+        await mediaFuture.timeout(CallService._mediaAcquireTimeout);
+      } on TimeoutException {
+        debugPrint('[CallService] ⏰ acquisition média sans réponse → teardown');
+        _errorMessage = LocaleController.instance.l10n.callFailed;
+        await _terminateCall();
+        return;
+      }
       notify();
 
       // Sortie audio : un casque déjà connecté l'emporte, sinon haut-parleur
@@ -238,8 +253,22 @@ extension CallOneToOne on CallService {
 
       await _webrtc.buildPeerConnection(type, iceServers: await iceFuture);
 
+      // Le répondeur garde ses candidats, comme l'appelant garde les siens.
+      //
+      // Il n'avait pas de tampon : ses candidats partaient directement, et
+      // `sendSocketEvent` les jette en rendant `false` quand le socket n'est
+      // pas prêt — valeur ignorée ici. Côté serveur, `ice_candidate` sort aussi
+      // sans rien dire tant que la propriété d'appareil n'est pas revendiquée,
+      // ce qui n'arrive qu'au traitement de `answer_call`.
+      //
+      // Or les candidats relais, ceux qui passent par TURN, sont les derniers
+      // rassemblés — plusieurs secondes après le décrochage, exactement la
+      // fenêtre où un socket monté au démarrage à froid peut hoqueter. Et
+      // WebRTC ne repasse jamais par `onIceCandidate` pour un candidat déjà
+      // émis. Sur un réseau qui exige TURN, l'appelant se retrouvait sans
+      // aucune paire testable : silence des deux côtés.
       _webrtc.onIceCandidate = (candidate) {
-        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
+        final payload = <String, dynamic>{
           'targetUserId': _remoteUserId.toString(),
           'candidate': {
             'candidate': candidate.candidate,
@@ -248,7 +277,13 @@ extension CallOneToOne on CallService {
           },
           'generation': _webrtc.iceGeneration,
           if (_currentCallId != null) 'callId': _currentCallId,
-        });
+        };
+        if (_outgoingIceOutbox.length < CallService._maxOutgoingIceReplay) {
+          _outgoingIceOutbox.add(
+            (generation: _webrtc.iceGeneration, payload: payload),
+          );
+        }
+        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, payload);
       };
 
       _wireOneToOneConnectionStateHandlers();
@@ -259,14 +294,56 @@ extension CallOneToOne on CallService {
 
       final answer = await _webrtc.createAnswer();
 
-      _apiClient.sendSocketEvent(SocketEvents.answerCall, {
-        'callerId': _remoteUserId.toString(),
-        'callId': _currentCallId,
-        'answer': {
-          'sdp': answer.sdp,
-          'type': answer.type,
+      // La réponse WebRTC est le seul message que l'appelant attend, et elle
+      // partait sans accusé ni file — contrairement au raccrochage, qui a reçu
+      // les deux. Perdue sur un socket zombie, elle ne repartait jamais :
+      // l'appelé affichait « en cours » avec son chronomètre, l'appelant
+      // restait sur « connexion », et aucun média ne passait jusqu'à l'échec
+      // ICE puis au délai global.
+      //
+      // Entre la vérification du socket et cette émission, il s'écoule
+      // `buildPeerConnection`, `handleOffer` et `createAnswer` — plusieurs
+      // centaines de millisecondes d'allers-retours natifs, sur un socket monté
+      // quelques secondes plus tôt au démarrage à froid.
+      final reponseAccusee = await _apiClient.sendSocketEventAcked(
+        SocketEvents.answerCall,
+        {
+          'callerId': _remoteUserId.toString(),
+          'callId': _currentCallId,
+          'answer': {
+            'sdp': answer.sdp,
+            'type': answer.type,
+          },
         },
-      });
+      );
+      if (!reponseAccusee) {
+        debugPrint(
+          '[CallService] ** réponse WebRTC sans accusé → reconstruction et '
+          'seconde tentative',
+        );
+        // Le socket paraissait prêt et n'a rien accusé : il est mort sans le
+        // dire. On le reconstruit et on réémet une fois — l'appel n'a pas
+        // d'autre chance, et le serveur traite une seconde réponse par son
+        // refus explicite plutôt que par un dégât.
+        await _apiClient.forceReconnect();
+        final secondeChance = await _apiClient.sendSocketEventAcked(
+          SocketEvents.answerCall,
+          {
+            'callerId': _remoteUserId.toString(),
+            'callId': _currentCallId,
+            'answer': {
+              'sdp': answer.sdp,
+              'type': answer.type,
+            },
+          },
+        );
+        if (!secondeChance) {
+          debugPrint('[CallService] ** réponse WebRTC perdue → teardown');
+          _errorMessage = LocaleController.instance.l10n.callFailed;
+          await _terminateCall();
+          return;
+        }
+      }
 
       _status = CallStatus.connected;
       _startDurationTimer();

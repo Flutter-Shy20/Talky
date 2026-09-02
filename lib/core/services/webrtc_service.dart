@@ -364,7 +364,29 @@ class WebRTCService {
                 : false,
           };
           debugPrint('[WebRTC] Contraintes fallback: $fallbackConstraints');
-          return await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+          try {
+            return await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+          } catch (e2) {
+            // Dernier repli : l'audio seul.
+            //
+            // `ensureCallMediaPermissions` documente et applique déjà « une
+            // caméra refusée n'est pas bloquante : l'appel se dégrade en
+            // audio » — elle se contente de journaliser et rend l'état du
+            // micro. Mais rien en aval ne dégradait quoi que ce soit : les deux
+            // tentatives ci-dessus demandent la vidéo, l'exception remontait
+            // jusqu'au `catch` d'`answerCall`, qui appelait `rejectCall()`.
+            //
+            // Un appel vidéo entrant décroché sur un téléphone où la caméra n'a
+            // jamais été autorisée était donc REFUSÉ — l'appelant recevait un
+            // refus — alors que le micro, lui, était accordé. Et le démarrage à
+            // froid depuis une notification est exactement le contexte où la
+            // permission caméra n'a jamais été demandée au calme.
+            if (type != CallType.video) rethrow;
+            debugPrint('[WebRTC] ** vidéo indisponible ($e2) → audio seul');
+            return await navigator.mediaDevices.getUserMedia(
+              <String, dynamic>{'audio': true, 'video': false},
+            );
+          }
         }
         rethrow;
       }

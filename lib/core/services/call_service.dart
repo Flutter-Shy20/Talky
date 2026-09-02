@@ -314,6 +314,14 @@ class CallService extends ChangeNotifier {
   /// terre, ou appareil du pair absent. Le verdict reste au timeout global.
   static const Duration _iceRestartRetryInterval = Duration(seconds: 5);
 
+  /// Borne l'ouverture du micro et de la caméra au décrochage.
+  ///
+  /// Entre le décrochage et l'envoi de la réponse, plus aucune horloge ne
+  /// couvre l'appel. Vingt secondes laissent le temps à une boîte de dialogue
+  /// de permission d'être acceptée, et restent en deçà des quarante-cinq
+  /// secondes après lesquelles le serveur classe l'appel « sans réponse ».
+  static const Duration _mediaAcquireTimeout = Duration(seconds: 20);
+
   /// Délai avant d'auditer le socket quand un appel entre en reconnexion, et
   /// silence au-delà duquel on le tient pour mort. Huit secondes laissent le
   /// temps à une reprise normale d'aboutir, et gardent trente-sept secondes
