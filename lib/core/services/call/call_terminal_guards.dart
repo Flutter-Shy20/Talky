@@ -331,3 +331,40 @@ bool shouldAdoptNativeAccept({
   if (presente.isEmpty || actif.isEmpty) return false;
   return presente == actif;
 }
+
+/// Ce qu'une action CallKit terminale doit rapporter au serveur.
+enum TerminalCallReport {
+  /// Un refus explicite de l'utilisateur : le serveur l'inscrit « rejeté ».
+  refus,
+
+  /// Rien. Le minuteur serveur de 45 secondes classe l'appel « sans réponse »,
+  /// et lui seul sait le faire.
+  rien,
+}
+
+/// Faut-il signaler un refus au serveur pour cette action CallKit ?
+///
+/// L'expiration de la notification — 40 secondes, posées délibérément avant les
+/// 45 secondes du serveur — était rapportée comme un refus explicite. Le
+/// serveur écrivait alors `status = 2` cinq secondes avant que son propre
+/// minuteur n'ait écrit `status = 3`, et l'`UPDATE` étant inconditionnel, il
+/// écrasait même un « sans réponse » déjà correct quand un retard sous Doze
+/// inversait l'ordre.
+///
+/// Un appel qu'on n'a simplement pas entendu, téléphone dans la poche,
+/// s'inscrivait donc « Rejeté » dans le journal des DEUX correspondants.
+///
+/// Le même choix était fait des deux côtés de la frontière — ici et dans
+/// l'écouteur `ACTIVE_CALLS` natif. Les corriger séparément aurait créé une
+/// incohérence entre application vivante et application tuée.
+TerminalCallReport reportForTerminalAction(String actionName) {
+  switch (actionName) {
+    case 'decline':
+      return TerminalCallReport.refus;
+    // `timeout` : la sonnerie a expiré, personne n'a rien décidé.
+    // `ended` : retrait par le système ou nettoyage local — un autre appareil
+    // peut encore sonner, ou avoir déjà décroché.
+    default:
+      return TerminalCallReport.rien;
+  }
+}

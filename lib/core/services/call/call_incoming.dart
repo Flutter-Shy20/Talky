@@ -507,20 +507,24 @@ extension CallIncoming on CallService {
           mode: action.mode,
         );
         break;
+      // Refus explicite et sonnerie expirée arrivent tous deux ici. Seul le
+      // premier se signale au serveur — voir `reportForTerminalAction`.
       case IncomingCallActionType.decline:
-        await rejectIncomingCallFromPush(
-          callerId: action.callerId,
-          callId: action.callId,
-          isConference: action.isConference,
-        );
-        break;
       case IncomingCallActionType.timeout:
-        // Timeout CallKit : refus compte (sonnerie expirée).
-        await rejectIncomingCallFromPush(
-          callerId: action.callerId,
-          callId: action.callId,
-          isConference: action.isConference,
-        );
+        if (reportForTerminalAction(action.action.name) ==
+            TerminalCallReport.refus) {
+          await rejectIncomingCallFromPush(
+            callerId: action.callerId,
+            callId: action.callId,
+            isConference: action.isConference,
+          );
+        } else {
+          await notifyCallEndedFromExternal(
+            callId: action.callId,
+            callerId: action.callerId,
+            localOnlyIfIncoming: true,
+          );
+        }
         break;
       case IncomingCallActionType.ended:
         // Dismiss OS / nettoyage local — ne pas reject_call (autre device peut
