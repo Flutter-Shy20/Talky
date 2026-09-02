@@ -43,6 +43,24 @@ extension MiscApi on TalkyApiClient {
       // Fallback STUN public si le backend est injoignable — l'app reste utilisable
       // sur les réseaux non-symétriques.
       debugPrint('[TalkyApiClient] fetchIceServers fallback: $e');
+      // Un cache encore rempli vaut infiniment mieux que deux STUN publics.
+      //
+      // Le repli les rendait sans regarder ce qu'on avait déjà : une requête
+      // qui échoue — réseau qui se réveille, jeton à rafraîchir — jetait des
+      // identifiants TURN parfaitement valides, sur le chemin critique de tout
+      // appel. Sans relais, un réseau à NAT symétrique ne peut pas établir la
+      // moindre paire : appel muet des deux côtés.
+      //
+      // On ne teste pas l'expiration ici : `_iceServersExpiresAt` porte déjà
+      // une marge de dix minutes, et des identifiants un peu vieux valent mieux
+      // que pas de relais du tout.
+      final cache = _cachedIceServers;
+      if (cache != null && cache.isNotEmpty) {
+        debugPrint(
+          '[TalkyApiClient] 🧊 repli sur le cache TURN (${cache.length} serveur(s))',
+        );
+        return cache;
+      }
       return const [
         {'urls': 'stun:stun.l.google.com:19302'},
         {'urls': 'stun:stun1.l.google.com:19302'},

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -128,6 +129,26 @@ class CallKitService {
   }
 
   static const _nativeCallChannel = MethodChannel('com.alanya/call_native');
+
+  /// Fond de l'écran d'appel plein écran Android : volontairement transparent.
+  ///
+  /// Le dégradé de `IncomingCallScreen` est porté par le layout natif
+  /// (res/layout/activity_callkit_incoming.xml) ; le plugin, lui, peint cette
+  /// couleur en aplat par-dessus. Un aplat opaque effacerait donc la maquette.
+  static const _callkitBackgroundColor = '#00000000';
+
+  /// Couleur de texte de ce même écran, accordée à values/values-night.
+  ///
+  /// Le layout est une ressource Android : ses couleurs suivent le mode nuit
+  /// du **système**, pas le `ThemeMode` choisi dans l'application (aucune
+  /// ressource ne sait lire une préférence Flutter). Le texte étant le seul
+  /// élément que le plugin repeint depuis Dart, on résout la même bascule —
+  /// sinon un utilisateur en thème clair sur un système sombre lirait du texte
+  /// sombre sur notre dégradé de nuit.
+  static String get _callkitTextColor =>
+      PlatformDispatcher.instance.platformBrightness == Brightness.dark
+          ? '#FFFFFFFF' // CallUiColors.dark.onBackground
+          : '#FF1A1D23'; // CallUiColors.light.onBackground
 
   /// Même règle que `CallService._isAppForeground`, et la même correction :
   /// un état encore inconnu est un arrière-plan. Ici l'enjeu est l'inverse du
@@ -358,7 +379,8 @@ class CallKitService {
         // La sonnerie importée est alors jouée par RingtoneService (Flutter) ou
         // CustomRingtonePlayer (natif) selon le cycle de vie de l'app.
         ringtonePath: silent ? 'silence' : RingtonePreferences.resolveAndroidCallKitRingtone(),
-        backgroundColor: '#0955fa',
+        backgroundColor: _callkitBackgroundColor,
+        textColor: _callkitTextColor,
         actionColor: '#4CAF50',
         incomingCallNotificationChannelName: l10n.incomingCallsChannel,
         missedCallNotificationChannelName: l10n.missedCalls,
@@ -432,7 +454,7 @@ class CallKitService {
         isCustomNotification: true,
         isShowLogo: false,
         ringtonePath: '',
-        backgroundColor: '#0955fa',
+        backgroundColor: _callkitBackgroundColor,
         actionColor: '#4CAF50',
         incomingCallNotificationChannelName: l10n.ongoingCallsChannel,
         missedCallNotificationChannelName: l10n.missedCalls,
@@ -498,11 +520,33 @@ class CallKitService {
     }
   }
 
+  /// Ferme les entrées CallKit — **celle de [callId] seule si elle est nommée**.
+  ///
+  /// `endAllCalls()` retire TOUTES les entrées sans considération d'identifiant,
+  /// et cette méthode est appelée partout sur les chemins push et CallKit :
+  /// refus depuis la notification, entrée invalide ou périmée, fin externe. Une
+  /// réunion en cours en arrière-plan y perdait son entrée `meeting_<id>` — donc
+  /// sa notification, son chronomètre, son retour depuis le tiroir — au moindre
+  /// appel refusé à côté. Et l'écouteur `ACTIVE_CALLS` arrête le service du
+  /// plugin dès que la liste se vide.
+  ///
+  /// Quand l'appelant sait quel appel il ferme, il n'y a aucune raison
+  /// d'emporter les autres. Le nettoyage global reste accessible en appelant
+  /// sans identifiant — c'est ce que fait `purgeStaleActiveCalls`.
   Future<void> endAll({String? callId}) async {
     if (kIsWeb) return;
     final id = callId?.trim() ?? '';
     if (id.isNotEmpty) {
       await EndedCallRegistry.markEnded(id);
+      if (id == _lastShownCallId) _lastShownCallId = null;
+      if (id == _nativeIncomingCallId) _nativeIncomingCallId = null;
+      await _markProgrammaticDismissNative([id]);
+      try {
+        await FlutterCallkitIncoming.endCall(id);
+      } catch (e) {
+        debugPrint('[CallKit] endAll(ciblé) error: $e');
+      }
+      return;
     }
     _lastShownCallId = null;
     _nativeIncomingCallId = null;
