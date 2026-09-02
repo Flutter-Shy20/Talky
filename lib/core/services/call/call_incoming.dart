@@ -115,6 +115,45 @@ extension CallIncoming on CallService {
     }
   }
 
+  /// Adopte un décrochage que le natif a enregistré sans que Flutter le sache.
+  ///
+  /// Depuis que `MainActivity` lit le décrochage dans son intent de lancement,
+  /// l'entrée CallKit passe à « acceptée » de façon synchrone, sans course. Mais
+  /// application en arrière-plan, le moteur Flutter est vivant et endormi : au
+  /// réveil il reprenait l'entrant — revendiquant la présentation et relançant
+  /// sa sonnerie sur un appel que l'utilisateur venait de décrocher.
+  ///
+  /// À interroger **avant** toute reprise. Rend `true` si l'appel a été adopté,
+  /// auquel cas l'appelant n'a plus rien à faire.
+  Future<bool> adoptNativeAcceptIfAny() async {
+    if (kIsWeb) return false;
+    final presentationId = _activeIncomingPresentationCallId;
+    final actif = await _callKit.getActiveCall();
+    if (!shouldAdoptNativeAccept(
+      statusIsIncoming: _status == CallStatus.incoming,
+      autoAnsweringFromPush: _isAutoAnsweringFromPush,
+      presentationId: presentationId,
+      activeCallId: actif?['callId'] as String?,
+      activeAccepted: actif?['isAccepted'] == true,
+    )) {
+      return false;
+    }
+    debugPrint(
+      '[CallService] ⚡ décrochage natif adopté au réveil: $presentationId',
+    );
+    await acceptIncomingCallFromPush(
+      callId: (actif!['callId'] as String?) ?? '',
+      callerId: (actif['callerId'] as String?) ?? '',
+      callerName: (actif['callerName'] as String?) ?? '',
+      callerPhoto: actif['callerPhoto'] as String?,
+      isVideo: actif['isVideo'] == true,
+      roomId: actif['roomId'] as String?,
+      sessionKind: actif['sessionKind'] as String?,
+      mode: actif['mode'] as String?,
+    );
+    return true;
+  }
+
   /// Rejoint un appel de groupe accepté depuis une notification.
   ///
   /// `joinGroupCall` n'avait qu'un appelant dans toute l'application — le bouton

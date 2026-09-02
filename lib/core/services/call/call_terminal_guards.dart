@@ -304,3 +304,30 @@ String? incomingPresentationId({String? callId, String? groupRoomId}) {
   if (salon != null && salon.isNotEmpty) return salon;
   return null;
 }
+
+/// Faut-il adopter un décrochage que le natif a enregistré sans nous ?
+///
+/// Depuis que `MainActivity` lit le décrochage dans son intent de lancement,
+/// l'entrée CallKit peut passer à « acceptée » pendant que Flutter n'écoutait
+/// pas — application en arrière-plan, moteur vivant mais endormi. Au retour au
+/// premier plan, l'application reprenait alors l'entrant : elle revendiquait la
+/// présentation et relançait sa sonnerie sur un appel que l'utilisateur venait
+/// de décrocher. C'est le symptôme rapporté.
+///
+/// La question se pose donc **avant** toute reprise, et elle exige que l'entrée
+/// active désigne bien l'appel qu'on présente : une entrée résiduelle d'un autre
+/// appel ne doit pas faire décrocher celui-ci.
+bool shouldAdoptNativeAccept({
+  required bool statusIsIncoming,
+  required bool autoAnsweringFromPush,
+  required String? presentationId,
+  required String? activeCallId,
+  required bool activeAccepted,
+}) {
+  if (!statusIsIncoming || autoAnsweringFromPush) return false;
+  if (!activeAccepted) return false;
+  final presente = presentationId?.trim() ?? '';
+  final actif = activeCallId?.trim() ?? '';
+  if (presente.isEmpty || actif.isEmpty) return false;
+  return presente == actif;
+}

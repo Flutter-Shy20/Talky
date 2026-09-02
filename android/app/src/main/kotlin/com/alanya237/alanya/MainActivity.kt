@@ -41,13 +41,26 @@ class MainActivity : FlutterFragmentActivity() {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
         }
+        handleCallAcceptIntent(intent)
         handleNotificationIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handleCallAcceptIntent(intent)
         handleNotificationIntent(intent)
+    }
+
+    /**
+     * Le décrochage voyage dans l'intent qui nous lance — voir
+     * [CallAcceptFromIntent], qui explique pourquoi c'est le seul canal sans
+     * course. Appelé avant [handleNotificationIntent], qui sort de toute façon
+     * dès sa première garde pour un intent CallKit.
+     */
+    private fun handleCallAcceptIntent(intent: Intent?) {
+        val callId = CallAcceptFromIntent.consommer(this, intent) ?: return
+        Log.i(TAG, "décrochage lu dans l'intent callId=$callId")
     }
 
     override fun onResume() {

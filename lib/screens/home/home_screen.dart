@@ -132,13 +132,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     unawaited(CallKitService.instance.refreshNativeIncomingState());
     if (callService.status == CallStatus.incoming &&
         !callService.isAutoAnsweringFromPush) {
-      // Retour au premier plan : retire CallKit et relance la sonnerie Dart.
-      unawaited(callService.resumeForegroundIncoming());
+      unawaited(_reprendreEntrant(callService));
     }
     Provider.of<ChatProvider>(context, listen: false)
         .repository
         .syncPushSuppressionForLifecycle(true);
     _syncPushDeviceState(foreground: true);
+  }
+
+  /// Reprend l'entrant — mais seulement si l'utilisateur n'a pas déjà décroché.
+  ///
+  /// `MainActivity` enregistre le décrochage dans son intent de lancement, donc
+  /// avant même que ce réveil ne soit livré. Reprendre sans poser la question
+  /// revendiquait la présentation et relançait la sonnerie sur un appel déjà
+  /// accepté : c'est l'écran qui sonne encore.
+  Future<void> _reprendreEntrant(CallService callService) async {
+    if (await callService.adoptNativeAcceptIfAny()) return;
+    if (!mounted) return;
+    if (callService.status != CallStatus.incoming ||
+        callService.isAutoAnsweringFromPush) {
+      return;
+    }
+    // Retour au premier plan : retire CallKit et relance la sonnerie Dart.
+    await callService.resumeForegroundIncoming();
   }
 
   @override
