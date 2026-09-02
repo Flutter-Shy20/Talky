@@ -78,10 +78,22 @@ extension CallSession on CallService {
 
   Future<void> _releaseCallSession() async {
     if (kIsWeb) return;
+    // La fenêtre flottante et les rendus vidéo appartiennent à celui qui tient
+    // la session : les libérer depuis un appel dont l'acquisition avait été
+    // REFUSÉE viderait l'écran de la réunion toujours en cours. On demande donc
+    // d'abord si la session est bien la nôtre.
+    final aNous = CallSessionGuard.instance.holdsSession(_callKitCallId);
+    if (!aNous) {
+      debugPrint(
+        '[CallService] session média non tenue par $_callKitCallId — '
+        'rien à rendre',
+      );
+      return;
+    }
     // Avant le garde : la fenêtre flottante disparaît avec la session, et rien
     // ne doit rester branché sur des rendus en cours de libération.
     await SystemPip.instance.reset();
     await SessionVideoRenderers.instance.release();
-    await CallSessionGuard.instance.release();
+    await CallSessionGuard.instance.release(callId: _callKitCallId);
   }
 }

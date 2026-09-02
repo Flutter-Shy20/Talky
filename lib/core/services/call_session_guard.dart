@@ -24,6 +24,33 @@ enum SessionAcquisition {
   conflit,
 }
 
+/// Faut-il rendre la session média à la demande de [releasedBy] ?
+///
+/// `acquire` refuse déjà proprement un conflit, sans compter — mais `release`
+/// décrémentait aveuglément. Une session dont l'acquisition avait été REFUSÉE
+/// faisait donc quand même tomber le compteur à zéro en se retirant, et
+/// démontait celle du voisin : service au premier plan arrêté, focus audio
+/// rendu, entrée CallKit fermée, verrou de veille et capteur de proximité
+/// relâchés — sur un appel, ou une réunion, toujours en cours.
+///
+/// Le chemin est celui qu'`acquire` documente déjà : rejoindre une réunion
+/// pendant un appel, ou décrocher un appel pendant une réunion. La correction
+/// d'`acquire` était donc à moitié faite ; c'est l'autre moitié.
+///
+/// Un appelant qui ne sait pas s'identifier garde l'ancien comportement : on ne
+/// peut pas lui refuser ce qu'on ne sait pas attribuer.
+bool shouldReleaseSession({
+  required int refCount,
+  required String? heldBy,
+  required String? releasedBy,
+}) {
+  if (refCount <= 0) return false;
+  final rendeur = releasedBy?.trim() ?? '';
+  final tenant = heldBy?.trim() ?? '';
+  if (rendeur.isEmpty || tenant.isEmpty) return true;
+  return rendeur == tenant;
+}
+
 /// Décide du sort d'un `acquire`, sans rien toucher.
 ///
 /// Extraite parce que la version précédente incrémentait le compteur dans les
@@ -190,9 +217,37 @@ class CallSessionGuard with WidgetsBindingObserver {
     await CallKitService.instance.setConnected(_callId!);
   }
 
-  Future<void> release() async {
+  /// La session média est-elle tenue par [callId] ?
+  ///
+  /// À interroger avant de démonter quoi que ce soit de partagé — la fenêtre
+  /// flottante et les rendus vidéo appartiennent eux aussi à celui qui tient la
+  /// session, et les libérer depuis une session refusée vide l'écran du voisin.
+  bool holdsSession(String? callId) {
+    if (kIsWeb) return false;
+    return shouldReleaseSession(
+      refCount: _refCount,
+      heldBy: _callId,
+      releasedBy: callId,
+    );
+  }
+
+  /// Rend la session — **si elle est bien à cet appel-ci**. Voir
+  /// [shouldReleaseSession].
+  Future<void> release({String? callId}) async {
     if (kIsWeb) return;
-    if (_refCount == 0) return;
+    if (!shouldReleaseSession(
+      refCount: _refCount,
+      heldBy: _callId,
+      releasedBy: callId,
+    )) {
+      if (_refCount > 0) {
+        debugPrint(
+          '[CallSessionGuard] ⛔ release ignoré : session tenue par $_callId, '
+          'rendue par $callId',
+        );
+      }
+      return;
+    }
     _refCount--;
     if (_refCount > 0) return;
 
@@ -206,11 +261,11 @@ class CallSessionGuard with WidgetsBindingObserver {
 
     await AudioHelper.releaseCallAudio();
 
-    final callId = _callId;
-    if (callId != null && callId.isNotEmpty) {
+    final tenu = _callId;
+    if (tenu != null && tenu.isNotEmpty) {
       try {
-        await CallKitService.instance.endCall(callId);
-        debugPrint('[CallSessionGuard] CallKit fermé callId=$callId');
+        await CallKitService.instance.endCall(tenu);
+        debugPrint('[CallSessionGuard] CallKit fermé callId=$tenu');
       } catch (e) {
         debugPrint('[CallSessionGuard] endCall error: $e');
       }

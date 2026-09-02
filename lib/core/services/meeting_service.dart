@@ -1051,11 +1051,22 @@ class MeetingService extends ChangeNotifier {
     speakingDetector.stop();
     final meetingCallId = _currentMeeting != null ? 'meeting_${_currentMeeting!.idMeeting}' : null;
     if (!kIsWeb) {
-      // Avant le garde : la fenêtre flottante disparaît avec la réunion, et
-      // rien ne doit rester branché sur des rendus en cours de libération.
-      await SystemPip.instance.reset();
-      await SessionVideoRenderers.instance.release();
-      await CallSessionGuard.instance.release();
+      // Même garde que du côté appel : si la session média appartient à un
+      // appel — parce que notre acquisition avait été refusée —, la rendre ici
+      // démonterait SON service au premier plan, SON focus audio et SON entrée
+      // CallKit, sur une communication toujours vivante.
+      if (CallSessionGuard.instance.holdsSession(meetingCallId)) {
+        // Avant le garde : la fenêtre flottante disparaît avec la réunion, et
+        // rien ne doit rester branché sur des rendus en cours de libération.
+        await SystemPip.instance.reset();
+        await SessionVideoRenderers.instance.release();
+        await CallSessionGuard.instance.release(callId: meetingCallId);
+      } else {
+        debugPrint(
+          '[MeetingService] session média non tenue par $meetingCallId — '
+          'rien à rendre',
+        );
+      }
       if (meetingCallId != null) {
         try {
           await CallKitService.instance.endCall(meetingCallId);
