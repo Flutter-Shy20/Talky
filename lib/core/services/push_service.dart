@@ -468,7 +468,15 @@ class PushService {
     final svc = _instance;
     if (svc == null) return;
     try {
-      final token = svc._token ?? await svc._fm.getToken();
+      // Toujours redemander, jamais servir le cache.
+      //
+      // `svc._token` est posé par `_setup()` au démarrage. Le lire en premier
+      // renvoyait donc au backend le jeton connu à l'ouverture de
+      // l'application, même s'il avait tourné depuis : il n'existait aucune
+      // réparation en cours de processus, seul un démarrage à froid corrigeait.
+      // Et le backend, lui, purge la cible dès que FCM répond
+      // `registration-token-not-registered`.
+      final token = await svc._fm.getToken() ?? svc._token;
       if (token != null) {
         svc._token = token;
         await svc._safeUpdateToken(token);

@@ -7,6 +7,7 @@ import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import io.flutter.plugins.firebase.messaging.ContextHolder
+import io.flutter.plugins.firebase.messaging.FlutterFirebaseTokenLiveData
 
 /**
  * Couche Android propriétaire (Phase 4) — activée via manifest placeholder
@@ -80,8 +81,34 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
+    /**
+     * Le jeton a tourné. Il faut le dire à Flutter — personne d'autre ne le fera.
+     *
+     * Le SDK ne délivre `onNewToken` qu'à UN service `MESSAGING_EVENT`, et
+     * depuis le passage à la couche notifications native c'est celui-ci : le
+     * service du plugin est désactivé au manifeste
+     * (`talkyFlutterFcmEnabled="false"`). Or c'est lui, et lui seul, qui
+     * alimentait `FlutterFirebaseTokenLiveData` — la source unique de
+     * l'événement `onTokenRefresh` que `PushService` écoute. Cette écoute était
+     * donc devenue du code mort, et cette méthode-ci se contentait de
+     * journaliser.
+     *
+     * Conséquence, processus vivant : après une rotation, le backend continuait
+     * de viser l'ancien jeton, FCM répondait `registration-token-not-registered`
+     * et le serveur purgeait la cible. L'appareil n'avait plus aucune adresse
+     * push, et rien ne le réparait avant un démarrage à froid.
+     *
+     * On repose donc le jeton là où le plugin l'attend. Le receiver du plugin
+     * reste indépendant et continue de réveiller l'isolate Dart.
+     */
     override fun onNewToken(token: String) {
-        Log.d(TAG, "onNewToken — Flutter syncTokenWithBackend expected")
+        Log.i(TAG, "onNewToken — relais vers Flutter (len=${token.length})")
+        ensureFlutterContext()
+        try {
+            FlutterFirebaseTokenLiveData.getInstance().postToken(token)
+        } catch (e: Exception) {
+            Log.e(TAG, "relais du jeton échoué", e)
+        }
     }
 
     private fun ensureFlutterContext() {

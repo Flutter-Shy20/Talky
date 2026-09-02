@@ -389,3 +389,45 @@ bool shouldPostRejectToServer(String? callId) {
   if (id.isEmpty) return true;
   return RegExp(r'^\d+$').hasMatch(id);
 }
+
+/// Cette offre de reprise peut-elle être appliquée dans l'état local courant ?
+///
+/// Le sort du destinataire après une mort de processus tenait à cette garde.
+/// Seul l'appelant persiste un instantané : au redémarrage à froid en pleine
+/// communication, l'appelé lit son entrée CallKit acceptée, repasse par
+/// `acceptIncomingCallFromPush` et se retrouve en « entrant » avec
+/// l'auto-réponse armée. Il confirme pourtant la reprise au serveur — ce qui
+/// annule la grâce de déconnexion, l'appel est officiellement vivant — mais la
+/// restauration s'arrête là, faute d'instantané.
+///
+/// L'appelant, lui, voit son lien tomber, entre en reconnexion et émet son
+/// offre de rejointe. Elle arrivait ici et était jetée : `incoming` ne figurait
+/// pas dans les états autorisés. L'appelé restait figé sur « connexion en
+/// cours » trente secondes puis « Échec », et le correspondant attendait les
+/// quarante-cinq secondes du délai global. La restauration après mort de
+/// processus ne fonctionnait que pour celui qui avait passé l'appel.
+///
+/// Recevoir l'offre suffit : la branche « pas de PeerConnection » reconstruit
+/// toute la pile en `asOutgoingCaller: false`, ce qui est exactement le rôle
+/// d'un appelé de restart.
+bool acceptsRejoinOfferForLocalStatus({
+  required String callStatusName,
+  required bool isRestoringOutgoing,
+  required bool peerMatchesRemote,
+  required bool awaitingAutoAnswer,
+}) {
+  if (isRestoringOutgoing) return true;
+  switch (callStatusName) {
+    case 'connected':
+    case 'reconnecting':
+      return true;
+    case 'connecting':
+      return peerMatchesRemote;
+    case 'incoming':
+      // Appelé restauré après une mort de processus : il n'a pas d'instantané,
+      // mais il sait qu'il était en train de décrocher.
+      return awaitingAutoAnswer && peerMatchesRemote;
+    default:
+      return false;
+  }
+}

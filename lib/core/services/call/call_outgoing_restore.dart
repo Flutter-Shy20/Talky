@@ -423,10 +423,12 @@ extension CallOutgoingRestore on CallService {
     if (peerId == null || offerMap is! Map || offerMap['sdp'] == null) return;
     if (_remoteUserId != null && peerId != _remoteUserId) return;
 
-    final allowed = _status == CallStatus.connected ||
-        _status == CallStatus.reconnecting ||
-        _isRestoringOutgoing ||
-        (_status == CallStatus.connecting && _remoteUserId == peerId);
+    final allowed = acceptsRejoinOfferForLocalStatus(
+      callStatusName: _status.name,
+      isRestoringOutgoing: _isRestoringOutgoing,
+      peerMatchesRemote: _remoteUserId == peerId,
+      awaitingAutoAnswer: _isAutoAnsweringFromPush || _autoAnswerOnNextIncoming,
+    );
     if (!allowed) {
       debugPrint('[CallService] 🛡 call_rejoin_offer ignoré status=$_status');
       return;
@@ -479,7 +481,17 @@ extension CallOutgoingRestore on CallService {
         if (_currentCallId != null) 'callId': _currentCallId,
       });
 
-      if (_isRestoringOutgoing || _status == CallStatus.connecting) {
+      if (_isRestoringOutgoing ||
+          _status == CallStatus.connecting ||
+          _status == CallStatus.incoming) {
+        // `incoming` : appelé restauré après une mort de processus. La reprise
+        // est négociée, il n'attend plus rien — surtout pas l'offre initiale,
+        // que le serveur ne rejoue pas.
+        _isAutoAnsweringFromPush = false;
+        _autoAnswerOnNextIncoming = false;
+        _autoAnswerCallerId = null;
+        _cancelAwaitingOfferTimeout();
+        _cancelIncomingRingSafety();
         _completeOutgoingRestore();
       } else if (_status == CallStatus.connected ||
           _status == CallStatus.reconnecting) {

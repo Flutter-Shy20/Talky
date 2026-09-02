@@ -69,6 +69,38 @@ class CallMediaForegroundService : Service() {
         return START_NOT_STICKY
     }
 
+    /**
+     * L'utilisateur a balayé Alanya depuis les récents.
+     *
+     * Android n'arrête PAS un service au retrait de sa tâche : l'activité et son
+     * moteur Flutter sont détruits, l'isolate Dart meurt, et plus personne ne
+     * peut appeler `stop` sur le canal `call_media` — le seul chemin d'arrêt de
+     * ce service. Sa notification, posée en `setOngoing(true)` et sans action,
+     * n'est pas balayable : l'utilisateur gardait un « Appel en cours » qu'il ne
+     * pouvait pas retirer, et un processus maintenu à priorité premier plan,
+     * jusqu'au prochain appel mené à son terme ou à un arrêt forcé.
+     *
+     * Au relancement, rien ne nettoyait l'orphelin non plus : le drapeau côté
+     * Dart repart à faux, donc l'arrêt sort d'entrée.
+     *
+     * Le pair, lui, est prévenu par la grâce de déconnexion du serveur.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.i(TAG, "tâche retirée des récents — arrêt du service")
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "stopForeground: $e")
+        }
+        stopSelf()
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         Log.i(TAG, "stopped")
         super.onDestroy()

@@ -617,7 +617,20 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         if (active != null) {
           final callId = active['callId'] as String? ?? '';
           if (callId.startsWith('meeting_')) {
-            debugPrint('[AuthWrapper] ℹ CallKit réunion ignoré au cold start: $callId');
+            // Une invitation de réunion n'a jamais d'entrée CallKit : celles-ci
+            // viennent uniquement de `CallSessionGuard.acquire` pendant une
+            // réunion. C'est donc un débris d'un processus mort en réunion, et
+            // l'ignorer était la bonne intention — mais la branche se contentait
+            // de le journaliser. L'entrée restait dans ACTIVE_CALLS jusqu'à sa
+            // péremption, trois minutes, et `getActiveCall()` continuait de
+            // désigner une réunion qui n'existe plus : c'est ce que lisent
+            // `refreshNativeIncomingState` et `adoptNativeAcceptIfAny`.
+            //
+            // On fait donc ce que fait la branche « sortant résiduel » juste en
+            // dessous : marquer et fermer.
+            debugPrint('[AuthWrapper] 🧹 débris CallKit de réunion: $callId');
+            await EndedCallRegistry.markEnded(callId);
+            await CallKitService.instance.endAll(callId: callId);
           } else if (callId.isNotEmpty && await EndedCallRegistry.isEnded(callId)) {
             debugPrint('[AuthWrapper] 🛡 CallKit terminé ignoré au cold start: $callId');
             await CallKitService.instance.endAll(callId: callId);
