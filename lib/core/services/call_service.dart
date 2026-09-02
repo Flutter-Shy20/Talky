@@ -541,9 +541,25 @@ class CallService extends ChangeNotifier {
       _kAndroidNativeCallNotifications;
 
   /// Retire l'UI CallKit sans refuser l'appel (migration premier plan).
+  ///
+  /// Deux défauts corrigés ici, et ensemble ils faisaient les deux sonneries.
+  ///
+  /// L'identifiant était `_currentCallId` — **nul pour une invitation de
+  /// groupe**, qui ne pose que `_groupRoomId`. Le retrait sortait donc à vide
+  /// pendant que la sonnerie Flutter, elle, raisonnait bien sur le salon et
+  /// partait. L'écran d'appel du plugin restait affiché, avec sa propre
+  /// sonnerie : deux sonneries, sans qu'aucune trace ne le dise.
+  ///
+  /// Et la garde `!_isAppForeground` re-dérivait une décision que l'appelant
+  /// venait de prendre. `resumeForegroundIncoming` est son unique appelant, et
+  /// il n'agit qu'après que l'autorité de présentation a rendu
+  /// `handoffToFlutter`. Au montage de l'accueil, l'état de cycle de vie peut
+  /// encore être inconnu : la garde sortait, alors que le démarrage de la
+  /// sonnerie douze lignes plus bas n'en avait pas. Deux moitiés d'un même
+  /// geste, deux prédicats.
   Future<void> dismissIncomingCallKitForForeground() async {
-    if (kIsWeb || !_isAppForeground) return;
-    final id = _currentCallId;
+    if (kIsWeb) return;
+    final id = _activeIncomingPresentationCallId;
     if (id == null || id.isEmpty) return;
     await _callKit.dismissIncomingUiSilently(callId: id);
   }
@@ -571,13 +587,10 @@ class CallService extends ChangeNotifier {
       _incomingPresentation.owner;
 
   /// callId utilisé pour l'ownership UI (1-1 = callId, groupe/conf = room/session).
-  String? get _activeIncomingPresentationCallId {
-    final id = _currentCallId?.trim();
-    if (id != null && id.isNotEmpty) return id;
-    final room = _groupRoomId?.trim();
-    if (room != null && room.isNotEmpty) return room;
-    return null;
-  }
+  String? get _activeIncomingPresentationCallId => incomingPresentationId(
+        callId: _currentCallId,
+        groupRoomId: _groupRoomId,
+      );
 
   /// HomeScreen : ouvrir IncomingCallScreen seulement si Flutter est owner.
   bool get shouldShowFlutterIncomingUi => evaluateShouldShowFlutterIncomingUi(

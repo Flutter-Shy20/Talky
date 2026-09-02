@@ -13,6 +13,30 @@ bool isConferenceCallIncoming({
   return false;
 }
 
+/// Genre de session que désigne une acceptation venue d'un push.
+enum AcceptedSessionKind { unAUn, groupe, conference }
+
+/// Que faut-il établir quand l'utilisateur décroche depuis une notification ?
+///
+/// `acceptIncomingCallFromPush` traitait la conférence, puis laissait **tout le
+/// reste** tomber dans la queue du 1-à-1 : armer l'auto-réponse et attendre une
+/// offre WebRTC. Or un appel de groupe n'en produit aucune — le code le savait
+/// même, puisqu'il évitait d'armer le délai d'attente d'offre « le groupe
+/// n'utilise pas `_pendingOffer` ». Mais rien ne prenait le relais.
+///
+/// Résultat : décrocher un appel de groupe depuis la notification ne pouvait
+/// **pas** aboutir. `joinGroupCall` n'a qu'un appelant dans toute l'application,
+/// le bouton de l'écran entrant. L'appel restait en « entrant » jusqu'à ce que
+/// le filet de 55 secondes le refuse.
+AcceptedSessionKind acceptedSessionKind({
+  required bool isConference,
+  String? roomId,
+}) {
+  if (isConference) return AcceptedSessionKind.conference;
+  final salon = roomId?.trim() ?? '';
+  return salon.isEmpty ? AcceptedSessionKind.unAUn : AcceptedSessionKind.groupe;
+}
+
 /// True si call_conf_invite doit être fusionné (même session déjà incoming).
 bool shouldMergeConfInvite({
   required String callStatusName,

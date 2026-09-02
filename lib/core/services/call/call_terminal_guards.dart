@@ -285,3 +285,22 @@ bool appIsForeground(String? lifecycleStateName) =>
 /// aucune horloge locale ne peut répondre.
 bool groupInviteIsPresentable(String? roomId) =>
     (roomId?.trim() ?? '').isNotEmpty;
+
+/// Sous quel identifiant un appel entrant est-il présenté ?
+///
+/// Un appel à deux porte un `callId` ; une invitation de groupe n'en a pas — le
+/// handler `group_call_invite` ne pose que `_groupRoomId`. Tout code qui vise
+/// l'entrant par son seul `callId` sort donc **à vide** pour un groupe, sans un
+/// mot.
+///
+/// C'est ce qui produisait les deux sonneries : le retrait de l'entrée CallKit
+/// visait `_currentCallId`, nul, et ne retirait rien ; la sonnerie Flutter,
+/// elle, raisonnait sur le salon et partait bien. Les deux moitiés du même geste
+/// ne parlaient pas du même appel.
+String? incomingPresentationId({String? callId, String? groupRoomId}) {
+  final id = callId?.trim();
+  if (id != null && id.isNotEmpty) return id;
+  final salon = groupRoomId?.trim();
+  if (salon != null && salon.isNotEmpty) return salon;
+  return null;
+}

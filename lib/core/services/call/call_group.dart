@@ -122,6 +122,11 @@ extension CallGroup on CallService {
   }) async {
     _groupRoomId = roomId;
     _status = CallStatus.joining;
+    // Aucun `stop` sur ce chemin : le seul du fichier est dans
+    // `rejectGroupCall`. Rejoindre depuis l'écran entrant laissait donc la
+    // sonnerie Flutter tourner sur un appel déjà rejoint.
+    unawaited(_ringtone.stop());
+    _cancelIncomingRingSafety();
     // Moi-même dans le roster
     _groupRoster[myId.toString()] = GroupParticipantInfo(
       id: myId.toString(),

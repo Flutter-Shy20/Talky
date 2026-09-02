@@ -57,6 +57,25 @@ extension CallIncoming on CallService {
     _isAutoAnsweringFromPush = true;
     _clearIncomingPresentation(callId: callId.isNotEmpty ? callId : null);
 
+    // L'acceptation est connue : le filet de 55 s n'a plus lieu d'être. À son
+    // expiration il appelle `notifyCallEndedFromExternal` SANS
+    // `localOnlyIfIncoming`, donc il *refuse* un appel accepté resté en
+    // « entrant » — exactement le sort réservé aux appels de groupe jusqu'ici.
+    _cancelIncomingRingSafety();
+
+    final genre = acceptedSessionKind(isConference: isConf, roomId: roomId);
+
+    if (genre == AcceptedSessionKind.groupe) {
+      final salon = roomId!.trim();
+      _groupRoomId = salon;
+      _status = CallStatus.incoming;
+      _ensureRemoteIdentityResolved();
+      notify();
+      debugPrint('[CallService] ⚡ décrochage groupe depuis un push → joinGroupCall');
+      await _rejoindreGroupeDepuisPush(salon);
+      return;
+    }
+
     if (isConf) {
       final sessionId = (roomId != null && roomId.isNotEmpty)
           ? roomId
@@ -94,6 +113,55 @@ extension CallIncoming on CallService {
       // _pendingOffer, il ne faut donc pas déclencher un teardown à tort).
       _armAwaitingOfferTimeout();
     }
+  }
+
+  /// Rejoint un appel de groupe accepté depuis une notification.
+  ///
+  /// `joinGroupCall` n'avait qu'un appelant dans toute l'application — le bouton
+  /// de l'écran entrant. Décrocher depuis la notification ne menait donc nulle
+  /// part : l'appel restait « entrant » jusqu'au refus du filet de sécurité.
+  ///
+  /// L'identité locale est posée par le fournisseur au démarrage
+  /// (`setLocalIdentity`). Si elle manque — session pas encore restaurée —, on
+  /// ne peut pas rejoindre : on laisse alors l'entrant se présenter et
+  /// l'utilisateur reprend la main, plutôt que d'attendre en silence.
+  Future<void> _rejoindreGroupeDepuisPush(String roomId) async {
+    final moi = _localUserId;
+    if (moi == null) {
+      debugPrint(
+        '[CallService] ** identité locale absente → décrochage groupe différé',
+      );
+      _isAutoAnsweringFromPush = false;
+      _autoAnswerOnNextIncoming = false;
+      _armIncomingRingSafety();
+      notify();
+      return;
+    }
+
+    // L'entrée CallKit de l'invitation porte le salon ; `joinGroupCall` en
+    // ouvrira une autre sous `group_$roomId`. Retirer la première, sinon deux
+    // entrées coexistent pour un seul appel.
+    await _callKit.endAll(callId: roomId);
+    await _ringtone.stop();
+
+    final invitant = _remoteUserId == null
+        ? null
+        : GroupParticipantInfo(
+            id: _remoteUserId.toString(),
+            name: (_remoteUserName?.isNotEmpty == true)
+                ? _remoteUserName!
+                : LocaleController.instance.l10n.participantFallback,
+            photo: _remoteUserPhoto,
+          );
+
+    await joinGroupCall(
+      roomId: roomId,
+      myId: moi,
+      myName: _localUserName,
+      myPhoto: _localUserPhoto,
+      isVideo: _isVideo,
+      callerInfo: invitant,
+    );
   }
 
   /// Vérifie qu'une notification d'appel entrant peut préparer l'écran entrant.
