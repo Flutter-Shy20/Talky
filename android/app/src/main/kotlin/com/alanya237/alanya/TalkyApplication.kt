@@ -182,8 +182,16 @@ class TalkyApplication : Application() {
             // Une expiration n'a rien à signaler : le minuteur serveur de 45 s
             // la classe correctement, et lui seul sait le faire.
             if (CallDeclineRegistry.consumeIfDeclined(id)) {
-                Log.i(TAG, "ACTIVE_CALLS: refus utilisateur caller=$callerId callId=$callId")
-                CallRejectHelper.enqueueAndPost(this, callerId, callId)
+                // Un salon de groupe (`group_…`) ou une session (`conf_…`) n'est
+                // pas un appel à deux : posté sur /calls/reject, il faisait
+                // réécrire par le serveur le dernier appel à deux entre les
+                // mêmes personnes. Le refus d'un groupe est purement local.
+                if (callId != null && !callId.matches(Regex("^\\d+$"))) {
+                    Log.i(TAG, "ACTIVE_CALLS: refus local (pas un appel à deux) callId=$callId")
+                } else {
+                    Log.i(TAG, "ACTIVE_CALLS: refus utilisateur caller=$callerId callId=$callId")
+                    CallRejectHelper.enqueueAndPost(this, callerId, callId)
+                }
             } else {
                 Log.i(
                     TAG,

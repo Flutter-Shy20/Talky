@@ -368,3 +368,24 @@ TerminalCallReport reportForTerminalAction(String actionName) {
       return TerminalCallReport.rien;
   }
 }
+
+/// Ce refus doit-il être posté au serveur sur le chemin 1-à-1 ?
+///
+/// Un salon de groupe (`group_<conv>_<ms>`) et une session de conférence
+/// (`conf_…`) ne sont pas des appels à deux. Postés sur `/calls/reject`, le
+/// serveur n'en tirait aucun identifiant, sautait sa garde de refus tardif —
+/// un invité de groupe n'a pas d'entrée d'état — et retombait sur « le dernier
+/// appel entre ces deux comptes », qu'il passait à « Rejeté ». Un appel abouti,
+/// parfois vieux de plusieurs jours, se trouvait réécrit chez les DEUX.
+///
+/// Le refus d'un groupe est purement local : `rejectGroupCall` le documente
+/// depuis toujours — « le backend n'expose pas de reject_group_call ».
+///
+/// Le serveur se garde désormais aussi de son côté, pour le parc déjà
+/// installé ; ce test-ci évite l'aller-retour et dit l'intention.
+bool shouldPostRejectToServer(String? callId) {
+  final id = callId?.trim() ?? '';
+  // Sans identifiant, on laisse le serveur trancher avec ce qu'il sait.
+  if (id.isEmpty) return true;
+  return RegExp(r'^\d+$').hasMatch(id);
+}

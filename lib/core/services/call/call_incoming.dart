@@ -457,6 +457,18 @@ extension CallIncoming on CallService {
       return;
     }
 
+    // Un salon de groupe n'est pas un appel à deux : le poster faisait
+    // réécrire par le serveur le dernier appel à deux entre les mêmes
+    // personnes. Voir `shouldPostRejectToServer` — le refus d'un groupe est
+    // purement local, comme `rejectGroupCall` le documente depuis toujours.
+    if (!shouldPostRejectToServer(resolvedCallId)) {
+      debugPrint(
+        '[CallService] refus local (pas un appel à deux): $resolvedCallId',
+      );
+      await _terminateCall();
+      return;
+    }
+
     final cid = int.tryParse(callerId);
     if (cid != null) {
       await PendingCallRejectStore.enqueue(
