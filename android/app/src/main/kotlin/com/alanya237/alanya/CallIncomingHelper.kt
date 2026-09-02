@@ -42,6 +42,37 @@ object CallIncomingHelper {
             Log.d(TAG, "skip duplicate callId=$callId")
             return
         }
+
+        // ── Cet appel est-il déjà terminé ? ─────────────────────────────────
+        //
+        // `EndedCallRegistry` existe exactement pour ça — son en-tête le dit :
+        // « pour que l'isolate FCM ignore un push `call` arrivé après
+        // `call_ended` ». Mais sur Android le handler Dart sort avant de le
+        // consulter, et ce chemin-ci ne le lisait pas du tout : le registre
+        // était écrit par tout le monde et lu par personne au moment où l'on
+        // fait sonner. Un push d'appel livré après son ordre de fin faisait
+        // donc sonner en plein écran, quarante secondes, un appel annulé.
+        if (callId.isNotEmpty() && estDejaTermine(context, callId)) {
+            Log.i(TAG, "appel déjà terminé, on ne sonne pas: $callId")
+            return
+        }
+
+        // ── L'utilisateur est-il déjà en communication ? ────────────────────
+        //
+        // Aucune garde n'existait ici, et le serveur n'en a pas non plus pour
+        // les appels de groupe : `create_group_call` sonne chez tout le monde
+        // sans consulter l'état d'occupation. Or `isApplicationForeground` rend
+        // faux dès que le verrou d'écran est posé — l'état normal d'un appel
+        // audio, écran éteint. Une invitation arrivait donc en plein écran,
+        // sonnerie comprise, par-dessus une conversation en cours.
+        //
+        // On l'affiche quand même, mais en sourdine et sans plein écran :
+        // l'information a sa place dans le tiroir, l'intrusion non.
+        val enCommunication = estEnCommunication(context)
+        if (enCommunication) {
+            Log.i(TAG, "communication en cours → entrant en sourdine: $callId")
+        }
+
         if (callId.isNotEmpty()) lastShownCallId = callId
 
         ensureInitialized(context)
@@ -58,17 +89,69 @@ object CallIncomingHelper {
         } else {
             listChoice?.second ?: resolveNativeRingtoneName(context)
         }
-        val bundle = buildIncomingBundle(data, ringtonePath)
+        val bundle = buildIncomingBundle(
+            data,
+            if (enCommunication) "silence" else ringtonePath,
+            pleinEcran = !enCommunication,
+        )
         try {
             notificationManager?.showIncomingNotification(bundle)
             addCall(context.applicationContext, Data.fromBundle(bundle))
-            if (customPath != null) {
+            // ── La notification a-t-elle réellement été postée ? ────────────
+            //
+            // Le plugin ne joue son son et n'affiche quoi que ce soit que si le
+            // canal est actif ; son `notify()` est un no-op silencieux quand
+            // POST_NOTIFICATIONS est refusée. Notre lecteur, lui, démarrait sans
+            // condition — et en boucle. L'utilisateur ayant refusé les
+            // notifications et choisi une sonnerie importée entendait donc son
+            // téléphone sonner à plein volume, écran vide, sans notification,
+            // sans écran d'appel et sans bouton pour décrocher : rien de ce qui
+            // arrête la sonnerie à quarante secondes ne passe par un chemin
+            // qu'une notification absente peut emprunter.
+            if (customPath != null && !enCommunication && notificationsActives(context)) {
                 CustomRingtonePlayer.start(context, customPath)
+            } else if (customPath != null) {
+                Log.i(TAG, "sonnerie importée non démarrée (notification absente ou sourdine)")
             }
             Log.d(TAG, "showIncoming callId=$callId caller=${data["callerId"]} custom=${customPath != null}")
         } catch (e: Exception) {
             Log.e(TAG, "showIncoming failed", e)
         }
+    }
+
+    /** L'appel figure-t-il dans le registre des appels terminés écrit par Dart ? */
+    private fun estDejaTermine(context: Context, callId: String): Boolean = try {
+        val prefs = context.getSharedPreferences(
+            "FlutterSharedPreferences", Context.MODE_PRIVATE,
+        )
+        val brut = prefs.getString("flutter.ended_call_ids_v1", null)
+        if (brut.isNullOrBlank()) {
+            false
+        } else {
+            val expirations = JSONObject(brut)
+            val expire = expirations.optLong(callId, 0L)
+            expire > System.currentTimeMillis()
+        }
+    } catch (e: Exception) {
+        Log.w(TAG, "lecture du registre des appels terminés: $e")
+        false
+    }
+
+    /** Une entrée CallKit acceptée signifie une communication en cours. */
+    private fun estEnCommunication(context: Context): Boolean = try {
+        getDataActiveCalls(context.applicationContext).any { it.isAccepted }
+    } catch (e: Exception) {
+        Log.w(TAG, "lecture ACTIVE_CALLS: $e")
+        false
+    }
+
+    /** Une notification postée maintenant serait-elle visible ? */
+    private fun notificationsActives(context: Context): Boolean = try {
+        NotificationManagerCompat.from(context.applicationContext)
+            .areNotificationsEnabled()
+    } catch (e: Exception) {
+        Log.w(TAG, "areNotificationsEnabled: $e")
+        true
     }
 
     /** Résout la sonnerie d'appel de la première liste prioritaire du contact. */
@@ -254,6 +337,7 @@ object CallIncomingHelper {
     private fun buildIncomingBundle(
         data: Map<String, String>,
         ringtonePath: String = "system_ringtone_default",
+        pleinEcran: Boolean = true,
     ): android.os.Bundle {
         val callId = (data["callId"] ?: data["roomId"] ?: "").trim()
         val callerId = data["callerId"] ?: ""
@@ -310,7 +394,7 @@ object CallIncomingHelper {
                 "actionColor" to "#4CAF50",
                 "incomingCallNotificationChannelName" to "Appels entrants",
                 "missedCallNotificationChannelName" to "Appels manqués",
-                "isShowFullLockedScreen" to true,
+                "isShowFullLockedScreen" to pleinEcran,
             ),
         )
         val bundle = Data(args).toBundle()
