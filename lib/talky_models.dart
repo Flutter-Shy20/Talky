@@ -1090,7 +1090,7 @@ class Meeting {
 class MeetingParticipant {
   final int idMeeting;
   final int participantID; // IDparticipant en DB
-  final int status;        // 0=pending,1=accepté,2=refusé
+  final int status;        // 0=invité jamais rejoint, 1=a rejoint au moins une fois, 2=inutilisé
   final bool connecte;
   final int duree;
   // Jointure users

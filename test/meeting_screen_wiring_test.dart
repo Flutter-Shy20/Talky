@@ -47,4 +47,26 @@ void main() {
       );
     });
   });
+
+  group('câblage de l’écran de détail', () {
+    final detail = File('lib/screens/meetings/meeting_detail_screen.dart')
+        .readAsStringSync();
+
+    test('le badge participant passe par la règle, pas par un accès direct',
+        () {
+      expect(detail.contains('badgeParticipant('), isTrue);
+      // `participant.status == 1` était la lecture directe qui faisait dire
+      // « Accepté » à tout invité, rejoint ou non.
+      expect(detail.contains('participant.status == 1'), isFalse,
+          reason: 'la lecture directe du statut a été remplacée par la règle');
+    });
+
+    test('la phase de réunion vient d’un seul endroit', () {
+      expect(detail.contains('phaseReunion('), isTrue);
+      expect(detail.contains('peutRejoindre('), isTrue);
+      // L'ancien calcul dupliqué, recalculé séparément pour la puce et pour le
+      // bouton, ce qui les faisait diverger.
+      expect(detail.contains('enum _MeetingStatus'), isFalse);
+    });
+  });
 }

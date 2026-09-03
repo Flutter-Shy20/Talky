@@ -1495,6 +1495,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get meetingEnded => 'Réunion terminée';
 
   @override
+  String get meetingParticipantJoined => 'A rejoint';
+
+  @override
+  String get meetingParticipantPending => 'En attente';
+
+  @override
   String get meetingExpired => 'Échue';
 
   @override

@@ -2632,6 +2632,18 @@ abstract class AppLocalizations {
   /// **'Réunion terminée'**
   String get meetingEnded;
 
+  /// No description provided for @meetingParticipantJoined.
+  ///
+  /// In fr, this message translates to:
+  /// **'A rejoint'**
+  String get meetingParticipantJoined;
+
+  /// No description provided for @meetingParticipantPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente'**
+  String get meetingParticipantPending;
+
   /// No description provided for @meetingExpired.
   ///
   /// In fr, this message translates to:

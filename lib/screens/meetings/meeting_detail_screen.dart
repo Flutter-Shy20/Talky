@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/call_limits.dart';
 import '../../core/navigation/app_navigator.dart';
 import '../../core/services/meeting/meeting_join_affordance.dart';
+import '../../core/services/meeting/meeting_participant_view.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
@@ -500,6 +501,7 @@ class _MeetingDetailBody extends StatelessWidget {
           ...meeting.participants.map((p) => _ParticipantTile(
                 participant: p,
                 isMe: p.participantID == myId,
+                isHost: p.participantID == meeting.idOrganiser,
               )),
 
         AppSpacing.vGapXxl,
@@ -556,16 +558,21 @@ class _InfoRow extends StatelessWidget {
 
 class _ParticipantTile extends StatelessWidget {
   const _ParticipantTile(
-      {required this.participant, required this.isMe});
+      {required this.participant, required this.isMe, required this.isHost});
 
   final MeetingParticipant participant;
   final bool isMe;
+  final bool isHost;
 
   @override
   Widget build(BuildContext context) {
     final name =
         participant.nom ?? participant.pseudo ?? context.l10n.participantFallback;
-    final accepted = participant.status == 1;
+    final aRejoint = badgeParticipant(
+          status: participant.status,
+          estOrganisateur: isHost,
+        ) ==
+        MeetingParticipantBadge.aRejoint;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -619,15 +626,17 @@ class _ParticipantTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
             decoration: BoxDecoration(
-              color: accepted
+              color: aRejoint
                   ? context.semantic.successContainer
                   : context.semantic.warningContainer,
               borderRadius: AppRadius.brSm,
             ),
             child: Text(
-              accepted ? context.l10n.accepted : context.l10n.statusPending,
+              aRejoint
+                  ? context.l10n.meetingParticipantJoined
+                  : context.l10n.meetingParticipantPending,
               style: TextStyle(
-                color: accepted
+                color: aRejoint
                     ? context.semantic.success
                     : context.semantic.warning,
                 fontSize: 11,
