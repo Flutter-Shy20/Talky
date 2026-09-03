@@ -37,6 +37,14 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen>
   String _myName = '';
   bool _isOrganiser = false;
 
+  /// La liste des participants a-t-elle été rendue par le réseau ?
+  ///
+  /// La première passe vient du cache local, qui ne peut pas la porter :
+  /// `GET /meetings` ne joint pas `participant`, donc `participantsJson` y vaut
+  /// toujours `[]`. Sans ce drapeau, l'écran affichait « Aucun participant »
+  /// pendant l'aller-retour, y compris pour une réunion qui en a.
+  bool _participantsCharges = false;
+
   ModalRoute<dynamic>? _observedRoute;
   MeetingService? _meetingService;
   Timer? _phaseTicker;
@@ -149,6 +157,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen>
         _myName = myName;
         _isOrganiser = meeting.idOrganiser == myId;
         _isLoading = false;
+        _participantsCharges = true;
       });
     } catch (e) {
       if (!mounted) return;
@@ -351,6 +360,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen>
                   phase: _phase!,
                   myId: _myId,
                   isOrganiser: _isOrganiser,
+                  participantsCharges: _participantsCharges,
                   onInvite: _inviteMore,
                 ),
     );
@@ -365,6 +375,7 @@ class _MeetingDetailBody extends StatelessWidget {
     required this.phase,
     required this.myId,
     required this.isOrganiser,
+    required this.participantsCharges,
     required this.onInvite,
   });
 
@@ -377,6 +388,10 @@ class _MeetingDetailBody extends StatelessWidget {
   final MeetingPhase phase;
   final int myId;
   final bool isOrganiser;
+
+  /// Faux tant que la passe réseau n'a pas répondu — voir le champ homonyme
+  /// de l'état.
+  final bool participantsCharges;
   final VoidCallback onInvite;
 
   String _formatDuration(BuildContext context, int minutes) {
@@ -486,7 +501,21 @@ class _MeetingDetailBody extends StatelessWidget {
           ],
         ),
         AppSpacing.vGapMd,
-        if (meeting.participants.isEmpty)
+        if (!participantsCharges)
+          // Ni la liste, ni « aucun participant » : on ne sait pas encore. Le
+          // cache ne porte pas les participants, et affirmer le vide était faux
+          // une fois sur deux.
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            child: Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else if (meeting.participants.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
             child: Center(

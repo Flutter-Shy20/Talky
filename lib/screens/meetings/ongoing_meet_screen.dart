@@ -7,6 +7,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/services/call/session_video_renderers.dart';
 import '../../core/services/meeting/meeting_exit_rules.dart';
 import '../../core/services/meeting/meeting_focus_rules.dart';
+import '../../core/services/meeting/meeting_join_affordance.dart';
 import '../../core/services/meeting_service.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
@@ -243,6 +244,11 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   void _showParticipantsPanel(MeetingService meetingService) {
     showModalBottomSheet(
       context: context,
+      // Sans `isScrollControlled`, la feuille est plafonnée à 9/16 de l'écran :
+      // le `maxChildSize: 0.85` du DraggableScrollableSheet qu'elle contient ne
+      // voulait rien dire, et le geste de glissement vers le haut ne faisait
+      // rien.
+      isScrollControlled: true,
       backgroundColor: _kMeetSheet,
       shape: const RoundedRectangleBorder(
         borderRadius: AppRadius.sheetTop,
@@ -336,13 +342,17 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                       color: Colors.white54, fontSize: 13),
                                 ),
                                 AppSpacing.hGapXs,
-                                IconButton(
-                                  icon: const Icon(
-                                      CupertinoIcons.switch_camera,
-                                      color: AppColors.white),
-                                  onPressed: () =>
-                                      meetingService.switchCamera(),
-                                ),
+                                // Réunion audio : pas de caméra à changer. Le
+                                // bouton restait affiché et inerte — le lobby,
+                                // lui, testait déjà `typeMedia`.
+                                if (afficheCommandesCamera(meeting?.typeMedia))
+                                  IconButton(
+                                    icon: const Icon(
+                                        CupertinoIcons.switch_camera,
+                                        color: AppColors.white),
+                                    onPressed: () =>
+                                        meetingService.switchCamera(),
+                                  ),
                                 IconButton(
                                   icon: const Icon(Icons.people_outline,
                                       color: AppColors.white),
@@ -444,18 +454,21 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                               },
                               isLarge: true,
                             ),
-                            _buildControlBtn(
-                              icon: meetingService.isVideoOff
-                                  ? CupertinoIcons.video_camera
-                                  : CupertinoIcons.video_camera_solid,
-                              color: meetingService.isVideoOff
-                                  ? AppColors.white
-                                  : Colors.white24,
-                              iconColor: meetingService.isVideoOff
-                                  ? AppColors.black
-                                  : AppColors.white,
-                              onTap: () => meetingService.toggleVideo(),
-                            ),
+                            // Même raison qu'en haut de l'écran : sans piste
+                            // vidéo, `toggleVideo` sort sans rien faire.
+                            if (afficheCommandesCamera(meeting?.typeMedia))
+                              _buildControlBtn(
+                                icon: meetingService.isVideoOff
+                                    ? CupertinoIcons.video_camera
+                                    : CupertinoIcons.video_camera_solid,
+                                color: meetingService.isVideoOff
+                                    ? AppColors.white
+                                    : Colors.white24,
+                                iconColor: meetingService.isVideoOff
+                                    ? AppColors.black
+                                    : AppColors.white,
+                                onTap: () => meetingService.toggleVideo(),
+                              ),
                             _buildControlBtn(
                               icon: meetingService.isMuted
                                   ? CupertinoIcons.mic_off
@@ -706,6 +719,12 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     meetingService.markMeetingChatOpen();
     showModalBottomSheet(
       context: context,
+      // Sans `isScrollControlled`, la feuille garde une hauteur fixe de 9/16 :
+      // le rembourrage `viewInsets` du champ de saisie poussait celui-ci hors
+      // du cadre par le haut au lieu de faire monter la feuille, et le clavier
+      // le recouvrait.
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: _kMeetSheet,
       shape: const RoundedRectangleBorder(
           borderRadius: AppRadius.sheetTop),
@@ -728,8 +747,10 @@ class _ParticipantsSheet extends StatelessWidget {
             ?.alanyaID ??
         0;
     final meeting = meetingService.currentMeeting;
-    final connectedIds =
-        Set<String>.from(meetingService.remoteStreams.keys);
+    // Une seule source de vérité : la salle. `remoteStreams` disait « absent »
+    // d'un arrivant dont le flux n'était pas encore négocié, et `p.connecte`
+    // venait du dernier `getMeeting`, rechargé seulement à l'invitation.
+    final connectedIds = meetingService.presentIds;
     final participants = meeting?.participants ?? [];
 
     return ChangeNotifierProvider.value(
@@ -775,7 +796,10 @@ class _ParticipantsSheet extends StatelessWidget {
                           borderRadius: AppRadius.brSm,
                         ),
                         child: Text(
-                          '${participants.length}',
+                          // Présents sur invités : le compteur n'affichait que
+                          // le second, ce qui ne disait rien de la salle.
+                          '${participants.where((p) => connectedIds.contains(p.participantID.toString())).length}'
+                          '/${participants.length}',
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 12),
                         ),
@@ -798,9 +822,8 @@ class _ParticipantsSheet extends StatelessWidget {
                           itemCount: participants.length,
                           itemBuilder: (_, i) {
                             final p = participants[i];
-                            final isConnected = p.connecte ||
-                                connectedIds.contains(
-                                    p.participantID.toString());
+                            final isConnected = connectedIds
+                                .contains(p.participantID.toString());
                             final name = p.nom ??
                                 p.pseudo ??
                                 context.l10n.participantFallback;
@@ -943,7 +966,20 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
     return ChangeNotifierProvider.value(
       value: widget.meetingService,
       child: Consumer<MeetingService>(
-        builder: (context, svc, _) => Column(
+        // La feuille est désormais libre de grandir (`isScrollControlled`) :
+        // elle prendrait tout l'écran sans ce plafond, et le rembourrage du bas
+        // suit maintenant le clavier au niveau de la feuille entière plutôt que
+        // du seul champ de saisie.
+        builder: (context, svc, _) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+            ),
+            child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             AppSpacing.vGapSm,
             Container(
@@ -1018,11 +1054,13 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                     ),
             ),
             Padding(
-              padding: EdgeInsets.only(
+              // Le décalage clavier est porté par la feuille entière, plus par
+              // ce seul rembourrage : à hauteur fixe, il poussait le champ hors
+              // du cadre au lieu de le remonter.
+              padding: const EdgeInsets.only(
                 left: AppSpacing.lg,
                 right: AppSpacing.lg,
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
+                bottom: AppSpacing.lg,
               ),
               child: Row(
                 children: [
@@ -1061,6 +1099,8 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
               ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

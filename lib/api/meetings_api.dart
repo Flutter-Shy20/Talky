@@ -40,17 +40,11 @@ extension MeetingsApi on TalkyApiClient {
     return data as Map<String, dynamic>;
   }
 
-  /// Résout une réunion par son code de room (même si on n'en est pas encore
-  /// participant). Lève une exception si introuvable / terminée.
-  Future<Map<String, dynamic>> getMeetingByRoom(String room) async {
-    final data = await _handleRequest(
-      () => _client.get(
-        Uri.parse('${TalkyApiClient.baseUrl}/meetings/by-room/${Uri.encodeComponent(room)}'),
-        headers: _headers,
-      ),
-    );
-    return data as Map<String, dynamic>;
-  }
+  // `getMeetingByRoom` a été retirée avec `MeetingService.joinByRoom` : aucun
+  // écran n'offre d'entrer par code de salon, la fonctionnalité n'existe pas
+  // côté produit. La route serveur reste en place, désormais réservée aux
+  // participants — elle servira si un lien d'invitation voit le jour, et la
+  // retirer casserait un client déjà installé.
 
   Future<void> joinMeetingHttp(int idMeeting) async {
     await _handleRequest(
@@ -70,30 +64,14 @@ extension MeetingsApi on TalkyApiClient {
     );
   }
 
-  Future<void> updateMeeting(int idMeeting, {
-    String? objet,
-    String? startTime,
-    int? duree,
-    int? typeMedia,
-  }) async {
-    final body = <String, dynamic>{};
-    if (objet != null) body['objet'] = objet;
-    if (startTime != null) body['start_time'] = startTime;
-    if (duree != null) body['duree'] = duree;
-    if (typeMedia != null) body['type_media'] = typeMedia;
-    await _handleRequest(
-      () => _client.put(
-        Uri.parse('${TalkyApiClient.baseUrl}/meetings/$idMeeting'),
-        headers: _headers,
-        body: jsonEncode(body),
-      ),
-    );
-  }
+  // `updateMeeting` a été retirée : aucun appelant, et elle envoyait un
+  // `type_media` que le contrôleur n'a jamais traité — un champ ignoré en
+  // silence, qui aurait répondu 200 sans rien changer. Il n'existe pas d'écran
+  // d'édition de réunion ; le seul besoin réel est ci-dessous, et il est ciblé.
 
   /// Repli HTTP de « terminer pour tout le monde ».
   ///
-  /// Ciblée plutôt que passer par [updateMeeting], qui envoie un `type_media`
-  /// que le contrôleur ignore et qui n'a aucun appelant. Le serveur, en voyant
+  /// Le serveur, en voyant
   /// `isEnd` passer à 1, solde les participants et diffuse `meeting:ended`
   /// exactement comme le chemin socket.
   Future<void> updateMeetingEnd(int idMeeting) async {

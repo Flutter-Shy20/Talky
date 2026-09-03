@@ -3,6 +3,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/services/meeting/meeting_join_refusal.dart';
 import '../../core/services/meeting_service.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -113,8 +114,29 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
       if (!mounted) return;
       setState(() => _joining = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.cannotJoinMeeting('$e'))),
+        SnackBar(content: Text(_messageRefus(e))),
       );
+    }
+  }
+
+  /// Traduit un refus d'entrée en phrase lisible.
+  ///
+  /// Les codes voyagent dans le message d'un `StateError` : sans ce passage,
+  /// l'utilisateur lisait « Bad state: SESSION_BUSY ». Les erreurs non
+  /// classées gardent leur message d'origine — une exception HTTP porte déjà
+  /// une phrase du serveur, plus précise que ce qu'on écrirait ici.
+  String _messageRefus(Object erreur) {
+    switch (refusPourErreur(erreur)) {
+      case MeetingJoinRefusal.sessionOccupee:
+        return context.l10n.meetingBlockedByCall;
+      case MeetingJoinRefusal.reunionTerminee:
+        return context.l10n.meetingEnded;
+      case MeetingJoinRefusal.reunionEchue:
+        return context.l10n.meetingJoinExpired;
+      case MeetingJoinRefusal.nonInvite:
+        return context.l10n.meetingJoinNotInvited;
+      case MeetingJoinRefusal.autre:
+        return context.l10n.cannotJoinMeeting('$erreur');
     }
   }
 

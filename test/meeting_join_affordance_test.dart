@@ -67,4 +67,21 @@ void main() {
       expect(peutRejoindre(MeetingPhase.programmee), isTrue);
     });
   });
+
+  group('afficheCommandesCamera', () {
+    test('réunion vidéo : les commandes caméra ont un sens', () {
+      expect(afficheCommandesCamera(0), isTrue);
+    });
+
+    test('réunion audio seule : deux boutons qui ne répondaient pas', () {
+      // `_initLocalStream` force isVideoOff et il n'existe aucune piste vidéo :
+      // `toggleVideo` sortait sans rien faire.
+      expect(afficheCommandesCamera(1), isFalse);
+    });
+
+    test('type inconnu ou absent : on n’offre pas une commande incertaine', () {
+      expect(afficheCommandesCamera(null), isFalse);
+      expect(afficheCommandesCamera(9), isFalse);
+    });
+  });
 }

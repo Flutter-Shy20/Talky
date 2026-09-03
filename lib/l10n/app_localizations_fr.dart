@@ -1495,6 +1495,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get meetingEnded => 'Réunion terminée';
 
   @override
+  String get meetingBlockedByCall =>
+      'Un appel est en cours : impossible de rejoindre la réunion.';
+
+  @override
+  String get meetingJoinExpired => 'Cette réunion est échue.';
+
+  @override
+  String get meetingJoinNotInvited => 'Réunion introuvable.';
+
+  @override
   String get meetingParticipantJoined => 'A rejoint';
 
   @override

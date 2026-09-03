@@ -48,6 +48,50 @@ void main() {
     });
   });
 
+  group('correctifs sans règle propre', () {
+    final service =
+        File('lib/core/services/meeting_service.dart').readAsStringSync();
+
+    test('le statut repasse par idle, sinon la bannière n’annonce rien', () {
+      // `idle` n'était plus jamais écrit après la déclaration du champ : la
+      // bannière de session l'attend pour dire « Réunion terminée ».
+      expect(service.contains('_status = MeetingStatus.idle'), isTrue);
+    });
+
+    test('une session média occupée refuse l’entrée au lieu de la mutiler', () {
+      expect(service.contains("throw StateError('SESSION_BUSY')"), isTrue);
+      // Surtout pas de libération des rendus ici : le singleton est partagé
+      // avec l'appel, et la garde `holdsSession` du cleanup existe pour ça.
+      expect(
+        RegExp(r'SessionVideoRenderers\.instance\.release\(\)')
+            .allMatches(service)
+            .length,
+        1,
+        reason: 'une seule libération, celle du cleanup gardée par holdsSession',
+      );
+    });
+
+    test('les deux feuilles peuvent grandir', () {
+      // Sans `isScrollControlled`, elles sont plafonnées à 9/16 : le clavier
+      // recouvrait le chat, et le glissement de la feuille participants était
+      // inerte.
+      expect(
+        RegExp(r'isScrollControlled: true').allMatches(ecran).length,
+        2,
+        reason: 'la feuille de chat et celle des participants',
+      );
+    });
+
+    test('la présence vient de la salle, pas des flux', () {
+      expect(ecran.contains('meetingService.presentIds'), isTrue);
+      expect(
+        ecran.contains('Set<String>.from(meetingService.remoteStreams.keys)'),
+        isFalse,
+        reason: 'un flux mort survit à son propriétaire, et l’inverse',
+      );
+    });
+  });
+
   group('câblage de l’écran de détail', () {
     final detail = File('lib/screens/meetings/meeting_detail_screen.dart')
         .readAsStringSync();

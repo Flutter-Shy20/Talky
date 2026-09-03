@@ -74,6 +74,15 @@ class MeetingService extends ChangeNotifier {
   // Noms des participants connectés (alanyaID → nom affiché).
   final Map<String, String> _participantRoster = {};
 
+  /// Qui est réellement dans la salle, moi compris.
+  ///
+  /// La feuille des participants croisait les clés de `remoteStreams` avec un
+  /// `connecte` figé, rechargé seulement à l'occasion d'une invitation : un
+  /// arrivant dont le flux n'était pas encore négocié passait pour absent, et
+  /// un flux mort survivait à son propriétaire. Ni l'un ni l'autre ne dit qui
+  /// est là — la salle, elle, le sait.
+  final Set<String> _presents = {};
+
   // UI minimisée (bannière flottante active).
   bool _isMeetingUiMinimized = false;
   bool _isMeetingUiRouteOpen = false;
@@ -96,6 +105,9 @@ class MeetingService extends ChangeNotifier {
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
   int get unreadChatCount => _unreadChatCount;
   Map<String, String> get participantRoster => Map.unmodifiable(_participantRoster);
+
+  /// Identifiants des participants présents dans la salle, moi compris.
+  Set<String> get presentIds => Set.unmodifiable(_presents);
 
   /// Résout le nom affiché d'un participant (liste API + roster temps réel).
   String participantDisplayName(String userId) {
@@ -239,6 +251,11 @@ class MeetingService extends ChangeNotifier {
       if (data is Map) {
         _applyMuteStatesSnapshot(data['muteStates']);
         _applyVideoStatesSnapshot(data['videoStates']);
+        // Les instantanés micro/caméra sont l'annuaire de la salle : le serveur
+        // purge l'entrée d'un partant (`meeting:leave` comme expiration de la
+        // grâce), donc leurs clés sont exactement les présents, moi excepté.
+        _seedPresentsFromSnapshot(data['muteStates']);
+        _seedPresentsFromSnapshot(data['videoStates']);
         notifyListeners();
       }
       if (_roomJoinCompleter != null && !_roomJoinCompleter!.isCompleted) {
@@ -265,6 +282,7 @@ class MeetingService extends ChangeNotifier {
       if (userId == null) return;
 
       var changed = false;
+      if (_presents.add(_participantId(userId))) changed = true;
       final displayName = data['userName']?.toString() ??
           data['nom']?.toString() ??
           data['pseudo']?.toString();
@@ -299,6 +317,7 @@ class MeetingService extends ChangeNotifier {
       final userId = data['userID']?.toString();
       if (userId != null) {
         _participantRoster.remove(userId);
+        _presents.remove(_participantId(userId));
         _removePeer(userId);
       }
     });
@@ -445,6 +464,21 @@ class MeetingService extends ChangeNotifier {
     muteStates.forEach((key, value) {
       _applyRemoteMuteState(key.toString(), value == true);
     });
+  }
+
+  /// Ajoute aux présents les identifiants d'un instantané d'état.
+  ///
+  /// Limite connue : un participant qui n'aurait jamais annoncé ses états
+  /// micro/caméra n'y figurerait pas. Le client les envoie toujours, dans le
+  /// `join_room` lui-même — le cas n'existe pas aujourd'hui, mais il existerait
+  /// avec un autre client. La correction robuste serait une liste de présents
+  /// dans le payload `meeting:room_joined`, côté serveur.
+  void _seedPresentsFromSnapshot(dynamic states) {
+    if (states is! Map) return;
+    for (final key in states.keys) {
+      final id = _participantId(key.toString());
+      if (id.isNotEmpty) _presents.add(id);
+    }
   }
 
   void _applyVideoStatesSnapshot(dynamic videoStates) {
@@ -669,31 +703,10 @@ class MeetingService extends ChangeNotifier {
     }
   }
 
-  /// Rejoindre par code de room (cherche dans la liste des réunions).
-  Future<void> joinByRoom({
-    required String roomCode,
-    required int myId,
-    required String myName,
-  }) async {
-    _status = MeetingStatus.joining;
-    notifyListeners();
-
-    try {
-      // Résolution par code côté serveur : fonctionne même si on n'est pas
-      // encore participant (contrairement à getMeetings qui filtre).
-      final data = await _apiClient.getMeetingByRoom(roomCode);
-      _currentMeeting = Meeting.fromJson(data);
-      _seedRosterFromMeeting();
-
-      await _apiClient.joinMeetingHttp(_currentMeeting!.idMeeting);
-      await _joinRoom(myId: myId, myName: myName);
-    } catch (e) {
-      debugPrint('[MeetingService] Erreur joinByRoom: $e');
-      _status = MeetingStatus.ended;
-      notifyListeners();
-      rethrow;
-    }
-  }
+  // `joinByRoom` a été retirée : aucun écran n'offrait d'entrer par code de
+  // salon, et elle était le seul appelant de `getMeetingByRoom`. La route
+  // serveur subsiste, réservée aux participants depuis le durcissement des
+  // autorisations — elle servira si un lien d'invitation voit le jour.
 
   Future<void> _joinRoom({required int myId, required String myName}) async {
     if (_localStream == null) {
@@ -701,6 +714,7 @@ class MeetingService extends ChangeNotifier {
     }
 
     _myId = myId.toString();
+    _presents.add(_participantId(_myId!));
     _syncLocalMediaFromTracks();
 
     if (myName.isNotEmpty) {
@@ -750,11 +764,22 @@ class MeetingService extends ChangeNotifier {
         await CallSessionGuard.instance.markConnected();
         await _bindSessionRenderers(isVideo: isVideo);
       } else {
-        // Un appel tient déjà la session. `markConnected` aurait marqué
-        // « connectée » l'entrée CallKit de CET appel, pas celle de la réunion.
+        // Un appel tient déjà la session média. La réunion se poursuivait quand
+        // même : sans entrée CallKit, sans focus audio, sans fenêtre flottante
+        // (`_bindSessionRenderers` n'était pas appelé) — et sans un mot à
+        // l'utilisateur, un `debugPrint` pour tout signal.
+        //
+        // On refuse d'entrer plutôt que d'offrir une réunion amputée. Ce n'est
+        // PAS un endroit où libérer les rendus : `SessionVideoRenderers` est un
+        // singleton partagé avec l'appel, et la garde `holdsSession` du cleanup
+        // existe précisément pour ne pas démonter la fenêtre d'un appel bien
+        // vivant. La fuite disparaît parce qu'on n'entre pas, pas parce qu'on
+        // nettoie derrière soi.
         debugPrint(
           '[MeetingService] ⛔ session média refusée — un appel est en cours',
         );
+        await _terminateMeeting(emitLeave: true);
+        throw StateError('SESSION_BUSY');
       }
     }
 
@@ -823,6 +848,19 @@ class MeetingService extends ChangeNotifier {
       debugPrint('[MeetingService] _cleanup error: $e');
     } finally {
       _status = MeetingStatus.ended;
+      notifyListeners();
+      // Puis `idle`, comme `CallService` le fait depuis toujours
+      // (call_one_to_one.dart). Le service s'arrêtait à `ended`, et `idle`
+      // n'était plus jamais écrit après la déclaration du champ : la bannière
+      // de session, qui attend précisément ce statut pour annoncer « Réunion
+      // terminée », ne l'annonçait donc jamais quand la réunion était minimisée.
+      //
+      // Les deux notifications sont nécessaires : la première ferme l'écran
+      // (voir shouldPopMeetingScreen, qui accepte les deux statuts), la seconde
+      // laisse la bannière constater la fin. La microtâche garantit que la
+      // première a été traitée avant que la seconde parte.
+      _status = MeetingStatus.idle;
+      await Future.microtask(() {});
       notifyListeners();
     }
   }
@@ -1134,6 +1172,9 @@ class MeetingService extends ChangeNotifier {
     _meetingDuration = 0;
     _currentMeeting = null;
     _participantRoster.clear();
+    // Sans ce vidage, la réunion suivante hériterait des présents de la
+    // précédente.
+    _presents.clear();
     _myId = null;
     _roomJoinCompleter = null;
     _isMuted = false;

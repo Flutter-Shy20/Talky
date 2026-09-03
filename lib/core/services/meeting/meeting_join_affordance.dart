@@ -48,3 +48,16 @@ MeetingPhase phaseReunion({
 /// n'a rien à voir avec le défaut corrigé ici.
 bool peutRejoindre(MeetingPhase phase) =>
     phase != MeetingPhase.terminee && phase != MeetingPhase.echue;
+
+/// Cette réunion expose-t-elle des commandes caméra ?
+///
+/// `type_media` vaut 0 pour une réunion vidéo, 1 pour une réunion audio seule.
+/// L'écran plein affichait la bascule caméra et le changement de caméra dans
+/// les deux cas : en audio, `_initLocalStream` a déjà forcé `isVideoOff`, il
+/// n'existe aucune piste vidéo, et `toggleVideo` sort sans rien faire. Deux
+/// boutons qui ne répondent pas. Le lobby, lui, testait déjà `typeMedia`.
+///
+/// Une valeur inconnue — ou absente, le temps que la réunion soit chargée —
+/// vaut « pas de caméra » : on n'offre jamais une commande dont on n'est pas
+/// sûr qu'elle ait quelque chose à commander.
+bool afficheCommandesCamera(int? typeMedia) => typeMedia == 0;

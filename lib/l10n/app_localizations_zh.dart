@@ -1416,6 +1416,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get meetingEnded => '会议已结束';
 
   @override
+  String get meetingBlockedByCall => '通话进行中：无法加入会议。';
+
+  @override
+  String get meetingJoinExpired => '此会议已过期。';
+
+  @override
+  String get meetingJoinNotInvited => '找不到会议。';
+
+  @override
   String get meetingParticipantJoined => '已加入';
 
   @override

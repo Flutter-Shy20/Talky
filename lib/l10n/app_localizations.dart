@@ -2632,6 +2632,24 @@ abstract class AppLocalizations {
   /// **'Réunion terminée'**
   String get meetingEnded;
 
+  /// No description provided for @meetingBlockedByCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un appel est en cours : impossible de rejoindre la réunion.'**
+  String get meetingBlockedByCall;
+
+  /// No description provided for @meetingJoinExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette réunion est échue.'**
+  String get meetingJoinExpired;
+
+  /// No description provided for @meetingJoinNotInvited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réunion introuvable.'**
+  String get meetingJoinNotInvited;
+
   /// No description provided for @meetingParticipantJoined.
   ///
   /// In fr, this message translates to:
