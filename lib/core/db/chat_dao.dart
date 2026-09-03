@@ -526,6 +526,25 @@ class ChatDao {
     return pending.sendAt.isAfter(serverLastAt);
   }
 
+  /// True s'il existe en local un message postérieur à [at], **filtres de
+  /// suppression levés** (un message supprimé pour moi reste en base, marqué
+  /// par `deletedForID`).
+  ///
+  /// Sert à [ConversationSummaryReducer] : quand l'aperçu de la conversation
+  /// est plus récent que le dernier message local visible, cette question
+  /// tranche entre deux causes opposées. Vrai = le message qui portait
+  /// l'aperçu a été masqué localement, l'aperçu doit reculer. Faux = il manque
+  /// de l'historique, l'aperçu ne doit pas bouger.
+  Future<bool> hasMessageNewerThan(int conversID, DateTime at) async {
+    final row = await (db.select(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversID) &
+              m.sendAt.isBiggerThanValue(at))
+          ..limit(1))
+        .getSingleOrNull();
+    return row != null;
+  }
+
   /// Batch de [hasPendingNewerThan] : 1 SELECT pour toutes les conversations.
   /// Retourne les conversID dont un pending local est plus récent que
   /// [serverLastAtByConv].
