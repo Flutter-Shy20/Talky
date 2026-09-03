@@ -474,6 +474,11 @@ extension _ChatBubbles on _ChatDetailScreenState {
           .copyWith(color: _bubbleText(isMe)),
       linkColor: isMe ? context.colors.onPrimary : context.colors.primary,
       mentions: _mentionSpec(isMe),
+      onAlanyaNumber: _openAlanyaNumber,
+      // Le même dépôt que les mentions : liens, e-mails et numéros y sont
+      // libérés au dispose, sinon chaque reconstruction de bulle en fuit un
+      // dans une liste qui défile.
+      recognizerSink: _mentionRecognizers,
     );
     if (inlineMeta == null) return Text.rich(TextSpan(children: spans));
 
@@ -795,6 +800,76 @@ extension _ChatBubbles on _ChatDetailScreenState {
           // Évitent l'écran vide le temps du chargement.
           initialName: membre?.nom ?? '',
           initialAvatar: membre?.user.avatarUrl ?? '',
+        ),
+      ),
+    );
+  }
+
+  /// Résout un numéro Alanya tapé dans une bulle : le voile de chargement le
+  /// temps de l'aller-retour serveur, puis la fiche du contact — ou
+  /// « Numéro indisponible » si personne ne porte ce numéro.
+  ///
+  /// Un numéro inconnu n'est pas une erreur à signaler comme telle : la
+  /// détection étant volontairement large, taper sur un « 250 » qui comptait
+  /// des invités est un cas ordinaire, pas une panne.
+  Future<void> _openAlanyaNumber(String numero) async {
+    final digits = AlanyaPhoneFormatter.normalize(numero);
+    if (digits.isEmpty) return;
+
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+
+    // Le voile est posé sans être attendu : c'est la réponse serveur qui
+    // rythme la suite, pas la fermeture de la boîte de dialogue.
+    unawaited(showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      // Sans ça, un retour système ferme le voile et le `pop` d'après emporte
+      // l'écran de discussion.
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    ));
+
+    User? trouve;
+    try {
+      final data = await _apiClient.getUserByPhone(digits);
+      if (data.isNotEmpty && data.first is Map) {
+        trouve = User.fromJson(Map<String, dynamic>.from(data.first as Map));
+      }
+    } catch (_) {
+      // 404 comme coupure réseau : de notre point de vue, le numéro n'est pas
+      // joignable. Le distinguer n'aiderait personne ici.
+    }
+
+    if (!mounted) return;
+    navigator.pop(); // referme le voile
+
+    if (trouve == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.numberUnavailable)),
+      );
+      return;
+    }
+
+    // Mon propre numéro → mon profil, pour la même raison que les mentions :
+    // bloquer et signaler n'ont aucun sens sur soi.
+    if (trouve.alanyaID == _myId) {
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+      );
+      return;
+    }
+
+    navigator.push(
+      MaterialPageRoute(
+        builder: (_) => ContactDetailScreen(
+          userId: trouve!.alanyaID,
+          // Évitent l'écran vide le temps du chargement de la fiche.
+          initialName: trouve.nom,
+          initialAvatar: trouve.avatarUrl,
         ),
       ),
     );
