@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/call_limits.dart';
+import '../../core/navigation/app_navigator.dart';
+import '../../core/services/meeting/meeting_join_affordance.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
@@ -24,17 +28,71 @@ class MeetingDetailScreen extends StatefulWidget {
   State<MeetingDetailScreen> createState() => _MeetingDetailScreenState();
 }
 
-class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
+class _MeetingDetailScreenState extends State<MeetingDetailScreen>
+    with RouteAware {
   Meeting? _meeting;
   bool _isLoading = true;
   int _myId = 0;
   String _myName = '';
   bool _isOrganiser = false;
 
+  ModalRoute<dynamic>? _observedRoute;
+  MeetingService? _meetingService;
+  Timer? _phaseTicker;
+
   @override
   void initState() {
     super.initState();
     _load();
+    // Une réunion peut se terminer pendant qu'on regarde ce même écran : le
+    // service le sait avant l'API.
+    _meetingService = Provider.of<MeetingService>(context, listen: false)
+      ..addListener(_onMeetingServiceChanged);
+    // La phase dépend de l'heure, et l'heure n'émet rien. Sans ce battement, le
+    // bouton « Rejoindre » restait affiché jusqu'à la prochaine reconstruction,
+    // même une fois l'échéance passée.
+    _phaseTicker = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) { if (mounted) setState(() {}); },
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Le retour depuis la réunion passe par ici et non par un `.then` : le lobby
+    // se retire par `pushReplacement`, qui complète immédiatement le futur de la
+    // route remplacée. Le `.then((_) => _load())` d'avant s'exécutait donc à
+    // l'entrée en réunion, jamais au retour — d'où un écran figé sur l'état
+    // d'avant, bouton « Rejoindre » compris.
+    final route = ModalRoute.of(context);
+    if (route is PageRoute && route != _observedRoute) {
+      if (_observedRoute is PageRoute) appRouteObserver.unsubscribe(this);
+      _observedRoute = route;
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPopNext() => _load();
+
+  @override
+  void dispose() {
+    _phaseTicker?.cancel();
+    _meetingService?.removeListener(_onMeetingServiceChanged);
+    if (_observedRoute is PageRoute) appRouteObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  void _onMeetingServiceChanged() {
+    if (!mounted) return;
+    final service = _meetingService;
+    if (service == null) return;
+    // La réunion en cours vient de se terminer : recharger pour que la puce et
+    // le bouton disent la vérité sans attendre un aller-retour d'écran.
+    if (service.status == MeetingStatus.ended && _meeting?.isEnd == false) {
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -214,6 +272,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   }
 
   void _openLobby() {
+    // Pas de `.then` : le rechargement au retour est fait par `didPopNext`.
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -225,7 +284,20 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           typeMedia: _meeting?.typeMedia ?? 0,
         ),
       ),
-    ).then((_) => _load());
+    );
+  }
+
+  /// Où en est la réunion, maintenant. Une seule décision pour la puce d'état et
+  /// pour le bouton, qui divergeaient.
+  MeetingPhase? get _phase {
+    final m = _meeting;
+    if (m == null) return null;
+    return phaseReunion(
+      isEnd: m.isEnd,
+      debut: m.startDateTime,
+      dureeMinutes: m.duree,
+      maintenant: DateTime.now(),
+    );
   }
 
   @override
@@ -251,9 +323,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
             ),
         ],
       ),
-      floatingActionButton: _meeting != null &&
-              !_meeting!.isEnd &&
-              _meeting!.endDateTime.isAfter(DateTime.now())
+      floatingActionButton: _phase != null && peutRejoindre(_phase!)
           ? FloatingActionButton.extended(
               heroTag: 'meeting_detail_join_fab',
               onPressed: _openLobby,
@@ -277,11 +347,10 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 )
               : _MeetingDetailBody(
                   meeting: _meeting!,
+                  phase: _phase!,
                   myId: _myId,
                   isOrganiser: _isOrganiser,
-                  onJoin: _openLobby,
                   onInvite: _inviteMore,
-                  onCancel: _cancelMeeting,
                 ),
     );
   }
@@ -292,34 +361,22 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
 class _MeetingDetailBody extends StatelessWidget {
   const _MeetingDetailBody({
     required this.meeting,
+    required this.phase,
     required this.myId,
     required this.isOrganiser,
-    required this.onJoin,
     required this.onInvite,
-    required this.onCancel,
   });
 
   final Meeting meeting;
+
+  /// Calculée par l'écran, pas ici : la puce d'état et le bouton flottant
+  /// doivent dire la même chose. `onJoin` et `onCancel` étaient déclarés et
+  /// jamais appelés — un futur bouton les aurait utilisés en contournant
+  /// l'affordance.
+  final MeetingPhase phase;
   final int myId;
   final bool isOrganiser;
-  final VoidCallback onJoin;
   final VoidCallback onInvite;
-  final VoidCallback onCancel;
-
-  _MeetingStatus _computeStatus() {
-    if (meeting.isEnd) return _MeetingStatus.ended;
-    final now = DateTime.now();
-    if (meeting.startDateTime.isBefore(now) &&
-        meeting.endDateTime.isAfter(now)) {
-      return _MeetingStatus.inProgress;
-    }
-    final diff = meeting.startDateTime.difference(now);
-    if (!diff.isNegative && diff.inMinutes <= 15) {
-      return _MeetingStatus.soon;
-    }
-    if (diff.isNegative) return _MeetingStatus.ended;
-    return _MeetingStatus.scheduled;
-  }
 
   String _formatDuration(BuildContext context, int minutes) {
     final l10n = context.l10n;
@@ -342,8 +399,6 @@ class _MeetingDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = _computeStatus();
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 100),
@@ -358,7 +413,7 @@ class _MeetingDetailBody extends StatelessWidget {
               ),
             ),
             AppSpacing.hGapMd,
-            _statusChip(context, status),
+            _statusChip(context, phase),
           ],
         ),
         AppSpacing.vGapSm,
@@ -452,25 +507,28 @@ class _MeetingDetailBody extends StatelessWidget {
     );
   }
 
-  Widget _statusChip(BuildContext context, _MeetingStatus status) {
-    switch (status) {
-      case _MeetingStatus.inProgress:
+  Widget _statusChip(BuildContext context, MeetingPhase phase) {
+    switch (phase) {
+      case MeetingPhase.enCours:
         return StatusChip(
             label: context.l10n.inProgress, tone: StatusChipTone.success);
-      case _MeetingStatus.soon:
+      case MeetingPhase.bientot:
         return StatusChip(
             label: context.l10n.comingSoon, tone: StatusChipTone.warning);
-      case _MeetingStatus.scheduled:
+      case MeetingPhase.programmee:
         return StatusChip(
             label: context.l10n.scheduled, tone: StatusChipTone.brand);
-      case _MeetingStatus.ended:
+      case MeetingPhase.echue:
+        // Distincte de « Terminé » : personne n'a mis fin à cette réunion, son
+        // heure est simplement passée. L'ancienne puce confondait les deux.
+        return StatusChip(
+            label: context.l10n.meetingExpired, tone: StatusChipTone.neutral);
+      case MeetingPhase.terminee:
         return StatusChip(
             label: context.l10n.ended, tone: StatusChipTone.neutral);
     }
   }
 }
-
-enum _MeetingStatus { scheduled, soon, inProgress, ended }
 
 // ─── Ligne d'info ─────────────────────────────────────────────────────────────
 

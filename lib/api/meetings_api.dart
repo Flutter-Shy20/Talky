@@ -90,6 +90,22 @@ extension MeetingsApi on TalkyApiClient {
     );
   }
 
+  /// Repli HTTP de « terminer pour tout le monde ».
+  ///
+  /// Ciblée plutôt que passer par [updateMeeting], qui envoie un `type_media`
+  /// que le contrôleur ignore et qui n'a aucun appelant. Le serveur, en voyant
+  /// `isEnd` passer à 1, solde les participants et diffuse `meeting:ended`
+  /// exactement comme le chemin socket.
+  Future<void> updateMeetingEnd(int idMeeting) async {
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('${TalkyApiClient.baseUrl}/meetings/$idMeeting'),
+        headers: _headers,
+        body: jsonEncode({'isEnd': 1}),
+      ),
+    );
+  }
+
   Future<void> inviteParticipants(int idMeeting, List<int> participantIds) async {
     await _handleRequest(
       () => _client.post(

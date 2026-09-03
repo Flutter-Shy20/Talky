@@ -2632,6 +2632,12 @@ abstract class AppLocalizations {
   /// **'Réunion terminée'**
   String get meetingEnded;
 
+  /// No description provided for @meetingExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échue'**
+  String get meetingExpired;
+
   /// No description provided for @newMeeting.
   ///
   /// In fr, this message translates to:

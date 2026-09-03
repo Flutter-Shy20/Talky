@@ -5,9 +5,12 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/services/call/session_video_renderers.dart';
+import '../../core/services/meeting/meeting_exit_rules.dart';
+import '../../core/services/meeting/meeting_focus_rules.dart';
 import '../../core/services/meeting_service.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/calls/call_participant_focus_overlay.dart';
 import '../../widgets/calls/speaking_indicator_border.dart';
 import '../../widgets/common/app_avatar.dart';
 import '../../widgets/common/app_badge.dart';
@@ -46,6 +49,9 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   bool _closing = false;
   final Set<String> _watchedVideoTrackIds = {};
 
+  /// Participant mis en avant par un tap sur sa tuile, ou null.
+  String? _focusedParticipantId;
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +68,34 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   void _minimize() {
     if (_closing || !mounted) return;
     Navigator.of(context).pop();
+  }
+
+  /// Ferme l'écran — **une seule fois**, quel que soit celui qui arrive le
+  /// premier.
+  ///
+  /// C'est le seul détenteur de `_closing`, et le seul chemin de fermeture avec
+  /// `_minimize` (qui, lui, ne termine rien). Le listener et les deux boutons de
+  /// sortie l'appellent sans se coordonner : le premier ferme, les suivants
+  /// n'ont plus rien à faire. Avant ça, chacun popait de son côté et le second
+  /// pop retirait la route du dessous — voir [shouldPopMeetingScreen].
+  ///
+  /// Le retrait du listener est fait ici et pas ailleurs : la notification
+  /// suivante (`idle`, une fois F1 livré) ne doit pas rouvrir la question.
+  void _closeOnce() {
+    if (_closing || !mounted) return;
+    _closing = true;
+    _meetingService.removeListener(_onMeetingServiceChanged);
+    Navigator.of(context).pop();
+  }
+
+  void _focusParticipant(String userId) {
+    if (_closing || !mounted) return;
+    setState(() => _focusedParticipantId = userId);
+  }
+
+  void _dismissFocus() {
+    if (!mounted) return;
+    setState(() => _focusedParticipantId = null);
   }
 
   void _onFullscreenPop(bool didPop) {
@@ -84,6 +118,17 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     if (!mounted) return;
 
     meetingService.addListener(_onMeetingServiceChanged);
+    // L'inscription arrive après plusieurs `await` : une réunion terminée
+    // pendant l'ouverture des rendus a déjà notifié, dans le vide. Sans cette
+    // relecture, l'écran restait ouvert sur une réunion morte, et plus rien ne
+    // viendrait le fermer.
+    if (shouldPopMeetingScreen(
+      alreadyClosing: _closing,
+      meetingStatusName: meetingService.status.name,
+    )) {
+      _closeOnce();
+      return;
+    }
     // Première trame, changement de taille, arrivée d'une tuile : le porteur
     // notifie, l'écran se redessine.
     _renderers.addListener(_onRenderersChanged);
@@ -100,11 +145,22 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     final meetingService =
         Provider.of<MeetingService>(context, listen: false);
 
-    if (meetingService.status == MeetingStatus.ended) {
-      meetingService.removeListener(_onMeetingServiceChanged);
-      _closing = true;
-      Navigator.of(context).pop();
+    if (shouldPopMeetingScreen(
+      alreadyClosing: _closing,
+      meetingStatusName: meetingService.status.name,
+    )) {
+      _closeOnce();
       return;
+    }
+
+    // Le participant mis en avant peut partir pendant qu'on le regarde.
+    final focusRetenu = focusEncoreValide(
+      focusedId: _focusedParticipantId,
+      localId: meetingService.myId,
+      fluxDistants: meetingService.remoteStreams.keys.toSet(),
+    );
+    if (focusRetenu != _focusedParticipantId) {
+      _focusedParticipantId = focusRetenu;
     }
 
     if (_localRendererReady &&
@@ -209,214 +265,286 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
             Provider.of<AuthProvider>(context, listen: false).currentUser?.avatarUrl;
         final isOrganiser = meeting?.idOrganiser == myId;
 
+        final localId = meetingService.myId ?? myId.toString();
+        final focusedId = _focusedParticipantId;
+        final focusOverlay = _buildFocusOverlay(
+          meetingService,
+          localId: localId,
+          myAvatar: myAvatar,
+          youLabel: context.l10n.youLabel,
+        );
+
         return PopScope(
-          canPop: true,
-          onPopInvokedWithResult: (didPop, _) => _onFullscreenPop(didPop),
+          // Le retour arrière referme d'abord la mise en avant. `_closeOnce`
+          // pope impérativement et n'est pas filtré par `canPop`, qui ne
+          // s'applique qu'aux gestes système.
+          canPop: focusedId == null,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop &&
+                actionRetour(focusOuvert: _focusedParticipantId != null) ==
+                    MeetingBackAction.fermerFocus) {
+              _dismissFocus();
+              return;
+            }
+            _onFullscreenPop(didPop);
+          },
           child: Scaffold(
             backgroundColor: _kMeetBg,
-            body: SafeArea(
-              child: Column(
-                children: [
-                  // ── Top Bar ─────────────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  CupertinoIcons.chevron_down,
-                                  color: AppColors.white,
-                                  size: 28,
-                                ),
-                                onPressed: _minimize,
-                              ),
-                              AppSpacing.hGapSm,
-                              Flexible(
-                                child: Text(
-                                  meeting?.objet ?? context.l10n.meeting,
-                                  style: const TextStyle(
-                                    color: AppColors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Row(
+            body: Stack(
+              children: [
+                SafeArea(
+                  child: Column(
+                    children: [
+                      // ── Top Bar ─────────────────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              meetingService.formattedDuration,
-                              style: const TextStyle(
-                                  color: Colors.white54, fontSize: 13),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      CupertinoIcons.chevron_down,
+                                      color: AppColors.white,
+                                      size: 28,
+                                    ),
+                                    onPressed: _minimize,
+                                  ),
+                                  AppSpacing.hGapSm,
+                                  Flexible(
+                                    child: Text(
+                                      meeting?.objet ?? context.l10n.meeting,
+                                      style: const TextStyle(
+                                        color: AppColors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            AppSpacing.hGapXs,
-                            IconButton(
-                              icon: const Icon(
-                                  CupertinoIcons.switch_camera,
-                                  color: AppColors.white),
-                              onPressed: () =>
-                                  meetingService.switchCamera(),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.people_outline,
-                                  color: AppColors.white),
-                              onPressed: () =>
-                                  _showParticipantsPanel(meetingService),
+                            Row(
+                              children: [
+                                Text(
+                                  meetingService.formattedDuration,
+                                  style: const TextStyle(
+                                      color: Colors.white54, fontSize: 13),
+                                ),
+                                AppSpacing.hGapXs,
+                                IconButton(
+                                  icon: const Icon(
+                                      CupertinoIcons.switch_camera,
+                                      color: AppColors.white),
+                                  onPressed: () =>
+                                      meetingService.switchCamera(),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.people_outline,
+                                      color: AppColors.white),
+                                  onPressed: () =>
+                                      _showParticipantsPanel(meetingService),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
 
-                  // ── Grille vidéo ─────────────────────────────────
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      child: _remoteRenderers.isEmpty
-                          ? _buildVideoTile(
-                              label: context.l10n.youLabel,
-                              renderer: _localRenderer,
-                              photoUrl: myAvatar,
-                              showVideo: _localTileShowsVideo(meetingService),
-                              isVideoOff: meetingService.isVideoOff,
-                              isMuted: meetingService.isMuted,
-                              isSpeaking: meetingService.amISpeaking,
-                              mirror: true,
-                            )
-                          : GridView.count(
-                              crossAxisCount:
-                                  _remoteRenderers.length < 2 ? 1 : 2,
-                              mainAxisSpacing: AppSpacing.sm,
-                              crossAxisSpacing: AppSpacing.sm,
-                              childAspectRatio: 0.8,
-                              children: [
-                                _buildVideoTile(
+                      // ── Grille vidéo ─────────────────────────────────
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          child: _remoteRenderers.isEmpty
+                              ? _buildVideoTile(
                                   label: context.l10n.youLabel,
                                   renderer: _localRenderer,
                                   photoUrl: myAvatar,
-                                  showVideo:
-                                      _localTileShowsVideo(meetingService),
+                                  showVideo: _localTileShowsVideo(meetingService),
                                   isVideoOff: meetingService.isVideoOff,
                                   isMuted: meetingService.isMuted,
                                   isSpeaking: meetingService.amISpeaking,
                                   mirror: true,
-                                ),
-                                ..._remoteRenderers.entries.map((entry) {
-                                  final userId = entry.key;
-                                  final label = meetingService
-                                      .participantDisplayName(userId);
-                                  final stream =
-                                      meetingService.remoteStreams[userId];
-                                  return _buildVideoTile(
-                                    label: label,
-                                    renderer: entry.value,
-                                    photoUrl: meetingService
-                                        .participantAvatarUrl(userId),
-                                    showVideo: _remoteTileShowsVideo(
-                                      entry.value,
-                                      stream,
-                                      isVideoOff: meetingService
-                                          .isParticipantVideoOff(userId),
+                                  onTap: () => _focusParticipant(localId),
+                                )
+                              : GridView.count(
+                                  crossAxisCount:
+                                      _remoteRenderers.length < 2 ? 1 : 2,
+                                  mainAxisSpacing: AppSpacing.sm,
+                                  crossAxisSpacing: AppSpacing.sm,
+                                  childAspectRatio: 0.8,
+                                  children: [
+                                    _buildVideoTile(
+                                      label: context.l10n.youLabel,
+                                      renderer: _localRenderer,
+                                      photoUrl: myAvatar,
+                                      showVideo:
+                                          _localTileShowsVideo(meetingService),
+                                      isVideoOff: meetingService.isVideoOff,
+                                      isMuted: meetingService.isMuted,
+                                      isSpeaking: meetingService.amISpeaking,
+                                      mirror: true,
+                                      onTap: () => _focusParticipant(localId),
                                     ),
-                                    isVideoOff: meetingService
-                                        .isParticipantVideoOff(userId),
-                                    isMuted: meetingService
-                                        .isParticipantMuted(userId),
-                                    isSpeaking: meetingService
-                                        .isUserSpeaking(userId),
-                                  );
-                                }),
-                              ],
-                            ),
-                    ),
-                  ),
+                                    ..._remoteRenderers.entries.map((entry) {
+                                      final userId = entry.key;
+                                      final label = meetingService
+                                          .participantDisplayName(userId);
+                                      final stream =
+                                          meetingService.remoteStreams[userId];
+                                      return _buildVideoTile(
+                                        label: label,
+                                        renderer: entry.value,
+                                        photoUrl: meetingService
+                                            .participantAvatarUrl(userId),
+                                        showVideo: _remoteTileShowsVideo(
+                                          entry.value,
+                                          stream,
+                                          isVideoOff: meetingService
+                                              .isParticipantVideoOff(userId),
+                                        ),
+                                        isVideoOff: meetingService
+                                            .isParticipantVideoOff(userId),
+                                        isMuted: meetingService
+                                            .isParticipantMuted(userId),
+                                        isSpeaking: meetingService
+                                            .isUserSpeaking(userId),
+                                        onTap: () => _focusParticipant(userId),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                        ),
+                      ),
 
-                  // ── Contrôles bas ──────────────────────────────────
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.lg,
-                        horizontal: AppSpacing.xxl),
-                    color: _kMeetBg,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildControlBtn(
-                          icon: Icons.call_end,
-                          color: AppColors.error,
-                          iconColor: AppColors.white,
-                          onTap: () async {
-                            _closing = true;
-                            await meetingService.leaveMeeting();
-                            if (context.mounted) Navigator.pop(context);
-                          },
-                          isLarge: true,
+                      // ── Contrôles bas ──────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.lg,
+                            horizontal: AppSpacing.xxl),
+                        color: _kMeetBg,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildControlBtn(
+                              icon: Icons.call_end,
+                              color: AppColors.error,
+                              iconColor: AppColors.white,
+                              onTap: () async {
+                                // Pas de `_closing` posé ici : `_terminateMeeting`
+                                // notifie dans un `finally`, donc le listener ferme
+                                // pendant l'attente. Cet appel n'est que le filet
+                                // du cas où il ne l'aurait pas fait.
+                                await meetingService.leaveMeeting();
+                                if (mounted) _closeOnce();
+                              },
+                              isLarge: true,
+                            ),
+                            _buildControlBtn(
+                              icon: meetingService.isVideoOff
+                                  ? CupertinoIcons.video_camera
+                                  : CupertinoIcons.video_camera_solid,
+                              color: meetingService.isVideoOff
+                                  ? AppColors.white
+                                  : Colors.white24,
+                              iconColor: meetingService.isVideoOff
+                                  ? AppColors.black
+                                  : AppColors.white,
+                              onTap: () => meetingService.toggleVideo(),
+                            ),
+                            _buildControlBtn(
+                              icon: meetingService.isMuted
+                                  ? CupertinoIcons.mic_off
+                                  : CupertinoIcons.mic,
+                              color: meetingService.isMuted
+                                  ? AppColors.white
+                                  : Colors.white24,
+                              iconColor: meetingService.isMuted
+                                  ? AppColors.black
+                                  : AppColors.white,
+                              onTap: () => meetingService.toggleMute(),
+                            ),
+                            _buildControlBtn(
+                              icon: Icons.chat_bubble_outline,
+                              color: Colors.white24,
+                              iconColor: AppColors.white,
+                              badgeCount: meetingService.unreadChatCount,
+                              onTap: () =>
+                                  _showMeetingChat(context, meetingService),
+                            ),
+                            if (isOrganiser)
+                              _buildControlBtn(
+                                icon: Icons.stop_circle_outlined,
+                                color: AppColors.error,
+                                iconColor: AppColors.white,
+                                onTap: () => _confirmEndForAll(
+                                    context, meetingService),
+                              )
+                            else
+                              _buildControlBtn(
+                                icon: Icons.more_vert,
+                                color: Colors.white24,
+                                iconColor: AppColors.white,
+                                onTap: () =>
+                                    _showParticipantsPanel(meetingService),
+                              ),
+                          ],
                         ),
-                        _buildControlBtn(
-                          icon: meetingService.isVideoOff
-                              ? CupertinoIcons.video_camera
-                              : CupertinoIcons.video_camera_solid,
-                          color: meetingService.isVideoOff
-                              ? AppColors.white
-                              : Colors.white24,
-                          iconColor: meetingService.isVideoOff
-                              ? AppColors.black
-                              : AppColors.white,
-                          onTap: () => meetingService.toggleVideo(),
-                        ),
-                        _buildControlBtn(
-                          icon: meetingService.isMuted
-                              ? CupertinoIcons.mic_off
-                              : CupertinoIcons.mic,
-                          color: meetingService.isMuted
-                              ? AppColors.white
-                              : Colors.white24,
-                          iconColor: meetingService.isMuted
-                              ? AppColors.black
-                              : AppColors.white,
-                          onTap: () => meetingService.toggleMute(),
-                        ),
-                        _buildControlBtn(
-                          icon: Icons.chat_bubble_outline,
-                          color: Colors.white24,
-                          iconColor: AppColors.white,
-                          badgeCount: meetingService.unreadChatCount,
-                          onTap: () =>
-                              _showMeetingChat(context, meetingService),
-                        ),
-                        if (isOrganiser)
-                          _buildControlBtn(
-                            icon: Icons.stop_circle_outlined,
-                            color: AppColors.error,
-                            iconColor: AppColors.white,
-                            onTap: () => _confirmEndForAll(
-                                context, meetingService),
-                          )
-                        else
-                          _buildControlBtn(
-                            icon: Icons.more_vert,
-                            color: Colors.white24,
-                            iconColor: AppColors.white,
-                            onTap: () =>
-                                _showParticipantsPanel(meetingService),
-                          ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                // ── Mise en avant d'un participant ────────────────
+                // Par-dessus la grille. L'overlay réserve lui-même la place de
+                // la barre de contrôles, qui reste utilisable.
+                if (focusOverlay != null) focusOverlay,
+              ],
             ),
           ),
         );
       },
+    );
+  }
+
+  /// Construit l'overlay de mise en avant, ou null si aucune tuile n'est visée.
+  ///
+  /// La polarité de la caméra s'inverse ici : le service dit `isVideoOff`,
+  /// l'overlay attend `isVideoOn`. C'est le genre d'inversion qui passe la
+  /// relecture et ne se voit qu'à l'usage.
+  Widget? _buildFocusOverlay(
+    MeetingService meetingService, {
+    required String localId,
+    required String? myAvatar,
+    required String youLabel,
+  }) {
+    final focusedId = _focusedParticipantId;
+    if (focusedId == null) return null;
+    final isLocal = focusedId == localId;
+    return CallParticipantFocusOverlay(
+      userId: focusedId,
+      name: isLocal
+          ? youLabel
+          : meetingService.participantDisplayName(focusedId),
+      stream: isLocal
+          ? meetingService.localStream
+          : meetingService.remoteStreams[focusedId],
+      photoUrl:
+          isLocal ? myAvatar : meetingService.participantAvatarUrl(focusedId),
+      isMuted: isLocal
+          ? meetingService.isMuted
+          : meetingService.isParticipantMuted(focusedId),
+      isVideoOn: isLocal
+          ? !meetingService.isVideoOff
+          : !meetingService.isParticipantVideoOff(focusedId),
+      isSpeaking: isLocal
+          ? meetingService.amISpeaking
+          : meetingService.isUserSpeaking(focusedId),
+      mirror: isLocal,
+      onDismiss: _dismissFocus,
     );
   }
 
@@ -448,9 +576,9 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
         ],
       ),
     );
-    if (confirm == true && context.mounted) {
+    if (confirm == true && mounted) {
       await meetingService.endMeetingForAll();
-      if (context.mounted) Navigator.pop(context);
+      if (mounted) _closeOnce();
     }
   }
 
@@ -466,11 +594,15 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     bool isVideoOff = false,
     String? photoUrl,
     bool mirror = false,
+    VoidCallback? onTap,
   }) {
     final showVideoView =
         showVideo && !isVideoOff && renderer != null && renderer.srcObject != null;
 
-    return SpeakingIndicatorBorder(
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SpeakingIndicatorBorder(
       isSpeaking: isSpeaking && !isMuted,
       borderRadius: AppRadius.brMd,
       child: Container(
@@ -531,6 +663,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
           ),
         ],
       ),
+    ),
     ),
     );
   }

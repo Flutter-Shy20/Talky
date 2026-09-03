@@ -444,6 +444,7 @@
   "messagesCleared": "Messages cleared",
   "reservedNumbers": "Reserved numbers",
   "meetingEnded": "Meeting ended",
+  "meetingExpired": "Expired",
   "newMeeting": "New meeting",
   "alanyaPhone": "Alanya ID",
   "deletedMessage": "Deleted message",

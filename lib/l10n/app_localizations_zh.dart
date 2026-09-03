@@ -1416,6 +1416,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get meetingEnded => '会议已结束';
 
   @override
+  String get meetingExpired => '已过期';
+
+  @override
   String get newMeeting => '新建会议';
 
   @override

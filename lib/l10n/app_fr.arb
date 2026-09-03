@@ -914,6 +914,7 @@
   "messagesCleared": "Messages effacés",
   "reservedNumbers": "Numéros réservés",
   "meetingEnded": "Réunion terminée",
+  "meetingExpired": "Échue",
   "newMeeting": "Nouvelle réunion",
   "alanyaPhone": "ID Alanya",
   "deletedMessage": "Message supprimé",

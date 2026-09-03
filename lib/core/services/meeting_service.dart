@@ -122,6 +122,14 @@ class MeetingService extends ChangeNotifier {
     return participant?.avatarUrl;
   }
 
+  /// Notre identifiant pendant la réunion.
+  ///
+  /// C'est la clé qui corrèle socket et WebRTC — celle de `_participantId`, donc
+  /// celle des tuiles. `AuthProvider` en donne une autre, prise du compte : elle
+  /// coïncide en pratique, mais divergerait si le compte changeait en cours de
+  /// session. L'écran d'appel expose déjà l'équivalent (`localUserId`).
+  String? get myId => _myId;
+
   Set<String> get activeSpeakers => speakingDetector.activeSpeakers;
   bool get amISpeaking => speakingDetector.amISpeaking;
   bool isUserSpeaking(String userId) => speakingDetector.isSpeaking(userId);
@@ -768,10 +776,22 @@ class MeetingService extends ChangeNotifier {
 
   /// Termine la réunion pour tout le monde (organisateur seulement).
   Future<void> endMeetingForAll() async {
-    if (_currentMeeting == null) return;
+    final reunion = _currentMeeting;
+    if (reunion == null) return;
     _apiClient.sendSocketEvent(SocketEvents.meetingEnd, {
-      'meetingID': _currentMeeting!.idMeeting,
+      'meetingID': reunion.idMeeting,
     });
+    // Repli : la fin pour tous n'existait que par socket, et l'écran se fermait
+    // dans tous les cas. Socket tombée — ce qui arrive sans que rien ne le dise,
+    // voir `shouldRebuildSocketDuringReconnect` —, `isEnd` restait 0 : la
+    // réunion réapparaissait « en cours » au chargement suivant, et restait
+    // rejoignable. L'échec est silencieux à dessein : le chemin socket a
+    // probablement déjà fait le travail.
+    try {
+      await _apiClient.updateMeetingEnd(reunion.idMeeting);
+    } catch (e) {
+      debugPrint('[MeetingService] repli HTTP isEnd échoué: $e');
+    }
     await _terminateMeeting(emitLeave: false);
   }
 
