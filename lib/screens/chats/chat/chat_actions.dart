@@ -1626,14 +1626,20 @@ extension _ChatActions on _ChatDetailScreenState {
     // Loin dans l'historique : saut immédiat (évite d'animer des milliers de px).
     if (pixels > 800) {
       _scrollController.jumpTo(0);
-      if (mounted && !_atBottom) rebuild(() => _atBottom = true);
+      _syncAtBottom();
       return;
     }
-    _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOut,
-    );
+    _scrollController
+        .animateTo(
+          0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        )
+        // Un animateTo depuis une position déjà à 0 ne notifie personne, et une
+        // animation interrompue s'arrête où elle veut : sans ce point final,
+        // l'état restait sur ce qu'en avait compris le dernier événement de
+        // scroll.
+        .whenComplete(_syncAtBottom);
   }
 
   /// Saute à la mention suivante et décrémente la pastille.
@@ -1763,8 +1769,13 @@ extension _ChatActions on _ChatDetailScreenState {
     final convId = _convId;
     if (convId == null || replyToID <= 0) return;
 
+    // `_suppressAutoScroll` suffit à geler le recentrage automatique pendant le
+    // saut. On ne décrète plus « on a quitté le bas » avant de savoir où l'on
+    // va : quand la cible était déjà à l'écran — une citation, une mention à
+    // quelques lignes — la révélation n'avait aucune position à changer, donc
+    // aucun événement de scroll pour rétablir la vérité, et le bouton
+    // s'affichait sans qu'on ait bougé du dernier message.
     _suppressAutoScroll = true;
-    _atBottom = false;
 
     try {
       final found = await _ensureMessageLoaded(convId, replyToID);
@@ -1823,6 +1834,8 @@ extension _ChatActions on _ChatDetailScreenState {
       if (mounted) {
         rebuild(() => _pendingScrollMsgId = null);
         _suppressAutoScroll = false;
+        // Le saut a pu se terminer n'importe où, y compris là d'où il partait.
+        _syncAtBottom();
       }
     }
   }

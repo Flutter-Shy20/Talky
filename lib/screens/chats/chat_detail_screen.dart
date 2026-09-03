@@ -191,6 +191,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// True si la conv a un aperçu serveur (lastMessageAt) → le fil ne devrait pas rester vide.
   bool _expectMessages = false;
   bool _atBottom = true;
+  bool _atBottomSyncScheduled = false;
   bool _suppressAutoScroll = false;
   int? _highlightMsgId;
   int? _pendingScrollMsgId;
@@ -420,15 +421,47 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     }
   }
 
-  void _onScroll() {
-    final pos = _scrollController.position;
+  /// Sous cette distance du bas, le lecteur est « au dernier message » et le
+  /// bouton de retour n'a pas lieu d'être.
+  static const _bottomThreshold = 150.0;
+
+  /// Source unique de [_atBottom] : une position réelle, jamais un événement.
+  ///
+  /// « Être en bas » dépend de la position ET de la géométrie de la viewport.
+  /// Quand seule la seconde change — le clavier qui s'ouvre, le panneau emoji,
+  /// la barre de format — Flutter réajuste la position pendant le layout via
+  /// `correctPixels`, qui ne réveille aucun auditeur de scroll : c'est son
+  /// rôle. Un état dérivé du seul listener de scroll restait donc figé sur la
+  /// valeur d'avant, et le bouton s'affichait alors qu'on n'avait pas quitté
+  /// le dernier message. D'où la réconciliation, appelée aussi sur
+  /// [ScrollMetricsNotification].
+  void _syncAtBottom() {
+    if (!_scrollController.hasClients) return;
     // reverse: true → offset 0 = bas (messages récents).
-    final atBottom = pos.pixels <= 150;
-    if (atBottom != _atBottom && mounted) {
+    final atBottom = _scrollController.position.pixels <= _bottomThreshold;
+    if (atBottom == _atBottom) return;
+    if (mounted) {
       setState(() => _atBottom = atBottom);
     } else {
       _atBottom = atBottom;
     }
+  }
+
+  /// Coalesce les réconciliations : l'ouverture du clavier émet une
+  /// notification de métriques par frame d'animation, et rien ne sert de
+  /// planifier quinze callbacks pour une seule décision.
+  void _scheduleAtBottomSync() {
+    if (_atBottomSyncScheduled) return;
+    _atBottomSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _atBottomSyncScheduled = false;
+      _syncAtBottom();
+    });
+  }
+
+  void _onScroll() {
+    final pos = _scrollController.position;
+    _syncAtBottom();
 
     // Près du haut visuel → charger une page d'anciens messages.
     // `_reachedStart` : une fois l'historique épuisé, chaque micro-événement de
@@ -1087,7 +1120,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                     // les récents près de la zone de saisie.
                                     final reversedFeed = feed.reversed.toList();
 
-                                    return SlidableAutoCloseBehavior(
+                                    final fil = SlidableAutoCloseBehavior(
                                       child: ListView.builder(
                                         controller: _scrollController,
                                         reverse: true,
@@ -1201,6 +1234,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                           );
                                         },
                                       ),
+                                    );
+
+                                    // Le seul signal que Flutter émette quand
+                                    // les métriques changent sans qu'on ait
+                                    // scrollé : viewport rétrécie par le
+                                    // clavier, contenu qui grandit, panneau qui
+                                    // s'ouvre. La réponse est différée d'une
+                                    // frame — la notification part en plein
+                                    // layout, où un setState serait refusé.
+                                    return NotificationListener<
+                                        ScrollMetricsNotification>(
+                                      onNotification: (_) {
+                                        _scheduleAtBottomSync();
+                                        return false;
+                                      },
+                                      child: fil,
                                     );
                                   },
                                 );
