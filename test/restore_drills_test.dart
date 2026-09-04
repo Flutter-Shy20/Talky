@@ -426,4 +426,145 @@ void main() {
     final rows = await restored.select(restored.localMessages).get();
     expect(rows.single.clientId, 'a');
   });
+
+  group('rebond sur la version précédente', () {
+    // `keptVersions` vaut deux, et la seconde existe pour ce jour-là. Le code
+    // prenait pourtant `archives.first` et abandonnait sur échec : on gardait
+    // un filet dans lequel personne ne tombait jamais.
+
+    /// Écrase les premiers octets : l'en-tête ne sera plus reconnu.
+    Future<void> abimer(RemoteArchive archive) async {
+      final f = File(archive.id);
+      final octets = await f.readAsBytes();
+      octets.setRange(0, 4, const [0, 0, 0, 0]);
+      await f.writeAsBytes(octets, flush: true);
+    }
+
+    Future<BackupSnapshotContent> restaurerLaPlusRecenteLisible() async {
+      final candidates = BackupService.candidatesFor(
+        alanyaID,
+        await target.list(),
+      );
+      return BackupService(db: db, keys: keys).restoreFirstReadable(
+        target: target,
+        candidates: candidates,
+        workDir: Directory(p.join(tmp.path, 'restore')),
+      );
+    }
+
+    test('la plus récente est corrompue : la précédente sauve la mise',
+        () async {
+      final ancienne = await makeBackup();
+      // Une seconde plus tard, sinon les deux portent le même nom : les
+      // horodatages sont à la seconde près.
+      await db.into(db.localMessages).insert(LocalMessagesCompanion.insert(
+            clientId: 'b',
+            conversationID: 1,
+            senderID: 7,
+            sendAt: DateTime.utc(2026, 3, 15),
+            syncPending: const Value(false),
+          ));
+      final recente = await BackupService(db: db, keys: keys).run(
+        target: target,
+        alanyaID: alanyaID,
+        // Une valeur DIFFÉRENTE de l'ancienne : sans ça, l'assertion finale
+        // passerait quelle que soit l'archive relue, et le test ne prouverait
+        // rien du rebond.
+        prefs: const {'app_locale': 'en'},
+        workDir: Directory(p.join(tmp.path, 'work2')),
+        now: DateTime.utc(2026, 8, 31, 22),
+      );
+      expect(recente.succeeded, isTrue);
+      expect(recente.archive!.name.compareTo(ancienne.name), greaterThan(0),
+          reason: 'la plus récente doit trier après, sur le nom');
+
+      await abimer(recente.archive!);
+
+      // Avant cette correction : exception, et l'ancienne intacte juste à côté.
+      final content = await restaurerLaPlusRecenteLisible();
+      expect(content.prefs['app_locale'], 'fr',
+          reason: "c'est bien l'ANCIENNE qui a été relue, la récente étant"
+              ' illisible');
+    });
+
+    test('les deux sont illisibles : échec net, pas de plantage', () async {
+      final a = await makeBackup();
+      final b = await BackupService(db: db, keys: keys).run(
+        target: target,
+        alanyaID: alanyaID,
+        prefs: const {},
+        workDir: Directory(p.join(tmp.path, 'work2')),
+        now: DateTime.utc(2026, 8, 31, 22),
+      );
+      await abimer(a);
+      await abimer(b.archive!);
+
+      await expectLater(
+        restaurerLaPlusRecenteLisible(),
+        throwsA(isA<BackupFormatInvalid>()),
+      );
+    });
+
+    test('destination vide : erreur explicite, pas une exception obscure',
+        () async {
+      await expectLater(
+        restaurerLaPlusRecenteLisible(),
+        throwsA(isA<BackupFormatInvalid>()),
+      );
+    });
+  });
+
+  group('choix des candidates', () {
+    RemoteArchive faux(String name) => RemoteArchive(
+          id: name,
+          name: name,
+          bytes: 1,
+          // Volontairement à l'envers de l'ordre des noms : c'est tout l'objet
+          // du test. La purge trie sur le nom parce que certaines destinations
+          // réécrivent l'heure de modification au dépôt ; la restauration
+          // s'appuyait pourtant dessus.
+          modifiedAt: DateTime.utc(2020),
+        );
+
+    test('trie sur le nom, du plus récent au plus ancien', () {
+      final out = BackupService.candidatesFor(15, [
+        faux('alanya-backup-15-20260101T000000Z.enc'),
+        faux('alanya-backup-15-20260901T000000Z.enc'),
+        faux('alanya-backup-15-20260501T000000Z.enc'),
+      ]);
+      expect(out.map((a) => a.name).toList(), [
+        'alanya-backup-15-20260901T000000Z.enc',
+        'alanya-backup-15-20260501T000000Z.enc',
+        'alanya-backup-15-20260101T000000Z.enc',
+      ]);
+    });
+
+    test("écarte les archives d'un autre compte", () {
+      // Deux comptes Alanya sur le même téléphone. Restaurer celle de l'autre
+      // échouerait au déchiffrement — la clé est dérivée du compte, donc aucune
+      // fuite — mais l'inscrit n'y comprendrait rien.
+      final out = BackupService.candidatesFor(15, [
+        faux('alanya-backup-99-20260901T000000Z.enc'),
+        faux('alanya-backup-15-20260101T000000Z.enc'),
+      ]);
+      expect(out.map((a) => a.name).toList(),
+          ['alanya-backup-15-20260101T000000Z.enc']);
+    });
+
+    test('écarte le descriptif en clair', () {
+      final out = BackupService.candidatesFor(15, [
+        faux('alanya-backup-15-latest.json'),
+        faux('alanya-backup-15-20260101T000000Z.enc'),
+      ]);
+      expect(out, hasLength(1));
+    });
+
+    test('identifiant inconnu : rend tout plutôt que rien', () {
+      final out = BackupService.candidatesFor(0, [
+        faux('alanya-backup-99-20260901T000000Z.enc'),
+        faux('alanya-backup-15-20260101T000000Z.enc'),
+      ]);
+      expect(out, hasLength(2));
+    });
+  });
 }

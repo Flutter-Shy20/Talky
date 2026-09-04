@@ -1433,6 +1433,7 @@
   "backupRunNow": "立即备份",
   "backupRunning": "正在备份…",
   "backupSucceeded": "备份完成",
+  "backupAlreadyRunning": "备份正在进行中。",
   "backupFailed": "备份失败",
   "backupStaleWarning": "已数天没有成功备份。请检查网络和可用空间。",
   "backupDestinationLabel": "备份位置",

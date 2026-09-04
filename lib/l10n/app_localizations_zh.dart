@@ -4692,6 +4692,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupSucceeded => '备份完成';
 
   @override
+  String get backupAlreadyRunning => '备份正在进行中。';
+
+  @override
   String get backupFailed => '备份失败';
 
   @override

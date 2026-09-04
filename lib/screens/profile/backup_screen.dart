@@ -174,6 +174,7 @@ class _BackupScreenState extends State<BackupScreen> {
         // le téléphone.
         BackupRunResult.fallback => l10n.backupFellBack,
         BackupRunResult.failure => l10n.backupFailed,
+        BackupRunResult.alreadyRunning => l10n.backupAlreadyRunning,
       }),
     ));
   }
@@ -213,14 +214,25 @@ class _BackupScreenState extends State<BackupScreen> {
     await _store.setDestination(BackupDestination.drive);
     if (!mounted) return;
     setState(() => _destination = BackupDestination.drive);
+    // La date de secours parlait d'un échec survenu sous l'ancienne
+    // destination : elle n'a plus rien à annoncer.
+    await _store.saveState(_state.withoutFallback());
     messenger
         .showSnackBar(SnackBar(content: Text(l10n.backupDriveConnected)));
-    // Relu : le descriptif affiché vient désormais d'un autre endroit.
-    await _load();
+
+    // **Et on dépose tout de suite.** Sans ça, l'écran affichait « Google
+    // Drive » puis « dernière sauvegarde : jamais » — parce qu'on lit un Drive
+    // encore vide — et rien ne partait avant l'échéance suivante, jusqu'à sept
+    // jours plus tard. Connecter une destination sans y rien mettre est
+    // précisément le genre d'écart entre l'affiché et le vrai qu'on supprime.
+    await _runNow();
   }
 
   Future<void> _useDeviceStorage() async {
     await _store.setDestination(BackupDestination.device);
+    // Même raison qu'à la connexion : le bandeau de secours appartient à la
+    // destination qu'on quitte.
+    await _store.saveState(_state.withoutFallback());
     if (!mounted) return;
     setState(() => _destination = BackupDestination.device);
     await _load();
@@ -460,6 +472,7 @@ class _BackupScreenState extends State<BackupScreen> {
     await navigator.push(MaterialPageRoute(
       builder: (_) => RestoreScreen(
         db: chat.repository.dao.db,
+        alanyaID: chat.repository.myId,
         keys: _keys,
         target: target,
         // Aucune annonce serveur ici : c'est tout l'intérêt de cette entrée.

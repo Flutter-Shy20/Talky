@@ -38,6 +38,22 @@ class HomeScreen extends StatefulWidget {
   /// Onglet initial (0=discussions, 1=appels, 2=statuts…).
   final int initialTab;
 
+  /// Demande à l'accueil **déjà affiché** de changer d'onglet.
+  ///
+  /// ── Pourquoi ce détour plutôt qu'un `HomeScreen(initialTab: …)` empilé ──
+  ///
+  /// L'accueil est rendu par l'`AuthWrapper`, à la racine de la pile. En
+  /// empiler un second exemplaire par-dessus laisse le premier **monté** :
+  /// deux abonnements aux actions de notification, deux écouteurs de
+  /// `CallService`, et chaque action traitée deux fois. Le défaut est
+  /// silencieux et pénible à diagnostiquer.
+  ///
+  /// On dépile donc jusqu'à la racine, et on demande à l'exemplaire vivant de
+  /// se déplacer.
+  static final ValueNotifier<int?> tabRequest = ValueNotifier<int?>(null);
+
+  static void requestTab(int index) => tabRequest.value = index;
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -79,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final tab = widget.initialTab.clamp(0, _screens.length - 1);
     _selectedIndex = tab;
     _pageController = PageController(initialPage: tab);
+    HomeScreen.tabRequest.addListener(_onTabRequested);
     unawaited(_loadCallsWatermark());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -106,6 +123,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _pageController.dispose();
     _callService.removeListener(_onCallStatusChanged);
     _notifActionSub?.cancel();
+    HomeScreen.tabRequest.removeListener(_onTabRequested);
     super.dispose();
   }
 
@@ -422,6 +440,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else if (notif.type == 'meeting_invite') {
       _showInviteSnackBar(notif);
     }
+  }
+
+  /// Honore une demande venue d'ailleurs, puis la consomme.
+  ///
+  /// La remise à `null` déclenche une seconde notification : la garde évite
+  /// d'y répondre, et laisse la demande suivante repartir d'un état propre.
+  void _onTabRequested() {
+    final index = HomeScreen.tabRequest.value;
+    if (index == null || !mounted) return;
+    _switchToTab(index.clamp(0, _screens.length - 1));
+    HomeScreen.tabRequest.value = null;
   }
 
   void _switchToTab(int index) {

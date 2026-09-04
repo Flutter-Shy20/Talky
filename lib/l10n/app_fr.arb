@@ -3009,6 +3009,7 @@
   "backupRunNow": "Sauvegarder maintenant",
   "backupRunning": "Sauvegarde en cours…",
   "backupSucceeded": "Sauvegarde terminée",
+  "backupAlreadyRunning": "Une sauvegarde est déjà en cours.",
   "backupFailed": "La sauvegarde a échoué",
   "backupStaleWarning": "Aucune sauvegarde n'a abouti depuis plusieurs jours. Vérifiez votre connexion et l'espace disponible.",
   "backupDestinationLabel": "Destination",

@@ -581,6 +581,13 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         }
         return RestoreScreen(
           db: chat.repository.dao.db,
+          // Depuis `AuthProvider` et non `chat.repository.myId` : à cet
+          // instant la messagerie n'est pas encore liée — c'est justement ce
+          // que la restauration attend — et son identifiant vaut zéro.
+          alanyaID: Provider.of<AuthProvider>(context, listen: false)
+                  .currentUser
+                  ?.alanyaID ??
+              0,
           target: target,
           keys: ServerBackupKeyProvider((path) async {
             final kid = path.startsWith('/backup/key/')

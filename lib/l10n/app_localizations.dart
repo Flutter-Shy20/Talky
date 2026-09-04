@@ -8524,6 +8524,12 @@ abstract class AppLocalizations {
   /// **'Sauvegarde terminée'**
   String get backupSucceeded;
 
+  /// No description provided for @backupAlreadyRunning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une sauvegarde est déjà en cours.'**
+  String get backupAlreadyRunning;
+
   /// No description provided for @backupFailed.
   ///
   /// In fr, this message translates to:

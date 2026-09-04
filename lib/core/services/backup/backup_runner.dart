@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -56,6 +58,10 @@ enum BackupRunResult {
 
   /// Rien n'a été écrit.
   failure,
+
+  /// Une sauvegarde était déjà en cours. **Rien n'a échoué** — l'annoncer
+  /// comme un échec enverrait l'inscrit chercher un problème inexistant.
+  alreadyRunning,
 }
 
 /// Résultat d'une tentative, avec l'état qui en découle.
@@ -93,9 +99,39 @@ class BackupRunner {
   static const _store = BackupSettingsStore();
   static const _policy = BackupSchedulePolicy();
 
-  /// Empêche deux sauvegardes simultanées — un aller-retour rapide entre
-  /// l'écran d'accueil et l'application en déclencherait sinon deux.
-  bool _running = false;
+  /// Empêche deux sauvegardes simultanées.
+  ///
+  /// ── Pourquoi `static` ──
+  ///
+  /// Une sauvegarde est exclusive à **l'application** : une base, un fichier de
+  /// travail, une destination, un descriptif `latest.json`. Or chaque appelant
+  /// construit son propre `BackupRunner` — la tâche de fond le sien, l'écran de
+  /// réglages le sien. Un verrou d'instance ne voyait donc jamais l'autre, et
+  /// deux sauvegardes pouvaient se dérouler en parallèle sur les mêmes fichiers.
+  ///
+  /// Le dépôt Drive y est particulièrement sensible : `write` liste, décide, puis
+  /// crée ou met à jour. Deux exécutions concurrentes décident toutes deux de
+  /// « créer », et Drive accepte les homonymes — d'où **deux `latest.json`**
+  /// dont `readMeta` prend ensuite un au hasard. Le descriptif affiché peut
+  /// alors rester périmé indéfiniment, sans qu'aucune sauvegarde n'échoue.
+  ///
+  /// La course la plus probable ne vient même pas du bouton manuel : le
+  /// gestionnaire de cycle de vie lance `_maybeRunBackup` en `unawaited`, sans
+  /// garde. Deux retours au premier plan rapprochés, et la sauvegarde
+  /// automatique se court après elle-même.
+  ///
+  /// ── Ce que ce verrou ne couvre pas ──
+  ///
+  /// Un isolat séparé : il faudrait alors un verrou de fichier. Et un dépôt
+  /// bloqué sans délai d'expiration le retiendrait jusqu'au prochain démarrage
+  /// du processus — le bon endroit pour traiter ce cas est le délai de l'appel
+  /// réseau, pas un verrou qui se libère tout seul.
+  static bool _running = false;
+
+  /// Libère le verrou entre deux cas de test. Un état statique fuit sinon d'un
+  /// test à l'autre, et le second échouerait sans rapport avec ce qu'il vérifie.
+  @visibleForTesting
+  static void releaseLockForTest() => _running = false;
 
   BackupRunner({
     required this.db,
@@ -109,8 +145,8 @@ class BackupRunner {
   /// À appeler au passage en [AppLifecycleState.resumed], et une fois au
   /// démarrage. Ne fait rien si ce n'est pas dû.
   ///
-  /// Retourne `true` si une sauvegarde a effectivement été lancée — utile aux
-  /// tests et aux journaux, l'appelant n'a pas à s'en soucier.
+  /// Rend `null` quand rien n'a été tenté — pas dû, réseau mesuré, sauvegarde
+  /// déjà en cours — et le résultat de la tentative sinon.
   Future<BackupAttempt?> maybeRun({
     required int alanyaID,
     DateTime? now,
@@ -146,12 +182,24 @@ class BackupRunner {
     required int alanyaID,
     DateTime? now,
   }) async {
+    // Testé AVANT toute lecture, et posé juste après, sans `await` entre les
+    // deux : Dart étant à fil unique, la séquence est atomique et aucun mutex
+    // n'est nécessaire.
+    if (_running) {
+      return BackupAttempt(
+          BackupRunResult.alreadyRunning, null, await _store.state());
+    }
+    // Une archive nommée `alanya-backup-0-….enc` serait invisible à toute
+    // restauration. `maybeRun` s'en gardait déjà ; le bouton manuel, non.
+    if (alanyaID == 0) {
+      return BackupAttempt(
+          BackupRunResult.failure, null, await _store.state());
+    }
+    _running = true;
+
     final at = now ?? DateTime.now().toUtc();
     final frequency = await _store.frequency();
     final state = await _store.state();
-
-    if (_running) return BackupAttempt(BackupRunResult.failure, null, state);
-    _running = true;
     try {
       final resolved = await _resolveTarget(
         state: state,

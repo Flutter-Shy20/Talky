@@ -2127,6 +2127,7 @@
   "backupRunNow": "Back up now",
   "backupRunning": "Backing up\u2026",
   "backupSucceeded": "Backup complete",
+  "backupAlreadyRunning": "A backup is already running.",
   "backupFailed": "The backup failed",
   "backupStaleWarning": "No backup has succeeded for several days. Check your connection and available space.",
   "backupDestinationLabel": "Destination",

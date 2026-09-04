@@ -243,6 +243,75 @@ class BackupService {
     );
   }
 
+  /// Restaure la **plus récente archive lisible** parmi [candidates].
+  ///
+  /// ── Pourquoi une boucle et non la première ──
+  ///
+  /// [keptVersions] vaut deux, et ce n'est pas décoratif : la seconde existe
+  /// pour le jour où la première est illisible. Le code ne prenait pourtant
+  /// que `archives.first` et abandonnait sur échec — on conservait donc
+  /// scrupuleusement un filet dans lequel personne ne tombait jamais. Une
+  /// sauvegarde corrompue de la veille faisait perdre tout l'historique alors
+  /// qu'une copie valable de la semaine précédente attendait juste à côté.
+  ///
+  /// On essaie aussi la suivante après une clé inconnue ou un schéma trop
+  /// récent : l'archive précédente peut porter une autre version de clé, ou un
+  /// schéma plus ancien donc lisible par cette version de l'application.
+  ///
+  /// L'erreur remontée est **la première**, celle de l'archive la plus
+  /// récente : c'est celle qui décrit ce qui est réellement arrivé à la
+  /// sauvegarde que l'inscrit attendait.
+  Future<BackupSnapshotContent> restoreFirstReadable({
+    required BackupTarget target,
+    required List<RemoteArchive> candidates,
+    required Directory workDir,
+  }) async {
+    Object? firstError;
+    for (final archive in candidates) {
+      try {
+        return await restore(
+          target: target,
+          archive: archive,
+          workDir: workDir,
+        );
+      } catch (e) {
+        firstError ??= e;
+        debugPrint('[Restore] ${archive.name} illisible ($e)'
+            ' → tentative sur la précédente');
+      }
+    }
+    throw firstError ??
+        const BackupFormatInvalid('aucune archive à la destination');
+  }
+
+  /// Les archives de [alanyaID], de la plus récente à la plus ancienne.
+  ///
+  /// ── Deux corrections en une ──
+  ///
+  /// **Le tri se fait sur le nom**, comme la purge. Celle-ci s'en explique :
+  /// l'heure de modification est réécrite au dépôt par certaines destinations.
+  /// La restauration s'appuyait pourtant dessus, via l'ordre rendu par `list()`.
+  /// Deux critères contradictoires pour désigner « la plus récente ».
+  ///
+  /// **Et le compte est filtré.** Un même téléphone peut porter deux comptes
+  /// Alanya. La restauration ne regardait que l'extension, et pouvait donc
+  /// désigner l'archive de l'autre : indéchiffrable — la clé est dérivée du
+  /// compte, donc aucune fuite — mais un échec incompréhensible.
+  ///
+  /// [alanyaID] à zéro rend tout, trié : c'est le repli quand l'identifiant
+  /// n'est pas connu, et il vaut mieux essayer que ne rien proposer.
+  static List<RemoteArchive> candidatesFor(
+    int alanyaID,
+    List<RemoteArchive> all,
+  ) {
+    final prefix = 'alanya-backup-$alanyaID-';
+    return all
+        .where((a) => a.name.endsWith('.enc'))
+        .where((a) => alanyaID == 0 || a.name.startsWith(prefix))
+        .toList()
+      ..sort((a, b) => b.name.compareTo(a.name));
+  }
+
   /// Descriptif en clair de la dernière sauvegarde, ou `null` s'il n'y en a
   /// pas. Ne déchiffre rien et ne demande aucune clé.
   Future<BackupMeta?> readMeta(BackupTarget target, int alanyaID) async {
