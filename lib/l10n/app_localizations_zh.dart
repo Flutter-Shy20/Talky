@@ -169,16 +169,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLanguage => '语言';
 
   @override
-  String get settingsLangFr => '法语';
-
-  @override
-  String get settingsLangEn => '英语';
-
-  @override
-  String get settingsLangZh => '中文';
-
-  @override
   String get settingsLangSystem => '跟随系统';
+
+  @override
+  String get settingsSectionLanguages => '语言';
+
+  @override
+  String get settingsAppLanguage => '应用语言';
+
+  @override
+  String get settingsMessageTranslation => '消息翻译';
+
+  @override
+  String settingsLangSystemResolved(String language) {
+    return '跟随手机设置——当前为 $language';
+  }
+
+  @override
+  String get languageScreenHint => '此设置仅更改应用界面的语言，不会更改您收到的消息的语言。';
+
+  @override
+  String get languageSectionMessages => '消息';
 
   @override
   String get settingsMedia => '媒体';
@@ -2120,6 +2131,54 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get infoAction => '详情';
+
+  @override
+  String get reportAction => '举报';
+
+  @override
+  String get reportMessageTitle => '举报此消息';
+
+  @override
+  String get reportUserTitle => '举报此账号';
+
+  @override
+  String get reportSubtitle => '您的举报将发送给 ALANYA 团队。对方不会收到通知。';
+
+  @override
+  String get reportReasonHarassment => '骚扰或欺凌';
+
+  @override
+  String get reportReasonHate => '仇恨言论';
+
+  @override
+  String get reportReasonViolence => '暴力或威胁';
+
+  @override
+  String get reportReasonSexual => '色情内容';
+
+  @override
+  String get reportReasonScam => '诈骗';
+
+  @override
+  String get reportReasonSpam => '垃圾信息';
+
+  @override
+  String get reportReasonImpersonation => '冒充他人';
+
+  @override
+  String get reportReasonOther => '其他';
+
+  @override
+  String get reportNoteHint => '补充说明（选填）';
+
+  @override
+  String get reportSubmit => '发送举报';
+
+  @override
+  String get reportSent => '举报已发送，谢谢。';
+
+  @override
+  String get reportFailed => '发送失败，请重试。';
 
   @override
   String get cannotPlaceCallCheckInternet => '无法发起通话，请检查网络连接后重试。';
@@ -5727,6 +5786,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tripsTraceExpiredBody => '该行程的位置点已被清除。概要和时间线仍然可用。';
 
   @override
+  String get tripsTraceUnavailable => '轨迹无法加载';
+
+  @override
+  String get tripsTraceUnavailableBody => '无法加载该行程的位置点。它们并未被删除，请重试。';
+
+  @override
+  String get tripsTraceEmpty => '没有位置记录';
+
+  @override
+  String get tripsTraceEmptyBody => '该行程期间没有记录任何位置。概要和时间线仍然可用。';
+
+  @override
   String get tripsEventStarted => '已开始';
 
   @override
@@ -5830,6 +5901,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get deleteModel => '删除';
+
+  @override
+  String get modelBundled => '已内置于应用中';
 
   @override
   String downloadingModel(String language) {

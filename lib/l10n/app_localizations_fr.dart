@@ -170,16 +170,28 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsLanguage => 'Langue';
 
   @override
-  String get settingsLangFr => 'Français';
-
-  @override
-  String get settingsLangEn => 'Anglais';
-
-  @override
-  String get settingsLangZh => 'Chinois';
-
-  @override
   String get settingsLangSystem => 'Système';
+
+  @override
+  String get settingsSectionLanguages => 'Langues';
+
+  @override
+  String get settingsAppLanguage => 'Langue de l\'application';
+
+  @override
+  String get settingsMessageTranslation => 'Traduction des messages';
+
+  @override
+  String settingsLangSystemResolved(String language) {
+    return 'Suit le téléphone — actuellement $language';
+  }
+
+  @override
+  String get languageScreenHint =>
+      'La langue de l\'application. Elle ne change pas la langue des messages que vous recevez.';
+
+  @override
+  String get languageSectionMessages => 'Messages';
 
   @override
   String get settingsMedia => 'Médias';
@@ -2200,6 +2212,55 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get infoAction => 'Infos';
+
+  @override
+  String get reportAction => 'Signaler';
+
+  @override
+  String get reportMessageTitle => 'Signaler ce message';
+
+  @override
+  String get reportUserTitle => 'Signaler ce compte';
+
+  @override
+  String get reportSubtitle =>
+      'Votre signalement est transmis à l’équipe ALANYA. La personne concernée n’en est pas informée.';
+
+  @override
+  String get reportReasonHarassment => 'Harcèlement ou intimidation';
+
+  @override
+  String get reportReasonHate => 'Propos haineux';
+
+  @override
+  String get reportReasonViolence => 'Violence ou menaces';
+
+  @override
+  String get reportReasonSexual => 'Contenu sexuel';
+
+  @override
+  String get reportReasonScam => 'Arnaque ou fraude';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonImpersonation => 'Usurpation d’identité';
+
+  @override
+  String get reportReasonOther => 'Autre';
+
+  @override
+  String get reportNoteHint => 'Précision (facultatif)';
+
+  @override
+  String get reportSubmit => 'Envoyer le signalement';
+
+  @override
+  String get reportSent => 'Signalement transmis. Merci.';
+
+  @override
+  String get reportFailed => 'Envoi impossible. Réessayez.';
 
   @override
   String get cannotPlaceCallCheckInternet =>
@@ -5994,6 +6055,20 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les positions de ce trajet ont été purgées. Le résumé et la frise restent disponibles.';
 
   @override
+  String get tripsTraceUnavailable => 'Trace indisponible';
+
+  @override
+  String get tripsTraceUnavailableBody =>
+      'Impossible de charger les positions de ce trajet. Elles n\'ont pas été effacées — réessayez.';
+
+  @override
+  String get tripsTraceEmpty => 'Aucune position';
+
+  @override
+  String get tripsTraceEmptyBody =>
+      'Aucune position n\'a été enregistrée pendant ce trajet. Le résumé et la frise restent disponibles.';
+
+  @override
   String get tripsEventStarted => 'Départ';
 
   @override
@@ -6102,6 +6177,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get deleteModel => 'Supprimer';
+
+  @override
+  String get modelBundled => 'Inclus dans l’application';
 
   @override
   String downloadingModel(String language) {

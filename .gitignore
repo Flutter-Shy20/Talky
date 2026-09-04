@@ -44,6 +44,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+android/build/
+
+# Tuiles vectorielles téléchargées pour les essais cartographiques (~250 Mo)
+.tmp-pmtiles/
 
 DIAGNOSTIC_APPELS_ANDROID.md
 PLAN_ACTION_ANDROID_CALLS.md
@@ -51,3 +55,19 @@ lib.zip
 
 *.dumpsys.txt
 android/.kotlin/
+
+# LaTeX — sous-produits de compilation. Les sources .tex et les .pdf produits
+# restent suivis : ce sont eux qu'on lit et qu'on partage.
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.idx
+*.ilg
+*.ind
+*.lof
+*.lot
+*.out
+*.synctex.gz
+*.toc

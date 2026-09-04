@@ -100,6 +100,7 @@ import '../trips/trip_detail_screen.dart';
 import '../../core/utils/trip_payload.dart';
 import '../../widgets/chat/trip_message_card.dart';
 import '../../widgets/chat/translation_model_prompt.dart';
+import '../../widgets/report/report_sheet.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels

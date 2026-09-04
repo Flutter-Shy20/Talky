@@ -412,29 +412,47 @@ abstract class AppLocalizations {
   /// **'Langue'**
   String get settingsLanguage;
 
-  /// No description provided for @settingsLangFr.
-  ///
-  /// In fr, this message translates to:
-  /// **'Français'**
-  String get settingsLangFr;
-
-  /// No description provided for @settingsLangEn.
-  ///
-  /// In fr, this message translates to:
-  /// **'Anglais'**
-  String get settingsLangEn;
-
-  /// No description provided for @settingsLangZh.
-  ///
-  /// In fr, this message translates to:
-  /// **'Chinois'**
-  String get settingsLangZh;
-
   /// No description provided for @settingsLangSystem.
   ///
   /// In fr, this message translates to:
   /// **'Système'**
   String get settingsLangSystem;
+
+  /// No description provided for @settingsSectionLanguages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Langues'**
+  String get settingsSectionLanguages;
+
+  /// No description provided for @settingsAppLanguage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Langue de l\'application'**
+  String get settingsAppLanguage;
+
+  /// No description provided for @settingsMessageTranslation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction des messages'**
+  String get settingsMessageTranslation;
+
+  /// Sous-titre du mode « Système » : indique la langue effectivement résolue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suit le téléphone — actuellement {language}'**
+  String settingsLangSystemResolved(String language);
+
+  /// No description provided for @languageScreenHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'La langue de l\'application. Elle ne change pas la langue des messages que vous recevez.'**
+  String get languageScreenHint;
+
+  /// No description provided for @languageSectionMessages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages'**
+  String get languageSectionMessages;
 
   /// No description provided for @settingsMedia.
   ///
@@ -4023,6 +4041,102 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Infos'**
   String get infoAction;
+
+  /// Entrée du menu long-press d'un message et de la fiche contact.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signaler'**
+  String get reportAction;
+
+  /// No description provided for @reportMessageTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signaler ce message'**
+  String get reportMessageTitle;
+
+  /// No description provided for @reportUserTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signaler ce compte'**
+  String get reportUserTitle;
+
+  /// Rassure sur la confidentialité : sans cette phrase, on n'ose pas signaler quelqu'un avec qui on discute.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre signalement est transmis à l’équipe ALANYA. La personne concernée n’en est pas informée.'**
+  String get reportSubtitle;
+
+  /// No description provided for @reportReasonHarassment.
+  ///
+  /// In fr, this message translates to:
+  /// **'Harcèlement ou intimidation'**
+  String get reportReasonHarassment;
+
+  /// No description provided for @reportReasonHate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Propos haineux'**
+  String get reportReasonHate;
+
+  /// No description provided for @reportReasonViolence.
+  ///
+  /// In fr, this message translates to:
+  /// **'Violence ou menaces'**
+  String get reportReasonViolence;
+
+  /// No description provided for @reportReasonSexual.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contenu sexuel'**
+  String get reportReasonSexual;
+
+  /// No description provided for @reportReasonScam.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arnaque ou fraude'**
+  String get reportReasonScam;
+
+  /// No description provided for @reportReasonSpam.
+  ///
+  /// In fr, this message translates to:
+  /// **'Spam'**
+  String get reportReasonSpam;
+
+  /// No description provided for @reportReasonImpersonation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Usurpation d’identité'**
+  String get reportReasonImpersonation;
+
+  /// No description provided for @reportReasonOther.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autre'**
+  String get reportReasonOther;
+
+  /// No description provided for @reportNoteHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Précision (facultatif)'**
+  String get reportNoteHint;
+
+  /// No description provided for @reportSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le signalement'**
+  String get reportSubmit;
+
+  /// No description provided for @reportSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signalement transmis. Merci.'**
+  String get reportSent;
+
+  /// No description provided for @reportFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi impossible. Réessayez.'**
+  String get reportFailed;
 
   /// No description provided for @cannotPlaceCallCheckInternet.
   ///
@@ -10300,6 +10414,30 @@ abstract class AppLocalizations {
   /// **'Les positions de ce trajet ont été purgées. Le résumé et la frise restent disponibles.'**
   String get tripsTraceExpiredBody;
 
+  /// No description provided for @tripsTraceUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trace indisponible'**
+  String get tripsTraceUnavailable;
+
+  /// No description provided for @tripsTraceUnavailableBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les positions de ce trajet. Elles n\'ont pas été effacées — réessayez.'**
+  String get tripsTraceUnavailableBody;
+
+  /// No description provided for @tripsTraceEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune position'**
+  String get tripsTraceEmpty;
+
+  /// No description provided for @tripsTraceEmptyBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune position n\'a été enregistrée pendant ce trajet. Le résumé et la frise restent disponibles.'**
+  String get tripsTraceEmptyBody;
+
   /// No description provided for @tripsEventStarted.
   ///
   /// In fr, this message translates to:
@@ -10497,6 +10635,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Supprimer'**
   String get deleteModel;
+
+  /// Sous-titre du modèle anglais : livré avec ML Kit, ni téléchargeable ni supprimable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inclus dans l’application'**
+  String get modelBundled;
 
   /// No description provided for @downloadingModel.
   ///

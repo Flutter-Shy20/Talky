@@ -29,6 +29,7 @@ import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
 import '../../widgets/conversation_mute_sheet.dart';
 import '../../widgets/conversation_translate_sheet.dart';
+import '../../widgets/report/report_sheet.dart';
 
 /// Fiche détaillée d'un contact, réutilisable depuis :
 /// — l'en-tête d'une discussion 1-1
@@ -474,6 +475,13 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                 case 'delete':
                   _deleteConversation();
                   break;
+                case 'report':
+                  showReportSheet(
+                    context,
+                    targetType: 'user',
+                    targetId: widget.userId,
+                  );
+                  break;
               }
             },
             itemBuilder: (_) => [
@@ -481,6 +489,14 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                 PopupMenuItem(
                   value: 'block',
                   child: Text(_isBlocked ? context.l10n.unblock : context.l10n.commonBlock),
+                ),
+              // Bloquer et signaler répondent à deux besoins distincts : le
+              // premier me protège, le second prévient l'équipe. Les proposer
+              // côte à côte évite de croire que bloquer suffit à alerter.
+              if (!_isSelf)
+                PopupMenuItem(
+                  value: 'report',
+                  child: Text(context.l10n.reportAction),
                 ),
               if (_effectiveConvId != null) ...[
                 PopupMenuItem(
