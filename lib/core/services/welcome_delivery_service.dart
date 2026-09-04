@@ -72,14 +72,13 @@ class WelcomeDeliveryService {
         );
         return;
       case 'statuses':
-        // `isFirst` et non `false` : cet appel vise un onglet precis, il doit
-        // donc empiler -- mais en preservant la page racine, seule porteuse de
-        // la session. Le retour arriere revient a l'accueil au lieu de quitter.
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen(initialTab: 2)),
-          (route) => route.isFirst,
-        );
+        // On dépile jusqu'à l'accueil, puis on lui demande de changer d'onglet.
+        //
+        // Empiler un second `HomeScreen` laissait le premier monté : deux
+        // abonnements aux actions de notification, deux écouteurs d'appel, et
+        // chaque action traitée en double. Voir `HomeScreen.requestTab`.
+        Navigator.popUntil(context, (route) => route.isFirst);
+        HomeScreen.requestTab(2);
         return;
       case 'help':
         if (officialUserId != null && officialUserId > 0) {

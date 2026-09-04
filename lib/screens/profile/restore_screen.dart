@@ -75,6 +75,13 @@ class RestoreScreen extends StatefulWidget {
   final BackupTarget target;
   final BackupAnnouncement announcement;
 
+  /// Compte dont on restaure les sauvegardes.
+  ///
+  /// Sert à ne proposer que **les siennes** : un même téléphone peut porter
+  /// deux comptes Alanya, et désigner l'archive de l'autre donnerait un échec
+  /// de déchiffrement incompréhensible. Zéro rend tout, faute de mieux.
+  final int alanyaID;
+
   /// Appelé quand l'inscrit refuse, ou quand la restauration échoue et qu'il
   /// choisit de continuer sans. L'application poursuit son démarrage normal.
   final VoidCallback onSkip;
@@ -86,6 +93,7 @@ class RestoreScreen extends StatefulWidget {
     required this.target,
     required this.announcement,
     required this.onSkip,
+    this.alanyaID = 0,
   });
 
   @override
@@ -114,9 +122,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
     });
 
     try {
-      final archives = (await _target.list())
-          .where((a) => a.name.endsWith('.enc'))
-          .toList();
+      final archives = await _candidates(_target);
       if (archives.isEmpty) {
         throw const BackupFormatInvalid('aucune archive à la destination');
       }
@@ -124,10 +130,12 @@ class _RestoreScreenState extends State<RestoreScreen> {
       final work = Directory(
         p.join((await getTemporaryDirectory()).path, 'restore_work'),
       );
+      // La plus récente LISIBLE, et non la plus récente : c'est ce qui donne
+      // enfin un usage à la seconde version qu'on conserve depuis le début.
       final content = await BackupService(db: widget.db, keys: widget.keys)
-          .restore(
+          .restoreFirstReadable(
         target: _target,
-        archive: archives.first,
+        candidates: archives,
         workDir: work,
       );
 
@@ -177,8 +185,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
         _fail(l10n.restoreGoogleRefused);
         return;
       }
-      final archives =
-          (await drive.list()).where((a) => a.name.endsWith('.enc')).toList();
+      final archives = await _candidates(drive);
       if (archives.isEmpty) {
         // Distinguer « ce compte n'en contient pas » d'une panne : l'inscrit
         // s'est peut-être simplement trompé de compte Google.
@@ -223,6 +230,19 @@ class _RestoreScreenState extends State<RestoreScreen> {
     } catch (_) {
       _fail(l10n.restoreFailedMessage);
     }
+  }
+
+  /// Les archives à essayer, de la plus récente à la plus ancienne.
+  ///
+  /// Une archive **désignée à la main** échappe au filtre : l'inscrit a pointé
+  /// un fichier précis, peut-être renommé ou rapatrié d'un ordinateur. On
+  /// l'utilise tel quel, sans lui expliquer que son nom ne convient pas.
+  Future<List<RemoteArchive>> _candidates(BackupTarget target) async {
+    final all = await target.list();
+    if (target is PickedArchiveTarget) {
+      return all.where((a) => a.name.endsWith('.enc')).toList();
+    }
+    return BackupService.candidatesFor(widget.alanyaID, all);
   }
 
   void _fail(String message) {

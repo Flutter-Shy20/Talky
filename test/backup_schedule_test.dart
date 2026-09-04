@@ -302,4 +302,25 @@ void main() {
       }
     });
   });
+
+  group('changement de destination', () {
+    test('oublie la copie de secours, garde le reste', () {
+      // Le bandeau parle d'un échec survenu sous l'ANCIENNE destination : le
+      // laisser le ferait ressusciter après un aller-retour, sans qu'aucune
+      // tentative n'ait eu lieu entre-temps.
+      final avant = BackupState(
+        lastSuccessAt: DateTime.utc(2026, 8, 20),
+        lastAttemptAt: now,
+        consecutiveFailures: 3,
+        firstFailureAt: DateTime.utc(2026, 8, 25),
+        lastFallbackAt: now,
+      );
+      final apres = avant.withoutFallback();
+      expect(apres.lastFallbackAt, isNull);
+      expect(apres.lastSuccessAt, avant.lastSuccessAt);
+      expect(apres.consecutiveFailures, 3);
+      expect(apres.firstFailureAt, avant.firstFailureAt);
+      expect(apres.lastAttemptAt, now);
+    });
+  });
 }

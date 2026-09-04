@@ -74,6 +74,20 @@ class BackupState {
         lastFallbackAt: lastFallbackAt,
       );
 
+  /// Oublie la copie de secours, sans toucher au reste.
+  ///
+  /// Appelé quand l'inscrit change de destination : le bandeau parle d'un
+  /// échec survenu sous une autre destination, il n'a plus rien à annoncer.
+  /// Sans cela, un aller-retour Drive → appareil → Drive ressuscitait un
+  /// avertissement vieux de plusieurs semaines, sans qu'aucune tentative
+  /// n'ait eu lieu entre-temps.
+  BackupState withoutFallback() => BackupState(
+        lastSuccessAt: lastSuccessAt,
+        lastAttemptAt: lastAttemptAt,
+        consecutiveFailures: consecutiveFailures,
+        firstFailureAt: firstFailureAt,
+      );
+
   /// Drive était visé, il n'a pas répondu, une copie locale a été écrite.
   ///
   /// **Compté comme un échec**, et c'est tout l'intérêt : les données sont

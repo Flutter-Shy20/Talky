@@ -4839,6 +4839,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get backupSucceeded => 'Sauvegarde terminée';
 
   @override
+  String get backupAlreadyRunning => 'Une sauvegarde est déjà en cours.';
+
+  @override
   String get backupFailed => 'La sauvegarde a échoué';
 
   @override
