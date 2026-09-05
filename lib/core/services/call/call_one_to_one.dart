@@ -588,6 +588,7 @@ extension CallOneToOne on CallService {
     _pendingOffer = null;
     _currentCallId = null;
     _callKitCallId = null;
+    _serverCallIdKnown = false;
     _callDuration = 0;
     _isMuted = false;
     _isVideoOn = true;

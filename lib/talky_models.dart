@@ -1913,6 +1913,12 @@ class SocketEvents {
 
   // Appels 1-1 (Backend → Flutter)
   static const incomingCall  = 'incoming_call';
+  /// L'appel est créé et le destinataire sonne : { callId, targetId, isVideo }.
+  /// Émis à la seule socket de l'appelant, qui adopte alors l'identifiant du
+  /// serveur. Sans lui, il n'apprenait le sien qu'au décrochage — et tout
+  /// événement terminal reçu pendant la sonnerie était jeté faute de
+  /// correspondance.
+  static const callRinging   = 'call_ringing';
   static const callAnswered  = 'call_answered';
   static const callRejected  = 'call_rejected';
   static const callEnded     = 'call_ended';

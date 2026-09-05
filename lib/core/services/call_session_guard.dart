@@ -8,6 +8,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'audio_helper.dart';
 import 'call/background_media_rules.dart';
 import 'call/call_audio_routes.dart';
+import 'call/session_video_renderers.dart';
 import 'callkit_service.dart';
 
 enum SessionMode { audio, video }
@@ -303,6 +304,20 @@ class CallSessionGuard with WidgetsBindingObserver {
       _ensureAudioTrackActive();
       _maybeReplaceAudioIfNeeded();
       _applyLocalVideoPolicy();
+      // Rebranche ce qu'un passage par `detached` aurait coupé. Sans effet
+      // quand rien n'a été détaché : `syncMain` ignore ce qui n'a pas changé.
+      SessionVideoRenderers.instance.resync();
+    } else if (state == AppLifecycleState.detached) {
+      // L'activité est détruite — retour arrière, ou balayage depuis les
+      // applications récentes. Le moteur Flutter se détache, mais les rendus
+      // vidéo continuent d'être alimentés : la première image livrée après
+      // coup tue le processus. On coupe l'alimentation tant que le canal
+      // répond encore.
+      //
+      // Ce chemin ne devrait plus être emprunté pendant un appel vidéo, que le
+      // Picture-in-Picture retient désormais au premier plan. Il reste pour ce
+      // que le PiP ne couvre pas : l'appareil qui le refuse, et l'appel audio.
+      SessionVideoRenderers.instance.detachStreams();
     }
   }
 

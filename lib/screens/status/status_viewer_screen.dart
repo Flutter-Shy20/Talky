@@ -25,6 +25,26 @@ import '../../talky_models.dart';
 import 'status_views_screen.dart';
 import 'status_audio_view.dart';
 
+/// Ce qui peut retenir la lecture d'un statut.
+///
+/// Un booléen unique ne suffisait pas : six gestes le levaient et le
+/// baissaient sans savoir qui l'avait levé. Relâcher un appui long pendant
+/// qu'un like était en vol relançait la lecture que le like tenait en pause,
+/// et le `finally` du like la relançait à son tour sous un doigt encore posé.
+enum _PauseReason {
+  /// Doigt maintenu sur le statut.
+  hold,
+
+  /// Aller-retour réseau du like.
+  like,
+
+  /// Champ de réponse actif.
+  reply,
+
+  /// Enregistrement d'une réponse vocale.
+  recording,
+}
+
 class StatusViewerScreen extends StatefulWidget {
   final List<List<Statut>> contactGroups;
   final int startContactIndex;
@@ -52,7 +72,20 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   late int _itemIndex;
   late PageController _pageCtrl;
   late AnimationController _progress;
-  bool _paused = false;
+
+  /// Les raisons en cours de retenir la lecture. La lecture ne reprend que
+  /// lorsqu'il n'en reste aucune.
+  final Set<_PauseReason> _pauseReasons = {};
+  bool get _paused => _pauseReasons.isNotEmpty;
+
+  /// True quand la barre avance au rythme du lecteur, et non du minuteur fixe.
+  ///
+  /// Le type du statut ne suffit pas à le dire : une vidéo dont le
+  /// téléchargement ou l'initialisation a échoué retombe sur le minuteur.
+  /// L'ancienne reprise jugeait du seul type et n'armait donc rien pour elle —
+  /// un statut vidéo cassé restait à l'écran indéfiniment.
+  bool _mediaDrivenProgress = false;
+
   VideoPlayerController? _videoCtrl;
   ChewieController? _chewieCtrl;
   AudioPlayer? _audioPlayer;
@@ -91,7 +124,19 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
         if (s == AnimationStatus.completed) _next();
       });
     _replyController.addListener(_onReplyTextChanged);
+    // Toucher le champ met la lecture en pause ; seuls l'envoi d'une réponse
+    // et la fin d'un enregistrement la relançaient. Fermer le clavier sans
+    // rien envoyer laissait donc le statut en pause indéfiniment.
+    _replyFocus.addListener(_onReplyFocusChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadCurrent());
+  }
+
+  void _onReplyFocusChanged() {
+    if (_replyFocus.hasFocus) {
+      _pause(_PauseReason.reply);
+    } else {
+      _resume(_PauseReason.reply);
+    }
   }
 
   void _onReplyTextChanged() {
@@ -108,6 +153,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     _disposeMedia();
     _replyController.removeListener(_onReplyTextChanged);
     _replyController.dispose();
+    _replyFocus.removeListener(_onReplyFocusChanged);
     _replyFocus.dispose();
     super.dispose();
   }
@@ -225,10 +271,13 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     if (!mounted || seq != _loadSeq) return;
     setState(() {});
     _progress.duration = totalDuration;
-    // Texte / image : timer fixe. Vidéo / audio : barre pilotée par le lecteur.
-    if (!syncProgressFromMedia && !_paused) {
-      _progress.forward();
-    }
+    // Texte / image : minuteur fixe. Vidéo / audio prêt : barre pilotée par le
+    // lecteur. Le démarrage lui-même n'est plus décidé ici : cette méthode
+    // refusait de lancer la progression dès que `_paused` était vrai, sans
+    // jamais rien remettre à false — un statut chargé pendant qu'un like était
+    // en vol n'avait plus personne pour l'armer.
+    _mediaDrivenProgress = syncProgressFromMedia;
+    _applyPlayback();
   }
 
   void _onVideoTick() {
@@ -316,26 +365,57 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     _loadCurrent();
   }
 
-  void _setPaused(bool paused) {
-    setState(() => _paused = paused);
-    final s = _current;
-    final mediaDriven = s.type == 2 || s.type == 3;
-    if (paused) {
+  void _pause(_PauseReason raison) {
+    final etaitEnPause = _paused;
+    if (!_pauseReasons.add(raison) || etaitEnPause) return;
+    if (mounted) setState(() {});
+    _applyPlayback();
+  }
+
+  void _resume(_PauseReason raison) {
+    if (!_pauseReasons.remove(raison)) return;
+    // Une autre raison tient encore : ce n'est pas à celle-ci de relancer.
+    if (_paused) return;
+    if (mounted) setState(() {});
+    _applyPlayback();
+  }
+
+  /// Seul endroit qui démarre ou arrête la lecture, et il le décide depuis
+  /// l'état réel — pas depuis le souvenir de l'événement qui l'a appelé.
+  ///
+  /// Appelé aussi à la fin de [_loadCurrent] : un lecteur qui vient d'être
+  /// prêt doit respecter une pause posée pendant son chargement, et un statut
+  /// chargé alors que la pause vient d'être levée doit démarrer.
+  void _applyPlayback() {
+    if (!mounted) return;
+
+    if (_paused) {
       _progress.stop();
       _videoCtrl?.pause();
       _audioPlayer?.pause();
-    } else {
-      if (!mediaDriven) _progress.forward();
-      _videoCtrl?.play();
-      _audioPlayer?.play();
+      return;
     }
+
+    _videoCtrl?.play();
+    _audioPlayer?.play();
+    // Barre pilotée par le lecteur : c'est lui qui fait avancer le fil.
+    if (_mediaDrivenProgress) return;
+
+    // Déjà au bout : ce statut a fini son temps pendant la pause. Un
+    // `forward()` depuis 1.0 ne fait rien ET ne réémet pas `completed` — le
+    // fil resterait figé pour de bon, faute d'un dernier avancement.
+    if (_progress.value >= 1.0) {
+      _next();
+      return;
+    }
+    _progress.forward();
   }
 
   Future<void> _toggleLike() async {
     HapticFeedback.lightImpact();
     final provider = context.read<StatusProvider>();
     final id = _current.id;
-    _setPaused(true);
+    _pause(_PauseReason.like);
     final future = provider.toggleLike(id);
     setState(() {});
     try {
@@ -343,7 +423,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     } finally {
       if (mounted) {
         setState(() {});
-        _setPaused(false);
+        _resume(_PauseReason.like);
       }
     }
   }
@@ -402,7 +482,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       if (!mounted) return;
       _replyController.clear();
       _replyFocus.unfocus();
-      _setPaused(false);
+      _resume(_PauseReason.reply);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.replySent),
@@ -421,7 +501,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   Future<void> _startRecordingReply() async {
     if (_sendingReply || _isRecording) return;
     if (!await _recorder.hasPermission()) return;
-    _setPaused(true);
+    _pause(_PauseReason.recording);
     _replyFocus.unfocus();
     final dir = await getTemporaryDirectory();
     final path =
@@ -455,7 +535,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
         /* fichier temporaire déjà absent — ignoré */
       }
     }
-    if (mounted) _setPaused(false);
+    if (mounted) _resume(_PauseReason.recording);
   }
 
   Future<void> _sendVoiceReply(File file, int seconds) async {
@@ -494,7 +574,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       );
 
       if (!mounted) return;
-      _setPaused(false);
+      _resume(_PauseReason.recording);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.replySent),
@@ -578,8 +658,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                       child: GestureDetector(
                         behavior: HitTestBehavior.translucent,
                         onTap: _prev,
-                        onLongPressStart: (_) => _setPaused(true),
-                        onLongPressEnd: (_) => _setPaused(false),
+                        onLongPressStart: (_) => _pause(_PauseReason.hold),
+                        onLongPressEnd: (_) => _resume(_PauseReason.hold),
                       ),
                     ),
                     const Expanded(child: SizedBox.expand()),
@@ -588,8 +668,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                       child: GestureDetector(
                         behavior: HitTestBehavior.translucent,
                         onTap: _next,
-                        onLongPressStart: (_) => _setPaused(true),
-                        onLongPressEnd: (_) => _setPaused(false),
+                        onLongPressStart: (_) => _pause(_PauseReason.hold),
+                        onLongPressEnd: (_) => _resume(_PauseReason.hold),
                       ),
                     ),
                   ],
@@ -601,8 +681,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                       child: GestureDetector(
                         behavior: HitTestBehavior.translucent,
                         onTap: _prev,
-                        onLongPressStart: (_) => _setPaused(true),
-                        onLongPressEnd: (_) => _setPaused(false),
+                        onLongPressStart: (_) => _pause(_PauseReason.hold),
+                        onLongPressEnd: (_) => _resume(_PauseReason.hold),
                       ),
                     ),
                     Expanded(
@@ -610,8 +690,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                       child: GestureDetector(
                         behavior: HitTestBehavior.translucent,
                         onTap: _next,
-                        onLongPressStart: (_) => _setPaused(true),
-                        onLongPressEnd: (_) => _setPaused(false),
+                        onLongPressStart: (_) => _pause(_PauseReason.hold),
+                        onLongPressEnd: (_) => _resume(_PauseReason.hold),
                       ),
                     ),
                   ],
@@ -714,7 +794,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                           style: context.text.bodyLarge,
                           minLines: 1,
                           maxLines: 4,
-                          onTap: () => _setPaused(true),
+                          onTap: () => _pause(_PauseReason.reply),
                           textInputAction: TextInputAction.send,
                           onSubmitted: (_) {
                             if (canSend && _hasReplyText) _sendReply();

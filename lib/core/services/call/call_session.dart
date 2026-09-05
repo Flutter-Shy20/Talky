@@ -8,6 +8,9 @@ extension CallSession on CallService {
   String _ensureCallId() {
     if (_currentCallId == null || _currentCallId!.isEmpty) {
       _currentCallId = '${DateTime.now().millisecondsSinceEpoch}';
+      // Fabriqué, donc inconnu du serveur : tant qu'il n'aura pas annoncé le
+      // sien, les gardes de callId n'ont rien à comparer.
+      _serverCallIdKnown = false;
     }
     _callKitCallId = _currentCallId;
     return _currentCallId!;
@@ -20,6 +23,9 @@ extension CallSession on CallService {
     bool startCallKit = true,
   }) async {
     if (kIsWeb) return;
+    // Retenu avant `_ensureCallId`, qui va le réécrire : sur un refus, c'est le
+    // seul moyen de retrouver sous quel identifiant la session est tenue.
+    final tenuAvant = _callKitCallId;
     final callId = _ensureCallId();
     final pris = await CallSessionGuard.instance.acquire(
       mode: isVideo ? SessionMode.video : SessionMode.audio,
@@ -41,6 +47,17 @@ extension CallSession on CallService {
     if (!pris) {
       // Une autre session tient déjà le garde. On ne lie pas les rendus et on
       // ne réclame pas le mode image dans l'image : ils appartiennent à l'autre.
+      //
+      // Mais `_ensureCallId` a déjà réécrit `_callKitCallId`, et le laisser sur
+      // un identifiant que le garde ne connaît pas orphelinerait la session.
+      // C'est le cas d'un appel à deux converti en appel à trois : le garde tient
+      // l'appel d'origine, `acceptConferenceInvite` réclame la session sous
+      // l'identifiant de la conférence et se la voit refuser. `_releaseCallSession`
+      // demandait ensuite de rendre cet identifiant-là, ne le reconnaissait pas et
+      // repartait sans rien rendre — service au premier plan, wakelock, entrée
+      // CallKit et éligibilité au Picture-in-Picture survivaient à l'appel, si
+      // bien que quitter l'application ouvrait ensuite une vignette vide.
+      _callKitCallId = tenuAvant;
       debugPrint('[CallService] ⛔ session média refusée pour $callId');
       return;
     }

@@ -47,18 +47,32 @@ bool endsCurrentCall({
 /// `call_rejected`, `call_failed`, `call_error` : événements terminaux d'un
 /// appel **sortant**. Ils n'ont de sens que pendant qu'on en passe un, et que
 /// pour celui-là.
+///
+/// [currentCallIdIsLocal] dit que `currentCallId` est l'horodatage fabriqué par
+/// `_ensureCallId()`, et non l'identifiant du serveur. Comparer les deux ne peut
+/// alors qu'échouer, et l'échec coûtait l'appel : un refus arrivé pendant la
+/// sonnerie — avant `call_answered`, seul endroit où l'appelant adoptait
+/// l'identifiant serveur — était systématiquement jeté. L'appelant continuait
+/// d'entendre sa sonnerie de retour jusqu'au filet des 45 secondes, qui
+/// annonçait « pas de réponse » sur un appel pourtant refusé.
+///
+/// Le serveur annonce désormais son identifiant dès la sonnerie (`call_ringing`)
+/// et ce cas ne se présente plus ; il reste pour le parc encore servi par une
+/// instance plus ancienne. Il n'y a jamais qu'un seul appel sortant à la fois :
+/// le statut suffit à le désigner.
 bool acceptsOutgoingTerminalEvent({
   required String callStatusName,
   String? eventCallId,
   String? currentCallId,
+  bool currentCallIdIsLocal = false,
 }) {
   if (callStatusName != 'outgoing' && callStatusName != 'connecting') {
     return false;
   }
   if (eventCallId == null || eventCallId.isEmpty) return true;
-  return currentCallId == null ||
-      currentCallId.isEmpty ||
-      eventCallId == currentCallId;
+  if (currentCallId == null || currentCallId.isEmpty) return true;
+  if (currentCallIdIsLocal) return true;
+  return eventCallId == currentCallId;
 }
 
 /// `group_call_ended` : ne démonte le maillage que s'il désigne la salle où

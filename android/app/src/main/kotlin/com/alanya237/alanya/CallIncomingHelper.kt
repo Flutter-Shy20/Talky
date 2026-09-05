@@ -90,6 +90,7 @@ object CallIncomingHelper {
             listChoice?.second ?: resolveNativeRingtoneName(context)
         }
         val bundle = buildIncomingBundle(
+            context,
             data,
             if (enCommunication) "silence" else ringtonePath,
             pleinEcran = !enCommunication,
@@ -334,7 +335,25 @@ object CallIncomingHelper {
         }
     }
 
+    /**
+     * Couleur du texte de l'écran plein écran, au format attendu par
+     * `Color.parseColor`.
+     *
+     * Résolue depuis les ressources et non codée en dur : le layout
+     * (res/layout/activity_callkit_incoming.xml) tire ses couleurs de
+     * values/ et values-night/, et le plugin repeint le texte par-dessus.
+     * Passer une constante ferait lire du texte sombre sur notre dégradé de
+     * nuit, ou l'inverse. Même règle côté Dart (`_callkitTextColor`).
+     */
+    private fun couleurTexte(context: Context): String =
+        String.format(
+            java.util.Locale.US,
+            "#%08X",
+            context.getColor(R.color.callkit_on_background),
+        )
+
     private fun buildIncomingBundle(
+        context: Context,
         data: Map<String, String>,
         ringtonePath: String = "system_ringtone_default",
         pleinEcran: Boolean = true,
@@ -390,7 +409,11 @@ object CallIncomingHelper {
                 // NB : passer "" ne rend PAS muet — le plugin retombe alors sur
                 // la sonnerie système.
                 "ringtonePath" to ringtonePath,
-                "backgroundColor" to "#0955fa",
+                // Transparent : le dégradé de l'écran plein écran appartient au
+                // layout (res/layout/activity_callkit_incoming.xml), que cet
+                // aplat recouvrirait. Voir `_callkitBackgroundColor` côté Dart.
+                "backgroundColor" to "#00000000",
+                "textColor" to couleurTexte(context),
                 "actionColor" to "#4CAF50",
                 "incomingCallNotificationChannelName" to "Appels entrants",
                 "missedCallNotificationChannelName" to "Appels manqués",

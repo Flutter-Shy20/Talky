@@ -30,6 +30,7 @@ object PipBridge {
     private const val CHANNEL = "com.alanya237.alanya/pip"
 
     private var channel: MethodChannel? = null
+    private var activity: Activity? = null
 
     /** Un appel vidéo est en cours : quitter l'application doit passer en PiP. */
     private var eligible = false
@@ -37,13 +38,19 @@ object PipBridge {
     private val supported: Boolean
         get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
 
+    /** L'auto-entrée, qui couvre tous les chemins de sortie, demande l'API 31. */
+    private val autoEnterSupported: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
     fun attach(messenger: BinaryMessenger, activity: Activity) {
+        this.activity = activity
         channel = MethodChannel(messenger, CHANNEL).also { ch ->
             ch.setMethodCallHandler { call, result ->
                 when (call.method) {
                     "setEligible" -> {
                         eligible = call.argument<Boolean>("eligible") ?: false
                         Log.d(TAG, "éligible=$eligible")
+                        appliquerParametres()
                         result.success(supported)
                     }
                     "enterNow" -> result.success(enterPip(activity))
@@ -57,18 +64,57 @@ object PipBridge {
     fun detach() {
         channel?.setMethodCallHandler(null)
         channel = null
+        // Sans remettre les paramètres : `detach` est appelée depuis `onDestroy`,
+        // où l'activité n'accepte plus rien. L'éligibilité meurt avec elle.
+        activity = null
         eligible = false
     }
 
     /**
-     * Bouton Accueil ou geste de sortie, l'activité étant encore au premier
-     * plan. C'est le seul moment où Android accepte d'ouvrir un PiP : passé
-     * `onPause`, `enterPictureInPictureMode` est refusé.
+     * Déclare à Android que l'activité doit basculer d'elle-même en vignette.
      *
-     * Tous les chemins de sortie ne passent pas par ici — la vue des
-     * applications récentes, notamment, n'appelle pas `onUserLeaveHint`. Un
-     * appel non converti en PiP retombe simplement sur le comportement
-     * d'arrière-plan ordinaire.
+     * `onUserLeaveHint` ne couvre que le bouton Accueil. Le retour arrière ne
+     * passe pas par lui — il *termine* l'activité — pas plus que la vue des
+     * applications récentes. L'appel vidéo mourait donc avec l'activité, et la
+     * première image livrée après le détachement du moteur Flutter emportait le
+     * processus (« FlutterJNI is not attached to native »).
+     *
+     * `setAutoEnterEnabled` renverse la charge : c'est le système qui ouvre la
+     * vignette dès que l'activité passerait en arrière-plan, quel que soit le
+     * chemin emprunté. En dessous de l'API 31, le relais est pris par
+     * `onUserLeaveHint` pour l'Accueil et par `SystemPip.didPopRoute` côté
+     * Flutter pour le retour arrière.
+     */
+    private fun appliquerParametres() {
+        if (!autoEnterSupported) return
+        val act = activity ?: return
+        try {
+            act.setPictureInPictureParams(construireParams(autoEnter = eligible))
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "auto-entrée en PiP refusée: ${e.message}")
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "paramètres de PiP refusés: ${e.message}")
+        }
+    }
+
+    private fun construireParams(autoEnter: Boolean): PictureInPictureParams {
+        val builder = PictureInPictureParams.Builder()
+            // 16:9 : le format d'une vidéo d'appel. Android borne de toute
+            // façon le ratio entre 1:2.39 et 2.39:1 et refuse au-delà.
+            .setAspectRatio(Rational(16, 9))
+        if (autoEnterSupported) builder.setAutoEnterEnabled(autoEnter)
+        return builder.build()
+    }
+
+    /**
+     * Bouton Accueil ou geste de sortie, l'activité étant encore au premier
+     * plan. Sans auto-entrée, c'est le seul moment où Android accepte d'ouvrir
+     * un PiP : passé `onPause`, `enterPictureInPictureMode` est refusé.
+     *
+     * Tous les chemins de sortie ne passent pas par ici — ni le retour arrière,
+     * ni la vue des applications récentes. Sur API 31+, `setAutoEnterEnabled` a
+     * déjà tout couvert et cet appel ne fait que devancer le système ; en
+     * dessous, le retour arrière est rattrapé côté Flutter.
      */
     fun onUserLeaveHint(activity: Activity) {
         if (!eligible) return
@@ -79,12 +125,7 @@ object PipBridge {
         if (!supported) return false
         if (activity.isInPictureInPictureMode) return true
         return try {
-            val params = PictureInPictureParams.Builder()
-                // 16:9 : le format d'une vidéo d'appel. Android borne de toute
-                // façon le ratio entre 1:2.39 et 2.39:1 et refuse au-delà.
-                .setAspectRatio(Rational(16, 9))
-                .build()
-            activity.enterPictureInPictureMode(params)
+            activity.enterPictureInPictureMode(construireParams(autoEnter = eligible))
         } catch (e: IllegalStateException) {
             // Appareil ou profil où le PiP est désactivé, activité déjà en
             // pause : l'appel continue, sans fenêtre.

@@ -58,7 +58,7 @@ extension CallGroup on CallService {
       _startDurationTimer();
       _startSpeakingDetection(groupMode: true);
       if (!kIsWeb) {
-        _currentCallId = 'group_$roomId';
+        _adoptServerCallId('group_$roomId');
         await _acquireCallSession(
           isVideo: isVideo,
           displayName: LocaleController.instance.l10n.groupCall,
@@ -153,7 +153,7 @@ extension CallGroup on CallService {
       _startDurationTimer();
       _startSpeakingDetection(groupMode: true);
       if (!kIsWeb) {
-        _currentCallId = 'group_$roomId';
+        _adoptServerCallId('group_$roomId');
         await _acquireCallSession(
           isVideo: isVideo,
           displayName: LocaleController.instance.l10n.groupCall,

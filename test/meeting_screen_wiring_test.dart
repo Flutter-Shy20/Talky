@@ -92,6 +92,57 @@ void main() {
     });
   });
 
+  group('ouverture immédiate d’une réunion créée', () {
+    final service =
+        File('lib/core/services/meeting_service.dart').readAsStringSync();
+    final liste =
+        File('lib/screens/meetings/meets_screen.dart').readAsStringSync();
+    final corpsCreation = service.substring(
+      service.indexOf('Future<void> createAndJoin('),
+      service.indexOf('Future<void> _fermerReunionAbandonnee('),
+    );
+
+    test('l’écran est poussé sans attendre la création', () {
+      // Trois requêtes, l'ouverture du capteur vidéo et un aller-retour socket
+      // se tenaient entre le clic et le premier pixel.
+      expect(liste.contains('await meetingService.createAndJoin('), isFalse,
+          reason: 'attendre la création remet le réseau devant l’affichage');
+      expect(liste.contains('await meetingService.navigateToMeetingUi(context)'),
+          isTrue);
+    });
+
+    test('« joining » est posé avant le premier await', () {
+      // La route est poussée juste après l'appel, dans le même tour de boucle :
+      // le statut doit déjà dire que la réunion est active, sinon
+      // `navigateToMeetingUi` refuse d'ouvrir l'écran.
+      final poseStatut = corpsCreation.indexOf('_status = MeetingStatus.joining');
+      expect(poseStatut, greaterThanOrEqualTo(0));
+      expect(corpsCreation.indexOf('await '), greaterThan(poseStatut));
+    });
+
+    test('la caméra s’ouvre en parallèle des requêtes, pas après', () {
+      final medias = corpsCreation.indexOf('prepareLocalMedia(');
+      final creation = corpsCreation.indexOf('_apiClient.createMeeting(');
+      expect(medias, greaterThanOrEqualTo(0));
+      expect(creation, greaterThan(medias),
+          reason: 'getUserMedia n’a pas besoin de connaître la réunion');
+      // Et une seule acquisition : `_joinRoom` réclame la même.
+      expect(service.contains('_mediasEnVol'), isTrue);
+    });
+
+    test('une création abandonnée ne ressuscite pas la session', () {
+      // Le bouton « raccrocher » existe désormais pendant que la création est
+      // encore en vol. Sans ces constats, elle réécrivait ce que le nettoyage
+      // venait de solder : une réunion sans écran, tenant caméra et micro.
+      expect(service.contains('_generation++'), isTrue);
+      expect(
+        RegExp(r'generation != _generation').allMatches(corpsCreation).length,
+        3,
+        reason: 'un constat après chacun des trois points de reprise',
+      );
+    });
+  });
+
   group('câblage de l’écran de détail', () {
     final detail = File('lib/screens/meetings/meeting_detail_screen.dart')
         .readAsStringSync();

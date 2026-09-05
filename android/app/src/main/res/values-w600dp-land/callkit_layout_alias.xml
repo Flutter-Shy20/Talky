@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Voir values/callkit_layout_alias.xml : cette configuration est celle
+         que la librairie fournit aussi, il faut donc la reprendre ici. -->
+    <item name="activity_callkit_incoming" type="layout">@layout/callkit_incoming_content</item>
+</resources>

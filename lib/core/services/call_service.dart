@@ -120,6 +120,25 @@ class CallService extends ChangeNotifier {
   /// donc conservé ici, et c'est lui qu'on lui présente pour fermer l'entrée.
   String? _callKitCallId;
 
+  /// Vrai dès que `_currentCallId` porte l'identifiant attribué par le serveur.
+  ///
+  /// Faux tant que l'appel sortant n'a que l'horodatage de `_ensureCallId()`.
+  /// Aucune comparaison de callId ne peut alors rien conclure — et les gardes
+  /// terminales, qui en tiraient un refus, jetaient le refus du correspondant
+  /// pendant toute la sonnerie. Elles s'en tiennent au statut dans ce cas.
+  bool _serverCallIdKnown = false;
+
+  /// Pose l'identifiant que le serveur a attribué à l'appel.
+  ///
+  /// `_callKitCallId` n'est pas touché : CallKit et la couche native ne
+  /// connaissent que celui sous lequel l'entrée a été ouverte, et c'est lui
+  /// qu'il faudra leur présenter pour la fermer.
+  void _adoptServerCallId(String? id) {
+    final identifiant = id?.trim() ?? '';
+    _currentCallId = identifiant.isEmpty ? null : identifiant;
+    _serverCallIdKnown = identifiant.isNotEmpty;
+  }
+
   bool _callEndedByUs = false;
 
   /// Teardown en cours (endCall / terminate) — empêche un 2ᵉ `end_call`

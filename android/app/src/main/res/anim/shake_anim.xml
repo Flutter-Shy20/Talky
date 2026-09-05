@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Neutralise le tremblement du bouton « Accepter ».
+
+  `CallkitIncomingActivity.animateAcceptCall()` charge `R.anim.shake_anim`
+  sans condition ; ce nom est donc celui du plugin, redéfini ici (le module
+  applicatif prime sur la librairie) pour rendre une animation vide. Notre
+  `CallActionButton` ne tremble pas.
+-->
+<rotate xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="0"
+    android:fromDegrees="0"
+    android:pivotX="50%"
+    android:pivotY="50%"
+    android:toDegrees="0" />

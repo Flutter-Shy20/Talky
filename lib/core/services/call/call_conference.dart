@@ -74,7 +74,7 @@ extension CallConference on CallService {
       _startDurationTimer();
       _startSpeakingDetection(groupMode: true);
       if (!kIsWeb) {
-        _currentCallId = sessionId;
+        _adoptServerCallId(sessionId);
         await _acquireCallSession(
           isVideo: _isVideo,
           displayName: LocaleController.instance.l10n.groupCall,

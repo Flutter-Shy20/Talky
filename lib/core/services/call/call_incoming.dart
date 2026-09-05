@@ -51,7 +51,7 @@ extension CallIncoming on CallService {
     _remoteUserName = callerName;
     _remoteUserPhoto = normalizeBackendUrl(callerPhoto);
     _isVideo = isVideo;
-    _currentCallId = callId.isNotEmpty ? callId : null;
+    _adoptServerCallId(callId);
     _autoAnswerOnNextIncoming = true;
     _autoAnswerCallerId = callerId;
     _isAutoAnsweringFromPush = true;
@@ -285,7 +285,7 @@ extension CallIncoming on CallService {
     _remoteUserName = callerName;
     _remoteUserPhoto = normalizeBackendUrl(callerPhoto);
     _isVideo = isVideo;
-    _currentCallId = callId.isNotEmpty ? callId : null;
+    _adoptServerCallId(callId);
 
     final isConf = isConferenceCallIncoming(
       sessionKind: sessionKind,
@@ -586,7 +586,18 @@ extension CallIncoming on CallService {
         _status == CallStatus.reconnecting) {
       // `id` peut venir du serveur (FCM call_ended) comme de CallKit : sur un
       // appel sortant ce sont deux identifiants différents.
-      if (id.isEmpty || _matchesCurrentCallId(id)) {
+      // Troisième terme : sortant dont le serveur n'a pas encore annoncé
+      // l'identifiant — ni `_currentCallId` ni `_callKitCallId` ne peuvent
+      // désigner l'appel 2169 dont parle le push, et le refus de l'appelé
+      // n'arrivait donc jamais jusqu'au teardown.
+      if (id.isEmpty ||
+          _matchesCurrentCallId(id) ||
+          acceptsOutgoingTerminalEvent(
+            callStatusName: _status.name,
+            eventCallId: id,
+            currentCallId: _currentCallId,
+            currentCallIdIsLocal: !_serverCallIdKnown,
+          )) {
         await endCall();
         return;
       }

@@ -141,6 +141,50 @@ void main() {
         isTrue,
       );
     });
+
+    test('identifiant local seulement : le statut suffit', () {
+      // Le refus de l'appelé porte le callId serveur ; l'appelant n'a encore
+      // que l'horodatage de `_ensureCallId()`. Les comparer ne peut qu'échouer,
+      // et l'échec laissait la sonnerie de retour tourner jusqu'au « pas de
+      // réponse » du filet des 45 secondes.
+      expect(
+        acceptsOutgoingTerminalEvent(
+          callStatusName: 'connecting',
+          eventCallId: '2169',
+          currentCallId: '1788535682198',
+          currentCallIdIsLocal: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('identifiant local : le statut reste souverain', () {
+      for (final status in ['connected', 'idle', 'incoming', 'joining']) {
+        expect(
+          acceptsOutgoingTerminalEvent(
+            callStatusName: status,
+            eventCallId: '2169',
+            currentCallId: '1788535682198',
+            currentCallIdIsLocal: true,
+          ),
+          isFalse,
+          reason: 'statut $status',
+        );
+      }
+    });
+
+    test('identifiant serveur adopté : la comparaison reprend ses droits', () {
+      expect(
+        acceptsOutgoingTerminalEvent(
+          callStatusName: 'connecting',
+          eventCallId: '2041',
+          currentCallId: '2169',
+          currentCallIdIsLocal: false,
+        ),
+        isFalse,
+        reason: 'une fois call_ringing reçu, un refus tardif reste sans effet',
+      );
+    });
   });
 
   group('group_call_ended (B5)', () {

@@ -269,7 +269,10 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
             0;
         final myAvatar =
             Provider.of<AuthProvider>(context, listen: false).currentUser?.avatarUrl;
-        final isOrganiser = meeting?.idOrganiser == myId;
+        // Pendant la création, la réunion n'est pas encore revenue du serveur —
+        // mais on sait déjà que c'est la nôtre. Sans ça, le bouton « terminer
+        // pour tous » apparaissait après coup, à la place d'un autre.
+        final isOrganiser = meetingService.idOrganiseurEnCours == myId;
 
         final localId = meetingService.myId ?? myId.toString();
         final focusedId = _focusedParticipantId;
@@ -337,7 +340,13 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                             Row(
                               children: [
                                 Text(
-                                  meetingService.formattedDuration,
+                                  // L'écran s'ouvre désormais dès le clic, la
+                                  // salle n'est rejointe qu'ensuite : un
+                                  // chronomètre figé à 00:00 laisserait croire
+                                  // à un écran mort.
+                                  meetingService.isJoining
+                                      ? context.l10n.connecting2
+                                      : meetingService.formattedDuration,
                                   style: const TextStyle(
                                       color: Colors.white54, fontSize: 13),
                                 ),
@@ -345,7 +354,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                 // Réunion audio : pas de caméra à changer. Le
                                 // bouton restait affiché et inerte — le lobby,
                                 // lui, testait déjà `typeMedia`.
-                                if (afficheCommandesCamera(meeting?.typeMedia))
+                                if (afficheCommandesCamera(
+                                    meetingService.typeMediaEnCours))
                                   IconButton(
                                     icon: const Icon(
                                         CupertinoIcons.switch_camera,
@@ -456,7 +466,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                             ),
                             // Même raison qu'en haut de l'écran : sans piste
                             // vidéo, `toggleVideo` sort sans rien faire.
-                            if (afficheCommandesCamera(meeting?.typeMedia))
+                            if (afficheCommandesCamera(
+                                meetingService.typeMediaEnCours))
                               _buildControlBtn(
                                 icon: meetingService.isVideoOff
                                     ? CupertinoIcons.video_camera

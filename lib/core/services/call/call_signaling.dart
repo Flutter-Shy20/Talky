@@ -81,7 +81,7 @@ extension CallSignaling on CallService {
       _pendingOffer = Map<String, dynamic>.from(offer);
       // Appel confirmé vivant par le socket → plus besoin du filet d'attente d'offre.
       _cancelAwaitingOfferTimeout();
-      _currentCallId = incomingCallId;
+      _adoptServerCallId(incomingCallId);
       _status = CallStatus.incoming;
       debugPrint('[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
 
@@ -165,6 +165,51 @@ extension CallSignaling on CallService {
       }
     });
 
+    // Le serveur a créé l'appel et le destinataire sonne : il nous annonce
+    // l'identifiant sous lequel il en parlera désormais.
+    //
+    // C'est le seul moment où l'appelant peut l'apprendre avant le décrochage,
+    // et donc la seule façon pour lui de reconnaître un refus reçu pendant la
+    // sonnerie. Jusqu'ici, `_currentCallId` restait l'horodatage de
+    // `_ensureCallId()` : le refus du correspondant était jeté, le ringback
+    // continuait, et le filet des 45 secondes concluait « pas de réponse ».
+    //
+    // CallKit n'est pas suivi : son entrée reste ouverte sous l'identifiant
+    // fabriqué, conservé dans `_callKitCallId`.
+    _apiClient.onSocketEvent(SocketEvents.callRinging, (data) async {
+      final serverCallId = (data is Map ? data['callId'] : null)?.toString();
+      if (_status != CallStatus.outgoing && _status != CallStatus.connecting) {
+        debugPrint('[CallService] 🛡 call_ringing ignoré: status=$_status');
+        return;
+      }
+      if (!shouldAdoptServerCallId(
+        serverCallId: serverCallId,
+        currentCallId: _currentCallId,
+      )) {
+        return;
+      }
+      debugPrint(
+        '[CallService] 📞 call_ringing → callId serveur adopté: '
+        '$_currentCallId → $serverCallId (CallKit reste sur $_callKitCallId)',
+      );
+      _adoptServerCallId(serverCallId);
+      // Un état terminal a pu être écrit sous cet identifiant pendant qu'on
+      // l'ignorait — un refus très rapide, ou l'isolate FCM d'un push arrivé
+      // avant nous. On ne le découvrait jamais : le registre était interrogé
+      // sur une clé que personne n'écrivait.
+      if (await EndedCallRegistry.isEnded(serverCallId!)) {
+        debugPrint('[CallService] 🛡 call_ringing: $serverCallId déjà terminal → fin');
+        await notifyCallEndedFromExternal(callId: serverCallId);
+        return;
+      }
+      if (!kIsWeb) {
+        unawaited(persistOutgoingSnapshot(
+          phase: 'connecting',
+          serverCallId: serverCallId,
+        ));
+      }
+    });
+
     // Appel accepté par l'autre
     _apiClient.onSocketEvent(SocketEvents.callAnswered, (data) async {
       debugPrint('[CallService] 📞 call_answered reçu: $data');
@@ -212,7 +257,7 @@ extension CallSignaling on CallService {
             '[CallService] callId serveur adopté: $_currentCallId → $serverCallId '
             '(CallKit reste sur $_callKitCallId)',
           );
-          _currentCallId = serverCallId;
+          _adoptServerCallId(serverCallId);
         }
         unawaited(persistOutgoingSnapshot(
           phase: 'connected',
@@ -243,6 +288,7 @@ extension CallSignaling on CallService {
         callStatusName: _status.name,
         eventCallId: callId,
         currentCallId: _currentCallId,
+        currentCallIdIsLocal: !_serverCallIdKnown,
       )) {
         debugPrint('[CallService] 🛡 call_rejected ignoré: status=$_status callId=$callId');
         return;
@@ -306,12 +352,21 @@ extension CallSignaling on CallService {
       // le faisait pas. Le serveur émet `call_ended` depuis treize endroits —
       // fin, refus, grâce de déconnexion, resume_ack_timeout, transfert — et un
       // événement en retard raccrochait l'appel suivant.
+      // Second terme : appel sortant dont le serveur n'a pas encore annoncé
+      // l'identifiant. `endsCurrentCall` ne compare alors qu'un horodatage
+      // fabriqué, et son refus laissait la sonnerie de retour tourner.
       if (!endsCurrentCall(
-        eventCallId: callId,
-        currentCallId: _currentCallId,
-        confSessionId: _confSessionId,
-        groupRoomId: _groupRoomId,
-      )) {
+            eventCallId: callId,
+            currentCallId: _currentCallId,
+            confSessionId: _confSessionId,
+            groupRoomId: _groupRoomId,
+          ) &&
+          !acceptsOutgoingTerminalEvent(
+            callStatusName: _status.name,
+            eventCallId: callId,
+            currentCallId: _currentCallId,
+            currentCallIdIsLocal: !_serverCallIdKnown,
+          )) {
         debugPrint(
           '[CallService] 🛡 call_ended ignoré (autre appel) callId=$callId '
           'courant=$_currentCallId',
@@ -352,6 +407,7 @@ extension CallSignaling on CallService {
           callStatusName: _status.name,
           eventCallId: callId,
           currentCallId: _currentCallId,
+          currentCallIdIsLocal: !_serverCallIdKnown,
         )) {
           debugPrint('[CallService] 🛡 call_error $code ignoré: status=$_status');
           return;
@@ -380,6 +436,7 @@ extension CallSignaling on CallService {
         callStatusName: _status.name,
         eventCallId: failedCallId,
         currentCallId: _currentCallId,
+        currentCallIdIsLocal: !_serverCallIdKnown,
       )) {
         debugPrint('[CallService] 🛡 call_failed ignoré: status=$_status callId=$failedCallId');
         return;
@@ -740,7 +797,7 @@ extension CallSignaling on CallService {
 
       _confSessionId = sessionId;
       _isVideo = data['isVideo'] == true;
-      _currentCallId = sessionId;
+      _adoptServerCallId(sessionId);
       final mode = data['mode']?.toString();
       if (mode == 'transfer' || mode == 'join') _confMode = mode!;
 

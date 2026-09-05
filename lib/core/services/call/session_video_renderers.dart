@@ -179,6 +179,35 @@ class SessionVideoRenderers extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Détache les flux sans rien libérer, et sans rien attendre.
+  ///
+  /// Pour le seul cas où l'activité meurt sous nos pieds : le moteur Flutter se
+  /// détache alors que le producteur d'images continue de pousser des trames, et
+  /// la première arrivée après coup emporte le processus — `FlutterJNI is not
+  /// attached to native`, levée depuis `ImageReaderSurfaceProducer.onImage`.
+  ///
+  /// [release] ne peut pas servir ici : ses `dispose()` sont autant d'allers et
+  /// retours qui n'auront pas le temps de s'exécuter. Le détachement, lui, part
+  /// en un message par rendu et a une chance d'arriver avant la fin. C'est un
+  /// filet, pas une garantie.
+  ///
+  /// Réversible : [resync] rebranche tout si l'application revient.
+  void detachStreams() {
+    if (!_ready && _group.isEmpty) return;
+    for (final renderer in _group.values) {
+      renderer.srcObject = null;
+    }
+    _local?.srcObject = null;
+    _remote?.srcObject = null;
+    debugPrint('[SessionVideoRenderers] Flux détachés (activité détruite)');
+  }
+
+  /// Rejoue le branchement des flux posé par [bind].
+  ///
+  /// `syncMain` ne réaffecte que ce qui a changé : après un [detachStreams],
+  /// tout a changé, et tout revient.
+  void resync() => _onSourceChanged?.call();
+
   /// Libère tout. Appelée à la fin de session, jamais depuis un écran.
   Future<void> release() async {
     unbind();

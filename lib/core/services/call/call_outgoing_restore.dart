@@ -24,7 +24,10 @@ extension CallOutgoingRestore on CallService {
 
     debugPrint('[CallService] 🔄 restoreOutgoingFromColdStart callId=$callId');
 
+    // L'identifiant restauré est celui de CallKit, pas celui du serveur :
+    // l'instantané s'indexe dessus. `call_resume` posera l'autre.
     _currentCallId = callId;
+    _serverCallIdKnown = false;
     _remoteUserId = snap.remoteUserId;
     _remoteUserName = snap.remoteUserName;
     _remoteUserPhoto = snap.remoteUserPhoto;
@@ -156,7 +159,7 @@ extension CallOutgoingRestore on CallService {
     // Déjà en communication : ack suffit sauf si PC morte → rejoin.
     if (_status == CallStatus.connected && !_isRestoringOutgoing) {
       if (_currentCallId == null || _currentCallId!.isEmpty) {
-        _currentCallId = serverCallId;
+        _adoptServerCallId(serverCallId);
       }
       final pcDead = _webrtc.peerConnection == null || !_webrtc.isPcUsable;
       if (pcDead && isRestartInitiator) {
@@ -217,7 +220,7 @@ extension CallOutgoingRestore on CallService {
 
     _cancelOutgoingRestoreTimeout();
 
-    _currentCallId = serverCallId;
+    _adoptServerCallId(serverCallId);
 
     final isVideo = data['isVideo'] == true || _isVideo;
     _isVideo = isVideo;
@@ -330,7 +333,7 @@ extension CallOutgoingRestore on CallService {
       '[CallService] 🔄 bootstrap restore depuis call_resume '
       'client=${snap.clientCallId} server=$serverCallId',
     );
-    _currentCallId = serverCallId;
+    _adoptServerCallId(serverCallId);
     _remoteUserId = snap.remoteUserId;
     _remoteUserName = snap.remoteUserName;
     _remoteUserPhoto = snap.remoteUserPhoto;
