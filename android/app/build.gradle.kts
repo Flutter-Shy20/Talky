@@ -2,6 +2,8 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("com.google.gms.google-services")
+    // Après google-services, dont il dépend pour lire google-services.json.
+    id("com.google.firebase.crashlytics")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -55,6 +57,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+
+            // Explicite, bien que ce soit déjà la valeur par défaut du plugin :
+            // avec `isMinifyEnabled`, c'est cette ligne qui décide si les traces
+            // de plantage seront lisibles ou non. Une régression ici serait
+            // muette — le rapport continuerait d'arriver, simplement
+            // indéchiffrable.
+            configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                mappingFileUploadEnabled = true
+            }
         }
     }
 

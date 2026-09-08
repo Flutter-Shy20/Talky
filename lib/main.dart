@@ -2,7 +2,9 @@ import 'dart:async';
 // import 'dart:io'; // requis pour HttpOverrides — réactiver avec le bloc certificate pinning
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:image_picker_android/image_picker_android.dart';
@@ -87,14 +89,18 @@ void main() async {
 
   // Capture centralisée des erreurs non interceptées (UI + asynchrones).
   // Sans ça, une exception dans un build/callback partait dans le vide.
+  // `fatal: true` sur ces deux-là seulement : ce sont les erreurs qui ont
+  // échappé à tout le monde. Elles arrivent donc dans Crashlytics au même rang
+  // qu'un plantage natif, et non noyées parmi les erreurs réseau ordinaires.
+  // La remontée elle-même est branchée plus bas, après Firebase.
   FlutterError.onError = (details) {
     FlutterError.dumpErrorToConsole(details, forceReport: true);
     AppLog.e('FlutterError', details.exceptionAsString(),
-        details.exception, details.stack);
+        details.exception, details.stack, true);
   };
   WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
     AppLog.e('PlatformDispatcher', 'Erreur asynchrone non interceptée',
-        error, stack);
+        error, stack, true);
     return true;
   };
 
@@ -128,9 +134,26 @@ void main() async {
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    debugPrint('[Main] Firebase + CallKit initialisés');
+
+    // Rapport de plantage. Rien n'est envoyé en debug : les erreurs de
+    // développement sont déjà sous les yeux de qui les provoque, et les faire
+    // remonter fausserait les statistiques de la version publiée.
+    await FirebaseCrashlytics.instance
+        .setCrashlyticsCollectionEnabled(!kDebugMode);
+
+    // Les plantages natifs (Kotlin, JNI) sont capturés par le SDK lui-même.
+    // Ce branchement ne concerne que le côté Dart, invisible autrement — la
+    // majorité de ce qui casse dans une app Flutter.
+    AppLog.brancherRapporteur((error, stack, {required fatal, required contexte}) {
+      FirebaseCrashlytics.instance
+          .recordError(error, stack, reason: contexte, fatal: fatal);
+    });
+
+    debugPrint('[Main] Firebase + CallKit + Crashlytics initialisés');
   } catch (e) {
-    debugPrint('[Main] ** Init Firebase échouée — push désactivé: $e');
+    // Firebase absent : le rapporteur n'est jamais branché, `AppLog` continue
+    // de journaliser localement. Aucun appelant n'a à connaître ce cas.
+    debugPrint('[Main] ** Init Firebase échouée — push et rapport désactivés: $e');
   }
 
   // Charger avant runApp : le prefetch socket/sync lit ce flag de façon sync.
