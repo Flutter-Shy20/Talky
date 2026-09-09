@@ -30,6 +30,8 @@ import 'media_viewer_screen.dart';
 import '../../widgets/conversation_mute_sheet.dart';
 import '../../widgets/conversation_translate_sheet.dart';
 import '../../widgets/report/report_sheet.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Fiche détaillée d'un contact, réutilisable depuis :
 /// — l'en-tête d'une discussion 1-1
@@ -333,7 +335,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       }
       if (mounted) setState(() => _isFavorite = next);
     } catch (e) {
-      if (mounted) _snack(context.l10n.actionFailedWithError('$e'), error: true);
+      if (mounted) _snack(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -365,7 +367,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         });
       }
     } catch (e) {
-      if (mounted) _snack(context.l10n.actionFailedWithError('$e'), error: true);
+      if (mounted) _snack(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

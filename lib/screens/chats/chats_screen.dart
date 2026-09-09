@@ -32,6 +32,8 @@ import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
 import 'select_members_screen.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Entrées du menu ⋮ de l'écran des discussions.
 enum _ChatsMenuAction { contactLists, newGroup, markAllRead }
@@ -1062,7 +1064,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       if (!mounted) return;
       _exitSelectionMode();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(context.l10n.errorWithDetails('$e'))));
+      messenger.showSnackBar(SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))));
     }
   }
 
@@ -1093,7 +1095,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       if (!mounted) return;
       _exitSelectionMode();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(context.l10n.errorWithDetails('$e'))));
+      messenger.showSnackBar(SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))));
     }
   }
 
@@ -1107,7 +1109,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       if (!mounted) return;
       _exitSelectionMode();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(context.l10n.errorWithDetails('$e'))));
+      messenger.showSnackBar(SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))));
     }
   }
 
@@ -1118,7 +1120,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))),
       );
     }
   }
@@ -1130,7 +1132,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))),
       );
     }
   }
@@ -1142,7 +1144,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))),
       );
     }
   }
@@ -1154,7 +1156,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))),
       );
     }
   }

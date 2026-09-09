@@ -24,6 +24,8 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'status_views_screen.dart';
 import 'status_audio_view.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Ce qui peut retenir la lecture d'un statut.
 ///
@@ -492,7 +494,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(context.l10n.sendFailedWithError('$e'))));
+          .showSnackBar(SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.statut))));
     } finally {
       if (mounted) setState(() => _sendingReply = false);
     }
@@ -584,7 +586,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(context.l10n.sendFailedWithError('$e'))));
+          .showSnackBar(SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.statut))));
     } finally {
       if (mounted) setState(() => _sendingReply = false);
     }

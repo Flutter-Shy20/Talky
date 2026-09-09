@@ -101,6 +101,8 @@ import '../../core/utils/trip_payload.dart';
 import '../../widgets/chat/trip_message_card.dart';
 import '../../widgets/chat/translation_model_prompt.dart';
 import '../../widgets/report/report_sheet.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels
@@ -736,7 +738,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.cannotUnblockWithError('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))),
       );
     }
   }
