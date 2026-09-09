@@ -12,6 +12,8 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/alanya_phone_field.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class AdminUserDetailScreen extends StatefulWidget {
   final int userId;
@@ -90,7 +92,10 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
               child: Padding(
                 padding: AppSpacing.card,
                 child: Text(
-                  context.l10n.errorColon('${snapshot.error ?? context.l10n.dataUnavailable}'),
+                  snapshot.error != null
+                      ? presenterErreur(context.l10n, snapshot.error,
+                          domaine: ErrorDomain.admin)
+                      : context.l10n.dataUnavailable,
                   textAlign: TextAlign.center,
                   style: context.text.bodyMedium
                       ?.copyWith(color: context.colors.onSurface),

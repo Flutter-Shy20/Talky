@@ -16,7 +16,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../providers/status_provider.dart';
-import '../../talky_api_client.dart';
 import '../../widgets/common/common.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';

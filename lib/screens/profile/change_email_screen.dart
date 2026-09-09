@@ -7,7 +7,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/validators.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
-import '../../talky_api_client.dart';
 import '../../widgets/account/warning_banner.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
