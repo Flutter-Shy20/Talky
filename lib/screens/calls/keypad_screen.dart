@@ -14,6 +14,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/utils/user_search.dart';
 import '../../widgets/common/common.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class KeypadScreen extends StatefulWidget {
   const KeypadScreen({super.key});
@@ -349,7 +351,9 @@ class _KeypadScreenState extends State<KeypadScreen> {
         success: true,
       );
     } catch (e) {
-      if (mounted) _showSnack(context.l10n.errorColon('$e'));
+      if (mounted) {
+        _showSnack(presenterErreur(context.l10n, e, domaine: ErrorDomain.appel));
+      }
     } finally {
       if (mounted) setState(() => _addingContact = false);
     }

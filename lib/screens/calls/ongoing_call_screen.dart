@@ -22,6 +22,8 @@ import '../../widgets/calls/call_transfer_countdown_overlay.dart';
 import '../../widgets/calls/add_to_call_sheet.dart';
 import '../../widgets/calls/draggable_video_pip.dart';
 import '../../widgets/common/app_avatar.dart';
+import '../../core/errors/afficher_erreur.dart';
+import '../../core/errors/app_error.dart';
 
 /// Écran d'appel en cours (1-à-1, audio ou vidéo, groupe).
 class OngoingCallScreen extends StatefulWidget {
@@ -199,9 +201,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     } catch (e, st) {
       debugPrint('[AddToCall] ** échec ouverture: $e\n$st');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$e')),
-      );
+      afficherErreur(context, e, domaine: ErrorDomain.appel);
     }
   }
 

@@ -16,6 +16,8 @@ import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/contact_action_button.dart';
 import '../chats/chat_detail_screen.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Fiche d'un appel récent : récap de l'appel + raccourcis rapides
 /// (appel audio, vidéo, message, contact préféré).
@@ -131,7 +133,10 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
       // `_snack` vérifie `mounted`, mais `context.l10n` était évalué avant lui :
       // l'écran fermé pendant la requête, et la lecture partait sur un contexte
       // démonté.
-      if (mounted) _snack(context.l10n.actionFailedWithError('$e'), error: true);
+      if (mounted) {
+        _snack(presenterErreur(context.l10n, e, domaine: ErrorDomain.appel),
+            error: true);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

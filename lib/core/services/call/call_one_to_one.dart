@@ -142,27 +142,10 @@ extension CallOneToOne on CallService {
       debugPrint('[CallService] Erreur initiateCall: $e');
       debugPrint('[CallService] Type d\'erreur: ${e.runtimeType}');
 
-      // Déterminer le type d'erreur pour afficher un message clair
-      String errorMsg = LocaleController.instance.l10n.errorStartingTheCall;
-      final errorStr = e.toString().toLowerCase();
-
-      if (errorStr.contains('permission')) {
-        errorMsg = LocaleController.instance.l10n.permissionDeniedPleaseAllowMicrophoneCamera;
-      } else if (errorStr.contains('microphone') || errorStr.contains('audio')) {
-        errorMsg = LocaleController.instance.l10n.microphoneErrorPleaseCheckYourPermissions;
-      } else if (errorStr.contains('camera') || errorStr.contains('video')) {
-        errorMsg = LocaleController.instance.l10n.cameraErrorPleaseCheckYourPermissions;
-      } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
-        errorMsg = LocaleController.instance.l10n.mediaAccessErrorMakeSureHttps;
-      } else if (errorStr.contains('notfounderror')) {
-        errorMsg = LocaleController.instance.l10n.noMicrophoneCameraDeviceFoundOn;
-      } else if (errorStr.contains('notreadableerror')) {
-        errorMsg = LocaleController.instance.l10n.cannotAccessMicrophoneCameraCheckThat;
-      } else {
-        errorMsg = LocaleController.instance.l10n.errorColon(e.toString());
-      }
-
-      _errorMessage = errorMsg;
+      // Le tri se faisait sur `e.toString().contains(...)`. Le message de
+      // getUserMedia n'est stable ni entre versions de flutter_webrtc, ni
+      // entre Android et iOS, et la branche par défaut affichait l'exception.
+      _errorMessage = presenterErreurGlobale(e, domaine: ErrorDomain.appel);
       await _releaseCallSession();
       await _webrtc.dispose();
       _resetCallState();
@@ -372,23 +355,7 @@ extension CallOneToOne on CallService {
       debugPrint('[CallService] Erreur answerCall: $e');
       debugPrint('[CallService] Type d\'erreur: ${e.runtimeType}');
 
-      // Déterminer le type d'erreur pour afficher un message clair
-      String errorMsg = LocaleController.instance.l10n.errorAcceptingCall;
-      final errorStr = e.toString().toLowerCase();
-
-      if (errorStr.contains('permission')) {
-        errorMsg = LocaleController.instance.l10n.permissionDeniedPleaseAllowMicrophoneCamera;
-      } else if (errorStr.contains('microphone') || errorStr.contains('audio')) {
-        errorMsg = LocaleController.instance.l10n.microphoneErrorPleaseCheckYourPermissions;
-      } else if (errorStr.contains('camera') || errorStr.contains('video')) {
-        errorMsg = LocaleController.instance.l10n.cameraErrorPleaseCheckYourPermissions;
-      } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
-        errorMsg = LocaleController.instance.l10n.mediaAccessErrorMakeSureHttps;
-      } else {
-        errorMsg = LocaleController.instance.l10n.errorColon(e.toString());
-      }
-
-      _errorMessage = errorMsg;
+      _errorMessage = presenterErreurGlobale(e, domaine: ErrorDomain.appel);
       await rejectCall();
     }
   }
