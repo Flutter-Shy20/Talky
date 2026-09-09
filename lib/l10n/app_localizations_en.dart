@@ -5730,4 +5730,203 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get translateModeAutoSubtitle => 'Follows the general setting';
+
+  @override
+  String get errDelaiDepasse =>
+      'The server is taking too long to respond. Try again.';
+
+  @override
+  String get errReseauSuspect =>
+      'Secure connection failed. Check your network.';
+
+  @override
+  String get errSessionExpiree =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get errIntrouvable => 'Not found. This content may have been deleted.';
+
+  @override
+  String get errConflit => 'This action isn\'t possible right now.';
+
+  @override
+  String get errTropDeRequetes => 'Too many attempts. Please wait a moment.';
+
+  @override
+  String get errServeur => 'The service is temporarily unavailable. Try again.';
+
+  @override
+  String get errPermission => 'Permission denied. Check your device settings.';
+
+  @override
+  String get errPeripherique =>
+      'Device unavailable or already in use by another app.';
+
+  @override
+  String get errStockage => 'Cannot access the file. Check available storage.';
+
+  @override
+  String get errGenerique => 'Something went wrong. Try again.';
+
+  @override
+  String get errDomaineAuth => 'Sign-in failed. Try again.';
+
+  @override
+  String get errDomaineChat => 'Message not sent. Try again.';
+
+  @override
+  String get errDomaineAppel => 'The call could not be completed. Try again.';
+
+  @override
+  String get errDomaineReunion => 'The meeting could not be opened. Try again.';
+
+  @override
+  String get errDomaineQr => 'This code could not be used. Try again.';
+
+  @override
+  String get errDomaineMedia => 'The file could not be processed. Try again.';
+
+  @override
+  String get errDomaineTrajet => 'The trip could not be updated. Try again.';
+
+  @override
+  String get errDomaineStatut => 'The status could not be posted. Try again.';
+
+  @override
+  String get errDomaineProfil => 'The change could not be saved. Try again.';
+
+  @override
+  String get errDomaineAdmin => 'The operation failed. Try again.';
+
+  @override
+  String get errAppelHorsLigne => 'You need a connection to place a call.';
+
+  @override
+  String get errChatHorsLigne =>
+      'Message queued: it will send when you\'re back online.';
+
+  @override
+  String get errMediaStockage =>
+      'Cannot save. Check available space on your device.';
+
+  @override
+  String get errCodeRefreshExpired =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get errCodeDeviceRevoked =>
+      'This device was signed out. Please sign in again.';
+
+  @override
+  String get errCodeAccountDeletionPending => 'This account is being deleted.';
+
+  @override
+  String get errCodeRegisterRateLimited =>
+      'Too many sign-up attempts. Try again later.';
+
+  @override
+  String get errCodeQrSessionExpired =>
+      'This QR code has expired. Display a new one.';
+
+  @override
+  String get errCodeDeviceNotOwner =>
+      'This device isn\'t authorised for this action.';
+
+  @override
+  String get errCodeAddAlreadyUsed => 'This code has already been used.';
+
+  @override
+  String get errCodeAddMePolicyDenied =>
+      'This person doesn\'t accept being added by code.';
+
+  @override
+  String get errCodeMeetingExpired => 'This meeting has expired.';
+
+  @override
+  String get errCodeMeetingEnded => 'This meeting has ended.';
+
+  @override
+  String get errCodeMeetingOrganiserRequired =>
+      'Only the organiser can do that.';
+
+  @override
+  String get errCodeAccountAlreadyInMeeting =>
+      'This account is already in the meeting on another device.';
+
+  @override
+  String get errCodeSessionBusy => 'A call is in progress. End it first.';
+
+  @override
+  String get errCodeMaxDurationReached =>
+      'The maximum duration has been reached.';
+
+  @override
+  String get errCodeBlockedBySender => 'You can\'t contact this person.';
+
+  @override
+  String get errCodeNotAMember => 'You\'re no longer a member of this group.';
+
+  @override
+  String get errCodeGroupAdminsOnly => 'Group admins only.';
+
+  @override
+  String get errCodeGroupOwnerRequired => 'Only the group owner can do that.';
+
+  @override
+  String get errCodeConversationNotFound =>
+      'This conversation no longer exists.';
+
+  @override
+  String get errCodeOfficialReadonly =>
+      'This official account doesn\'t accept replies.';
+
+  @override
+  String get errCodeListMemberLimit =>
+      'This list has reached its member limit.';
+
+  @override
+  String get errCodeSystemListReadonly => 'This system list can\'t be edited.';
+
+  @override
+  String get errCodeInviteBlocked => 'This person can\'t be invited.';
+
+  @override
+  String get errCodeBusinessOnly => 'Business accounts only.';
+
+  @override
+  String get errCodeTrustListEmpty =>
+      'Your trusted circle is empty. Add someone first.';
+
+  @override
+  String get errCodeTripAlreadyActive => 'A trip is already in progress.';
+
+  @override
+  String get errCodeTripTerminal => 'This trip has already ended.';
+
+  @override
+  String get errCodeTripStillOpen => 'End the current trip first.';
+
+  @override
+  String get errCodeSosRateLimited =>
+      'Alert already sent. Wait before sending another.';
+
+  @override
+  String get errCodeInvalidEta => 'The arrival time isn\'t valid.';
+
+  @override
+  String get errCodeInvalidDestination => 'The destination isn\'t valid.';
+
+  @override
+  String get errCodeMediaExpired =>
+      'This media has expired and is no longer available.';
+
+  @override
+  String get errCodeInvalidExtension => 'This file type isn\'t supported.';
+
+  @override
+  String get errCodeInsufficientRole =>
+      'You don\'t have permission for this action.';
+
+  @override
+  String get errCodeFieldImmutable => 'This field can no longer be changed.';
 }

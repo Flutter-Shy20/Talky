@@ -5787,4 +5787,217 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get translateModeAutoSubtitle => 'Suit le réglage général';
+
+  @override
+  String get errDelaiDepasse =>
+      'Le serveur met trop de temps à répondre. Réessayez.';
+
+  @override
+  String get errReseauSuspect =>
+      'Connexion sécurisée impossible. Vérifiez votre réseau.';
+
+  @override
+  String get errSessionExpiree => 'Votre session a expiré. Reconnectez-vous.';
+
+  @override
+  String get errIntrouvable =>
+      'Introuvable. Ce contenu a peut-être été supprimé.';
+
+  @override
+  String get errConflit => 'Action impossible dans l\'état actuel.';
+
+  @override
+  String get errTropDeRequetes => 'Trop de tentatives. Patientez un instant.';
+
+  @override
+  String get errServeur =>
+      'Le service est momentanément indisponible. Réessayez.';
+
+  @override
+  String get errPermission =>
+      'Autorisation refusée. Vérifiez les réglages de votre appareil.';
+
+  @override
+  String get errPeripherique =>
+      'Périphérique indisponible ou déjà utilisé par une autre application.';
+
+  @override
+  String get errStockage =>
+      'Accès au fichier impossible. Vérifiez l\'espace disponible.';
+
+  @override
+  String get errGenerique => 'Une erreur est survenue. Réessayez.';
+
+  @override
+  String get errDomaineAuth => 'Connexion impossible. Réessayez.';
+
+  @override
+  String get errDomaineChat => 'Message non envoyé. Réessayez.';
+
+  @override
+  String get errDomaineAppel => 'L\'appel n\'a pas pu aboutir. Réessayez.';
+
+  @override
+  String get errDomaineReunion =>
+      'La réunion n\'a pas pu s\'ouvrir. Réessayez.';
+
+  @override
+  String get errDomaineQr => 'Ce code n\'a pas pu être utilisé. Réessayez.';
+
+  @override
+  String get errDomaineMedia =>
+      'Le fichier n\'a pas pu être traité. Réessayez.';
+
+  @override
+  String get errDomaineTrajet =>
+      'Le trajet n\'a pas pu être mis à jour. Réessayez.';
+
+  @override
+  String get errDomaineStatut =>
+      'Le statut n\'a pas pu être publié. Réessayez.';
+
+  @override
+  String get errDomaineProfil => 'Modification impossible. Réessayez.';
+
+  @override
+  String get errDomaineAdmin => 'Opération impossible. Réessayez.';
+
+  @override
+  String get errAppelHorsLigne => 'Appel impossible sans connexion.';
+
+  @override
+  String get errChatHorsLigne =>
+      'Message en attente : il partira au retour du réseau.';
+
+  @override
+  String get errMediaStockage =>
+      'Enregistrement impossible. Vérifiez l\'espace disponible sur l\'appareil.';
+
+  @override
+  String get errCodeRefreshExpired =>
+      'Votre session a expiré. Reconnectez-vous.';
+
+  @override
+  String get errCodeDeviceRevoked =>
+      'Cet appareil a été déconnecté. Reconnectez-vous.';
+
+  @override
+  String get errCodeAccountDeletionPending =>
+      'Ce compte est en cours de suppression.';
+
+  @override
+  String get errCodeRegisterRateLimited =>
+      'Trop de créations de compte. Réessayez plus tard.';
+
+  @override
+  String get errCodeQrSessionExpired =>
+      'Ce code QR a expiré. Affichez-en un nouveau.';
+
+  @override
+  String get errCodeDeviceNotOwner =>
+      'Cet appareil n\'est pas autorisé pour cette action.';
+
+  @override
+  String get errCodeAddAlreadyUsed => 'Ce code a déjà été utilisé.';
+
+  @override
+  String get errCodeAddMePolicyDenied =>
+      'Cette personne n\'accepte pas les ajouts par code.';
+
+  @override
+  String get errCodeMeetingExpired => 'Cette réunion a expiré.';
+
+  @override
+  String get errCodeMeetingEnded => 'Cette réunion est terminée.';
+
+  @override
+  String get errCodeMeetingOrganiserRequired =>
+      'Seul l\'organisateur peut faire cela.';
+
+  @override
+  String get errCodeAccountAlreadyInMeeting =>
+      'Ce compte participe déjà à la réunion sur un autre appareil.';
+
+  @override
+  String get errCodeSessionBusy =>
+      'Un appel est en cours. Terminez-le d\'abord.';
+
+  @override
+  String get errCodeMaxDurationReached => 'La durée maximale est atteinte.';
+
+  @override
+  String get errCodeBlockedBySender =>
+      'Vous ne pouvez pas contacter cette personne.';
+
+  @override
+  String get errCodeNotAMember => 'Vous ne faites plus partie de ce groupe.';
+
+  @override
+  String get errCodeGroupAdminsOnly => 'Réservé aux administrateurs du groupe.';
+
+  @override
+  String get errCodeGroupOwnerRequired =>
+      'Seul le propriétaire du groupe peut faire cela.';
+
+  @override
+  String get errCodeConversationNotFound =>
+      'Cette conversation n\'existe plus.';
+
+  @override
+  String get errCodeOfficialReadonly =>
+      'Ce compte officiel n\'accepte pas de réponse.';
+
+  @override
+  String get errCodeListMemberLimit =>
+      'Cette liste a atteint son nombre maximal de membres.';
+
+  @override
+  String get errCodeSystemListReadonly =>
+      'Cette liste système ne peut pas être modifiée.';
+
+  @override
+  String get errCodeInviteBlocked => 'Cette personne ne peut pas être invitée.';
+
+  @override
+  String get errCodeBusinessOnly => 'Réservé aux comptes professionnels.';
+
+  @override
+  String get errCodeTrustListEmpty =>
+      'Votre cercle de confiance est vide. Ajoutez-y quelqu\'un d\'abord.';
+
+  @override
+  String get errCodeTripAlreadyActive => 'Un trajet est déjà en cours.';
+
+  @override
+  String get errCodeTripTerminal => 'Ce trajet est déjà terminé.';
+
+  @override
+  String get errCodeTripStillOpen => 'Terminez d\'abord le trajet en cours.';
+
+  @override
+  String get errCodeSosRateLimited =>
+      'Alerte déjà envoyée. Patientez avant d\'en envoyer une autre.';
+
+  @override
+  String get errCodeInvalidEta =>
+      'L\'heure d\'arrivée indiquée n\'est pas valide.';
+
+  @override
+  String get errCodeInvalidDestination =>
+      'La destination indiquée n\'est pas valide.';
+
+  @override
+  String get errCodeMediaExpired =>
+      'Ce média a expiré et n\'est plus disponible.';
+
+  @override
+  String get errCodeInvalidExtension =>
+      'Ce type de fichier n\'est pas accepté.';
+
+  @override
+  String get errCodeInsufficientRole =>
+      'Vos droits ne permettent pas cette action.';
+
+  @override
+  String get errCodeFieldImmutable => 'Ce champ ne peut plus être modifié.';
 }

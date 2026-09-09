@@ -5535,4 +5535,181 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get translateModeAutoSubtitle => '跟随总体设置';
+
+  @override
+  String get errDelaiDepasse => '服务器响应超时。请重试。';
+
+  @override
+  String get errReseauSuspect => '无法建立安全连接。请检查您的网络。';
+
+  @override
+  String get errSessionExpiree => '您的会话已过期。请重新登录。';
+
+  @override
+  String get errIntrouvable => '未找到。此内容可能已被删除。';
+
+  @override
+  String get errConflit => '当前状态下无法执行此操作。';
+
+  @override
+  String get errTropDeRequetes => '尝试次数过多。请稍候。';
+
+  @override
+  String get errServeur => '服务暂时不可用。请重试。';
+
+  @override
+  String get errPermission => '权限被拒绝。请检查您的设备设置。';
+
+  @override
+  String get errPeripherique => '设备不可用或已被其他应用占用。';
+
+  @override
+  String get errStockage => '无法访问文件。请检查可用存储空间。';
+
+  @override
+  String get errGenerique => '发生错误。请重试。';
+
+  @override
+  String get errDomaineAuth => '登录失败。请重试。';
+
+  @override
+  String get errDomaineChat => '消息未发送。请重试。';
+
+  @override
+  String get errDomaineAppel => '通话未能接通。请重试。';
+
+  @override
+  String get errDomaineReunion => '无法打开会议。请重试。';
+
+  @override
+  String get errDomaineQr => '无法使用此二维码。请重试。';
+
+  @override
+  String get errDomaineMedia => '无法处理该文件。请重试。';
+
+  @override
+  String get errDomaineTrajet => '无法更新行程。请重试。';
+
+  @override
+  String get errDomaineStatut => '无法发布动态。请重试。';
+
+  @override
+  String get errDomaineProfil => '无法保存更改。请重试。';
+
+  @override
+  String get errDomaineAdmin => '操作失败。请重试。';
+
+  @override
+  String get errAppelHorsLigne => '无网络连接，无法拨打电话。';
+
+  @override
+  String get errChatHorsLigne => '消息已排队：网络恢复后将自动发送。';
+
+  @override
+  String get errMediaStockage => '无法保存。请检查设备的可用空间。';
+
+  @override
+  String get errCodeRefreshExpired => '您的会话已过期。请重新登录。';
+
+  @override
+  String get errCodeDeviceRevoked => '此设备已被登出。请重新登录。';
+
+  @override
+  String get errCodeAccountDeletionPending => '此账户正在删除中。';
+
+  @override
+  String get errCodeRegisterRateLimited => '注册尝试次数过多。请稍后再试。';
+
+  @override
+  String get errCodeQrSessionExpired => '此二维码已过期。请重新生成。';
+
+  @override
+  String get errCodeDeviceNotOwner => '此设备无权执行该操作。';
+
+  @override
+  String get errCodeAddAlreadyUsed => '此代码已被使用。';
+
+  @override
+  String get errCodeAddMePolicyDenied => '此用户不接受通过代码添加。';
+
+  @override
+  String get errCodeMeetingExpired => '此会议已过期。';
+
+  @override
+  String get errCodeMeetingEnded => '此会议已结束。';
+
+  @override
+  String get errCodeMeetingOrganiserRequired => '只有组织者才能执行此操作。';
+
+  @override
+  String get errCodeAccountAlreadyInMeeting => '该账户已在其他设备上参加此会议。';
+
+  @override
+  String get errCodeSessionBusy => '通话进行中。请先结束通话。';
+
+  @override
+  String get errCodeMaxDurationReached => '已达到最长时限。';
+
+  @override
+  String get errCodeBlockedBySender => '您无法联系此用户。';
+
+  @override
+  String get errCodeNotAMember => '您已不是该群组成员。';
+
+  @override
+  String get errCodeGroupAdminsOnly => '仅限群组管理员。';
+
+  @override
+  String get errCodeGroupOwnerRequired => '只有群主才能执行此操作。';
+
+  @override
+  String get errCodeConversationNotFound => '此会话已不存在。';
+
+  @override
+  String get errCodeOfficialReadonly => '此官方账户不接受回复。';
+
+  @override
+  String get errCodeListMemberLimit => '此列表已达到成员上限。';
+
+  @override
+  String get errCodeSystemListReadonly => '系统列表无法修改。';
+
+  @override
+  String get errCodeInviteBlocked => '无法邀请此用户。';
+
+  @override
+  String get errCodeBusinessOnly => '仅限企业账户。';
+
+  @override
+  String get errCodeTrustListEmpty => '您的信任名单为空。请先添加联系人。';
+
+  @override
+  String get errCodeTripAlreadyActive => '已有行程正在进行中。';
+
+  @override
+  String get errCodeTripTerminal => '此行程已结束。';
+
+  @override
+  String get errCodeTripStillOpen => '请先结束当前行程。';
+
+  @override
+  String get errCodeSosRateLimited => '警报已发送。请稍后再发送。';
+
+  @override
+  String get errCodeInvalidEta => '到达时间无效。';
+
+  @override
+  String get errCodeInvalidDestination => '目的地无效。';
+
+  @override
+  String get errCodeMediaExpired => '此媒体已过期，不再可用。';
+
+  @override
+  String get errCodeInvalidExtension => '不支持此文件类型。';
+
+  @override
+  String get errCodeInsufficientRole => '您没有执行此操作的权限。';
+
+  @override
+  String get errCodeFieldImmutable => '此字段无法再修改。';
 }
