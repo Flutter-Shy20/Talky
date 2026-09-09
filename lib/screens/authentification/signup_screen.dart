@@ -62,8 +62,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
     if (!mounted) return;
     if (!authProvider.isLoggedIn) {
-      final msg = authProvider.error ??
-          context.l10n.anErrorOccurred('register');
+      // `anErrorOccurred('register')` affichait littéralement « Une erreur est
+      // survenue: register » — le nom de l'appel serveur, lu par l'utilisateur.
+      final msg = authProvider.error ?? context.l10n.errDomaineAuth;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg)),
       );

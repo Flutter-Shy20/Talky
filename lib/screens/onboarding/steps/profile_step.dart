@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/errors/app_error.dart';
+import '../../../core/errors/error_presenter.dart';
 import '../../../core/services/countries_repository.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
@@ -192,7 +194,10 @@ class _ProfileStepState extends State<ProfileStep> {
       );
       if (mounted) widget.onContinue();
     } catch (e) {
-      if (mounted) setState(() => _saveError = '$e');
+      if (mounted) {
+        setState(() => _saveError =
+            presenterErreur(l10n, e, domaine: ErrorDomain.profil));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

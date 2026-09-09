@@ -5,6 +5,8 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/validators.dart';
 import '../../l10n/app_localizations.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/account/warning_banner.dart';
 import '../../widgets/alanya_phone_field.dart';
@@ -62,10 +64,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
     try {
       await action();
-    } on TalkyException catch (e) {
-      if (mounted) setState(() => _error = e.message);
     } catch (e) {
-      if (mounted) setState(() => _error = context.l10n.errorColon('$e'));
+      if (mounted) {
+        setState(() =>
+            _error = presenterErreur(context.l10n, e, domaine: ErrorDomain.auth));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
