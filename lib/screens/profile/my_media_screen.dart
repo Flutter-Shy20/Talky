@@ -8,6 +8,8 @@ import '../../core/utils/backend_url.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../chats/media_viewer_screen.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Grille paginée des médias envoyés par l'utilisateur.
 class MyMediaScreen extends StatefulWidget {
@@ -77,7 +79,7 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
       setState(() {
         _loading = false;
         _initial = false;
-        _error = '$e';
+        _error = presenterErreur(context.l10n, e, domaine: ErrorDomain.media);
       });
     }
   }

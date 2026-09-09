@@ -18,6 +18,8 @@ import '../../widgets/country_selector_tile.dart';
 import '../../widgets/profile/profile_identity_fields.dart';
 import '../chats/media_viewer_screen.dart';
 import 'profile_preview_screen.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -241,7 +243,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) return;
       setState(() => _uploadingAvatar = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.uploadFailedWithError('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.media))),
       );
     }
   }
@@ -285,7 +287,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) return;
       setState(() => _uploadingAvatar = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.profil))),
       );
     }
   }
@@ -342,7 +344,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.recordFailedWithError('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.media))),
       );
     }
   }

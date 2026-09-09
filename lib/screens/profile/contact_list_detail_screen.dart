@@ -82,8 +82,11 @@ class _ContactListDetailScreenState extends State<ContactListDetailScreen> {
         await cache.addListMember(widget.idList, user.alanyaID);
       }
     } on TalkyException catch (e) {
-      if (e.statusCode == 409 &&
-          e.message.toLowerCase().contains('limit')) {
+      // Le code du serveur remplace le reniflage de « limit » dans la prose :
+      // une reformulation côté backend cassait silencieusement la branche.
+      if (e.code == 'LIST_MEMBER_LIMIT' ||
+          (e.statusCode == 409 &&
+              e.message.toLowerCase().contains('limit'))) {
         _showError(l10n.listMemberLimitReached(memberLimit ?? kTrustMemberLimit));
       } else {
         AppLog.e('ContactListDetail', 'Bascule d\'appartenance échouée', e);

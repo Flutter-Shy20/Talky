@@ -1,5 +1,6 @@
 import '../../talky_api_client.dart' show TalkyException;
 import '../utils/app_exceptions.dart';
+import '../utils/media_staging.dart' show MediaStagingException;
 import 'error_kind.dart';
 
 /// Domaine fonctionnel où la panne s'est produite.
@@ -74,6 +75,10 @@ class AppError implements Exception {
             : kindPourStatut(erreur.statusCode),
         cause: erreur,
       );
+    }
+
+    if (erreur is MediaStagingException) {
+      return AppError(kind: erreur.kind, cause: erreur);
     }
 
     if (erreur is AppException) {

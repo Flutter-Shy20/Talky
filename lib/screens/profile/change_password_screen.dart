@@ -7,6 +7,8 @@ import '../../core/utils/validators.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -63,13 +65,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     } on TalkyException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.message;
+        _error = presenterErreur(context.l10n, e, domaine: ErrorDomain.profil);
         _loading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = context.l10n.errorColon('$e');
+        _error = presenterErreur(context.l10n, e, domaine: ErrorDomain.profil);
         _loading = false;
       });
     }

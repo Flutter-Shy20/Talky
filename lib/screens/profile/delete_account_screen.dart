@@ -8,6 +8,8 @@ import '../../core/theme/locale_controller.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Suppression de compte : avertissement → confirmation → grâce 7 jours.
 class DeleteAccountScreen extends StatefulWidget {
@@ -57,7 +59,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       if (!mounted) return;
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.deleteAccountFailed('$e'))),
+        SnackBar(content: Text(presenterErreur(l10n, e, domaine: ErrorDomain.profil))),
       );
     }
   }

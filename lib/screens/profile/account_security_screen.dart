@@ -14,6 +14,8 @@ import 'change_password_screen.dart';
 import 'connected_devices_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'recovery_code_screen.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Hub Compte et sécurité : email, mot de passe, appareils, biométrie.
 class AccountSecurityScreen extends StatefulWidget {
@@ -197,7 +199,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(l10n.biometricLockFailed('$e')),
+                            content: Text(presenterErreur(l10n, e, domaine: ErrorDomain.profil)),
                           ),
                         );
                       }

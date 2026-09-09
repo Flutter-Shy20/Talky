@@ -7,6 +7,8 @@ import '../../core/services/ringtone_preferences.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/common/ringtone_sync_info.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Réglages de la sonnerie d'appel : choix entre la sonnerie du téléphone,
 /// les sonneries fournies avec l'app, ou une sonnerie importée par
@@ -118,7 +120,9 @@ class _RingtoneSettingsScreenState extends State<RingtoneSettingsScreen> {
     } on RingtoneImportException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
+        SnackBar(
+            content: Text(presenterErreur(context.l10n, e,
+                domaine: ErrorDomain.profil))),
       );
     } catch (e) {
       if (!mounted) return;
