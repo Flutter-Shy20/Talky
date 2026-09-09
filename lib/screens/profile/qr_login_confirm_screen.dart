@@ -12,6 +12,8 @@ import '../../core/utils/app_log.dart';
 import '../../models/qr_models.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/account/warning_banner.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Confirmation d'une connexion, sur l'appareil DÉJÀ connecté qui vient de
 /// scanner un code de session.
@@ -124,7 +126,8 @@ class _QrLoginConfirmScreenState extends State<QrLoginConfirmScreen> {
         _afficher(context.l10n.qrApproveSessionExpired, AppColors.warning);
         return;
       }
-      _afficher(e.message, AppColors.error);
+      _afficher(presenterErreur(context.l10n, e, domaine: ErrorDomain.qr),
+          AppColors.error);
     } catch (e, st) {
       AppLog.e('QrLoginConfirm', 'Décision de connexion échouée', e, st);
       if (!mounted) return;

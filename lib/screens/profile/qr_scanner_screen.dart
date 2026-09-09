@@ -23,6 +23,8 @@ import '../../models/qr_models.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'qr_login_confirm_screen.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Scanner de code QR plein écran : identité d'un contact ou demande de
 /// connexion d'un nouvel appareil. La résolution du payload est faite par le
@@ -134,7 +136,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       _resume(switch (e.statusCode) {
         400 => context.l10n.qrScanErrorUnreadable,
         404 => context.l10n.qrScanErrorUnknown,
-        _ => e.message,
+        _ => presenterErreur(context.l10n, e, domaine: ErrorDomain.qr),
       });
     } catch (e, st) {
       AppLog.e('QrScanner', 'Résolution du code scanné échouée', e, st);
