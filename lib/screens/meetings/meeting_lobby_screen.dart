@@ -9,6 +9,8 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'ongoing_meet_screen.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class MeetingLobbyScreen extends StatefulWidget {
   final int meetingId;
@@ -136,7 +138,8 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
       case MeetingJoinRefusal.nonInvite:
         return context.l10n.meetingJoinNotInvited;
       case MeetingJoinRefusal.autre:
-        return context.l10n.cannotJoinMeeting('$erreur');
+        return presenterErreur(context.l10n, erreur,
+            domaine: ErrorDomain.reunion);
     }
   }
 

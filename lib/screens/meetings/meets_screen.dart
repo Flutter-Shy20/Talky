@@ -22,6 +22,8 @@ import 'participant_picker_screen.dart';
 import '../shared/schedule_screen.dart';
 import '../../core/theme/locale_controller.dart';
 import 'package:intl/intl.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class MeetsScreen extends StatefulWidget {
   const MeetsScreen({super.key});
@@ -219,7 +221,8 @@ class _MeetsScreenState extends State<MeetsScreen>
       final message =
           refusPourErreur(erreur) == MeetingJoinRefusal.sessionOccupee
               ? context.l10n.meetingBlockedByCall
-              : context.l10n.cannotCreateMeeting('$erreur');
+              : presenterErreur(context.l10n, erreur,
+              domaine: ErrorDomain.reunion);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );

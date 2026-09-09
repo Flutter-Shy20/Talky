@@ -19,6 +19,8 @@ import 'meeting_lobby_screen.dart';
 import 'participant_picker_screen.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/locale_controller.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class MeetingDetailScreen extends StatefulWidget {
   final int meetingId;
@@ -165,7 +167,8 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen>
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(context.l10n.cannotLoadMeeting('$e'))),
+              content: Text(presenterErreur(context.l10n, e,
+                  domaine: ErrorDomain.reunion))),
         );
       }
     }

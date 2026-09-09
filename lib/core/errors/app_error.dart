@@ -30,7 +30,7 @@ enum ErrorDomain {
 /// [cause] n'est là que pour la journalisation et Crashlytics. Elle ne doit
 /// **jamais** être interpolée dans un message affiché — c'est précisément ce
 /// que cet audit corrige.
-class AppError {
+class AppError implements Exception {
   /// Code machine stable envoyé par le backend (`TRUST_LIST_EMPTY`…).
   ///
   /// Nul tant que la route serveur n'a pas été migrée : le client sait s'en

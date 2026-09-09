@@ -14,6 +14,8 @@ import 'call_session_guard.dart';
 import 'callkit_service.dart';
 import '../navigation/app_navigator.dart';
 import '../theme/locale_controller.dart';
+import '../errors/app_error.dart';
+import '../errors/error_kind.dart';
 
 enum MeetingStatus { idle, joining, connected, ended }
 
@@ -1025,21 +1027,12 @@ class MeetingService extends ChangeNotifier {
       debugPrint('[MeetingService] ** Erreur _initLocalStream: $e');
       debugPrint('[MeetingService] Type: ${e.runtimeType}');
 
-      String errorMsg = LocaleController.instance.l10n.mediaAccessError;
-      final errorStr = e.toString().toLowerCase();
-
-      if (errorStr.contains('permission')) {
-        errorMsg = LocaleController.instance.l10n.microphoneCameraPermissionDenied;
-      } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
-        errorMsg = LocaleController.instance.l10n.mediaAccessErrorCheckHttpsOr;
-      } else if (errorStr.contains('notfounderror')) {
-        errorMsg = LocaleController.instance.l10n.noAudioVideoDeviceFound;
-      } else if (errorStr.contains('notreadableerror')) {
-        errorMsg = LocaleController.instance.l10n.cannotAccessDevicesCheckPermissions;
-      }
-
-      debugPrint('[MeetingService] Message d\'erreur: $errorMsg');
-      rethrow;
+      // Ce bloc classait la panne sur cinq branches, écrivait le message dans
+      // un `debugPrint`… puis faisait `rethrow`. Le message était donc calculé
+      // pour rien, et c'est l'exception nue qui remontait au lobby, lequel
+      // l'affichait : « Impossible de rejoindre : NotReadableError: Could not
+      // start video source ». La classification voyage désormais avec elle.
+      throw AppError(kind: kindPourException(e), cause: e);
     }
   }
 
