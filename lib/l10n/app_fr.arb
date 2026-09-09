@@ -1265,6 +1265,7 @@
   "turnOnSpeaker": "Activer le haut-parleur",
   "notAuthenticated": "Non authentifié",
   "networkTimeout": "Timeout réseau",
+  "networkError": "Connexion impossible. Vérifiez votre réseau et réessayez.",
   "networkErrorWithDetails": "Erreur réseau: {error}",
   "@networkErrorWithDetails": {
     "placeholders": {

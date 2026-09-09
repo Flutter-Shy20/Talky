@@ -432,7 +432,7 @@ extension AuthApi on TalkyApiClient {
 
     if (response.statusCode >= 400) {
       throw TalkyException(
-        LocaleController.instance.l10n.serverError,
+        resolveL10n().serverError,
         response.statusCode,
       );
     }
@@ -481,21 +481,21 @@ extension AuthApi on TalkyApiClient {
       final body = jsonDecode(response.body);
       if (body is! Map) {
         throw TalkyException(
-          LocaleController.instance.l10n.invalidResponseWithCode(response.statusCode),
+          resolveL10n().invalidResponseWithCode(response.statusCode),
           response.statusCode,
         );
       }
       final map = Map<String, dynamic>.from(body);
       if (response.statusCode >= 400) {
         final msg = map['error']?.toString() ??
-            LocaleController.instance.l10n.serverError;
+            resolveL10n().serverError;
         throw TalkyException(msg, response.statusCode);
       }
       return ExportJob.fromJson(map);
     } catch (e) {
       if (e is TalkyException) rethrow;
       throw TalkyException(
-        LocaleController.instance.l10n.invalidResponseWithCode(response.statusCode),
+        resolveL10n().invalidResponseWithCode(response.statusCode),
         response.statusCode,
       );
     }
@@ -524,7 +524,7 @@ extension AuthApi on TalkyApiClient {
     }
 
     if (response.statusCode >= 400) {
-      String msg = LocaleController.instance.l10n.serverError;
+      String msg = resolveL10n().serverError;
       try {
         final body = jsonDecode(response.body);
         if (body is Map && body['error'] != null) {

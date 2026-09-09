@@ -2366,6 +2366,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get networkTimeout => 'Network timeout';
 
   @override
+  String get networkError =>
+      'Connection failed. Check your network and try again.';
+
+  @override
   String networkErrorWithDetails(String error) {
     return 'Network error: $error';
   }

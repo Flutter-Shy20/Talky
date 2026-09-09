@@ -2299,6 +2299,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get networkTimeout => '网络超时';
 
   @override
+  String get networkError => '连接失败。请检查您的网络后重试。';
+
+  @override
   String networkErrorWithDetails(String error) {
     return '网络错误：$error';
   }

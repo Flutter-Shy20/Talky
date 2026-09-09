@@ -719,6 +719,7 @@
   "turnOnSpeaker": "开启扬声器",
   "notAuthenticated": "未登录",
   "networkTimeout": "网络超时",
+  "networkError": "连接失败。请检查您的网络后重试。",
   "networkErrorWithDetails": "网络错误：{error}",
   "invalidResponseWithCode": "响应无效（{code}）",
   "noRefreshToken": "缺少刷新令牌",

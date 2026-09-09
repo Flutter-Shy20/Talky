@@ -747,6 +747,7 @@
   "turnOnSpeaker": "Turn on speaker",
   "notAuthenticated": "Not authenticated",
   "networkTimeout": "Network timeout",
+  "networkError": "Connection failed. Check your network and try again.",
   "networkErrorWithDetails": "Network error: {error}",
   "invalidResponseWithCode": "Invalid response ({code})",
   "noRefreshToken": "No refresh token",

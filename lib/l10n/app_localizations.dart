@@ -4366,6 +4366,12 @@ abstract class AppLocalizations {
   /// **'Timeout réseau'**
   String get networkTimeout;
 
+  /// No description provided for @networkError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion impossible. Vérifiez votre réseau et réessayez.'**
+  String get networkError;
+
   /// No description provided for @networkErrorWithDetails.
   ///
   /// In fr, this message translates to:
