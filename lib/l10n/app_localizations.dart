@@ -11661,6 +11661,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Les nouveaux trajets et le SOS hors trajet sont réservés à Alanya Plus. Un trajet déjà commencé garde son SOS jusqu\'à la fin.'**
   String get plusLockedTrips;
+
+  /// No description provided for @plusCardLapsedBodyUntil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos réglages et votre historique sont conservés jusqu\'au {date}. Réabonnez-vous d\'ici là pour tout retrouver, coche comprise.'**
+  String plusCardLapsedBodyUntil(String date);
+
+  /// No description provided for @plusCardPurgedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.'**
+  String get plusCardPurgedBody;
 }
 
 class _AppLocalizationsDelegate

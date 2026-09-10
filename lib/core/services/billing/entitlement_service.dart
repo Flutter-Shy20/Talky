@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../talky_api_client.dart';
 import '../../../talky_models.dart';
+import '../list_ringtone_preferences.dart';
+import '../translation/message_translation_service.dart';
 import 'billing_models.dart';
 import 'entitlements.dart';
 
@@ -30,6 +32,10 @@ class EntitlementService extends ChangeNotifier {
 
   static const _cacheKey = 'plus_entitlements_json_v1';
   static const _offerKey = 'plus_offer_json_v1';
+
+  /// Dernière purge serveur déjà répercutée sur le téléphone (horodatage ISO) :
+  /// une purge ne s'applique qu'une fois, pas à chaque relecture des droits.
+  static const _purgeAppliedKey = 'plus_local_purge_applied_v1';
 
   /// Relu par le code natif Android quand l'application est tuée
   /// (`CallIncomingHelper`, `MessageNotificationHelper`) : les sonneries par
@@ -152,8 +158,28 @@ class EntitlementService extends ChangeNotifier {
         listRingtonesFlagKey,
         _current.has(PlusFeature.listRingtones),
       );
+      await _applyLocalPurge(prefs);
     } catch (e) {
       debugPrint('[Entitlements] cache non écrit : $e');
+    }
+  }
+
+  /// Le serveur a effacé les données payantes du compte : le téléphone efface
+  /// les siennes — modèles et traductions, sons des listes. La sauvegarde
+  /// n'est jamais concernée.
+  Future<void> _applyLocalPurge(SharedPreferences prefs) async {
+    final purgedAt = _current.purgedAt;
+    if (purgedAt == null) return;
+    final marker = purgedAt.toUtc().toIso8601String();
+    if (prefs.getString(_purgeAppliedKey) == marker) return;
+    try {
+      await MessageTranslationService.maybeInstance?.purgePaidData();
+      await ListRingtonePreferences.purgeLocal();
+      await prefs.setString(_purgeAppliedKey, marker);
+      debugPrint('[Entitlements] purge locale appliquée ($marker)');
+    } catch (e) {
+      // Le marqueur n'est pas posé : la prochaine lecture des droits réessaie.
+      debugPrint('[Entitlements] purge locale incomplète : $e');
     }
   }
 

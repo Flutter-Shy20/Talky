@@ -129,6 +129,31 @@ class ListRingtonePreferences extends ChangeNotifier {
     _loaded = true;
   }
 
+  /// Données Alanya Plus purgées côté serveur : les sons des listes et leur
+  /// ordre s'effacent ici aussi, ainsi que tout choix encore en attente d'envoi
+  /// (le repousser ferait renaître ce que la purge vient d'effacer). Les
+  /// appartenances restent : elles décrivent les listes, pas l'abonnement.
+  static Future<void> purgeLocal() async {
+    _settings = {};
+    _priority = [];
+    _pending = {};
+    _legacyPending = {};
+    _pendingOrder = false;
+    _legacyOrder = false;
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in [
+      _settingsKey,
+      _priorityKey,
+      _pendingKey,
+      _legacyKey,
+      _pendingOrderKey,
+      _legacyOrderKey,
+    ]) {
+      await prefs.remove(key);
+    }
+    _bound?.notifyListeners();
+  }
+
   /// Remet l'état statique à zéro (tests uniquement).
   @visibleForTesting
   static void resetForTesting() {

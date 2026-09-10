@@ -3037,5 +3037,7 @@
   "plusLockedTranslation": "Translation is part of Alanya Plus.",
   "plusLockedBackup": "New backups are part of Alanya Plus. Your existing backups can still be restored.",
   "plusLockedRingtones": "List ringtones are part of Alanya Plus. Your settings are kept and will come back when you subscribe.",
-  "plusLockedTrips": "New trips and SOS outside a trip are part of Alanya Plus. A trip already under way keeps its SOS until it ends."
+  "plusLockedTrips": "New trips and SOS outside a trip are part of Alanya Plus. A trip already under way keeps its SOS until it ends.",
+  "plusCardLapsedBodyUntil": "Your settings and history are kept until {date}. Subscribe again before then to get everything back, badge included.",
+  "plusCardPurgedBody": "Your Plus settings and history have been deleted. Subscribe again to get your features back."
 }

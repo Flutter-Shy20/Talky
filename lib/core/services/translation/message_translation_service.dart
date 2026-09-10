@@ -118,6 +118,26 @@ class MessageTranslationService {
     await _closeNativeResources();
   }
 
+  /// Données Alanya Plus purgées côté serveur, abonnement échu depuis
+  /// plusieurs semaines : les modèles téléchargés et les traductions gardées
+  /// en base s'effacent aussi ici. Le réglage de l'utilisateur, lui, reste —
+  /// un réabonnement retrouve ses préférences, il n'a qu'à reprendre un modèle.
+  Future<void> purgePaidData() async {
+    _queue.clear();
+    _queuedIds.clear();
+    _pendingScans.clear();
+    _convEnabledMemo.clear();
+    await _closeNativeResources();
+    for (final code in await _models.downloadedTargets()) {
+      try {
+        await _models.delete(code);
+      } catch (_) {
+        // Best-effort : un modèle introuvable n'empêche pas d'effacer les autres.
+      }
+    }
+    await _dao.clearAllTranslations();
+  }
+
   Future<void> _closeNativeResources() async {
     final translators = _translators.values.toList(growable: false);
     _translators.clear();

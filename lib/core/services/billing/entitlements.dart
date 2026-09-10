@@ -87,6 +87,8 @@ class Entitlements {
     this.features = const {},
     this.validUntil,
     this.lapsedAt,
+    this.purgeAfter,
+    this.purgedAt,
   });
 
   /// Serveur antérieur à l'abonnement, ou droits indisponibles : tout est
@@ -112,6 +114,13 @@ class Entitlements {
   /// Fin du dernier abonnement, quand il est terminé et qu'aucun n'a pris le
   /// relais. Nul pour qui n'a jamais été abonné.
   final DateTime? lapsedAt;
+
+  /// Abonnement terminé : réglages et historique payants conservés jusque-là.
+  final DateTime? purgeAfter;
+
+  /// … puis effacés côté serveur à cette date. Le téléphone efface alors ce
+  /// qu'il garde de son côté (modèles de traduction, sons des listes).
+  final DateTime? purgedAt;
 
   /// Une fonctionnalité inconnue du serveur n'est pas verrouillée.
   bool has(PlusFeature feature) => !known || (features[feature.code] ?? true);
@@ -145,6 +154,8 @@ class Entitlements {
       features: features,
       validUntil: _date(json['validUntil']),
       lapsedAt: _date(json['lapsedAt']),
+      purgeAfter: _date(json['purgeAfter']),
+      purgedAt: _date(json['purgedAt']),
     );
   }
 
@@ -158,5 +169,7 @@ class Entitlements {
         'features': features,
         'validUntil': validUntil?.toUtc().toIso8601String(),
         'lapsedAt': lapsedAt?.toUtc().toIso8601String(),
+        'purgeAfter': purgeAfter?.toUtc().toIso8601String(),
+        'purgedAt': purgedAt?.toUtc().toIso8601String(),
       };
 }

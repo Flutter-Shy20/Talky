@@ -191,6 +191,24 @@ void main() {
       expect(PlusFeature.fromCode(null), isNull);
     });
 
+    test('conservation puis purge : lues et gardées en cache', () {
+      final e = Entitlements.fromJson({
+        'phase': 'paid',
+        'features': {},
+        'lapsedAt': '2026-11-17T00:00:00.000Z',
+        'purgeAfter': '2026-12-17T00:00:00.000Z',
+        'purgedAt': null,
+      });
+      expect(e.purgeAfter, DateTime.utc(2026, 12, 17));
+      expect(e.purgedAt, isNull);
+      final purged = Entitlements.fromJson({
+        ...e.toJson(),
+        'purgedAt': '2026-12-17T01:00:00.000Z',
+      });
+      expect(Entitlements.fromJson(purged.toJson()).purgedAt,
+          DateTime.utc(2026, 12, 17, 1));
+    });
+
     test('la fin d\'abonnement survit au cache', () {
       final e = Entitlements.fromJson({
         'phase': 'paid',

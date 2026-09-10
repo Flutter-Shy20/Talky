@@ -1977,5 +1977,7 @@
   "plusLockedTranslation": "翻译为 Alanya Plus 专享功能。",
   "plusLockedBackup": "新的备份为 Alanya Plus 专享功能。您现有的备份仍可恢复。",
   "plusLockedRingtones": "列表铃声为 Alanya Plus 专享功能。您的设置已保留，订阅后即可恢复。",
-  "plusLockedTrips": "新行程和行程外的 SOS 为 Alanya Plus 专享功能。已开始的行程在结束前仍可使用 SOS。"
+  "plusLockedTrips": "新行程和行程外的 SOS 为 Alanya Plus 专享功能。已开始的行程在结束前仍可使用 SOS。",
+  "plusCardLapsedBodyUntil": "您的设置和历史记录将保留至 {date}。在此之前重新订阅即可恢复全部功能，包括认证标记。",
+  "plusCardPurgedBody": "您的 Plus 设置和历史记录已被删除。重新订阅即可恢复您的功能。"
 }

@@ -3780,5 +3780,8 @@
   "plusLockedTranslation": "La traduction est réservée à Alanya Plus.",
   "plusLockedBackup": "Les nouvelles sauvegardes sont réservées à Alanya Plus. Vos sauvegardes existantes restent restaurables.",
   "plusLockedRingtones": "Les sonneries par liste sont réservées à Alanya Plus. Vos réglages sont conservés et reprendront dès l'abonnement.",
-  "plusLockedTrips": "Les nouveaux trajets et le SOS hors trajet sont réservés à Alanya Plus. Un trajet déjà commencé garde son SOS jusqu'à la fin."
+  "plusLockedTrips": "Les nouveaux trajets et le SOS hors trajet sont réservés à Alanya Plus. Un trajet déjà commencé garde son SOS jusqu'à la fin.",
+  "plusCardLapsedBodyUntil": "Vos réglages et votre historique sont conservés jusqu'au {date}. Réabonnez-vous d'ici là pour tout retrouver, coche comprise.",
+  "@plusCardLapsedBodyUntil": {"placeholders": {"date": {"type": "String"}}},
+  "plusCardPurgedBody": "Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités."
 }

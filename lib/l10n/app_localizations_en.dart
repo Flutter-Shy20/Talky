@@ -6706,4 +6706,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get plusLockedTrips =>
       'New trips and SOS outside a trip are part of Alanya Plus. A trip already under way keeps its SOS until it ends.';
+
+  @override
+  String plusCardLapsedBodyUntil(String date) {
+    return 'Your settings and history are kept until $date. Subscribe again before then to get everything back, badge included.';
+  }
+
+  @override
+  String get plusCardPurgedBody =>
+      'Your Plus settings and history have been deleted. Subscribe again to get your features back.';
 }

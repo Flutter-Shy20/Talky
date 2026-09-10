@@ -277,11 +277,21 @@ class _PlusCardState extends State<PlusCard> {
       kickerIcon: Icons.error_outline_rounded,
       kickerColor: context.colors.error,
       title: l10n.plusCardLapsedTitle,
-      body: l10n.plusCardLapsedBody,
+      body: lapsedBody(context, e),
       action: l10n.plusResubscribe,
       onAction: _openOffer,
     );
   }
+}
+
+/// Ce que devient le compte après l'échéance : conservé jusqu'au…, puis
+/// effacé. Partagé avec « Mon abonnement ».
+String lapsedBody(BuildContext context, Entitlements e) {
+  final l10n = context.l10n;
+  if (e.purgedAt != null) return l10n.plusCardPurgedBody;
+  final until = e.purgeAfter;
+  if (until != null) return l10n.plusCardLapsedBodyUntil(formatPlusDate(context, until));
+  return l10n.plusCardLapsedBody;
 }
 
 /// La coque commune : fond, bordure, typographie et bouton, selon le ton.

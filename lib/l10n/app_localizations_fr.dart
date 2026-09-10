@@ -6789,4 +6789,13 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get plusLockedTrips =>
       'Les nouveaux trajets et le SOS hors trajet sont réservés à Alanya Plus. Un trajet déjà commencé garde son SOS jusqu\'à la fin.';
+
+  @override
+  String plusCardLapsedBodyUntil(String date) {
+    return 'Vos réglages et votre historique sont conservés jusqu\'au $date. Réabonnez-vous d\'ici là pour tout retrouver, coche comprise.';
+  }
+
+  @override
+  String get plusCardPurgedBody =>
+      'Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.';
 }

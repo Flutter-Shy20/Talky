@@ -6438,4 +6438,12 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get plusLockedTrips =>
       '新行程和行程外的 SOS 为 Alanya Plus 专享功能。已开始的行程在结束前仍可使用 SOS。';
+
+  @override
+  String plusCardLapsedBodyUntil(String date) {
+    return '您的设置和历史记录将保留至 $date。在此之前重新订阅即可恢复全部功能，包括认证标记。';
+  }
+
+  @override
+  String get plusCardPurgedBody => '您的 Plus 设置和历史记录已被删除。重新订阅即可恢复您的功能。';
 }

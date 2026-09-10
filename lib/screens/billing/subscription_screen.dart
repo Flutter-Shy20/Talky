@@ -13,6 +13,7 @@ import '../../core/services/billing/plus_status.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../talky_api_client.dart';
+import '../../widgets/billing/plus_card.dart' show lapsedBody;
 import '../../widgets/billing/plus_visuals.dart';
 import 'plus_offer_screen.dart';
 
@@ -377,7 +378,7 @@ class _StatusCard extends StatelessWidget {
         kicker = l10n.plusCardLapsedKicker(
             formatPlusDate(context, e.lapsedAt ?? now));
         title = l10n.plusCardLapsedTitle;
-        body = l10n.plusCardLapsedBody;
+        body = lapsedBody(context, e);
       case PlusStatus.grace:
         final date = formatPlusDate(context, e.graceUntil ?? now);
         title = l10n.plusCardGraceTitle(date);
