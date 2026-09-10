@@ -89,6 +89,8 @@ class Entitlements {
     this.lapsedAt,
     this.purgeAfter,
     this.purgedAt,
+    this.verificationStatus,
+    this.verifiedUntil,
   });
 
   /// Serveur antérieur à l'abonnement, ou droits indisponibles : tout est
@@ -122,6 +124,15 @@ class Entitlements {
   /// qu'il garde de son côté (modèles de traduction, sons des listes).
   final DateTime? purgedAt;
 
+  /// La coche telle que le serveur l'a écrite (0 non demandée, 1 en cours,
+  /// 2 vérifiée, 3 refusée, 4 révoquée, 5 expirée), et jusqu'à quand elle
+  /// tient. Nulle avec un serveur antérieur : le profil fait alors foi.
+  final int? verificationStatus;
+  final DateTime? verifiedUntil;
+
+  /// La coche s'affiche.
+  bool get isVerified => verificationStatus == 2;
+
   /// Une fonctionnalité inconnue du serveur n'est pas verrouillée.
   bool has(PlusFeature feature) => !known || (features[feature.code] ?? true);
 
@@ -144,6 +155,7 @@ class Entitlements {
         v is Map ? Map<String, dynamic>.from(v) : null;
     final period = map(json['period']);
     final upcoming = map(json['upcoming']);
+    final verification = map(json['verification']);
     return Entitlements(
       known: true,
       phase: _phase(json['phase']),
@@ -156,6 +168,8 @@ class Entitlements {
       lapsedAt: _date(json['lapsedAt']),
       purgeAfter: _date(json['purgeAfter']),
       purgedAt: _date(json['purgedAt']),
+      verificationStatus: (verification?['status'] as num?)?.toInt(),
+      verifiedUntil: _date(verification?['until']),
     );
   }
 
@@ -171,5 +185,10 @@ class Entitlements {
         'lapsedAt': lapsedAt?.toUtc().toIso8601String(),
         'purgeAfter': purgeAfter?.toUtc().toIso8601String(),
         'purgedAt': purgedAt?.toUtc().toIso8601String(),
+        if (verificationStatus != null)
+          'verification': {
+            'status': verificationStatus,
+            'until': verifiedUntil?.toUtc().toIso8601String(),
+          },
       };
 }

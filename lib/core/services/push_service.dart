@@ -610,7 +610,9 @@ class PushService {
     // comme les autres, et les droits se relisent — ce qu'elle annonce change
     // ce que l'application ouvre.
     if (type != null &&
-        (type.startsWith('billing_') || type.startsWith('payment_'))) {
+        (type.startsWith('billing_') ||
+            type.startsWith('payment_') ||
+            type == 'verification_update')) {
       _dispatchNotificationAction(
         NotificationAction.fromMap(data, fromTap: false),
       );

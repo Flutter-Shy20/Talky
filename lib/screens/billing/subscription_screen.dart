@@ -14,6 +14,8 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/billing/plus_card.dart' show lapsedBody;
+import '../../widgets/common/account_badge.dart' show VerifiedSeal;
+import '../profile/verification_screen.dart';
 import '../../widgets/billing/plus_visuals.dart';
 import 'plus_offer_screen.dart';
 
@@ -121,6 +123,33 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           children: [
             _StatusCard(entitlements: e, offer: offer),
             ..._actions(context, status, period, offer),
+            if (!e.exempt) ...[
+              AppSpacing.vGapMd,
+              Material(
+                color: context.colors.surface,
+                borderRadius: AppRadius.brMd,
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  leading: e.isVerified
+                      ? const VerifiedSeal(size: 28)
+                      : Icon(Icons.verified_outlined,
+                          color: context.colors.primary),
+                  title: Text(l10n.verificationStatusTitle,
+                      style: context.text.bodyLarge
+                          ?.copyWith(fontWeight: FontWeight.w600)),
+                  subtitle: Text(e.isVerified
+                      ? l10n.plusCardBadgeActive
+                      : e.verificationStatus == 1
+                          ? l10n.verificationPendingTitle
+                          : l10n.plusCardBadgeMissing),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const VerificationScreen()),
+                  ),
+                ),
+              ),
+            ],
             if (status == PlusStatus.active && period != null) ...[
               AppSpacing.vGapXl,
               Material(

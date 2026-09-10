@@ -199,6 +199,113 @@ class PlusChoiceDot extends StatelessWidget {
   }
 }
 
+enum PlusStepState { done, current, todo }
+
+/// Une étape d'une frise verticale (paiement, vérification) : pastille, trait
+/// vers la suivante, titre et précision.
+class PlusTimelineStep extends StatelessWidget {
+  const PlusTimelineStep({
+    super.key,
+    required this.state,
+    required this.title,
+    required this.subtitle,
+    this.last = false,
+  });
+
+  final PlusStepState state;
+  final String title;
+  final String subtitle;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = context.colors.primary;
+    final dot = switch (state) {
+      PlusStepState.done => Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: context.semantic.success,
+          ),
+          child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+        ),
+      PlusStepState.current => Container(
+          width: 18,
+          height: 18,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: primary, width: 2),
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(shape: BoxShape.circle, color: primary),
+          ),
+        ),
+      PlusStepState.todo => Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: context.colors.outline, width: 2),
+          ),
+        ),
+    };
+    final muted = state == PlusStepState.todo;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Column(
+            children: [
+              dot,
+              if (!last)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    margin: const EdgeInsets.symmetric(vertical: 3),
+                    color: state == PlusStepState.done
+                        ? context.semantic.success.withValues(alpha: 0.5)
+                        : context.colors.outlineVariant,
+                  ),
+                ),
+            ],
+          ),
+          AppSpacing.hGapMd,
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: last ? 0 : AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: context.text.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: muted
+                          ? context.colors.onSurfaceVariant
+                          : context.colors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle,
+                    style: context.text.bodySmall?.copyWith(
+                      color: context.colors.onSurfaceVariant,
+                      fontFeatures: kTabularFigures,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Pastille ronde d'une fonctionnalité (icône sur fond teinté).
 class PlusFeatureGlyph extends StatelessWidget {
   const PlusFeatureGlyph({

@@ -43,6 +43,7 @@ part 'api/welcome_api.dart';
 part 'api/reports_api.dart';
 part 'api/backup_api.dart';
 part 'api/billing_api.dart';
+part 'api/verification_api.dart';
 
 class TalkyApiClient {
   // ** Remplace par ton IP/domaine de production
@@ -558,7 +559,15 @@ class TalkyApiClient {
     try {
       final body = jsonDecode(response.body);
       if (body is Map && body['error'] != null) {
-        return TalkyException(body['error'].toString(), code);
+        // Le code et le corps suivent, comme pour `_parseResponse` : sans eux,
+        // un refus d'envoi (pièce trop lourde, dossier déjà ouvert) retombait
+        // sur le repli du statut HTTP au lieu de sa phrase.
+        return TalkyException(
+          body['error'].toString(),
+          code,
+          code: body['code']?.toString(),
+          details: Map<String, dynamic>.from(body),
+        );
       }
     } catch (_) {
       // body non JSON (ex. page nginx HTML)

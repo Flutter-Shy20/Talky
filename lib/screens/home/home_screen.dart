@@ -34,6 +34,7 @@ import '../../core/services/trip_repository.dart';
 import '../trips/trip_live_screen.dart';
 import '../../core/services/billing/entitlement_service.dart';
 import '../billing/subscription_screen.dart';
+import '../profile/verification_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.initialTab = 0});
@@ -299,6 +300,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (action.fromTap) _switchToTab(_tabStatuses);
     } else if (type.startsWith('trip_')) {
       unawaited(_handleTripNotification(action));
+    } else if (type == 'verification_update') {
+      // Décision sur le dossier : la coche change, les droits la portent.
+      final droits = EntitlementService.maybeInstance;
+      if (droits != null) unawaited(droits.refresh());
+      if (action.fromTap) {
+        unawaited(Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const VerificationScreen()),
+        ));
+      }
     } else if (type.startsWith('billing_') || type.startsWith('payment_')) {
       // Relance, échéance ou paiement : les droits d'abord, puis « Mon
       // abonnement » si l'utilisateur a touché la notification.

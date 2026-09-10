@@ -167,6 +167,20 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
     case 'PAYMENT_PROVIDER_ERROR':
       return l10n.errCodePaymentProviderError;
 
+    // Vérification d'identité
+    case 'VERIFICATION_UNAVAILABLE':
+      return l10n.errCodeVerificationUnavailable;
+    case 'DOCUMENTS_REQUIRED':
+      return l10n.errCodeDocumentsRequired;
+    case 'NAME_REQUIRED':
+      return l10n.errCodeNameRequired;
+    case 'VERIFICATION_ALREADY_OPEN':
+      return l10n.errCodeVerificationAlreadyOpen;
+    case 'VERIFICATION_ALREADY_APPROVED':
+      return l10n.errCodeVerificationAlreadyApproved;
+    case 'REQUEST_NOT_PENDING':
+      return l10n.errCodeRequestNotPending;
+
     // Droits
     case 'INSUFFICIENT_ROLE':
       return l10n.errCodeInsufficientRole;

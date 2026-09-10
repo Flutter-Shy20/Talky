@@ -493,18 +493,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               children: [
-                _TimelineStep(
-                  state: _StepState.done,
+                PlusTimelineStep(
+                  state: PlusStepState.done,
                   title: l10n.checkoutStepSent,
                   subtitle: l10n.checkoutStepSentTo(number),
                 ),
-                _TimelineStep(
-                  state: _StepState.current,
+                PlusTimelineStep(
+                  state: PlusStepState.current,
                   title: l10n.checkoutStepConfirm,
                   subtitle: l10n.checkoutStepPending,
                 ),
-                _TimelineStep(
-                  state: _StepState.todo,
+                PlusTimelineStep(
+                  state: PlusStepState.todo,
                   title: l10n.checkoutStepActivated,
                   subtitle: l10n.checkoutStepActivatedHint(_channel.brand),
                   last: true,
@@ -688,110 +688,6 @@ class _ChannelTile extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-enum _StepState { done, current, todo }
-
-class _TimelineStep extends StatelessWidget {
-  const _TimelineStep({
-    required this.state,
-    required this.title,
-    required this.subtitle,
-    this.last = false,
-  });
-
-  final _StepState state;
-  final String title;
-  final String subtitle;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = context.colors.primary;
-    final dot = switch (state) {
-      _StepState.done => Container(
-          width: 18,
-          height: 18,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: context.semantic.success,
-          ),
-          child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
-        ),
-      _StepState.current => Container(
-          width: 18,
-          height: 18,
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: primary, width: 2),
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(shape: BoxShape.circle, color: primary),
-          ),
-        ),
-      _StepState.todo => Container(
-          width: 18,
-          height: 18,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: context.colors.outline, width: 2),
-          ),
-        ),
-    };
-    final muted = state == _StepState.todo;
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Column(
-            children: [
-              dot,
-              if (!last)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 3),
-                    color: state == _StepState.done
-                        ? context.semantic.success.withValues(alpha: 0.5)
-                        : context.colors.outlineVariant,
-                  ),
-                ),
-            ],
-          ),
-          AppSpacing.hGapMd,
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: last ? 0 : AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: context.text.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: muted
-                          ? context.colors.onSurfaceVariant
-                          : context.colors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    subtitle,
-                    style: context.text.bodySmall?.copyWith(
-                      color: context.colors.onSurfaceVariant,
-                      fontFeatures: kTabularFigures,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

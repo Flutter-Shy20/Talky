@@ -6715,4 +6715,186 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get plusCardPurgedBody =>
       'Your Plus settings and history have been deleted. Subscribe again to get your features back.';
+
+  @override
+  String get verificationTitle => 'Get the badge';
+
+  @override
+  String get verificationStatusTitle => 'My verification';
+
+  @override
+  String get verificationIntro =>
+      'The badge tells your contacts that you really are the person this account is named after.';
+
+  @override
+  String get verificationNameLabel => 'Name to verify';
+
+  @override
+  String get verificationNameHint =>
+      'This is your profile name. It must match your ID.';
+
+  @override
+  String get verificationToProvide => 'To provide';
+
+  @override
+  String get verificationIdFront => 'ID document — front';
+
+  @override
+  String get verificationIdFrontHint =>
+      'National ID, passport or driving licence';
+
+  @override
+  String get verificationIdBack => 'ID document — back';
+
+  @override
+  String get verificationIdBackHint => 'if your document has one';
+
+  @override
+  String get verificationSelfie => 'Selfie holding your ID';
+
+  @override
+  String get verificationSelfieHint => 'face and ID clearly visible';
+
+  @override
+  String get verificationTakePhoto => 'Take a photo';
+
+  @override
+  String get verificationChooseGallery => 'Choose from gallery';
+
+  @override
+  String get verificationRemove => 'Remove';
+
+  @override
+  String get verificationPrivacy =>
+      'Your documents are encrypted, seen only by the admin team, and deleted 90 days after the decision. Every view is logged.';
+
+  @override
+  String get verificationSubmit => 'Send my request';
+
+  @override
+  String get verificationSendPieces => 'Send the documents';
+
+  @override
+  String get verificationPendingTitle => 'Verification in progress';
+
+  @override
+  String verificationPendingBody(String date) {
+    return 'Submitted on $date · answer within 5 working days';
+  }
+
+  @override
+  String get verificationStepSent => 'Request sent';
+
+  @override
+  String get verificationStepPieces => 'Documents received';
+
+  @override
+  String get verificationStepReview => 'Review by Alanya';
+
+  @override
+  String get verificationStepInProgress => 'in progress';
+
+  @override
+  String get verificationStepDecision => 'Decision';
+
+  @override
+  String get verificationStepDecisionHint => 'you\'ll get a notification';
+
+  @override
+  String get verificationPlusNotWaiting =>
+      'Your subscription is active: your Plus features don\'t wait for the decision.';
+
+  @override
+  String get verificationCancel => 'Cancel my request';
+
+  @override
+  String get verificationCancelConfirm =>
+      'Cancel the request? Your documents will be deleted.';
+
+  @override
+  String get verificationDocRequestedTitle => 'A document is missing';
+
+  @override
+  String get verificationRefusedTitle => 'Request refused';
+
+  @override
+  String get verificationRevokedTitle => 'Badge removed';
+
+  @override
+  String verificationReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get verificationResubmitHint => 'You can submit a new request.';
+
+  @override
+  String get verificationRenamedTitle => 'Your name has changed';
+
+  @override
+  String get verificationRenamedBody =>
+      'The badge is waiting for a new review: submit documents in your displayed name, or go back to the verified name.';
+
+  @override
+  String get verificationApprovedTitle => 'Identity verified, badge active';
+
+  @override
+  String verificationApprovedUntil(String date) {
+    return 'It follows your subscription: until $date.';
+  }
+
+  @override
+  String get verificationApprovedFree => 'The badge shows next to your name.';
+
+  @override
+  String get verificationPausedTitle => 'Identity verified, badge paused';
+
+  @override
+  String get verificationPausedBody =>
+      'It comes back as soon as your subscription resumes.';
+
+  @override
+  String get verificationNameWarning =>
+      'Changing your name removes the badge until a new review.';
+
+  @override
+  String get verificationUnavailableBody =>
+      'Identity verification opens soon. Check back in a few days.';
+
+  @override
+  String get plusCardVerifyTitle => 'Get the badge next to your name';
+
+  @override
+  String get plusCardVerifyBody =>
+      'Get your identity verified: your contacts will know it\'s really you.';
+
+  @override
+  String get plusCardVerifyAction => 'Verify my account';
+
+  @override
+  String get plusCardBadgeMissing =>
+      'Only identity verification is missing for the badge';
+
+  @override
+  String get errCodeVerificationUnavailable =>
+      'Identity verification isn\'t open yet.';
+
+  @override
+  String get errCodeDocumentsRequired => 'Add your ID and a selfie holding it.';
+
+  @override
+  String get errCodeNameRequired =>
+      'Add your name to your profile before getting it verified.';
+
+  @override
+  String get errCodeVerificationAlreadyOpen =>
+      'A request is already under review.';
+
+  @override
+  String get errCodeVerificationAlreadyApproved =>
+      'Your identity is already verified under this name.';
+
+  @override
+  String get errCodeRequestNotPending =>
+      'This request changed in the meantime. Reload the screen.';
 }

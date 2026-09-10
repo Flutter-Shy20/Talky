@@ -6446,4 +6446,169 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get plusCardPurgedBody => '您的 Plus 设置和历史记录已被删除。重新订阅即可恢复您的功能。';
+
+  @override
+  String get verificationTitle => '获取认证标记';
+
+  @override
+  String get verificationStatusTitle => '我的认证';
+
+  @override
+  String get verificationIntro => '认证标记告诉您的联系人，您确实是此账户名称所指的人。';
+
+  @override
+  String get verificationNameLabel => '待认证姓名';
+
+  @override
+  String get verificationNameHint => '这是您的个人资料姓名，必须与您的证件一致。';
+
+  @override
+  String get verificationToProvide => '需提供';
+
+  @override
+  String get verificationIdFront => '身份证件 — 正面';
+
+  @override
+  String get verificationIdFrontHint => '身份证、护照或驾照';
+
+  @override
+  String get verificationIdBack => '身份证件 — 背面';
+
+  @override
+  String get verificationIdBackHint => '如果证件有背面';
+
+  @override
+  String get verificationSelfie => '手持证件自拍';
+
+  @override
+  String get verificationSelfieHint => '面部和证件清晰可见';
+
+  @override
+  String get verificationTakePhoto => '拍照';
+
+  @override
+  String get verificationChooseGallery => '从相册选择';
+
+  @override
+  String get verificationRemove => '移除';
+
+  @override
+  String get verificationPrivacy => '您的证件已加密，仅管理团队可见，并在决定后 90 天删除。每次查看都会被记录。';
+
+  @override
+  String get verificationSubmit => '提交申请';
+
+  @override
+  String get verificationSendPieces => '发送证件';
+
+  @override
+  String get verificationPendingTitle => '认证审核中';
+
+  @override
+  String verificationPendingBody(String date) {
+    return '$date 提交 · 5 个工作日内答复';
+  }
+
+  @override
+  String get verificationStepSent => '申请已发送';
+
+  @override
+  String get verificationStepPieces => '证件已收到';
+
+  @override
+  String get verificationStepReview => 'Alanya 审核';
+
+  @override
+  String get verificationStepInProgress => '进行中';
+
+  @override
+  String get verificationStepDecision => '决定';
+
+  @override
+  String get verificationStepDecisionHint => '我们会通知您';
+
+  @override
+  String get verificationPlusNotWaiting => '您的订阅已生效：Plus 功能无需等待审核结果。';
+
+  @override
+  String get verificationCancel => '取消申请';
+
+  @override
+  String get verificationCancelConfirm => '取消申请？您的证件将被删除。';
+
+  @override
+  String get verificationDocRequestedTitle => '您的申请缺少证件';
+
+  @override
+  String get verificationRefusedTitle => '申请被拒绝';
+
+  @override
+  String get verificationRevokedTitle => '认证标记已撤销';
+
+  @override
+  String verificationReason(String reason) {
+    return '原因：$reason';
+  }
+
+  @override
+  String get verificationResubmitHint => '您可以重新提交申请。';
+
+  @override
+  String get verificationRenamedTitle => '您的姓名已更改';
+
+  @override
+  String get verificationRenamedBody => '认证标记等待重新审核：请提交与显示姓名一致的证件，或恢复已认证的姓名。';
+
+  @override
+  String get verificationApprovedTitle => '身份已认证，标记已生效';
+
+  @override
+  String verificationApprovedUntil(String date) {
+    return '它随您的订阅有效：至 $date。';
+  }
+
+  @override
+  String get verificationApprovedFree => '认证标记显示在您的名字旁。';
+
+  @override
+  String get verificationPausedTitle => '身份已认证，标记已暂停';
+
+  @override
+  String get verificationPausedBody => '订阅恢复后标记即会恢复。';
+
+  @override
+  String get verificationNameWarning => '更改姓名将撤销认证标记，直至重新审核。';
+
+  @override
+  String get verificationUnavailableBody => '身份认证即将开放。请几天后再来。';
+
+  @override
+  String get plusCardVerifyTitle => '在您的名字旁获得认证标记';
+
+  @override
+  String get plusCardVerifyBody => '认证您的身份：让联系人知道真的是您。';
+
+  @override
+  String get plusCardVerifyAction => '认证我的账户';
+
+  @override
+  String get plusCardBadgeMissing => '只差身份认证即可获得认证标记';
+
+  @override
+  String get errCodeVerificationUnavailable => '身份认证尚未开放。';
+
+  @override
+  String get errCodeDocumentsRequired => '请添加您的身份证件和手持证件的自拍。';
+
+  @override
+  String get errCodeNameRequired => '请先在个人资料中填写姓名再申请认证。';
+
+  @override
+  String get errCodeVerificationAlreadyOpen => '已有申请正在审核中。';
+
+  @override
+  String get errCodeVerificationAlreadyApproved => '您的身份已以此姓名认证。';
+
+  @override
+  String get errCodeRequestNotPending => '此申请已发生变化。请刷新页面。';
 }

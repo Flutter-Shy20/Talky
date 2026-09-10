@@ -6798,4 +6798,189 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get plusCardPurgedBody =>
       'Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.';
+
+  @override
+  String get verificationTitle => 'Obtenir la coche';
+
+  @override
+  String get verificationStatusTitle => 'Ma vérification';
+
+  @override
+  String get verificationIntro =>
+      'La coche dit à vos contacts que vous êtes bien la personne dont ce compte porte le nom.';
+
+  @override
+  String get verificationNameLabel => 'Nom à vérifier';
+
+  @override
+  String get verificationNameHint =>
+      'C\'est le nom de votre profil. Il doit correspondre à votre pièce.';
+
+  @override
+  String get verificationToProvide => 'À fournir';
+
+  @override
+  String get verificationIdFront => 'Pièce d\'identité — recto';
+
+  @override
+  String get verificationIdFrontHint => 'CNI, passeport ou permis de conduire';
+
+  @override
+  String get verificationIdBack => 'Pièce d\'identité — verso';
+
+  @override
+  String get verificationIdBackHint => 'si votre pièce en a un';
+
+  @override
+  String get verificationSelfie => 'Selfie avec la pièce';
+
+  @override
+  String get verificationSelfieHint => 'visage et pièce lisibles';
+
+  @override
+  String get verificationTakePhoto => 'Prendre une photo';
+
+  @override
+  String get verificationChooseGallery => 'Choisir dans la galerie';
+
+  @override
+  String get verificationRemove => 'Retirer';
+
+  @override
+  String get verificationPrivacy =>
+      'Vos pièces sont chiffrées, vues seulement par l\'administration, et supprimées 90 jours après la décision. Chaque consultation est journalisée.';
+
+  @override
+  String get verificationSubmit => 'Envoyer ma demande';
+
+  @override
+  String get verificationSendPieces => 'Envoyer les pièces';
+
+  @override
+  String get verificationPendingTitle => 'Vérification en cours';
+
+  @override
+  String verificationPendingBody(String date) {
+    return 'Déposée le $date · réponse sous 5 jours ouvrés';
+  }
+
+  @override
+  String get verificationStepSent => 'Demande envoyée';
+
+  @override
+  String get verificationStepPieces => 'Pièces reçues';
+
+  @override
+  String get verificationStepReview => 'Examen par Alanya';
+
+  @override
+  String get verificationStepInProgress => 'en cours';
+
+  @override
+  String get verificationStepDecision => 'Décision';
+
+  @override
+  String get verificationStepDecisionHint => 'une notification vous préviendra';
+
+  @override
+  String get verificationPlusNotWaiting =>
+      'Votre abonnement est actif : vos fonctionnalités Plus n\'attendent pas la décision.';
+
+  @override
+  String get verificationCancel => 'Annuler ma demande';
+
+  @override
+  String get verificationCancelConfirm =>
+      'Annuler la demande ? Vos pièces seront supprimées.';
+
+  @override
+  String get verificationDocRequestedTitle =>
+      'Une pièce manque à votre dossier';
+
+  @override
+  String get verificationRefusedTitle => 'Demande refusée';
+
+  @override
+  String get verificationRevokedTitle => 'Coche retirée';
+
+  @override
+  String verificationReason(String reason) {
+    return 'Motif : $reason';
+  }
+
+  @override
+  String get verificationResubmitHint =>
+      'Vous pouvez déposer une nouvelle demande.';
+
+  @override
+  String get verificationRenamedTitle => 'Votre nom a changé';
+
+  @override
+  String get verificationRenamedBody =>
+      'La coche attend un nouvel examen : déposez des pièces au nom affiché, ou reprenez le nom vérifié.';
+
+  @override
+  String get verificationApprovedTitle => 'Identité vérifiée, coche active';
+
+  @override
+  String verificationApprovedUntil(String date) {
+    return 'Elle suit votre abonnement : jusqu\'au $date.';
+  }
+
+  @override
+  String get verificationApprovedFree =>
+      'La coche s\'affiche à côté de votre nom.';
+
+  @override
+  String get verificationPausedTitle => 'Identité vérifiée, coche en pause';
+
+  @override
+  String get verificationPausedBody =>
+      'Elle revient dès que votre abonnement reprend.';
+
+  @override
+  String get verificationNameWarning =>
+      'Changer de nom retire la coche jusqu\'à un nouvel examen.';
+
+  @override
+  String get verificationUnavailableBody =>
+      'La vérification d\'identité ouvre bientôt. Revenez dans quelques jours.';
+
+  @override
+  String get plusCardVerifyTitle => 'Obtenez la coche à côté de votre nom';
+
+  @override
+  String get plusCardVerifyBody =>
+      'Faites vérifier votre identité : vos contacts sauront que c\'est bien vous.';
+
+  @override
+  String get plusCardVerifyAction => 'Faire vérifier mon compte';
+
+  @override
+  String get plusCardBadgeMissing =>
+      'Il ne manque que la vérification d\'identité pour la coche';
+
+  @override
+  String get errCodeVerificationUnavailable =>
+      'La vérification d\'identité n\'est pas encore ouverte.';
+
+  @override
+  String get errCodeDocumentsRequired =>
+      'Ajoutez votre pièce d\'identité et un selfie avec la pièce.';
+
+  @override
+  String get errCodeNameRequired =>
+      'Renseignez votre nom dans votre profil avant de le faire vérifier.';
+
+  @override
+  String get errCodeVerificationAlreadyOpen =>
+      'Une demande est déjà en cours d\'examen.';
+
+  @override
+  String get errCodeVerificationAlreadyApproved =>
+      'Votre identité est déjà vérifiée sous ce nom.';
+
+  @override
+  String get errCodeRequestNotPending =>
+      'Ce dossier a changé entre-temps. Rechargez l\'écran.';
 }

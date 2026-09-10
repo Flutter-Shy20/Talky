@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:talky_flutter/core/errors/afficher_erreur.dart';
 import 'package:talky_flutter/core/errors/app_error.dart';
 import 'package:talky_flutter/core/errors/error_presenter.dart';
@@ -107,6 +108,27 @@ void main() {
       expect(dire('PLAN_NOT_FOUND'), l10n.errCodePlanNotFound);
       expect(dire('PAYMENT_PROVIDER_ERROR'), l10n.errCodePaymentProviderError);
       expect(dire('SUBSCRIPTION_REQUIRED'), l10n.errCodeSubscriptionRequired);
+    });
+
+    test('vérification d\'identité : chaque code a sa phrase', () {
+      expect(dire('VERIFICATION_UNAVAILABLE'), l10n.errCodeVerificationUnavailable);
+      expect(dire('DOCUMENTS_REQUIRED'), l10n.errCodeDocumentsRequired);
+      expect(dire('NAME_REQUIRED'), l10n.errCodeNameRequired);
+      expect(dire('VERIFICATION_ALREADY_OPEN'), l10n.errCodeVerificationAlreadyOpen);
+      expect(dire('VERIFICATION_ALREADY_APPROVED'),
+          l10n.errCodeVerificationAlreadyApproved);
+      expect(dire('REQUEST_NOT_PENDING'), l10n.errCodeRequestNotPending);
+    });
+
+    test('un refus d\'envoi garde son code (uploadHttpException)', () {
+      final api = TalkyApiClient();
+      final e = api.uploadHttpException(http.Response(
+        '{"error":"Une demande est déjà en cours","code":"VERIFICATION_ALREADY_OPEN","requestId":9}',
+        409,
+      ));
+      expect(e.code, 'VERIFICATION_ALREADY_OPEN');
+      expect(e.details?['requestId'], 9);
+      expect(dire('VERIFICATION_ALREADY_OPEN'), l10n.errCodeVerificationAlreadyOpen);
     });
 
     test('repli du domaine', () {

@@ -11673,6 +11673,324 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.'**
   String get plusCardPurgedBody;
+
+  /// No description provided for @verificationTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Obtenir la coche'**
+  String get verificationTitle;
+
+  /// No description provided for @verificationStatusTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ma vérification'**
+  String get verificationStatusTitle;
+
+  /// No description provided for @verificationIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'La coche dit à vos contacts que vous êtes bien la personne dont ce compte porte le nom.'**
+  String get verificationIntro;
+
+  /// No description provided for @verificationNameLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom à vérifier'**
+  String get verificationNameLabel;
+
+  /// No description provided for @verificationNameHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est le nom de votre profil. Il doit correspondre à votre pièce.'**
+  String get verificationNameHint;
+
+  /// No description provided for @verificationToProvide.
+  ///
+  /// In fr, this message translates to:
+  /// **'À fournir'**
+  String get verificationToProvide;
+
+  /// No description provided for @verificationIdFront.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pièce d\'identité — recto'**
+  String get verificationIdFront;
+
+  /// No description provided for @verificationIdFrontHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'CNI, passeport ou permis de conduire'**
+  String get verificationIdFrontHint;
+
+  /// No description provided for @verificationIdBack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pièce d\'identité — verso'**
+  String get verificationIdBack;
+
+  /// No description provided for @verificationIdBackHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'si votre pièce en a un'**
+  String get verificationIdBackHint;
+
+  /// No description provided for @verificationSelfie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Selfie avec la pièce'**
+  String get verificationSelfie;
+
+  /// No description provided for @verificationSelfieHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'visage et pièce lisibles'**
+  String get verificationSelfieHint;
+
+  /// No description provided for @verificationTakePhoto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prendre une photo'**
+  String get verificationTakePhoto;
+
+  /// No description provided for @verificationChooseGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir dans la galerie'**
+  String get verificationChooseGallery;
+
+  /// No description provided for @verificationRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get verificationRemove;
+
+  /// No description provided for @verificationPrivacy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos pièces sont chiffrées, vues seulement par l\'administration, et supprimées 90 jours après la décision. Chaque consultation est journalisée.'**
+  String get verificationPrivacy;
+
+  /// No description provided for @verificationSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer ma demande'**
+  String get verificationSubmit;
+
+  /// No description provided for @verificationSendPieces.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer les pièces'**
+  String get verificationSendPieces;
+
+  /// No description provided for @verificationPendingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérification en cours'**
+  String get verificationPendingTitle;
+
+  /// No description provided for @verificationPendingBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déposée le {date} · réponse sous 5 jours ouvrés'**
+  String verificationPendingBody(String date);
+
+  /// No description provided for @verificationStepSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande envoyée'**
+  String get verificationStepSent;
+
+  /// No description provided for @verificationStepPieces.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pièces reçues'**
+  String get verificationStepPieces;
+
+  /// No description provided for @verificationStepReview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Examen par Alanya'**
+  String get verificationStepReview;
+
+  /// No description provided for @verificationStepInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'en cours'**
+  String get verificationStepInProgress;
+
+  /// No description provided for @verificationStepDecision.
+  ///
+  /// In fr, this message translates to:
+  /// **'Décision'**
+  String get verificationStepDecision;
+
+  /// No description provided for @verificationStepDecisionHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'une notification vous préviendra'**
+  String get verificationStepDecisionHint;
+
+  /// No description provided for @verificationPlusNotWaiting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre abonnement est actif : vos fonctionnalités Plus n\'attendent pas la décision.'**
+  String get verificationPlusNotWaiting;
+
+  /// No description provided for @verificationCancel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler ma demande'**
+  String get verificationCancel;
+
+  /// No description provided for @verificationCancelConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler la demande ? Vos pièces seront supprimées.'**
+  String get verificationCancelConfirm;
+
+  /// No description provided for @verificationDocRequestedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une pièce manque à votre dossier'**
+  String get verificationDocRequestedTitle;
+
+  /// No description provided for @verificationRefusedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande refusée'**
+  String get verificationRefusedTitle;
+
+  /// No description provided for @verificationRevokedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coche retirée'**
+  String get verificationRevokedTitle;
+
+  /// No description provided for @verificationReason.
+  ///
+  /// In fr, this message translates to:
+  /// **'Motif : {reason}'**
+  String verificationReason(String reason);
+
+  /// No description provided for @verificationResubmitHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous pouvez déposer une nouvelle demande.'**
+  String get verificationResubmitHint;
+
+  /// No description provided for @verificationRenamedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre nom a changé'**
+  String get verificationRenamedTitle;
+
+  /// No description provided for @verificationRenamedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'La coche attend un nouvel examen : déposez des pièces au nom affiché, ou reprenez le nom vérifié.'**
+  String get verificationRenamedBody;
+
+  /// No description provided for @verificationApprovedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Identité vérifiée, coche active'**
+  String get verificationApprovedTitle;
+
+  /// No description provided for @verificationApprovedUntil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Elle suit votre abonnement : jusqu\'au {date}.'**
+  String verificationApprovedUntil(String date);
+
+  /// No description provided for @verificationApprovedFree.
+  ///
+  /// In fr, this message translates to:
+  /// **'La coche s\'affiche à côté de votre nom.'**
+  String get verificationApprovedFree;
+
+  /// No description provided for @verificationPausedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Identité vérifiée, coche en pause'**
+  String get verificationPausedTitle;
+
+  /// No description provided for @verificationPausedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Elle revient dès que votre abonnement reprend.'**
+  String get verificationPausedBody;
+
+  /// No description provided for @verificationNameWarning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer de nom retire la coche jusqu\'à un nouvel examen.'**
+  String get verificationNameWarning;
+
+  /// No description provided for @verificationUnavailableBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'La vérification d\'identité ouvre bientôt. Revenez dans quelques jours.'**
+  String get verificationUnavailableBody;
+
+  /// No description provided for @plusCardVerifyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Obtenez la coche à côté de votre nom'**
+  String get plusCardVerifyTitle;
+
+  /// No description provided for @plusCardVerifyBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Faites vérifier votre identité : vos contacts sauront que c\'est bien vous.'**
+  String get plusCardVerifyBody;
+
+  /// No description provided for @plusCardVerifyAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Faire vérifier mon compte'**
+  String get plusCardVerifyAction;
+
+  /// No description provided for @plusCardBadgeMissing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il ne manque que la vérification d\'identité pour la coche'**
+  String get plusCardBadgeMissing;
+
+  /// No description provided for @errCodeVerificationUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'La vérification d\'identité n\'est pas encore ouverte.'**
+  String get errCodeVerificationUnavailable;
+
+  /// No description provided for @errCodeDocumentsRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez votre pièce d\'identité et un selfie avec la pièce.'**
+  String get errCodeDocumentsRequired;
+
+  /// No description provided for @errCodeNameRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renseignez votre nom dans votre profil avant de le faire vérifier.'**
+  String get errCodeNameRequired;
+
+  /// No description provided for @errCodeVerificationAlreadyOpen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une demande est déjà en cours d\'examen.'**
+  String get errCodeVerificationAlreadyOpen;
+
+  /// No description provided for @errCodeVerificationAlreadyApproved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre identité est déjà vérifiée sous ce nom.'**
+  String get errCodeVerificationAlreadyApproved;
+
+  /// No description provided for @errCodeRequestNotPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce dossier a changé entre-temps. Rechargez l\'écran.'**
+  String get errCodeRequestNotPending;
 }
 
 class _AppLocalizationsDelegate
