@@ -1,0 +1,138 @@
+% =====================================================================
+%  ALANYA — Dossier de conception
+%  Étape 8 : abonnement, fonctionnalités payantes et coche indigo
+%
+%  Compilation :  latexmk -pdf abonnement.tex
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+\usepackage{alanya-conception}
+\setAlanyaDocTitre{Abonnement}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AlanyaIndigoStrong,
+  urlcolor=AlanyaIndigoStrong,
+  pdftitle={Alanya - Abonnement},
+  pdfauthor={Equipe Alanya},
+  pdfsubject={Conception - abonnement, fonctionnalites payantes, paiement simule, coche indigo}
+}
+
+\begin{document}
+
+% =====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[AlanyaIndigo]
+    (current page.north west) rectangle ([yshift=-6.4cm]current page.north east);
+  \fill[AlanyaIndigoDark]
+    ([yshift=-6.4cm]current page.north west) rectangle ([yshift=-6.0cm]current page.north east);
+\end{tikzpicture}
+
+\vspace*{1.1cm}
+{\color{white}\sffamily
+\begin{center}
+  {\small\bfseries DOSSIER DE CONCEPTION}\\[6pt]
+  {\footnotesize\color{AlanyaContainer} Document de travail --- à valider avant développement}
+\end{center}}
+
+\vspace{3.4cm}
+
+\begin{center}\sffamily
+  {\small\bfseries ÉTAPE 8}\\[10pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[20pt]
+  {\fontsize{32}{36}\selectfont\bfseries\color{AlanyaIndigoDark} Abonnement}\\[10pt]
+  {\large\color{AlanyaGray} Ce qui se paie, ce qui reste gratuit, et quand}\\[6pt]
+  {\normalsize\itshape\color{AlanyaGray}
+   Plans modifiables sans code, paiement simulé, interrupteur d'activation}\\[22pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}
+\end{center}
+
+\vspace{1.2cm}
+
+\begin{center}
+  \badgePastilleCoche[3.2]
+\end{center}
+
+\vfill
+
+\begin{center}\sffamily
+  \begin{tabular}{@{}r@{\quad}l@{}}
+    \thd{Périmètre}   & Alanya (Flutter) \textbullet{} Alanya-Backend \textbullet{} Alanya Admin\\[3pt]
+    \thd{Statut}      & Conception --- aucune ligne de code écrite\\[3pt]
+    \thd{Dépend de}   & Socle de compte (migration 038) \textbullet{} Certification (volet 5)\\[3pt]
+    \thd{Révise}      & Volet 5 : la coche n'est plus gratuite, l'abonnement n'est plus dormant\\[3pt]
+    \thd{Date}        & \today\\
+  \end{tabular}
+\end{center}
+
+\vspace{0.8cm}
+\begin{center}\color{AlanyaGray}\small\sffamily
+  Document confidentiel --- diffusion restreinte
+\end{center}
+\end{titlepage}
+
+% =====================================================================
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\markboth{Avant-propos}{}
+\thispagestyle{plain}
+
+Le volet~5 avait conçu l'abonnement et le paiement pour les laisser \textbf{dormants}~: la
+certification y était gratuite, et les tables commerciales attendaient qu'une offre soit
+arrêtée. Elle l'est désormais. Ce document la décrit~: ce que l'abonnement débloque, ce qu'il
+coûte, comment on le paie tant qu'aucun agrégateur n'est branché, et comment l'administration
+passe de \guillemotleft~tout gratuit~\guillemotright{} à \guillemotleft~payant~\guillemotright{}
+sans prendre les utilisateurs par surprise.
+
+\begin{note}[Les décisions qui structurent tout]
+\begin{itemize}[leftmargin=1.2em, itemsep=1pt, topsep=2pt]
+  \item Une offre, deux durées~: \textbf{250~FCFA par mois} ou \textbf{2\,000~FCFA par an}.
+  \item Elle débloque la traduction, la sauvegarde, les trajets de confiance, les sonneries
+        par liste --- et plus tard la personnalisation du style.
+  \item La \textbf{coche indigo} demande deux choses~: un abonnement actif \emph{et} une
+        identité vérifiée par un administrateur. Elle tombe à l'échéance.
+  \item Le paiement est \textbf{simulé} par un faux agrégateur côté serveur~; le vrai
+        prendra sa place sans rien changer d'autre.
+  \item Un \textbf{interrupteur} dans l'administration laisse tout gratuit, puis active le
+        payant avec une période de grâce.
+  \item Les plans --- prix, durées, relances, contenu --- se modifient \textbf{depuis
+        l'administration}, sans passer par le code.
+\end{itemize}
+\end{note}
+
+\begin{alerte}[Ce que ce document révise]
+Le volet~5 posait \guillemotleft~aucune fonctionnalité conditionnée au badge~\guillemotright{}
+et \guillemotleft~certification gratuite~\guillemotright. La première règle tient toujours ---
+les fonctionnalités s'ouvrent par l'abonnement, jamais par la coche. La seconde est remplacée~:
+hors phase gratuite, la coche exige un abonnement. Le dossier, le coffre à documents et la
+purge à 90~jours du volet~5 restent valables tels quels.
+\end{alerte}
+
+\begin{constat}[Méthode]
+Les affirmations sur l'existant ont été vérifiées en lisant le code des trois dépôts et en
+interrogeant la base de production. Les chemins cités sont réels.
+\end{constat}
+
+\tableofcontents
+
+% =====================================================================
+\part{Approche naïve}
+% =====================================================================
+
+\input{contenu/abonnement-naive}
+
+% =====================================================================
+\part{Approche technique}
+% =====================================================================
+
+\input{contenu/abonnement-technique}
+
+\vfill
+\begin{center}\small\color{AlanyaGray}\sffamily
+Fin du dossier --- étape 8. \\
+Étape suivante : maquettes mobile et administration.
+\end{center}
+
+\end{document}

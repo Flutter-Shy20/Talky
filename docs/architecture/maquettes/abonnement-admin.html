@@ -1,0 +1,621 @@
+<title>Alanya Plus admin</title>
+
+<style>
+  :root {
+    --brand: #3F51B5; --online: #1FA363; --warn: #B7791F; --err: #C0392B;
+    --online-soft: rgba(31,163,99,.12); --warn-soft: rgba(183,121,31,.13); --err-soft: rgba(192,57,43,.1);
+
+    /* Chrome de l'administration : zinc + indigo, comme alanya-admin (shadcn). */
+    --adm-bg: #FAFAFA; --adm-panel: #FFFFFF; --adm-line: #E4E4E7; --adm-soft: #F4F4F5;
+    --adm-ink: #18181B; --adm-ink-2: #71717A; --adm-ink-3: #A1A1AA;
+    --adm-accent: #4F46E5; --adm-accent-soft: #EEF2FF; --adm-accent-ink: #FFFFFF;
+    --adm-scrim: rgba(24,24,27,.08);
+
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px;
+    --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --online-soft: rgba(31,163,99,.2); --warn-soft: rgba(183,121,31,.22); --err-soft: rgba(192,57,43,.22);
+      --adm-bg: #0C0C0E; --adm-panel: #18181B; --adm-line: #27272A; --adm-soft: #1F1F23;
+      --adm-ink: #FAFAFA; --adm-ink-2: #A1A1AA; --adm-ink-3: #71717A;
+      --adm-accent: #818CF8; --adm-accent-soft: #1E1B4B; --adm-accent-ink: #0C0C0E;
+      --adm-scrim: rgba(0,0,0,.3);
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+    }
+  }
+  :root[data-theme="dark"] {
+    --online-soft: rgba(31,163,99,.2); --warn-soft: rgba(183,121,31,.22); --err-soft: rgba(192,57,43,.22);
+    --adm-bg: #0C0C0E; --adm-panel: #18181B; --adm-line: #27272A; --adm-soft: #1F1F23;
+    --adm-ink: #FAFAFA; --adm-ink-2: #A1A1AA; --adm-ink-3: #71717A;
+    --adm-accent: #818CF8; --adm-accent-soft: #1E1B4B; --adm-accent-ink: #0C0C0E;
+    --adm-scrim: rgba(0,0,0,.3);
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page-bg); }
+
+  .page {
+    background: var(--page-bg); color: var(--page-ink); font-family: var(--sans);
+    font-size: 15px; line-height: 1.55; min-height: 100vh;
+    padding: clamp(20px,5vw,52px) clamp(16px,4vw,40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1720px; margin: 0 auto; display: flex; flex-direction: column; gap: 38px; }
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 70ch; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--brand); margin: 0; }
+  .masthead h1 { font-size: clamp(26px,3.6vw,37px); line-height: 1.12; letter-spacing: -.02em; font-weight: 700; margin: 0; text-wrap: balance; }
+  .masthead p { margin: 0; color: var(--page-ink-2); }
+
+  .panel {
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-lg); padding: clamp(18px,3vw,30px);
+    display: flex; flex-direction: column; gap: var(--s-xl);
+  }
+  .panel > header { display: flex; flex-direction: column; gap: 6px; }
+  .panel h2 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -.01em; }
+  .panel header p { margin: 0; color: var(--page-ink-2); font-size: 14px; max-width: 80ch; }
+
+  /* ---------- Coquille de l'administration ---------- */
+  .shell {
+    display: grid; grid-template-columns: 208px minmax(0,1fr); min-width: 980px;
+    background: var(--adm-bg); color: var(--adm-ink); font-size: 14px;
+    border: 1px solid var(--adm-line); border-radius: 14px; overflow: hidden;
+  }
+  .defile { overflow-x: auto; }
+  .nav { background: var(--adm-panel); border-right: 1px solid var(--adm-line); padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .nav .marque { font-weight: 700; font-size: 15px; padding: 4px 10px 14px; letter-spacing: -.01em; }
+  .nav .marque span { color: var(--adm-ink-3); font-weight: 500; font-size: 12px; margin-left: 4px; }
+  .nav a { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-radius: 8px; color: var(--adm-ink-2); text-decoration: none; font-size: 13.5px; }
+  .nav a.on { background: var(--adm-soft); color: var(--adm-ink); font-weight: 600; }
+  .nav a .n { font-family: var(--mono); font-size: 11px; background: var(--adm-accent); color: var(--adm-accent-ink); border-radius: 999px; padding: 0 7px; }
+  .nav .sep { height: 1px; background: var(--adm-line); margin: 8px 6px; }
+
+  .main { padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .fil { font-size: 12.5px; color: var(--adm-ink-2); }
+  .titre { display: flex; align-items: center; gap: 12px; }
+  .titre h3 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+  .titre .sp { flex: 1; }
+  .onglets { display: flex; gap: 4px; border-bottom: 1px solid var(--adm-line); }
+  .onglets span { padding: 8px 12px; font-size: 13.5px; color: var(--adm-ink-2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .onglets span.on { color: var(--adm-ink); font-weight: 600; border-bottom-color: var(--adm-accent); }
+
+  .carte { background: var(--adm-panel); border: 1px solid var(--adm-line); border-radius: 12px; overflow: hidden; }
+  .carte > .tete { padding: 13px 16px; border-bottom: 1px solid var(--adm-line); display: flex; align-items: center; gap: 10px; }
+  .carte > .tete h4 { margin: 0; font-size: 15px; font-weight: 650; }
+  .carte > .tete .sp { flex: 1; }
+  .carte > .corps { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .carte > .pied { padding: 12px 16px; border-top: 1px solid var(--adm-line); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .carte > .pied .sp { flex: 1; }
+  .desc { margin: 0; font-size: 13px; color: var(--adm-ink-2); line-height: 1.5; max-width: 70ch; }
+  .desc b { color: var(--adm-ink); }
+
+  .puce { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 620; white-space: nowrap; }
+  .puce i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .puce.ok { background: var(--online-soft); color: var(--online); }
+  .puce.att { background: var(--warn-soft); color: var(--warn); }
+  .puce.ko { background: var(--err-soft); color: var(--err); }
+  .puce.neu { background: var(--adm-soft); color: var(--adm-ink-2); }
+  .puce.acc { background: var(--adm-accent-soft); color: var(--adm-accent); }
+  .mono { font-family: var(--mono); font-size: 12.5px; }
+
+  .b { height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid transparent; font-family: inherit; font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .b.pri { background: var(--adm-ink); color: var(--adm-panel); }
+  .b.acc { background: var(--adm-accent); color: var(--adm-accent-ink); }
+  .b.sec { background: var(--adm-panel); color: var(--adm-ink); border-color: var(--adm-line); }
+  .b.ko { background: transparent; color: var(--err); border-color: currentColor; }
+  .b svg { width: 15px; height: 15px; }
+
+  /* Phases */
+  .phases { display: grid; grid-template-columns: 1.1fr 1fr 1.3fr; border: 1px solid var(--adm-line); border-radius: 10px; overflow: hidden; }
+  .ph { padding: 11px 13px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--adm-line); position: relative; }
+  .ph:last-child { border-right: none; }
+  .ph b { font-size: 13.5px; }
+  .ph span { font-size: 12px; color: var(--adm-ink-2); }
+  .ph.now { background: var(--online-soft); }
+  .ph.now::before { content: "Aujourd'hui"; position: absolute; top: 10px; right: 10px; font-family: var(--mono); font-size: 10px; color: var(--online); text-transform: uppercase; letter-spacing: .08em; }
+
+  .effets { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+  .effet { border: 1px solid var(--adm-line); border-radius: 10px; padding: 11px 13px; display: flex; flex-direction: column; gap: 2px; }
+  .effet .v { font-size: 22px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .effet span { font-size: 12px; color: var(--adm-ink-2); line-height: 1.4; }
+
+  .champs { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+  .champ { display: flex; flex-direction: column; gap: 5px; }
+  .champ label { font-size: 12.5px; font-weight: 600; }
+  .champ .inp { height: 36px; border: 1px solid var(--adm-line); border-radius: 8px; padding: 0 11px; display: flex; align-items: center; justify-content: space-between; background: var(--adm-panel); font-variant-numeric: tabular-nums; }
+  .champ .inp.large { height: auto; min-height: 36px; padding: 8px 11px; }
+  .champ .inp.vide { color: var(--adm-ink-3); }
+  .champ .inp.ro { background: var(--adm-soft); color: var(--adm-ink-2); }
+  .champ .inp small { color: var(--adm-ink-3); font-size: 12px; }
+  .champ .aide { font-size: 11.5px; color: var(--adm-ink-2); line-height: 1.4; }
+
+  .bandeau { display: flex; gap: 10px; padding: 11px 13px; border-radius: 10px; font-size: 13px; line-height: 1.5; color: var(--adm-ink-2); }
+  .bandeau svg { width: 17px; height: 17px; flex: none; margin-top: 2px; }
+  .bandeau b { color: var(--adm-ink); }
+  .bandeau.warn { background: var(--warn-soft); }
+  .bandeau.warn svg { color: var(--warn); }
+  .bandeau.neu { background: var(--adm-soft); }
+  .bandeau.neu svg { color: var(--adm-ink-2); }
+
+  /* Deux colonnes : écran + état voisin */
+  .duo { display: grid; grid-template-columns: minmax(0,1fr) 400px; gap: 24px; align-items: start; }
+  .dialogue { background: var(--adm-panel); border: 1px solid var(--adm-line); border-radius: 14px; box-shadow: 0 24px 60px rgba(24,24,27,.16); color: var(--adm-ink); font-size: 14px; display: flex; flex-direction: column; }
+  .dialogue .tete { padding: 18px 20px 6px; }
+  .dialogue h4 { margin: 0 0 4px; font-size: 17px; font-weight: 680; }
+  .dialogue .corps { padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .dialogue .pied { padding: 14px 20px; border-top: 1px solid var(--adm-line); display: flex; gap: 8px; justify-content: flex-end; }
+  .etiquette { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--page-ink-2); text-align: center; margin: 10px 0 0; }
+  .etiquette b { display: block; color: var(--page-ink); font-weight: 600; }
+
+  .liste-coches { display: flex; flex-direction: column; gap: 7px; font-size: 13px; }
+  .liste-coches div { display: flex; gap: 9px; align-items: flex-start; line-height: 1.4; }
+  .liste-coches svg { width: 16px; height: 16px; color: var(--online); flex: none; margin-top: 2px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 600; font-size: 12px; color: var(--adm-ink-2); padding: 9px 12px; border-bottom: 1px solid var(--adm-line); background: var(--adm-soft); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--adm-line); vertical-align: middle; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  tr.sel td { background: var(--adm-accent-soft); }
+  td .s { display: block; font-size: 11.5px; color: var(--adm-ink-2); }
+  td.num { text-align: right; }
+
+  .coches { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+  .cb { display: flex; align-items: center; gap: 9px; border: 1px solid var(--adm-line); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+  .cb .box { width: 17px; height: 17px; border-radius: 5px; border: 1.5px solid var(--adm-ink-3); flex: none; display: grid; place-items: center; }
+  .cb.on .box { background: var(--adm-accent); border-color: var(--adm-accent); color: var(--adm-accent-ink); }
+  .cb .box svg { width: 12px; height: 12px; }
+  .cb.off { color: var(--adm-ink-3); background: var(--adm-soft); }
+  .cb .t { flex: 1; }
+  .cb small { font-family: var(--mono); font-size: 10px; color: var(--adm-ink-3); }
+
+  .bascule { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .sw { display: inline-block; vertical-align: middle; width: 36px; height: 21px; border-radius: 999px; background: var(--adm-line); position: relative; flex: none; }
+  .t-paiements td { white-space: nowrap; padding: 10px; }
+  .t-paiements th { padding: 9px 10px; }
+  .sw::after { content: ""; position: absolute; left: 3px; top: 3px; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .sw.on { background: var(--adm-accent); }
+  .sw.on::after { left: auto; right: 3px; }
+
+  .apercu { border: 1px dashed var(--adm-line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--adm-soft); }
+  .opt { border: 1.5px solid var(--brand); border-radius: 12px; padding: 11px 12px; display: flex; align-items: center; gap: 10px; background: #fff; color: #1A1D23; box-shadow: 0 0 0 3px rgba(63,81,181,.14); }
+  .opt .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--brand); position: relative; flex: none; }
+  .opt .radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--brand); }
+  .opt .t { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+  .opt .t b { font-size: 14px; }
+  .opt .t span { font-size: 11.5px; color: #5B6273; }
+  .opt .m { font-size: 15px; font-weight: 700; white-space: nowrap; }
+  .opt .m small { font-size: 11px; color: #9AA0AE; font-weight: 500; }
+  .ruban { font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; background: rgba(31,163,99,.12); color: #1FA363; padding: 2px 7px; border-radius: 999px; align-self: flex-start; }
+
+  .kv { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 8px 14px; font-size: 13.5px; }
+  .kv dt { color: var(--adm-ink-2); font-size: 12.5px; }
+  .kv dd { margin: 0; font-weight: 550; }
+  .kv dd .s { display: block; font-weight: 400; font-size: 12px; color: var(--adm-ink-2); }
+  .badge { width: 17px; height: 17px; color: var(--brand); vertical-align: -3px; }
+  .grille-fiche { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); gap: 16px; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 16px; }
+  .ident { display: flex; align-items: center; gap: 14px; }
+  .ident .av { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#5C6BC0,#3949AB); color: #fff; display: grid; place-items: center; font-size: 21px; font-weight: 650; }
+  .ident h3 { margin: 0; font-size: 20px; font-weight: 700; display: flex; gap: 6px; align-items: center; letter-spacing: -.01em; }
+  .ident span { font-size: 12.5px; color: var(--adm-ink-2); }
+  .sel-champ { display: flex; gap: 12px; align-items: center; }
+  .sel-champ .inp { height: 36px; border: 1px solid var(--adm-line); border-radius: 8px; padding: 0 11px; display: flex; align-items: center; justify-content: space-between; min-width: 180px; background: var(--adm-panel); }
+
+  .notes { display: flex; flex-direction: column; gap: var(--s-md); }
+  .note { border-left: 3px solid var(--brand); padding-left: var(--s-md); font-size: 14px; color: var(--page-ink-2); max-width: 90ch; margin: 0; }
+  .note.attention { border-left-color: var(--err); }
+  .note b { color: var(--page-ink); font-weight: 650; }
+  .note code { font-family: var(--mono); font-size: 13px; }
+
+  footer.colophon { display: flex; flex-wrap: wrap; gap: var(--s-sm) var(--s-xl); padding-top: var(--s-lg); border-top: 1px solid var(--page-line); font-family: var(--mono); font-size: 11.5px; color: var(--page-ink-2); }
+  :focus-visible { outline: 2px solid var(--adm-accent); outline-offset: 3px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-sceau" viewBox="0 0 24 24"><path id="sceau-d" fill="currentColor"/></symbol>
+    <symbol id="b-coche" viewBox="0 0 24 24">
+      <use href="#i-sceau"/>
+      <path d="M6.6 12.4 10.1 15.9 17.6 8.2" transform="translate(12 12) scale(.86) translate(-12 -12)"
+            fill="none" stroke="#fff" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-alerte" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18.4A2 2 0 0 0 3.5 21.4h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></g></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-cadeau" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="4" rx="1"/><path d="M5 12.5V20h14v-7.5M12 8.5V20M12 8.5C10.5 5 7 5 7 7s2.5 1.5 5 1.5ZM12 8.5C13.5 5 17 5 17 7s-2.5 1.5-5 1.5Z"/></g></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Alanya · Abonnement · Étape 8 · Administration</p>
+    <h1>L'interrupteur, les plans, et un abonné</h1>
+    <p>
+      Trois écrans du panneau d'administration. Les chiffres de la première planche sont ceux de
+      la production au 10 septembre 2026 : 101 comptes, aucune coche.
+    </p>
+  </header>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>L'interrupteur et ses réglages</h2>
+      <p>La page dit d'abord où l'on en est, puis ce que l'activation déclencherait. Activer passe
+         par une confirmation qui demande un motif, journalisé.</p>
+    </header>
+
+    <div class="duo">
+      <div class="defile">
+        <div class="shell">
+          <nav class="nav">
+            <div class="marque">Alanya <span>admin</span></div>
+            <a>Tableau de bord</a>
+            <a>Utilisateurs</a>
+            <a>Vérifications <span class="n">3</span></a>
+            <a class="on">Abonnement</a>
+            <a>Signalements</a>
+            <a>Diffusions</a>
+            <div class="sep"></div>
+            <a>Activité admin</a>
+            <a>Paramètres</a>
+          </nav>
+          <div class="main">
+            <div class="fil">Abonnement</div>
+            <div class="titre"><h3>Abonnement</h3><span class="puce ok"><i></i>Gratuit</span><span class="sp"></span></div>
+            <div class="onglets"><span class="on">Réglages</span><span>Plans</span><span>Paiements</span><span>Abonnés</span></div>
+
+            <div class="carte">
+              <div class="tete"><h4>Phase</h4><span class="sp"></span><span class="mono" style="color:var(--adm-ink-2)">billing_settings.paid_enabled = 0</span></div>
+              <div class="corps">
+                <div class="phases">
+                  <div class="ph now"><b>Gratuit</b><span>tout pour tous, coche sur vérification seule</span></div>
+                  <div class="ph"><b>Grâce</b><span>30 jours · jusqu'au 10 octobre 2026</span></div>
+                  <div class="ph"><b>Payant</b><span>fonctionnalités et coche réservées aux abonnés</span></div>
+                </div>
+                <span style="font-size:12.5px;font-weight:600">Si vous activez aujourd'hui</span>
+                <div class="effets">
+                  <div class="effet"><span class="v">101</span><span>comptes reçoivent l'annonce du compte officiel</span></div>
+                  <div class="effet"><span class="v">0</span><span>coche entre en période de grâce</span></div>
+                  <div class="effet"><span class="v">10 oct.</span><span>fin de la grâce · rappel aux non-abonnés le 3 octobre</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="carte">
+              <div class="tete"><h4>Réglages</h4></div>
+              <div class="corps">
+                <div class="champs">
+                  <div class="champ"><label>Durée de la grâce</label><span class="inp">30 <small>jours</small></span><span class="aide">7 jours minimum. Posée à l'activation ; la date de fin reste modifiable ensuite.</span></div>
+                  <div class="champ"><label>Essai des nouveaux inscrits</label><span class="inp">0 <small>jours</small></span><span class="aide">Après la grâce, accès complet offert à chaque inscrit.</span></div>
+                  <div class="champ"><label>Conservation après échéance</label><span class="inp">30 <small>jours</small></span><span class="aide">Délai avant suppression des données des fonctionnalités payantes.</span></div>
+                </div>
+                <div class="bandeau warn">
+                  <svg><use href="#i-alerte"/></svg>
+                  <span><b>Fournisseur de paiement : <span class="mono">simulated</span>.</b> Défini par
+                    <span class="mono">PAYMENT_PROVIDER</span> sur le serveur. En production, l'activation
+                    est refusée tant que le paiement est simulé.</span>
+                </div>
+              </div>
+              <div class="pied">
+                <span class="mono" style="color:var(--adm-ink-2)">Modifié le 9 sept. 2026 par C. Ndongo</span>
+                <span class="sp"></span>
+                <button class="b sec" type="button">Enregistrer</button>
+                <button class="b acc" type="button">Activer le payant…</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="dialogue">
+          <div class="tete">
+            <h4>Activer le payant ?</h4>
+            <p class="desc">Les fonctionnalités Plus deviendront payantes le <b>10 octobre 2026 à
+              00:00</b>. D'ici là, rien ne change pour personne.</p>
+          </div>
+          <div class="corps">
+            <div class="liste-coches">
+              <div><svg><use href="#i-check"/></svg><span>Annonce du compte officiel à 101 comptes, aujourd'hui</span></div>
+              <div><svg><use href="#i-check"/></svg><span>Rappel le 3 octobre aux comptes sans abonnement</span></div>
+              <div><svg><use href="#i-check"/></svg><span>Le 10 octobre : fonctionnalités fermées aux non-abonnés, données conservées 30 jours</span></div>
+            </div>
+            <div class="champ">
+              <label>Motif</label>
+              <span class="inp large">Lancement de l'offre Alanya Plus</span>
+              <span class="aide">Obligatoire. Enregistré dans l'activité admin avec votre nom.</span>
+            </div>
+          </div>
+          <div class="pied">
+            <button class="b sec" type="button">Annuler</button>
+            <button class="b acc" type="button">Activer le 10 octobre</button>
+          </div>
+        </div>
+        <p class="etiquette"><b>Confirmation</b>ce qui va se passer, et quand</p>
+      </div>
+    </div>
+
+    <div class="notes">
+      <p class="note"><b>Les trois chiffres sont calculés, pas saisis.</b> Comptes joignables, coches
+        actives, date de fin de grâce : c'est ce que l'administrateur doit voir avant de décider.</p>
+      <p class="note attention"><b>Le bouton d'activation est une route dédiée</b>
+        (<code>POST /admin/billing/activate</code>), pas un <code>PUT</code> de réglages : l'activité
+        admin enregistre un verbe explicite et le motif.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>Les plans</h2>
+      <p>Prix, durée, relance, contenu, mise en avant : tout se règle ici. Un plan ne se supprime
+         pas, il se retire de l'offre.</p>
+    </header>
+
+    <div class="defile">
+      <div class="shell">
+        <nav class="nav">
+          <div class="marque">Alanya <span>admin</span></div>
+          <a>Tableau de bord</a>
+          <a>Utilisateurs</a>
+          <a>Vérifications <span class="n">3</span></a>
+          <a class="on">Abonnement</a>
+          <a>Signalements</a>
+          <a>Diffusions</a>
+          <div class="sep"></div>
+          <a>Activité admin</a>
+          <a>Paramètres</a>
+        </nav>
+        <div class="main">
+          <div class="fil">Abonnement › Plans</div>
+          <div class="titre"><h3>Plans</h3><span class="sp"></span><button class="b sec" type="button"><svg><use href="#i-plus"/></svg>Nouveau plan</button></div>
+          <div class="onglets"><span>Réglages</span><span class="on">Plans</span><span>Paiements</span><span>Abonnés</span></div>
+
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start">
+            <div class="col">
+              <div class="carte">
+                <table>
+                  <thead><tr><th>Plan</th><th class="num">Prix</th><th>Durée</th><th>Relance</th><th>État</th></tr></thead>
+                  <tbody>
+                    <tr class="sel"><td><b>Annuel</b><span class="s mono">plus_annuel · mis en avant</span></td><td class="num">2 000 XAF</td><td>12 mois</td><td>30 j avant</td><td><span class="puce ok"><i></i>Proposé</span></td></tr>
+                    <tr><td><b>Mensuel</b><span class="s mono">plus_mensuel</span></td><td class="num">250 XAF</td><td>1 mois</td><td>7 j avant</td><td><span class="puce ok"><i></i>Proposé</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="carte">
+                <div class="tete"><h4>Catalogue des fonctionnalités</h4></div>
+                <table>
+                  <thead><tr><th>Fonctionnalité</th><th>Payante</th><th>Livrée</th></tr></thead>
+                  <tbody>
+                    <tr><td>Traduction des messages<span class="s mono">translation</span></td><td><span class="sw on"></span></td><td><span class="puce ok"><i></i>Oui</span></td></tr>
+                    <tr><td>Sauvegarde des données<span class="s mono">backup</span></td><td><span class="sw on"></span></td><td><span class="puce ok"><i></i>Oui</span></td></tr>
+                    <tr><td>Trajets de confiance<span class="s mono">trusted_trips</span></td><td><span class="sw on"></span></td><td><span class="puce ok"><i></i>Oui</span></td></tr>
+                    <tr><td>Sonneries par liste<span class="s mono">list_ringtones</span></td><td><span class="sw on"></span></td><td><span class="puce ok"><i></i>Oui</span></td></tr>
+                    <tr><td>Coche indigo<span class="s mono">verified_badge</span></td><td><span class="sw on"></span></td><td><span class="puce ok"><i></i>Oui</span></td></tr>
+                    <tr><td>Personnalisation du style<span class="s mono">style</span></td><td><span class="sw on"></span></td><td><span class="puce neu"><i></i>À venir</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="carte">
+              <div class="tete"><h4>Annuel</h4><span class="puce acc">mis en avant</span><span class="sp"></span><span class="mono" style="color:var(--adm-ink-2)">plus_annuel</span></div>
+              <div class="corps">
+                <div class="champs">
+                  <div class="champ"><label>Nom · français</label><span class="inp">Annuel</span></div>
+                  <div class="champ"><label>Nom · anglais</label><span class="inp">Yearly</span></div>
+                  <div class="champ"><label>Nom · chinois</label><span class="inp">年度</span></div>
+                </div>
+                <div class="champs">
+                  <div class="champ"><label>Durée</label><span class="inp">12 <small>mois</small></span></div>
+                  <div class="champ"><label>Prix</label><span class="inp">2 000 <small>XAF</small></span></div>
+                  <div class="champ"><label>Relance</label><span class="inp">30 <small>jours avant</small></span></div>
+                </div>
+                <div class="champ"><label>Fonctionnalités incluses</label></div>
+                <div class="coches" style="margin-top:-8px">
+                  <div class="cb on"><span class="box"><svg><use href="#i-check"/></svg></span><span class="t">Traduction des messages</span></div>
+                  <div class="cb on"><span class="box"><svg><use href="#i-check"/></svg></span><span class="t">Sauvegarde des données</span></div>
+                  <div class="cb on"><span class="box"><svg><use href="#i-check"/></svg></span><span class="t">Trajets de confiance</span></div>
+                  <div class="cb on"><span class="box"><svg><use href="#i-check"/></svg></span><span class="t">Sonneries par liste</span></div>
+                  <div class="cb on"><span class="box"><svg><use href="#i-check"/></svg></span><span class="t">Coche indigo</span></div>
+                  <div class="cb off"><span class="box"></span><span class="t">Personnalisation du style</span><small>à venir</small></div>
+                </div>
+                <div style="display:flex;gap:22px;flex-wrap:wrap">
+                  <span class="bascule"><span class="sw on"></span>Proposé à l'achat</span>
+                  <span class="bascule"><span class="sw on"></span>Mis en avant dans l'offre</span>
+                </div>
+                <div class="champs" style="grid-template-columns:1fr 1fr">
+                  <div class="champ"><label>Produit App Store</label><span class="inp vide">à renseigner avec les stores</span></div>
+                  <div class="champ"><label>Produit Play Store</label><span class="inp vide">à renseigner avec les stores</span></div>
+                </div>
+                <div class="apercu">
+                  <span class="mono" style="color:var(--adm-ink-2);font-size:11px">APERÇU DANS L'APPLICATION</span>
+                  <div class="opt">
+                    <span class="radio"></span>
+                    <span class="t"><b>Annuel</b><span>soit 167 F par mois</span><span class="ruban">4 mois offerts</span></span>
+                    <span class="m">2 000 F <small>/ an</small></span>
+                  </div>
+                </div>
+                <div class="bandeau neu">
+                  <svg><use href="#i-info"/></svg>
+                  <span>Un nouveau prix vaut pour les <b>prochains paiements</b>. Les périodes déjà payées ne
+                    changent pas ; les abonnés en renouvellement automatique sont prévenus dans leur relance.</span>
+                </div>
+              </div>
+              <div class="pied">
+                <button class="b sec" type="button">Retirer de l'offre</button>
+                <span class="sp"></span>
+                <button class="b pri" type="button">Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <p class="note"><b>« 167 F par mois » et « 4 mois offerts » sont calculés</b> à partir du prix
+        et de la durée de chaque plan, comparés au plan mensuel. Modifier un prix met l'aperçu à jour ;
+        personne n'a à réécrire l'argument.</p>
+      <p class="note"><b>« Livrée » n'est pas un interrupteur.</b> Une fonctionnalité existe quand le
+        code sait la verrouiller ; la personnalisation du style figure au catalogue, grisée, en
+        attendant.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>Un abonné</h2>
+      <p>La fiche utilisateur gagne la carte « Abonnement et coche ». La carte « Socle » ne garde que
+         le genre de compte : l'état de vérification se déduit des décisions, il ne se saisit plus.</p>
+    </header>
+
+    <div class="duo">
+      <div class="defile">
+        <div class="shell">
+          <nav class="nav">
+            <div class="marque">Alanya <span>admin</span></div>
+            <a>Tableau de bord</a>
+            <a class="on">Utilisateurs</a>
+            <a>Vérifications <span class="n">3</span></a>
+            <a>Abonnement</a>
+            <a>Signalements</a>
+            <a>Diffusions</a>
+            <div class="sep"></div>
+            <a>Activité admin</a>
+            <a>Paramètres</a>
+          </nav>
+          <div class="main">
+            <div class="fil">Utilisateurs › Marie Kouassi</div>
+            <div class="ident">
+              <span class="av">M</span>
+              <div><h3>Marie Kouassi <svg class="badge"><use href="#b-coche"/></svg></h3><span class="mono">#2417 · 0042 8817 · @marie_k · inscrite le 11 mars 2026</span></div>
+            </div>
+
+            <div class="grille-fiche">
+              <div class="col">
+                <div class="carte">
+                  <div class="tete"><h4>Abonnement et coche</h4><span class="sp"></span><span class="puce ok"><i></i>Abonnée</span></div>
+                  <div class="corps">
+                    <dl class="kv">
+                      <dt>Période en cours</dt><dd>Annuel · 10 oct. 2026 → 10 oct. 2027<span class="s">payée pendant la grâce, commence à sa fin</span></dd>
+                      <dt>Renouvellement</dt><dd>Automatique<span class="s">Orange Money · +237 6•• •• 34 00</span></dd>
+                      <dt>Identité</dt><dd>Vérifiée le 24 sept. 2026<span class="s">par C. Ndongo · dossier #418 · nom vérifié « Marie Kouassi »</span></dd>
+                      <dt>Coche</dt><dd><span class="puce acc">Active jusqu'au 10 oct. 2027</span></dd>
+                    </dl>
+                  </div>
+                  <div class="pied">
+                    <button class="b sec" type="button"><svg><use href="#i-cadeau"/></svg>Offrir un abonnement…</button>
+                    <span class="sp"></span>
+                    <button class="b ko" type="button">Révoquer la coche…</button>
+                  </div>
+                </div>
+                <div class="carte">
+                  <div class="tete"><h4>Socle de compte</h4></div>
+                  <div class="corps">
+                    <div class="sel-champ"><span style="font-size:13px;font-weight:600">Genre de compte</span><span class="inp">Personnel <small style="color:var(--adm-ink-3)">▾</small></span></div>
+                    <p class="desc">L'état de vérification n'est plus modifiable ici : il découle du dossier
+                      d'identité, de l'abonnement et des révocations.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col">
+                <div class="carte">
+                  <div class="tete"><h4>Paiements</h4></div>
+                  <table class="t-paiements">
+                    <thead><tr><th>Date</th><th class="num">Montant</th><th>Moyen</th><th>Référence</th><th>Statut</th></tr></thead>
+                    <tbody>
+                      <tr><td>22/09/2026<span class="s">19:31</span></td><td class="num">2 000 F</td><td>Orange Money<span class="s"><span class="puce att">simulé</span></span></td><td class="mono">SIM-8F21C9</td><td><span class="puce ok"><i></i>Réussi</span></td></tr>
+                      <tr><td>22/09/2026<span class="s">19:28</span></td><td class="num">2 000 F</td><td>Orange Money<span class="s"><span class="puce att">simulé</span></span></td><td class="mono">SIM-8F20A1</td><td><span class="puce ko"><i></i>Refusé</span></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="carte">
+                  <div class="tete"><h4>Périodes</h4></div>
+                  <table>
+                    <thead><tr><th>Du</th><th>Au</th><th>Plan</th><th>Origine</th></tr></thead>
+                    <tbody>
+                      <tr><td>10 oct. 2026</td><td>10 oct. 2027</td><td>Annuel</td><td>Paiement SIM-8F21C9</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="dialogue">
+          <div class="tete">
+            <h4>Offrir un abonnement</h4>
+            <p class="desc">Une période s'ajoute après celle en cours. Aucun paiement n'est créé.</p>
+          </div>
+          <div class="corps">
+            <div class="champ"><label>Durée</label>
+              <div style="display:flex;gap:6px">
+                <span class="b sec" style="flex:1;justify-content:center">1 mois</span>
+                <span class="b sec" style="flex:1;justify-content:center;border-color:var(--adm-accent);color:var(--adm-accent)">3 mois</span>
+                <span class="b sec" style="flex:1;justify-content:center">12 mois</span>
+              </div>
+            </div>
+            <div class="champ"><label>Nouvelle échéance</label><span class="inp ro">10 janvier 2028</span></div>
+            <div class="champ"><label>Motif</label><span class="inp large">Testeuse de la version bêta — compensation</span><span class="aide">Obligatoire, visible dans l'historique et l'activité admin.</span></div>
+          </div>
+          <div class="pied">
+            <button class="b sec" type="button">Annuler</button>
+            <button class="b acc" type="button">Offrir 3 mois</button>
+          </div>
+        </div>
+        <p class="etiquette"><b>Geste commercial</b>une période de plus, jamais un faux paiement</p>
+      </div>
+    </div>
+
+    <div class="notes">
+      <p class="note"><b>Le paiement refusé reste visible.</b> Le simulateur a répondu « refus » au
+        premier essai (numéro de test finissant par 02) ; l'historique garde les deux lignes, comme il
+        le fera avec l'agrégateur.</p>
+      <p class="note attention"><b>Révoquer la coche ne touche pas à l'abonnement.</b> Les
+        fonctionnalités restent ; seule l'attestation d'identité tombe, avec un motif obligatoire.</p>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span>Maquette de conception — aucun code applicatif</span>
+    <span>Chrome : alanya-admin (zinc + indigo)</span>
+    <span>Chiffres de production au 10/09/2026</span>
+    <span>Source : docs/architecture/maquettes/abonnement-admin.html</span>
+  </footer>
+
+</div>
+</div>
+
+<script>
+  // Sceau à 12 lobes, identique au volet 1 et à la maquette mobile.
+  (function () {
+    const R = 10.6, A = 1.25, LOBES = 12, PAS = 288;
+    let d = '';
+    for (let i = 0; i < PAS; i++) {
+      const t = (i / PAS) * Math.PI * 2;
+      const r = R + A * Math.cos(LOBES * t);
+      d += (i ? 'L' : 'M') + (12 + r * Math.cos(t)).toFixed(2) + ' ' + (12 + r * Math.sin(t)).toFixed(2);
+    }
+    document.getElementById('sceau-d').setAttribute('d', d + 'Z');
+  })();
+</script>
