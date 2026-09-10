@@ -134,54 +134,6 @@
   "commonCallBack": "Rappeler",
   "callMissed": "Appel manqué",
   "callIncoming": "APPEL ENTRANT",
-  "errorWithDetails": "Échec : {error}",
-  "@errorWithDetails": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "actionFailedWithError": "Action impossible : {error}",
-  "@actionFailedWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "cannotUnblockWithError": "Impossible de débloquer : {error}",
-  "@cannotUnblockWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "loadErrorWithDetails": "Erreur chargement : {error}",
-  "@loadErrorWithDetails": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "cannotOpenFileApp": "Aucune app pour ouvrir ce fichier ({message})",
-  "@cannotOpenFileApp": {
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
-  },
-  "cannotOpenFileAppAlt": "Aucune application pour ouvrir ce fichier ({message})",
-  "@cannotOpenFileAppAlt": {
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
-  },
   "membersCount": "Membres ({count})",
   "@membersCount": {
     "placeholders": {
@@ -430,70 +382,6 @@
     "placeholders": {
       "count": {
         "type": "int"
-      }
-    }
-  },
-  "cannotLoadMeeting": "Impossible de charger la réunion : {error}",
-  "@cannotLoadMeeting": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "cannotJoinMeeting": "Impossible de rejoindre : {error}",
-  "@cannotJoinMeeting": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "cannotCreateMeeting": "Impossible de créer la réunion : {error}",
-  "@cannotCreateMeeting": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "meetingConnectFailed": "Échec de la connexion à la réunion : {error}",
-  "@meetingConnectFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "uploadFailedWithError": "Échec de l'upload : {error}",
-  "@uploadFailedWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "sendFailedWithError": "Échec de l'envoi : {error}",
-  "@sendFailedWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "recordFailedWithError": "Échec de l'enregistrement : {error}",
-  "@recordFailedWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "roleChangeError": "Erreur changement de rôle: {error}",
-  "@roleChangeError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
       }
     }
   },
@@ -1224,22 +1112,6 @@
   "videoViewOnce": "🎥 Vidéo · Vue unique",
   "videoCallPreview": "📹 Appel vidéo",
   "voiceCallPreview": "📞 Appel vocal",
-  "anErrorOccurred": "Une erreur est survenue: {error}",
-  "@anErrorOccurred": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "errorColon": "Erreur: {error}",
-  "@errorColon": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "deletePhotoAction": "Supprimer la photo",
   "unavailableOffline": "Indisponible hors ligne",
   "noParticipantsYet": "Aucun participant pour le moment",
@@ -1249,14 +1121,6 @@
   "voiceMessage": "Message vocal",
   "paused": "En pause",
   "recordOrImportAudio": "Enregistrez un vocal ou importez un fichier audio",
-  "unableToPostStatusWithError": "Impossible de publier le statut : {error}",
-  "@unableToPostStatusWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "tapToAddYourStatus": "Appuyer pour ajouter votre statut",
   "shareAContact": "Partager un contact",
   "searchAContact": "Rechercher un contact",
@@ -1266,22 +1130,6 @@
   "notAuthenticated": "Non authentifié",
   "networkTimeout": "Timeout réseau",
   "networkError": "Connexion impossible. Vérifiez votre réseau et réessayez.",
-  "networkErrorWithDetails": "Erreur réseau: {error}",
-  "@networkErrorWithDetails": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "invalidResponseWithCode": "Réponse invalide ({code})",
-  "@invalidResponseWithCode": {
-    "placeholders": {
-      "code": {
-        "type": "Object"
-      }
-    }
-  },
   "noRefreshToken": "Pas de refresh token",
   "refreshFailed": "Refresh échoué",
   "addedToPreferredContacts": "{name} ajouté aux contacts préférés",
@@ -1463,30 +1311,6 @@
     }
   },
   "usedLabel": "Utilisé",
-  "banUnbanError": "Erreur ban/unban: {error}",
-  "@banUnbanError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "deleteErrorWithDetails": "Erreur suppression: {error}",
-  "@deleteErrorWithDetails": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "loadUsersError": "Erreur chargement utilisateurs: {error}",
-  "@loadUsersError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "limitReachedParticipants": "Maximum {total} participants en {media} (vous inclus)",
   "@limitReachedParticipants": {
     "placeholders": {
@@ -1597,30 +1421,6 @@
   "@todayTimeShort": {
     "placeholders": {
       "time": {
-        "type": "String"
-      }
-    }
-  },
-  "sourceFileNotFound": "Fichier source introuvable : {path}",
-  "@sourceFileNotFound": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
-  "copyImpossible": "Copie impossible : {error}",
-  "@copyImpossible": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "copyFailedPath": "Copie échouée : {path}",
-  "@copyFailedPath": {
-    "placeholders": {
-      "path": {
         "type": "String"
       }
     }
@@ -2780,14 +2580,6 @@
   "exportInProgressHint": "Prêt dans ~24 h · notification à l'achèvement",
   "exportReady": "Votre export est prêt",
   "exportDownload": "Télécharger",
-  "exportFailed": "Export impossible : {error}",
-  "@exportFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "deleteAccountTitle": "Supprimer le compte",
   "deleteAccountEntrySubtitle": "Action irréversible",
   "deleteAccountStep1Title": "Action irréversible",
@@ -2809,28 +2601,12 @@
       }
     }
   },
-  "deleteAccountFailed": "Suppression impossible : {error}",
-  "@deleteAccountFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "biometricLock": "Verrouillage biométrique",
   "biometricLockTitle": "Alanya est verrouillé",
   "biometricLockUnlock": "Déverrouiller",
   "biometricLockSubtitle": "Empreinte ou reconnaissance faciale à l'ouverture",
   "biometricLockEnableConfirm": "Confirmez votre empreinte pour activer le verrou",
   "biometricLockUnavailable": "Biométrie indisponible sur cet appareil",
-  "biometricLockFailed": "Biométrie : {error}",
-  "@biometricLockFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "accountSecuritySectionProtection": "Protection",
   "logoutAllDevices": "Déconnecter tous les appareils",
   "logoutAllDevicesSubtitle": "Ferme toutes les sessions sauf celle-ci",
@@ -3586,5 +3362,6 @@
   "errCodeMediaExpired": "Ce média a expiré et n'est plus disponible.",
   "errCodeInvalidExtension": "Ce type de fichier n'est pas accepté.",
   "errCodeInsufficientRole": "Vos droits ne permettent pas cette action.",
-  "errCodeFieldImmutable": "Ce champ ne peut plus être modifié."
+  "errCodeFieldImmutable": "Ce champ ne peut plus être modifié.",
+  "errAucuneAppPourFichier": "Aucune application ne peut ouvrir ce fichier."
 }

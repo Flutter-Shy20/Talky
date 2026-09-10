@@ -359,36 +359,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get callIncoming => 'APPEL ENTRANT';
 
   @override
-  String errorWithDetails(String error) {
-    return 'Échec : $error';
-  }
-
-  @override
-  String actionFailedWithError(String error) {
-    return 'Action impossible : $error';
-  }
-
-  @override
-  String cannotUnblockWithError(String error) {
-    return 'Impossible de débloquer : $error';
-  }
-
-  @override
-  String loadErrorWithDetails(String error) {
-    return 'Erreur chargement : $error';
-  }
-
-  @override
-  String cannotOpenFileApp(String message) {
-    return 'Aucune app pour ouvrir ce fichier ($message)';
-  }
-
-  @override
-  String cannotOpenFileAppAlt(String message) {
-    return 'Aucune application pour ouvrir ce fichier ($message)';
-  }
-
-  @override
   String membersCount(int count) {
     return 'Membres ($count)';
   }
@@ -543,46 +513,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String selectUpToVoice(int count) {
     return 'Sélectionnez jusqu\'à $count membres pour l\'appel vocal';
-  }
-
-  @override
-  String cannotLoadMeeting(String error) {
-    return 'Impossible de charger la réunion : $error';
-  }
-
-  @override
-  String cannotJoinMeeting(String error) {
-    return 'Impossible de rejoindre : $error';
-  }
-
-  @override
-  String cannotCreateMeeting(String error) {
-    return 'Impossible de créer la réunion : $error';
-  }
-
-  @override
-  String meetingConnectFailed(String error) {
-    return 'Échec de la connexion à la réunion : $error';
-  }
-
-  @override
-  String uploadFailedWithError(String error) {
-    return 'Échec de l\'upload : $error';
-  }
-
-  @override
-  String sendFailedWithError(String error) {
-    return 'Échec de l\'envoi : $error';
-  }
-
-  @override
-  String recordFailedWithError(String error) {
-    return 'Échec de l\'enregistrement : $error';
-  }
-
-  @override
-  String roleChangeError(String error) {
-    return 'Erreur changement de rôle: $error';
   }
 
   @override
@@ -2319,16 +2249,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get voiceCallPreview => '📞 Appel vocal';
 
   @override
-  String anErrorOccurred(String error) {
-    return 'Une erreur est survenue: $error';
-  }
-
-  @override
-  String errorColon(String error) {
-    return 'Erreur: $error';
-  }
-
-  @override
   String get deletePhotoAction => 'Supprimer la photo';
 
   @override
@@ -2358,11 +2278,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Enregistrez un vocal ou importez un fichier audio';
 
   @override
-  String unableToPostStatusWithError(String error) {
-    return 'Impossible de publier le statut : $error';
-  }
-
-  @override
   String get tapToAddYourStatus => 'Appuyer pour ajouter votre statut';
 
   @override
@@ -2389,16 +2304,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get networkError =>
       'Connexion impossible. Vérifiez votre réseau et réessayez.';
-
-  @override
-  String networkErrorWithDetails(String error) {
-    return 'Erreur réseau: $error';
-  }
-
-  @override
-  String invalidResponseWithCode(Object code) {
-    return 'Réponse invalide ($code)';
-  }
 
   @override
   String get noRefreshToken => 'Pas de refresh token';
@@ -2575,21 +2480,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get usedLabel => 'Utilisé';
 
   @override
-  String banUnbanError(String error) {
-    return 'Erreur ban/unban: $error';
-  }
-
-  @override
-  String deleteErrorWithDetails(String error) {
-    return 'Erreur suppression: $error';
-  }
-
-  @override
-  String loadUsersError(String error) {
-    return 'Erreur chargement utilisateurs: $error';
-  }
-
-  @override
   String limitReachedParticipants(int total, String media) {
     return 'Maximum $total participants en $media (vous inclus)';
   }
@@ -2659,21 +2549,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String todayTimeShort(String time) {
     return 'Aujourd\'hui $time';
-  }
-
-  @override
-  String sourceFileNotFound(String path) {
-    return 'Fichier source introuvable : $path';
-  }
-
-  @override
-  String copyImpossible(String error) {
-    return 'Copie impossible : $error';
-  }
-
-  @override
-  String copyFailedPath(String path) {
-    return 'Copie échouée : $path';
   }
 
   @override
@@ -4398,11 +4273,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get exportDownload => 'Télécharger';
 
   @override
-  String exportFailed(String error) {
-    return 'Export impossible : $error';
-  }
-
-  @override
   String get deleteAccountTitle => 'Supprimer le compte';
 
   @override
@@ -4448,11 +4318,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String deleteAccountFailed(String error) {
-    return 'Suppression impossible : $error';
-  }
-
-  @override
   String get biometricLock => 'Verrouillage biométrique';
 
   @override
@@ -4472,11 +4337,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get biometricLockUnavailable =>
       'Biométrie indisponible sur cet appareil';
-
-  @override
-  String biometricLockFailed(String error) {
-    return 'Biométrie : $error';
-  }
 
   @override
   String get accountSecuritySectionProtection => 'Protection';
@@ -6000,4 +5860,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get errCodeFieldImmutable => 'Ce champ ne peut plus être modifié.';
+
+  @override
+  String get errAucuneAppPourFichier =>
+      'Aucune application ne peut ouvrir ce fichier.';
 }

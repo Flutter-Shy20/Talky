@@ -357,36 +357,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get callIncoming => 'INCOMING CALL';
 
   @override
-  String errorWithDetails(String error) {
-    return 'Failed: $error';
-  }
-
-  @override
-  String actionFailedWithError(String error) {
-    return 'Action failed: $error';
-  }
-
-  @override
-  String cannotUnblockWithError(String error) {
-    return 'Unable to unblock: $error';
-  }
-
-  @override
-  String loadErrorWithDetails(String error) {
-    return 'Load error: $error';
-  }
-
-  @override
-  String cannotOpenFileApp(String message) {
-    return 'No app to open this file ($message)';
-  }
-
-  @override
-  String cannotOpenFileAppAlt(String message) {
-    return 'No application to open this file ($message)';
-  }
-
-  @override
   String membersCount(int count) {
     return 'Members ($count)';
   }
@@ -541,46 +511,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String selectUpToVoice(int count) {
     return 'Select up to $count members for the voice call';
-  }
-
-  @override
-  String cannotLoadMeeting(String error) {
-    return 'Unable to load meeting: $error';
-  }
-
-  @override
-  String cannotJoinMeeting(String error) {
-    return 'Unable to join: $error';
-  }
-
-  @override
-  String cannotCreateMeeting(String error) {
-    return 'Unable to create meeting: $error';
-  }
-
-  @override
-  String meetingConnectFailed(String error) {
-    return 'Failed to connect to meeting: $error';
-  }
-
-  @override
-  String uploadFailedWithError(String error) {
-    return 'Upload failed: $error';
-  }
-
-  @override
-  String sendFailedWithError(String error) {
-    return 'Send failed: $error';
-  }
-
-  @override
-  String recordFailedWithError(String error) {
-    return 'Recording failed: $error';
-  }
-
-  @override
-  String roleChangeError(String error) {
-    return 'Role change error: $error';
   }
 
   @override
@@ -2298,16 +2228,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceCallPreview => '📞 Voice call';
 
   @override
-  String anErrorOccurred(String error) {
-    return 'An error occurred: $error';
-  }
-
-  @override
-  String errorColon(String error) {
-    return 'Error: $error';
-  }
-
-  @override
   String get deletePhotoAction => 'Delete photo';
 
   @override
@@ -2337,11 +2257,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Record a voice note or import an audio file';
 
   @override
-  String unableToPostStatusWithError(String error) {
-    return 'Unable to post status: $error';
-  }
-
-  @override
   String get tapToAddYourStatus => 'Tap to add your status';
 
   @override
@@ -2368,16 +2283,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get networkError =>
       'Connection failed. Check your network and try again.';
-
-  @override
-  String networkErrorWithDetails(String error) {
-    return 'Network error: $error';
-  }
-
-  @override
-  String invalidResponseWithCode(Object code) {
-    return 'Invalid response ($code)';
-  }
 
   @override
   String get noRefreshToken => 'No refresh token';
@@ -2553,21 +2458,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get usedLabel => 'Used';
 
   @override
-  String banUnbanError(String error) {
-    return 'Ban/unban error: $error';
-  }
-
-  @override
-  String deleteErrorWithDetails(String error) {
-    return 'Delete error: $error';
-  }
-
-  @override
-  String loadUsersError(String error) {
-    return 'Error loading users: $error';
-  }
-
-  @override
   String limitReachedParticipants(int total, String media) {
     return 'Maximum $total participants in $media (including you)';
   }
@@ -2637,21 +2527,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String todayTimeShort(String time) {
     return 'Today $time';
-  }
-
-  @override
-  String sourceFileNotFound(String path) {
-    return 'Source file not found: $path';
-  }
-
-  @override
-  String copyImpossible(String error) {
-    return 'Copy failed: $error';
-  }
-
-  @override
-  String copyFailedPath(String path) {
-    return 'Copy failed: $path';
   }
 
   @override
@@ -4356,11 +4231,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportDownload => 'Download';
 
   @override
-  String exportFailed(String error) {
-    return 'Export failed: $error';
-  }
-
-  @override
   String get deleteAccountTitle => 'Delete account';
 
   @override
@@ -4406,11 +4276,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String deleteAccountFailed(String error) {
-    return 'Deletion failed: $error';
-  }
-
-  @override
   String get biometricLock => 'Biometric lock';
 
   @override
@@ -4429,11 +4294,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get biometricLockUnavailable =>
       'Biometrics unavailable on this device';
-
-  @override
-  String biometricLockFailed(String error) {
-    return 'Biometrics: $error';
-  }
 
   @override
   String get accountSecuritySectionProtection => 'Protection';
@@ -5929,4 +5789,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errCodeFieldImmutable => 'This field can no longer be changed.';
+
+  @override
+  String get errAucuneAppPourFichier => 'No app can open this file.';
 }

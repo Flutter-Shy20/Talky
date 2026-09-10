@@ -481,22 +481,23 @@ extension AuthApi on TalkyApiClient {
       final body = jsonDecode(response.body);
       if (body is! Map) {
         throw TalkyException(
-          resolveL10n().invalidResponseWithCode(response.statusCode),
+          resolveL10n().serverError,
           response.statusCode,
         );
       }
       final map = Map<String, dynamic>.from(body);
       if (response.statusCode >= 400) {
-        final msg = map['error']?.toString() ??
-            resolveL10n().serverError;
-        throw TalkyException(msg, response.statusCode);
+        final msg = map['error']?.toString() ?? resolveL10n().serverError;
+        throw TalkyException(msg, response.statusCode,
+            code: map['code']?.toString());
       }
       return ExportJob.fromJson(map);
     } catch (e) {
       if (e is TalkyException) rethrow;
       throw TalkyException(
-        resolveL10n().invalidResponseWithCode(response.statusCode),
+        resolveL10n().serverError,
         response.statusCode,
+        cause: e,
       );
     }
   }

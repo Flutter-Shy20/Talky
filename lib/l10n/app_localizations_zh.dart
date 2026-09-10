@@ -353,36 +353,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get callIncoming => '来电';
 
   @override
-  String errorWithDetails(String error) {
-    return '失败：$error';
-  }
-
-  @override
-  String actionFailedWithError(String error) {
-    return '操作失败：$error';
-  }
-
-  @override
-  String cannotUnblockWithError(String error) {
-    return '无法解除屏蔽：$error';
-  }
-
-  @override
-  String loadErrorWithDetails(String error) {
-    return '加载错误：$error';
-  }
-
-  @override
-  String cannotOpenFileApp(String message) {
-    return '没有可打开此文件的应用（$message）';
-  }
-
-  @override
-  String cannotOpenFileAppAlt(String message) {
-    return '没有可打开此文件的应用程序（$message）';
-  }
-
-  @override
   String membersCount(int count) {
     return '成员（$count）';
   }
@@ -536,46 +506,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String selectUpToVoice(int count) {
     return '最多可选择 $count 位成员进行语音通话';
-  }
-
-  @override
-  String cannotLoadMeeting(String error) {
-    return '无法加载会议：$error';
-  }
-
-  @override
-  String cannotJoinMeeting(String error) {
-    return '无法加入：$error';
-  }
-
-  @override
-  String cannotCreateMeeting(String error) {
-    return '无法创建会议：$error';
-  }
-
-  @override
-  String meetingConnectFailed(String error) {
-    return '连接会议失败：$error';
-  }
-
-  @override
-  String uploadFailedWithError(String error) {
-    return '上传失败：$error';
-  }
-
-  @override
-  String sendFailedWithError(String error) {
-    return '发送失败：$error';
-  }
-
-  @override
-  String recordFailedWithError(String error) {
-    return '录制失败：$error';
-  }
-
-  @override
-  String roleChangeError(String error) {
-    return '变更角色时出错：$error';
   }
 
   @override
@@ -2233,16 +2163,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get voiceCallPreview => '📞 语音通话';
 
   @override
-  String anErrorOccurred(String error) {
-    return '发生错误：$error';
-  }
-
-  @override
-  String errorColon(String error) {
-    return '错误：$error';
-  }
-
-  @override
   String get deletePhotoAction => '删除照片';
 
   @override
@@ -2270,11 +2190,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recordOrImportAudio => '录制语音或导入音频文件';
 
   @override
-  String unableToPostStatusWithError(String error) {
-    return '无法发布动态：$error';
-  }
-
-  @override
   String get tapToAddYourStatus => '点击发布您的动态';
 
   @override
@@ -2300,16 +2215,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get networkError => '连接失败。请检查您的网络后重试。';
-
-  @override
-  String networkErrorWithDetails(String error) {
-    return '网络错误：$error';
-  }
-
-  @override
-  String invalidResponseWithCode(Object code) {
-    return '响应无效（$code）';
-  }
 
   @override
   String get noRefreshToken => '缺少刷新令牌';
@@ -2485,21 +2390,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get usedLabel => '已使用';
 
   @override
-  String banUnbanError(String error) {
-    return '封禁/解封出错：$error';
-  }
-
-  @override
-  String deleteErrorWithDetails(String error) {
-    return '删除出错：$error';
-  }
-
-  @override
-  String loadUsersError(String error) {
-    return '加载用户出错：$error';
-  }
-
-  @override
   String limitReachedParticipants(int total, String media) {
     return '$media最多 $total 位参与者（含您本人）';
   }
@@ -2569,21 +2459,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String todayTimeShort(String time) {
     return '今天 $time';
-  }
-
-  @override
-  String sourceFileNotFound(String path) {
-    return '未找到源文件：$path';
-  }
-
-  @override
-  String copyImpossible(String error) {
-    return '复制失败：$error';
-  }
-
-  @override
-  String copyFailedPath(String path) {
-    return '复制失败：$path';
   }
 
   @override
@@ -4234,11 +4109,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exportDownload => '下载';
 
   @override
-  String exportFailed(String error) {
-    return '导出失败：$error';
-  }
-
-  @override
   String get deleteAccountTitle => '注销账号';
 
   @override
@@ -4283,11 +4153,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String deleteAccountFailed(String error) {
-    return '注销失败：$error';
-  }
-
-  @override
   String get biometricLock => '生物识别锁';
 
   @override
@@ -4304,11 +4169,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get biometricLockUnavailable => '该设备不支持生物识别';
-
-  @override
-  String biometricLockFailed(String error) {
-    return '生物识别：$error';
-  }
 
   @override
   String get accountSecuritySectionProtection => '保护';
@@ -5712,4 +5572,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errCodeFieldImmutable => '此字段无法再修改。';
+
+  @override
+  String get errAucuneAppPourFichier => '没有应用可以打开此文件。';
 }

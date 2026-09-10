@@ -120,12 +120,6 @@
   "commonCallBack": "Call back",
   "callMissed": "Missed call",
   "callIncoming": "INCOMING CALL",
-  "errorWithDetails": "Failed: {error}",
-  "actionFailedWithError": "Action failed: {error}",
-  "cannotUnblockWithError": "Unable to unblock: {error}",
-  "loadErrorWithDetails": "Load error: {error}",
-  "cannotOpenFileApp": "No app to open this file ({message})",
-  "cannotOpenFileAppAlt": "No application to open this file ({message})",
   "membersCount": "Members ({count})",
   "groupMembersCount": "Group • {count} members",
   "pinnedMessagesCount": "Pinned messages ({count})",
@@ -158,14 +152,6 @@
   "maxParticipants": "Maximum {count} participants",
   "selectUpToVideo": "Select up to {count} members for the video call",
   "selectUpToVoice": "Select up to {count} members for the voice call",
-  "cannotLoadMeeting": "Unable to load meeting: {error}",
-  "cannotJoinMeeting": "Unable to join: {error}",
-  "cannotCreateMeeting": "Unable to create meeting: {error}",
-  "meetingConnectFailed": "Failed to connect to meeting: {error}",
-  "uploadFailedWithError": "Upload failed: {error}",
-  "sendFailedWithError": "Send failed: {error}",
-  "recordFailedWithError": "Recording failed: {error}",
-  "roleChangeError": "Role change error: {error}",
   "noResultsFor": "No results for \"{query}\"",
   "editedAt": "Edited at {time}",
   "labelForwarded": "{label} forwarded",
@@ -727,8 +713,6 @@
   "videoViewOnce": "🎥 Video · View once",
   "videoCallPreview": "📹 Video call",
   "voiceCallPreview": "📞 Voice call",
-  "anErrorOccurred": "An error occurred: {error}",
-  "errorColon": "Error: {error}",
   "deletePhotoAction": "Delete photo",
   "unavailableOffline": "Unavailable offline",
   "noParticipantsYet": "No participants yet",
@@ -738,7 +722,6 @@
   "voiceMessage": "Voice message",
   "paused": "Paused",
   "recordOrImportAudio": "Record a voice note or import an audio file",
-  "unableToPostStatusWithError": "Unable to post status: {error}",
   "tapToAddYourStatus": "Tap to add your status",
   "shareAContact": "Share a contact",
   "searchAContact": "Search for a contact",
@@ -748,8 +731,6 @@
   "notAuthenticated": "Not authenticated",
   "networkTimeout": "Network timeout",
   "networkError": "Connection failed. Check your network and try again.",
-  "networkErrorWithDetails": "Network error: {error}",
-  "invalidResponseWithCode": "Invalid response ({code})",
   "noRefreshToken": "No refresh token",
   "refreshFailed": "Refresh failed",
   "addedToPreferredContacts": "{name} added to preferred contacts",
@@ -795,9 +776,6 @@
   "durationTapToReturn": "{duration} · Tap to return",
   "sessionBannerTapToReturn": "{duration} · {type} · Tap to return",
   "usedLabel": "Used",
-  "banUnbanError": "Ban/unban error: {error}",
-  "deleteErrorWithDetails": "Delete error: {error}",
-  "loadUsersError": "Error loading users: {error}",
   "limitReachedParticipants": "Maximum {total} participants in {media} (including you)",
   "mediaLabelVideo": "video",
   "mediaLabelAudio": "audio",
@@ -814,9 +792,6 @@
   "messagesSummaryMany": "{count} new messages",
   "dateAtTimeFull": "{day}/{month}/{year} at {time}",
   "todayTimeShort": "Today {time}",
-  "sourceFileNotFound": "Source file not found: {path}",
-  "copyImpossible": "Copy failed: {error}",
-  "copyFailedPath": "Copy failed: {path}",
   "albumCannotBeForwarded": "This album cannot be forwarded",
   "userHashId": "User #{id}",
   "listWithCount": "List ({count})",
@@ -1892,14 +1867,6 @@
   "exportInProgressHint": "Ready in ~24 h · notification when complete",
   "exportReady": "Your export is ready",
   "exportDownload": "Download",
-  "exportFailed": "Export failed: {error}",
-  "@exportFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "deleteAccountTitle": "Delete account",
   "deleteAccountEntrySubtitle": "Irreversible action",
   "deleteAccountStep1Title": "Irreversible action",
@@ -1921,28 +1888,12 @@
       }
     }
   },
-  "deleteAccountFailed": "Deletion failed: {error}",
-  "@deleteAccountFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "biometricLock": "Biometric lock",
   "biometricLockTitle": "Alanya is locked",
   "biometricLockUnlock": "Unlock",
   "biometricLockSubtitle": "Fingerprint or face unlock on open",
   "biometricLockEnableConfirm": "Confirm your fingerprint to enable the lock",
   "biometricLockUnavailable": "Biometrics unavailable on this device",
-  "biometricLockFailed": "Biometrics: {error}",
-  "@biometricLockFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "accountSecuritySectionProtection": "Protection",
   "logoutAllDevices": "Sign out all devices",
   "logoutAllDevicesSubtitle": "Ends all sessions except this one",
@@ -2692,5 +2643,6 @@
   "errCodeMediaExpired": "This media has expired and is no longer available.",
   "errCodeInvalidExtension": "This file type isn't supported.",
   "errCodeInsufficientRole": "You don't have permission for this action.",
-  "errCodeFieldImmutable": "This field can no longer be changed."
+  "errCodeFieldImmutable": "This field can no longer be changed.",
+  "errAucuneAppPourFichier": "No app can open this file."
 }

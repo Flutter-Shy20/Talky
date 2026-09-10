@@ -772,42 +772,6 @@ abstract class AppLocalizations {
   /// **'APPEL ENTRANT'**
   String get callIncoming;
 
-  /// No description provided for @errorWithDetails.
-  ///
-  /// In fr, this message translates to:
-  /// **'Échec : {error}'**
-  String errorWithDetails(String error);
-
-  /// No description provided for @actionFailedWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Action impossible : {error}'**
-  String actionFailedWithError(String error);
-
-  /// No description provided for @cannotUnblockWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible de débloquer : {error}'**
-  String cannotUnblockWithError(String error);
-
-  /// No description provided for @loadErrorWithDetails.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur chargement : {error}'**
-  String loadErrorWithDetails(String error);
-
-  /// No description provided for @cannotOpenFileApp.
-  ///
-  /// In fr, this message translates to:
-  /// **'Aucune app pour ouvrir ce fichier ({message})'**
-  String cannotOpenFileApp(String message);
-
-  /// No description provided for @cannotOpenFileAppAlt.
-  ///
-  /// In fr, this message translates to:
-  /// **'Aucune application pour ouvrir ce fichier ({message})'**
-  String cannotOpenFileAppAlt(String message);
-
   /// No description provided for @membersCount.
   ///
   /// In fr, this message translates to:
@@ -999,54 +963,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Sélectionnez jusqu\'à {count} membres pour l\'appel vocal'**
   String selectUpToVoice(int count);
-
-  /// No description provided for @cannotLoadMeeting.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible de charger la réunion : {error}'**
-  String cannotLoadMeeting(String error);
-
-  /// No description provided for @cannotJoinMeeting.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible de rejoindre : {error}'**
-  String cannotJoinMeeting(String error);
-
-  /// No description provided for @cannotCreateMeeting.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible de créer la réunion : {error}'**
-  String cannotCreateMeeting(String error);
-
-  /// No description provided for @meetingConnectFailed.
-  ///
-  /// In fr, this message translates to:
-  /// **'Échec de la connexion à la réunion : {error}'**
-  String meetingConnectFailed(String error);
-
-  /// No description provided for @uploadFailedWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Échec de l\'upload : {error}'**
-  String uploadFailedWithError(String error);
-
-  /// No description provided for @sendFailedWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Échec de l\'envoi : {error}'**
-  String sendFailedWithError(String error);
-
-  /// No description provided for @recordFailedWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Échec de l\'enregistrement : {error}'**
-  String recordFailedWithError(String error);
-
-  /// No description provided for @roleChangeError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur changement de rôle: {error}'**
-  String roleChangeError(String error);
 
   /// No description provided for @noResultsFor.
   ///
@@ -4246,18 +4162,6 @@ abstract class AppLocalizations {
   /// **'📞 Appel vocal'**
   String get voiceCallPreview;
 
-  /// No description provided for @anErrorOccurred.
-  ///
-  /// In fr, this message translates to:
-  /// **'Une erreur est survenue: {error}'**
-  String anErrorOccurred(String error);
-
-  /// No description provided for @errorColon.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur: {error}'**
-  String errorColon(String error);
-
   /// No description provided for @deletePhotoAction.
   ///
   /// In fr, this message translates to:
@@ -4312,12 +4216,6 @@ abstract class AppLocalizations {
   /// **'Enregistrez un vocal ou importez un fichier audio'**
   String get recordOrImportAudio;
 
-  /// No description provided for @unableToPostStatusWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible de publier le statut : {error}'**
-  String unableToPostStatusWithError(String error);
-
   /// No description provided for @tapToAddYourStatus.
   ///
   /// In fr, this message translates to:
@@ -4371,18 +4269,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Connexion impossible. Vérifiez votre réseau et réessayez.'**
   String get networkError;
-
-  /// No description provided for @networkErrorWithDetails.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur réseau: {error}'**
-  String networkErrorWithDetails(String error);
-
-  /// No description provided for @invalidResponseWithCode.
-  ///
-  /// In fr, this message translates to:
-  /// **'Réponse invalide ({code})'**
-  String invalidResponseWithCode(Object code);
 
   /// No description provided for @noRefreshToken.
   ///
@@ -4654,24 +4540,6 @@ abstract class AppLocalizations {
   /// **'Utilisé'**
   String get usedLabel;
 
-  /// No description provided for @banUnbanError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur ban/unban: {error}'**
-  String banUnbanError(String error);
-
-  /// No description provided for @deleteErrorWithDetails.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur suppression: {error}'**
-  String deleteErrorWithDetails(String error);
-
-  /// No description provided for @loadUsersError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur chargement utilisateurs: {error}'**
-  String loadUsersError(String error);
-
   /// No description provided for @limitReachedParticipants.
   ///
   /// In fr, this message translates to:
@@ -4767,24 +4635,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aujourd\'hui {time}'**
   String todayTimeShort(String time);
-
-  /// No description provided for @sourceFileNotFound.
-  ///
-  /// In fr, this message translates to:
-  /// **'Fichier source introuvable : {path}'**
-  String sourceFileNotFound(String path);
-
-  /// No description provided for @copyImpossible.
-  ///
-  /// In fr, this message translates to:
-  /// **'Copie impossible : {error}'**
-  String copyImpossible(String error);
-
-  /// No description provided for @copyFailedPath.
-  ///
-  /// In fr, this message translates to:
-  /// **'Copie échouée : {path}'**
-  String copyFailedPath(String path);
 
   /// No description provided for @albumCannotBeForwarded.
   ///
@@ -7690,12 +7540,6 @@ abstract class AppLocalizations {
   /// **'Télécharger'**
   String get exportDownload;
 
-  /// No description provided for @exportFailed.
-  ///
-  /// In fr, this message translates to:
-  /// **'Export impossible : {error}'**
-  String exportFailed(String error);
-
   /// No description provided for @deleteAccountTitle.
   ///
   /// In fr, this message translates to:
@@ -7780,12 +7624,6 @@ abstract class AppLocalizations {
   /// **'Votre compte sera définitivement supprimé le {date}. Vous pouvez annuler d\'ici là.'**
   String deleteAccountGraceBody(String date);
 
-  /// No description provided for @deleteAccountFailed.
-  ///
-  /// In fr, this message translates to:
-  /// **'Suppression impossible : {error}'**
-  String deleteAccountFailed(String error);
-
   /// No description provided for @biometricLock.
   ///
   /// In fr, this message translates to:
@@ -7821,12 +7659,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Biométrie indisponible sur cet appareil'**
   String get biometricLockUnavailable;
-
-  /// No description provided for @biometricLockFailed.
-  ///
-  /// In fr, this message translates to:
-  /// **'Biométrie : {error}'**
-  String biometricLockFailed(String error);
 
   /// No description provided for @accountSecuritySectionProtection.
   ///
@@ -10389,6 +10221,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce champ ne peut plus être modifié.'**
   String get errCodeFieldImmutable;
+
+  /// No description provided for @errAucuneAppPourFichier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune application ne peut ouvrir ce fichier.'**
+  String get errAucuneAppPourFichier;
 }
 
 class _AppLocalizationsDelegate

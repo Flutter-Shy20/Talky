@@ -2404,7 +2404,7 @@ extension _ChatActions on _ChatDetailScreenState {
     final res = await OpenFilex.open(path);
     if (res.type != ResultType.done && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.cannotOpenFileAppAlt(res.message)), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.l10n.errAucuneAppPourFichier), backgroundColor: AppColors.error),
       );
     }
   }

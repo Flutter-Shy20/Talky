@@ -1100,7 +1100,7 @@ class _MediaCardState extends State<_MediaCard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content:
-              Text(context.l10n.cannotOpenFileApp(res.message)),
+              Text(context.l10n.errAucuneAppPourFichier),
           backgroundColor: context.colors.error,
         ),
       );
