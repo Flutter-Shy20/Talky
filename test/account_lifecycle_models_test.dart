@@ -28,7 +28,9 @@ void main() {
       });
       expect(page.items.length, 1);
       expect(page.items.first.isVideo, isFalse);
-      expect(page.nextCursor, 10);
+      // Curseur opaque (msgID, ou « taille_msgID » en tri par poids) : il
+      // est renvoyé tel quel au serveur, le modèle le garde en chaîne.
+      expect(page.nextCursor, '10');
     });
   });
 }
