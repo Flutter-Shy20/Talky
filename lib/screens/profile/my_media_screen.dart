@@ -217,7 +217,7 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
         if (!mounted) return;
         setState(() {
           _initial = false;
-          _error = '$e';
+          _error = presenterErreur(context.l10n, e, domaine: ErrorDomain.media);
         });
       },
     );
