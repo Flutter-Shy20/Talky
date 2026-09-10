@@ -2,6 +2,28 @@
 
 Suite de [`audit-erreurs-2026-09.md`](audit-erreurs-2026-09.md).
 
+> **État au 10/09/2026 — lots A livrés** sur la branche `erreurs-audit`
+> (15 commits, depuis `crashlytics`). Les lots B (backend) restent à faire.
+>
+> Trois écarts avec le plan initial, décidés en cours de route :
+> - **A10 (admin) a été conservé**, en version mécanique. Il devait être
+>   repoussé, mais `errorColon` et `loadErrorWithDetails` sont partagés entre
+>   l'admin et sept écrans utilisateur : les y laisser aurait interdit A11,
+>   donc la garantie structurelle entière. Aucun message admin n'a été rédigé
+>   par code — ce travail-là reste bien repoussé.
+> - **Un commit non prévu**, `fix(erreurs): trier sur le code, plus sur la
+>   prose du serveur` : le test-garde a révélé deux branches qui décidaient de
+>   l'affichage en cherchant un mot dans le message serveur.
+> - **28 clés supprimées** au lieu de 25 : les trois clés annexes prévues
+>   (`copyFailedPath`, `sourceFileNotFound`, `invalidResponseWithCode`) sont
+>   bien parties, et quatre sites affichant le message anglais du plugin
+>   OpenFilex ont été repris au passage.
+>
+> Vérification : `flutter analyze` sans erreur (48 avertissements, tous
+> préexistants) ; suite complète à 16 échecs, **identiques à ceux de la base**
+> — aucune régression, et un échec préexistant réparé
+> (`media_staging_test`, qui butait sur le `StateError` de `LocaleController`).
+
 Règle visée : **aucune exception, aucun texte serveur, aucun chemin de fichier
 n'atteint l'écran.** L'utilisateur ne lit que des phrases écrites à l'avance,
 traduites en fr/en/zh. Le détail technique part vers Crashlytics, pas vers lui.
