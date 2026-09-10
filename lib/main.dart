@@ -17,6 +17,7 @@ import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/services/billing/entitlement_service.dart';
+import 'core/services/billing/entitlements.dart';
 import 'core/db/app_database.dart';
 import 'dart:convert';
 import 'core/services/backup/restore_state.dart';
@@ -548,6 +549,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       await auth.refreshSessionOnResume();
       if (!mounted || !auth.isLoggedIn) return;
       await _ensureSocketReadyOnResume();
+      // Droits Alanya Plus : relus seulement s'ils ont passé leur date de
+      // validité. Un changement plus tôt arrive par `entitlements:updated`.
+      final droits = EntitlementService.maybeInstance;
+      if (droits != null) unawaited(droits.refreshIfStale());
       // Sauvegarde automatique : la politique est temporelle, donc il suffit
       // de lui demander son avis au retour au premier plan. Elle ne fait rien
       // si ce n'est pas dû, si le réseau est mesuré, ou si l'inscrit a choisi
@@ -707,6 +712,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
           Provider.of<ConnectivityProvider>(context, listen: false).service;
       final myId = chat.repository.myId;
       if (myId == 0) return;
+      // Sauvegarder est réservé à Alanya Plus ; restaurer ne l'est jamais. Le
+      // serveur refuserait la clé : inutile de rater une tentative à chaque
+      // retour au premier plan.
+      if (!EntitlementService.allows(PlusFeature.backup)) return;
 
       await BackupRunner(
         db: chat.repository.dao.db,

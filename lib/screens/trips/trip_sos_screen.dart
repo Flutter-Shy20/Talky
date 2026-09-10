@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/errors/afficher_erreur.dart';
+import '../../core/errors/app_error.dart';
 import '../../core/services/trip_repository.dart';
 import '../../core/services/trip_session_guard.dart';
 import '../../core/services/trip_socket_service.dart';
@@ -109,6 +111,12 @@ class _TripSosScreenState extends State<TripSosScreen> {
     } on TalkyException catch (e) {
       if (!mounted) return;
       _annuler();
+      // SOS isolé sans Alanya Plus (celui d'un trajet ouvert passe toujours) :
+      // le panneau de l'offre plutôt qu'un échec muet.
+      if (e.code == 'SUBSCRIPTION_REQUIRED') {
+        afficherErreur(context, e, domaine: ErrorDomain.trajet);
+        return;
+      }
       _erreur(switch (e.statusCode) {
         429 => l10n.tripsSosTooMany,
         409 => l10n.tripsCircleEmptyTitle,

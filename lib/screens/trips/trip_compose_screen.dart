@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/default_contact_lists.dart';
 import '../../core/db/app_database.dart';
+import '../../core/errors/afficher_erreur.dart';
+import '../../core/errors/app_error.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/trip_repository.dart';
 import '../../core/services/trip_session_guard.dart';
@@ -103,6 +105,12 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
     } on TalkyException catch (e) {
       if (!mounted) return;
       setState(() => _envoi = false);
+      // Abonnement échu depuis l'ouverture de l'écran : le panneau de l'offre,
+      // pas un « échec du départ ».
+      if (e.code == 'SUBSCRIPTION_REQUIRED') {
+        afficherErreur(context, e, domaine: ErrorDomain.trajet);
+        return;
+      }
       // On distingue les cas par le code renvoyé par le serveur, jamais par le
       // texte du message — celui-ci peut changer sans prévenir.
       final message = switch (e.statusCode) {

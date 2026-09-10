@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import 'billing/entitlement_service.dart';
+import 'billing/entitlements.dart';
 import 'ringtone_preferences.dart';
 
 /// Sonneries propres aux listes de contacts.
@@ -482,6 +484,12 @@ class ListRingtonePreferences extends ChangeNotifier {
         'callSoundName': setting.callSound?.name,
       });
       return true;
+    } on TalkyException catch (e) {
+      // Refus « réservé à Alanya Plus » : réessayer à chaque synchro ne
+      // changerait rien. Le choix reste local, sans être poussé.
+      if (e.code == 'SUBSCRIPTION_REQUIRED') return true;
+      debugPrint('[ListRingtone] sonneries de la liste $listId non poussées: $e');
+      return false;
     } catch (e) {
       debugPrint('[ListRingtone] sonneries de la liste $listId non poussées: $e');
       return false;
@@ -519,6 +527,10 @@ class ListRingtonePreferences extends ChangeNotifier {
   /// quand la liste attend un son personnalisé absent de cet appareil :
   /// remplacement provisoire, préférence conservée.
   static RingtoneOption? _resolve(int contactId, {required bool message}) {
+    // Sans Alanya Plus, le son habituel. Les réglages restent en place et
+    // reprennent au réabonnement. Le code natif lit le même verdict
+    // (EntitlementService.listRingtonesFlagKey) quand l'app est tuée.
+    if (!EntitlementService.allows(PlusFeature.listRingtones)) return null;
     final ordered = <int>[
       ..._priority,
       ..._settings.keys.where((id) => !_priority.contains(id)),

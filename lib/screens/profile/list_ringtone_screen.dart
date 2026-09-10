@@ -3,11 +3,14 @@ import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/db/app_database.dart';
+import '../../core/services/billing/entitlement_service.dart';
+import '../../core/services/billing/entitlements.dart';
 import '../../core/services/list_ringtone_preferences.dart';
 import '../../core/services/ringtone_preferences.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/contact_list_display.dart';
+import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/common/ringtone_sync_info.dart';
 
 /// Préfixe des entrées « son personnalisé choisi ailleurs, absent ici ».
@@ -132,6 +135,12 @@ class _ListRingtoneScreenState extends State<ListRingtoneScreen> {
     ];
   }
 
+  /// Choisir un son demande Alanya Plus ; revenir au son par défaut, jamais —
+  /// on ne retient personne dans un réglage qu'il ne peut plus changer.
+  bool _mayChoose(String id) =>
+      id == RingtoneOption.systemId ||
+      guardPlus(context, PlusFeature.listRingtones);
+
   String _valueFor(String? localId, ListSoundChoice? sound) {
     if (localId != null && localId.isNotEmpty) return localId;
     if (sound?.type == ListSoundType.custom) {
@@ -186,6 +195,13 @@ class _ListRingtoneScreenState extends State<ListRingtoneScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
+          if (!context.watch<EntitlementService>().has(PlusFeature.listRingtones)) ...[
+            PlusLockedBanner(
+              feature: PlusFeature.listRingtones,
+              text: context.l10n.plusLockedRingtones,
+            ),
+            AppSpacing.vGapLg,
+          ],
           Text(
             'Choisissez deux sons différents pour cette liste : un son court '
             'pour les messages, une sonnerie pour les appels.',
@@ -206,6 +222,7 @@ class _ListRingtoneScreenState extends State<ListRingtoneScreen> {
               // Ré-appuyer sur l'entrée « fichier absent » ne doit rien
               // enregistrer : ce n'est pas un son sélectionnable.
               if (id.startsWith(_kMissingPrefix)) return;
+              if (!_mayChoose(id)) return;
               listPrefs.setRingtone(list.idList, messageRingtoneId: id);
             },
           ),
@@ -220,6 +237,7 @@ class _ListRingtoneScreenState extends State<ListRingtoneScreen> {
             onPreview: _togglePreview,
             onChanged: (id) {
               if (id.startsWith(_kMissingPrefix)) return;
+              if (!_mayChoose(id)) return;
               listPrefs.setRingtone(list.idList, callRingtoneId: id);
             },
           ),

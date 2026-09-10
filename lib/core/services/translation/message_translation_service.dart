@@ -7,6 +7,8 @@ import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
+import '../billing/entitlement_service.dart';
+import '../billing/entitlements.dart';
 import 'translatable_content.dart';
 import 'translation_languages.dart';
 import 'translation_settings.dart';
@@ -346,6 +348,9 @@ class MessageTranslationService {
   /// L'override de conversation prime sur le réglage global : `1` force la
   /// traduction même si le global est à off, `0` l'interdit même s'il est à on.
   Future<bool> _isEnabledFor(int conversationID) async {
+    // Hors du mémo : l'abonnement peut prendre fin (ou reprendre) pendant que
+    // la conversation est ouverte, le réglage de l'utilisateur, lui, reste.
+    if (!EntitlementService.allows(PlusFeature.translation)) return false;
     final memo = _convEnabledMemo[conversationID];
     if (memo != null) return memo;
 
