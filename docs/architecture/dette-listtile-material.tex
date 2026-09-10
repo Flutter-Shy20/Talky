@@ -1,0 +1,254 @@
+% =====================================================================
+%  ALANYA — Note de dette technique
+%  Avertissements « ListTile background color or ink splashes may be invisible »
+%
+%  Compilation :  latexmk -pdf dette-listtile-material.tex
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+\usepackage{alanya-conception}
+\setAlanyaDocTitre{Dette : ListTile et Material}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AlanyaIndigoStrong,
+  urlcolor=AlanyaIndigoStrong,
+  pdftitle={Alanya - Dette technique : ListTile sans Material},
+  pdfauthor={Equipe Alanya},
+  pdfsubject={Avertissements Flutter a traiter}
+}
+
+\begin{document}
+
+% =====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[AlanyaIndigo]
+    (current page.north west) rectangle ([yshift=-6.4cm]current page.north east);
+  \fill[AlanyaIndigoDark]
+    ([yshift=-6.4cm]current page.north west) rectangle ([yshift=-6.0cm]current page.north east);
+\end{tikzpicture}
+
+\vspace*{1.1cm}
+{\color{white}\sffamily
+\begin{center}
+  {\small\bfseries NOTE DE DETTE TECHNIQUE}\\[6pt]
+  {\footnotesize\color{AlanyaContainer} À traiter --- sans urgence, mais sans oublier}
+\end{center}}
+
+\vspace{3.4cm}
+
+\begin{center}\sffamily
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[20pt]
+  {\fontsize{28}{32}\selectfont\bfseries\color{AlanyaIndigoDark} ListTile}\\[4pt]
+  {\fontsize{28}{32}\selectfont\bfseries\color{AlanyaIndigoDark} sans Material}\\[10pt]
+  {\large\color{AlanyaGray} Des centaines d'avertissements qui noient les vraies erreurs}\\[6pt]
+  {\normalsize\itshape\color{AlanyaGray}
+   Deux widgets partagés en sont la cause}\\[22pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}
+\end{center}
+
+\vspace{1.0cm}
+
+\begin{center}
+  \badgeMarque[3.4]
+\end{center}
+
+\vfill
+
+\begin{center}\sffamily
+  \begin{tabular}{@{}r@{\quad}l@{}}
+    \thd{Nature}     & Cosmétique en production, bloquant en développement\\[3pt]
+    \thd{Origine}    & Antérieure au chantier sauvegarde\\[3pt]
+    \thd{Effort}     & Environ deux heures\\[3pt]
+    \thd{Priorité}   & Basse, mais avant la prochaine campagne de débogage\\[3pt]
+    \thd{Date}       & \today\\
+  \end{tabular}
+\end{center}
+
+\vspace{0.8cm}
+\begin{center}\color{AlanyaGray}\small\sffamily
+  Document confidentiel --- diffusion restreinte
+\end{center}
+\end{titlepage}
+
+% =====================================================================
+\chapter*{Ce qu'il faut savoir}
+\addcontentsline{toc}{chapter}{Ce qu'il faut savoir}
+\markboth{Ce qu'il faut savoir}{}
+\thispagestyle{plain}
+
+Les journaux de l'application débitent en continu des blocs de ce genre~:
+
+\begin{lstlisting}[style=Alanya, language={}]
+EXCEPTION CAUGHT BY FLUTTER FRAMEWORK
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color.
+Because ListTile paints its background and ink splashes on the nearest
+Material ancestor, this DecoratedBox will hide those effects.
+\end{lstlisting}
+
+\begin{note}[Pourquoi ça mérite d'être traité, même si « ça marche »]
+En production, l'effet est purement visuel~: les ondes de clic ne se voient pas.
+Mais \textbf{en développement, chaque tuile fautive est remplacée par un bloc
+d'erreur rouge} et devient inutilisable. Et surtout, ces avertissements
+noient les vraies erreurs~: une seule ouverture d'écran en produit plusieurs
+dizaines, au milieu desquelles une exception réelle passe inaperçue.
+\end{note}
+
+\begin{alerte}[Vécu pendant le chantier sauvegarde]
+L'écran \emph{Réglages~\textrightarrow{} Sauvegarde} a été inutilisable
+plusieurs heures pour exactement cette raison, sans que personne ne comprenne
+pourquoi~: les tuiles de fréquence et l'entrée de restauration étaient
+remplacées par des blocs d'erreur. Le diagnostic a coûté plusieurs
+allers-retours parce que le vrai message était perdu au milieu du bruit.
+\end{alerte}
+
+\tableofcontents
+
+% =====================================================================
+\chapter{La règle enfreinte}
+
+Un \code{ListTile} peint son fond et ses ondes de clic sur le \textbf{Material
+le plus proche} dans l'arbre. Si un widget intermédiaire porte lui-même une
+couleur de fond --- \code{Container(color:)}, \code{DecoratedBox},
+\code{ColoredBox} --- ce fond masquerait ces effets, et Flutter lève une
+assertion plutôt que de laisser passer un rendu silencieusement faux.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Fautif} & \thd{Correct}\\
+\midrule
+\code{Container(color: c, child: ListTile(...))} &
+\code{Material(color: c, child: ListTile(...))}\\[6pt]
+\code{Container(decoration: BoxDecoration(color: c, borderRadius: r))} &
+\code{Material(color: c, borderRadius: r, clipBehavior: Clip.antiAlias)}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\code{Material} accepte \code{color}, \code{borderRadius}, \code{elevation} et
+\code{shadowColor}~: il remplace un \code{Container} décoratif sans rien perdre,
+et il est \emph{plus} correct puisque c'est lui que les widgets Material
+attendent.
+
+\begin{note}[Ombres]
+Une ombre portée passe par \code{elevation} et \code{shadowColor} plutôt que
+par \code{boxShadow}. Le rendu diffère légèrement --- l'élévation Material suit
+sa propre courbe --- et c'est l'occasion d'uniformiser plutôt que de reproduire
+à l'identique.
+\end{note}
+
+% =====================================================================
+\chapter{Où corriger}
+
+\section{Deux widgets partagés produisent l'essentiel}
+
+C'est la bonne nouvelle~: il ne s'agit pas de reprendre trente écrans.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Fichier} & \thd{Ce qui cloche}\\
+\midrule
+\code{lib/widgets/profile/settings\_group.dart} &
+Le \code{Container(color: context.colors.surface)} qui enveloppe le contenu du
+groupe (ligne 31 environ). Il entoure tous les \code{SettingsNavTile} et
+\code{SwitchListTile} de \textbf{tous} les écrans de réglages. Le remplacer par
+un \code{Material} corrige l'essentiel des avertissements d'un seul geste.\\[6pt]
+\code{lib/screens/profile/profile\_screen.dart} &
+La carte à \code{BoxDecoration(color: surface, boxShadow: AppShadows.subtle)}
+(ligne 280 environ) qui contient la colonne de \code{ListTile} --- listes de
+contacts, trajets, déconnexion. C'est elle qu'on voit dans les journaux sous
+\code{\_openContactLists}, \code{\_openTrips}, \code{\_logout}.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Écrans à vérifier ensuite}
+
+Ces fichiers contiennent à la fois un \code{ListTile} et un fond coloré. Tous ne
+sont pas fautifs --- la coexistence ne suffit pas, encore faut-il que le fond
+soit un \emph{ancêtre} de la tuile --- mais c'est la liste à parcourir une fois
+les deux widgets partagés corrigés.
+
+\begin{lstlisting}[style=Alanya, language={}]
+lib/screens/profile/preferred_contacts_screen.dart
+lib/screens/profile/storage_screen.dart
+lib/screens/profile/edit_profile_screen.dart
+lib/screens/profile/qr_code_screen.dart
+lib/screens/profile/contact_lists_screen.dart
+lib/screens/profile/list_ringtone_screen.dart
+lib/screens/profile/notification_settings_screen.dart
+lib/screens/profile/account_security_screen.dart
+lib/screens/chats/chats_screen.dart
+lib/screens/chats/forward_message_screen.dart
+lib/screens/chats/share_to_conversation_screen.dart
+lib/screens/chats/conversation_media_screen.dart
+lib/screens/chats/album_media_list_screen.dart
+lib/screens/calls/keypad_screen.dart
+lib/screens/calls/group_participants_picker_screen.dart
+lib/screens/meetings/meets_screen.dart
+lib/screens/status/status_create_screen.dart
+lib/screens/onboarding/steps/profile_step.dart
+\end{lstlisting}
+
+\begin{note}[Déjà corrigé]
+\code{lib/screens/profile/backup\_screen.dart} l'a été pendant le chantier
+sauvegarde. Sa fonction \code{\_card()} montre la forme à reproduire~:
+\code{Padding} extérieur, \code{Material} avec \code{color}, \code{borderRadius}
+et \code{clipBehavior}, puis \code{Padding} intérieur.
+\end{note}
+
+% =====================================================================
+\chapter{Méthode et vérification}
+
+\section{Repérer}
+
+\begin{lstlisting}[style=Alanya, language={}]
+# Fichiers combinant une tuile et un fond colore
+for f in $(grep -rl "ListTile" lib/screens lib/widgets --include=*.dart); do
+  grep -q "decoration: BoxDecoration\|ColoredBox\|Container(" "$f" && echo "$f"
+done
+\end{lstlisting}
+
+\section{Vérifier}
+
+Le compteur d'avertissements est la mesure la plus honnête. Avant correction, il
+se compte en centaines par ouverture d'écran~:
+
+\begin{lstlisting}[style=Alanya, language={}]
+adb logcat -c
+# ... parcourir l'application : profil, reglages, discussions ...
+adb logcat -d -s flutter:V | grep -c "ink splashes may be invisible"
+\end{lstlisting}
+
+L'objectif est **zéro**. Un compteur qui descend sans atteindre zéro signale
+qu'un écran de la liste n'a pas été traité.
+
+\section{L'ordre à suivre}
+
+\begin{enumerate}[leftmargin=*]
+  \item \code{settings\_group.dart} --- le plus rentable, il couvre tous les
+        écrans de réglages d'un coup.
+  \item \code{profile\_screen.dart} --- la deuxième source la plus bruyante.
+  \item Mesurer. Le reste de la liste ne mérite d'être parcouru que si le
+        compteur n'est pas déjà à zéro.
+\end{enumerate}
+
+\begin{alerte}[À faire avant la prochaine campagne de débogage]
+Ce n'est pas urgent en soi. Mais tant que ces avertissements coulent, **toute
+recherche de bug dans l'application coûte plus cher qu'elle ne devrait**, et
+certains défauts resteront invisibles. Le traiter est un investissement sur la
+capacité à diagnostiquer, pas une correction cosmétique.
+\end{alerte}
+
+\vfill
+\begin{center}\small\color{AlanyaGray}\sffamily
+Fin de la note.
+\end{center}
+
+\end{document}

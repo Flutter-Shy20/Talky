@@ -9,6 +9,21 @@ import '../utils/media_album.dart';
 import '../utils/system_event_payload.dart';
 import 'app_database.dart';
  
+/// Types de messages que « Mes médias » sait lister : image, vidéo, audio,
+/// fichier. Le texte (0) et la localisation (5) n'ont pas de fichier joint,
+/// et le message système (6) encore moins.
+const kMyMediaTypes = <int>[1, 2, 3, 4];
+
+/// Une ligne de [ChatDao.watchLocalMedia] : le message porteur du média, plus
+/// le nom d'expéditeur résolu depuis le cache local de contacts
+/// ([LocalUsers]) quand il est connu — `null` sinon (homonyme non mis en
+/// cache localement), l'affichage s'en passe déjà.
+class LocalMediaRow {
+  final LocalMessage message;
+  final String? senderName;
+  const LocalMediaRow(this.message, this.senderName);
+}
+
 class ChatDao {
   final AppDatabase db;
   ChatDao(this.db);
@@ -768,14 +783,247 @@ class ChatDao {
         .write(LocalMessagesCompanion(deletedForID: Value(userId)));
   }
 
+  /// Messages locaux correspondant à des msgID (ceux affichés dans Mes médias,
+  /// pour transférer la sélection). Un média dont la conversation n'est plus
+  /// en cache local n'a pas de ligne : la liste renvoyée peut être plus courte.
+  /// Un message par sa clé primaire.
+  ///
+  /// La récupération d'un média absent pendant un export part du manifeste,
+  /// qui porte `clientId` et non `msgID` — ce dernier vaut 0 tant que le
+  /// serveur n'a pas confirmé.
+  Future<LocalMessage?> messageByClientId(String clientId) {
+    return (db.select(db.localMessages)
+          ..where((m) => m.clientId.equals(clientId))
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  Future<List<LocalMessage>> messagesByIds(List<int> msgIDs) {
+    if (msgIDs.isEmpty) return Future.value(const []);
+    return (db.select(db.localMessages)
+          ..where((m) => m.msgID.isIn(msgIDs) & m.isDeleted.equals(false)))
+        .get();
+  }
+
+  /// Renseigne la taille d'un média mesurée sur le disque.
+  ///
+  /// Rattrapage : `mediaSize` est nul pour tous les médias envoyés avant que
+  /// l'app ne relève la taille des fichiers. Tant qu'il l'est, « Mes médias »
+  /// les compte pour zéro octet — le total affiché est faux et le tri « Plus
+  /// lourds » les relègue en fin de liste, c'est-à-dire qu'il cache
+  /// précisément ce qu'il est censé faire remonter.
+  ///
+  /// Clé sur `clientId` et non sur `msgID` : c'est la clé primaire, et elle
+  /// est stable dès l'origine.
+  Future<void> setMediaSize(String clientId, int bytes) {
+    return (db.update(db.localMessages)
+          ..where((m) => m.clientId.equals(clientId)))
+        .write(LocalMessagesCompanion(mediaSize: Value(bytes)));
+  }
+
   Future<void> setLocalMediaPath(int msgID, String path) {
     return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
+        .write(LocalMessagesCompanion(localMediaPath: Value(path)));
+  }
+
+  /// Variante de [setLocalMediaPath] clée sur `clientId`.
+  ///
+  /// La récupération d'un média absent pendant un export part du manifeste,
+  /// qui porte `clientId` — la clé primaire, stable dès l'origine — plutôt que
+  /// `msgID`, qui vaut 0 tant que le serveur n'a pas confirmé.
+  Future<void> setLocalMediaPathByClientId(String clientId, String path) {
+    return (db.update(db.localMessages)
+          ..where((m) => m.clientId.equals(clientId)))
         .write(LocalMessagesCompanion(localMediaPath: Value(path)));
   }
 
   Future<void> clearLocalMediaPath(int msgID) {
     return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
         .write(const LocalMessagesCompanion(localMediaPath: Value(null)));
+  }
+
+  /// Source de « Mes médias » : uniquement les médias dont `localMediaPath`
+  /// est renseigné, c'est-à-dire réellement téléchargés sur l'appareil —
+  /// jamais un média simplement reçu. Que le téléchargement ait été
+  /// automatique ou manuel ne change rien, les deux passent par
+  /// [setLocalMediaPath]. L'existence du fichier sur disque (le chemin peut
+  /// pointer sur un fichier depuis effacé hors de l'app) reste à vérifier par
+  /// l'appelant — ce fichier n'importe pas `dart:io`.
+  ///
+  /// Vue unique exclue côté destinataire (jamais de copie persistante) mais
+  /// gardée côté expéditeur, comme le faisait l'ancien endpoint serveur.
+  ///
+  /// Les filtres sont poussés en SQL plutôt que joués en mémoire : la requête
+  /// est plafonnée à 2000 lignes, filtrer après coup découperait dans les
+  /// 2000 médias les plus récents au lieu des 2000 médias les plus récents
+  /// *qui correspondent* — une discussion peu active n'aurait rien affiché.
+  ///
+  /// [until] est une borne **exclusive** (typiquement le lendemain minuit du
+  /// dernier jour voulu) : un média envoyé le 31 mars à 14 h doit être compris
+  /// dans « jusqu'au 31 mars ».
+  /// Socle commun des requêtes « Mes médias » et « exporter cette période ».
+  ///
+  /// Ce qu'il exclut ne dépend d'aucun filtre choisi par l'utilisateur : un
+  /// message effacé, un message masqué pour moi, un type sans fichier, et un
+  /// média à vue unique reçu — jamais de copie persistante côté destinataire,
+  /// donc jamais dans une grille ni dans une archive. Un média à vue unique
+  /// que **j'ai envoyé** reste, lui, à moi.
+  ///
+  /// [requireLocalFile] sépare les deux usages : la grille ne montre que ce
+  /// qui est sur le disque, l'export doit aussi voir ce qui manque pour
+  /// pouvoir le dire.
+  Expression<bool> _mediaScope(
+    int myId, {
+    required List<int> types,
+    required bool requireLocalFile,
+    bool? mineOnly,
+    int? conversationID,
+    DateTime? from,
+    DateTime? until,
+  }) {
+    var where = db.localMessages.isDeleted.equals(false) &
+        (db.localMessages.deletedForID.isNull() |
+            db.localMessages.deletedForID.equals(myId).not()) &
+        db.localMessages.type.isIn(types.isEmpty ? kMyMediaTypes : types) &
+        (db.localMessages.isViewOnce.equals(false) |
+            db.localMessages.senderID.equals(myId));
+    if (requireLocalFile) {
+      where = where & db.localMessages.localMediaPath.isNotNull();
+    }
+    if (mineOnly == true) {
+      where = where & db.localMessages.senderID.equals(myId);
+    } else if (mineOnly == false) {
+      where = where & db.localMessages.senderID.equals(myId).not();
+    }
+    if (conversationID != null) {
+      where = where & db.localMessages.conversationID.equals(conversationID);
+    }
+    if (from != null) {
+      where = where & db.localMessages.sendAt.isBiggerOrEqualValue(from);
+    }
+    if (until != null) {
+      where = where & db.localMessages.sendAt.isSmallerThanValue(until);
+    }
+    return where;
+  }
+
+  Stream<List<LocalMediaRow>> watchLocalMedia(
+    int myId, {
+    bool? mineOnly,
+    int? conversationID,
+    DateTime? from,
+    DateTime? until,
+    List<int> types = kMyMediaTypes,
+  }) {
+    final query = db.select(db.localMessages).join([
+      leftOuterJoin(
+        db.localUsers,
+        db.localUsers.alanyaID.equalsExp(db.localMessages.senderID),
+      ),
+    ])..where(_mediaScope(
+        myId,
+        types: types,
+        requireLocalFile: true,
+        mineOnly: mineOnly,
+        conversationID: conversationID,
+        from: from,
+        until: until,
+      ));
+    query
+      ..orderBy([
+        OrderingTerm(
+            expression: db.localMessages.sendAt, mode: OrderingMode.desc),
+      ])
+      ..limit(2000);
+
+    return query.watch().map((rows) => rows.map((row) {
+          final msg = row.readTable(db.localMessages);
+          final user = row.readTableOrNull(db.localUsers);
+          final name = user == null
+              ? null
+              : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+          return LocalMediaRow(
+              msg, (name == null || name.isEmpty) ? null : name);
+        }).toList());
+  }
+
+  /// Périmètre d'une exportation de période : **tous** les médias qui entrent
+  /// dans les filtres, téléchargés ou non.
+  ///
+  /// Différence avec [watchLocalMedia], et c'est tout l'intérêt : la grille ne
+  /// montre que ce qui est sur le disque, l'archive doit aussi connaître ce
+  /// qui manque. Une archive incomplète qui le dit vaut infiniment mieux
+  /// qu'une archive incomplète qui se tait — l'inscrit ne découvrirait le trou
+  /// que le jour où il chercherait la photo.
+  ///
+  /// Instantané et non flux : un export porte sur un périmètre figé au moment
+  /// où l'inscrit appuie. Un média qui arrive pendant l'assemblage n'a pas à
+  /// s'y inviter.
+  ///
+  /// Ordre chronologique **croissant** ici, à l'inverse de la grille : une
+  /// archive se lit du plus ancien au plus récent.
+  Future<List<LocalMediaRow>> mediaForExport(
+    int myId, {
+    bool? mineOnly,
+    int? conversationID,
+    DateTime? from,
+    DateTime? until,
+    List<int> types = kMyMediaTypes,
+  }) async {
+    final query = db.select(db.localMessages).join([
+      leftOuterJoin(
+        db.localUsers,
+        db.localUsers.alanyaID.equalsExp(db.localMessages.senderID),
+      ),
+    ])
+      ..where(_mediaScope(
+        myId,
+        types: types,
+        requireLocalFile: false,
+        mineOnly: mineOnly,
+        conversationID: conversationID,
+        from: from,
+        until: until,
+      ))
+      ..orderBy([
+        OrderingTerm(
+            expression: db.localMessages.sendAt, mode: OrderingMode.asc),
+      ]);
+
+    final rows = await query.get();
+    return rows.map((row) {
+      final msg = row.readTable(db.localMessages);
+      final user = row.readTableOrNull(db.localUsers);
+      final name = user == null
+          ? null
+          : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+      return LocalMediaRow(msg, (name == null || name.isEmpty) ? null : name);
+    }).toList();
+  }
+
+  /// Les conversations qui ont au moins un média téléchargé sur l'appareil.
+  ///
+  /// Sert le sélecteur « Discussion » de « Mes médias » : la liste complète
+  /// des conversations y proposerait des choix qui n'affichent rien, ce que
+  /// l'utilisateur lit comme un bug plutôt que comme un filtre vide.
+  ///
+  /// Instantané, pas un flux : le sélecteur est une feuille modale, elle se
+  /// referme avant qu'un nouveau média n'arrive.
+  Future<Set<int>> conversationIdsWithLocalMedia(int myId) async {
+    final query = db.selectOnly(db.localMessages, distinct: true)
+      ..addColumns([db.localMessages.conversationID])
+      ..where(db.localMessages.isDeleted.equals(false) &
+          (db.localMessages.deletedForID.isNull() |
+              db.localMessages.deletedForID.equals(myId).not()) &
+          db.localMessages.type.isIn(kMyMediaTypes) &
+          db.localMessages.localMediaPath.isNotNull() &
+          (db.localMessages.isViewOnce.equals(false) |
+              db.localMessages.senderID.equals(myId)));
+    final rows = await query.get();
+    return rows
+        .map((r) => r.read(db.localMessages.conversationID))
+        .whereType<int>()
+        .toSet();
   }
 
   // ── Traduction sur l'appareil ───────────────────────────────────────

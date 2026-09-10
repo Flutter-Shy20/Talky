@@ -11,7 +11,6 @@ import '../../models/qr_models.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/alanya_qr_view.dart';
-import '../home/home_screen.dart';
 
 /// Étapes vues par l'appareil qui AFFICHE le code, c'est-à-dire celui qui n'est
 /// pas encore connecté. C'est toujours l'autre appareil qui décide.
@@ -244,11 +243,10 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
     if (!mounted) return;
 
     if (auth.isLoggedIn) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-        (route) => false,
-      );
+      // Cet ecran est empile PAR-DESSUS l'`AuthWrapper` : le retirer suffit a
+      // reveler l'accueil que ce dernier rend deja. Empiler `HomeScreen` avec
+      // `(route) => false` detruirait la page racine et, avec elle, la session.
+      Navigator.popUntil(context, (route) => route.isFirst);
       return;
     }
 

@@ -28,6 +28,13 @@ class ConnectivityProvider extends ChangeNotifier {
     _init();
   }
 
+  /// Le service sous-jacent, pour qui a besoin de la mesure fine.
+  ///
+  /// `isOnline` répond à « y a-t-il du réseau ? ». La sauvegarde automatique,
+  /// elle, a besoin de « ce réseau est-il facturé ? » — question à laquelle
+  /// seul [ConnectivityService.currentIsUnmetered] répond.
+  ConnectivityService get service => _service;
+
   bool get isOnline => _hasNetwork;
   bool get isSocketConnected => _api.isSocketConnected;
 

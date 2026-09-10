@@ -1,0 +1,1425 @@
+% =====================================================================
+%  ALANYA — Dossier de conception
+%  Exportation des médias, sauvegarde et restauration de compte
+%
+%  Compilation :  latexmk -pdf sauvegarde-exportation-medias.tex
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+\usepackage{alanya-conception}
+\setAlanyaDocTitre{Sauvegarde et exportation}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AlanyaIndigoStrong,
+  urlcolor=AlanyaIndigoStrong,
+  pdftitle={Alanya - Exportation des medias, sauvegarde et restauration},
+  pdfauthor={Equipe Alanya},
+  pdfsubject={Conception - export local, sauvegarde Google Drive, migration d'appareil}
+}
+
+\begin{document}
+
+% =====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[AlanyaIndigo]
+    (current page.north west) rectangle ([yshift=-6.4cm]current page.north east);
+  \fill[AlanyaIndigoDark]
+    ([yshift=-6.4cm]current page.north west) rectangle ([yshift=-6.0cm]current page.north east);
+\end{tikzpicture}
+
+\vspace*{1.1cm}
+{\color{white}\sffamily
+\begin{center}
+  {\small\bfseries DOSSIER DE CONCEPTION}\\[6pt]
+  {\footnotesize\color{AlanyaContainer} Document de travail --- à valider avant développement}
+\end{center}}
+
+\vspace{3.4cm}
+
+\begin{center}\sffamily
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[20pt]
+  {\fontsize{30}{34}\selectfont\bfseries\color{AlanyaIndigoDark} Exportation,}\\[4pt]
+  {\fontsize{30}{34}\selectfont\bfseries\color{AlanyaIndigoDark} sauvegarde}\\[4pt]
+  {\fontsize{30}{34}\selectfont\bfseries\color{AlanyaIndigoDark} et restauration}\\[10pt]
+  {\large\color{AlanyaGray} Ce qui est déjà sur le téléphone n'a pas à repasser par le réseau}\\[6pt]
+  {\normalsize\itshape\color{AlanyaGray}
+   Archive locale, sauvegarde chiffrée sur Drive, migration d'appareil}\\[22pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}
+\end{center}
+
+\vspace{1.0cm}
+
+\begin{center}
+  \badgeMarque[3.4]
+\end{center}
+
+\vfill
+
+\begin{center}\sffamily
+  \begin{tabular}{@{}r@{\quad}l@{}}
+    \thd{Périmètre}     & Talky (Flutter, Android) \textbullet{} Alanya-Backend\\[3pt]
+    \thd{Statut}        & Conception --- aucune ligne de code écrite\\[3pt]
+    \thd{Point d'entrée} & Profil \textrightarrow{} Mes médias\\[3pt]
+    \thd{Dépend de}     & Partitions de médias (rétention serveur, \code{410 MEDIA\_EXPIRED})\\[3pt]
+    \thd{Plateforme}    & Android d'abord --- iOS et iCloud hors périmètre\\[3pt]
+    \thd{Date}          & \today\\
+  \end{tabular}
+\end{center}
+
+\vspace{0.8cm}
+\begin{center}\color{AlanyaGray}\small\sffamily
+  Document confidentiel --- diffusion restreinte
+\end{center}
+\end{titlepage}
+
+% =====================================================================
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\markboth{Avant-propos}{}
+\thispagestyle{plain}
+
+Ce dossier répond à une note manuscrite posée en marge de la maquette de l'écran
+\emph{Mes médias}~:
+
+\begin{quote}\itshape
+Nous devons travailler à s'assurer que les données sont bien stockées sur le téléphone des
+inscrits à la plateforme. Cette exportation doit exploiter cet aspect, ceci nous permettra
+d'économiser notre bande passante mais aussi les data de l'inscrit. La seule situation où
+il y a une réelle exportation, c'est lorsqu'il ouvre son compte sur un nouveau téléphone~;
+dans ce cas les données stockées sur le drive de Google sont transférées sur le nouveau
+téléphone.
+\end{quote}
+
+Deux exigences s'y lisent, et elles ne se recouvrent pas. La première est une règle
+d'économie~: une exportation ne doit rien retélécharger de ce que le téléphone possède
+déjà. La seconde est un scénario~: la migration vers un nouvel appareil, où un transfert
+réel a lieu, depuis Google Drive.
+
+\begin{note}[Comment lire ce document]
+La \textbf{partie~I} décrit ce que l'inscrit voit et ce qu'on lui promet. Elle se valide
+sans lire la suite. La \textbf{partie~II} décrit comment on le construit, fichier par
+fichier. Le chapitre~\ref{ch:decisions} récapitule toutes les décisions arrêtées et sert
+de référence rapide.
+\end{note}
+
+\tableofcontents
+
+% =====================================================================
+\part{Ce que l'inscrit voit}
+% =====================================================================
+
+\chapter{Le problème posé}
+\label{ch:probleme}
+
+\section{Deux horloges qui ne tournent pas à la même vitesse}
+
+Depuis la mise en place du stockage partitionné, Alanya tient deux règles de conservation
+distinctes, et c'est de leur écart que naît tout ce document.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Où} & \thd{Durée} & \thd{Pourquoi}\\
+\midrule
+Sur nos serveurs & 30 jours & Le coût de stockage est le nôtre. Les partitions
+journalières font tomber la plus ancienne chaque nuit.\\
+Sur le téléphone & sans limite & Le stockage appartient à l'inscrit. Tout média
+téléchargé reste jusqu'à désinstallation ou changement de compte.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{constat}
+La valeur de rétention n'est pas codée en dur dans l'application. \code{MediaExpiryPolicy}
+l'apprend du champ \code{retentionDays} porté par chaque réponse \code{410 Gone}, et la
+mémorise. Elle vaut 365~jours pendant la mise en service du stockage partitionné, 30
+ensuite. Toute la présente conception s'appuie sur cette valeur apprise, jamais sur une
+constante.
+\end{constat}
+
+Passé la fenêtre serveur, un média n'existe plus qu'en un seul exemplaire au monde~: celui
+posé sur le téléphone de l'inscrit. Il n'y a plus de filet. Une casse, un vol, un
+formatage, un changement de téléphone, et la photo est perdue --- définitivement, sans que
+personne chez Alanya ne puisse rien y faire.
+
+\section{Ce que la note demande}
+
+L'exigence d'économie n'est pas un détail d'optimisation, c'est une contrainte de
+conception. Un inscrit qui exporte les 47~médias de mars 2026 les possède déjà tous sur son
+téléphone. Les redemander au serveur reviendrait à payer deux fois~: notre bande passante
+sortante, et le forfait data de l'inscrit, pour des octets qui sont déjà à trente
+centimètres de l'écran.
+
+\begin{constat}
+\code{ChatDao.watchLocalMedia} ne liste que les messages dont \code{localMediaPath} est
+renseigné, c'est-à-dire les fichiers réellement présents sur le disque. L'écran
+\emph{Mes médias} est donc déjà, par construction, une vue de ce que le téléphone possède
+--- et fonctionne hors connexion. L'exportation hérite gratuitement de cette propriété.
+\end{constat}
+
+\section{La réponse retenue : deux mécanismes, jamais confondus}
+
+Un même bouton ne peut pas servir deux besoins aussi différents que « emporter mes photos
+de mars ailleurs » et « retrouver mon compte sur mon nouveau téléphone ». Les confondre
+mène à la pire des situations~: deux mécanismes qui écrivent au même endroit, et plus
+personne ne sait lequel détient ses données le jour où il en a besoin.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X X@{}}
+\toprule
+ & \thd{Sauvegarde} & \thd{Exportation}\\
+\midrule
+Déclenchement & automatique, selon la fréquence choisie & l'inscrit appuie sur un bouton\\
+Contenu       & la base triée, plus les préférences retenues & les médias d'une période\\
+Format        & interne, chiffré, illisible hors d'Alanya & ouvert, en clair, lisible partout\\
+Destination   & dossier \code{Alanya} du Drive de l'inscrit & partage système, Téléchargements, ou Drive\\
+Sert à        & retrouver son compte sur un nouveau téléphone & sortir ses souvenirs d'Alanya\\
+Coût réseau   & quelques Mo & zéro, sauf récupération explicitement acceptée\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Conséquence assumée]
+La sauvegarde ne contient pas les médias. Sur un nouveau téléphone, l'inscrit retrouve ses
+conversations, mais les médias de plus de 30~jours ne reviennent pas~: ils n'étaient ni sur
+le serveur, ni dans la sauvegarde. Ce choix évite de déverser plusieurs gigaoctets dans un
+quota Google de 15~Go, mais il déplace l'exportation~: elle n'est plus un confort, elle est
+\textbf{le seul filet} pour les médias anciens. C'est pourquoi l'archive exportée est
+elle-même relisible par la restauration (chapitre~\ref{ch:restauration}).
+\end{alerte}
+
+\chapter{Exporter une période}
+\label{ch:export}
+
+\section{Le parcours}
+
+L'inscrit arrive sur \emph{Mes médias}, resserre par discussion, par période, par famille
+de média, puis appuie sur \textbf{Exporter cette période}. Une feuille s'ouvre et annonce
+trois choses avant tout engagement~: combien d'éléments, quel poids, et ce qui manque.
+
+\begin{enumerate}[leftmargin=*]
+  \item \thd{Récapitulatif.} « 47~éléments \textbullet{} 128~Mo \textbullet{} mars 2026
+        \textbullet{} Ama Nguema ». Le périmètre exporté est exactement celui que la grille
+        affiche~: aucune surprise, ni en plus ni en moins.
+  \item \thd{Éléments manquants}, s'il y en a (voir §\ref{sec:manquants}).
+  \item \thd{Destination.} Partager \textbullet{} Enregistrer dans Téléchargements
+        \textbullet{} Déposer sur mon Drive.
+  \item \thd{Assemblage} en tâche de fond, progression en notification.
+  \item \thd{Remise} de l'archive selon la destination choisie.
+\end{enumerate}
+
+\section{Ce que contient l'archive}
+
+Des fichiers ouverts, rangés comme l'inscrit s'y attend, plus deux fichiers de contexte.
+
+\begin{lstlisting}[style=Alanya, language={}]
+alanya-export-241030112-2026-03-01_2026-03-31.zip
+  index.html                     <- planche-contact, ouvrable sans Alanya
+  manifest.json                  <- contexte lisible par machine
+  Alanya Images/
+    2026-03-14_ama-nguema_0001.jpg
+  Alanya Videos/
+  Alanya Audio/
+  Alanya Documents/
+\end{lstlisting}
+
+\begin{constat}
+L'arborescence reprend celle que \code{AlanyaMediaExportService} pose déjà dans
+\code{Download/Alanya/}~: \code{Alanya Images}, \code{Alanya Videos},
+\code{Alanya Documents}. Un inscrit qui a déjà exporté des médias un par un retrouve la
+même organisation dans le zip. Seul \code{Alanya Audio} est nouveau.
+\end{constat}
+
+Le \code{manifest.json} est ce qui distingue une archive utile d'un tas de fichiers. Un an
+plus tard, un nom de fichier ne dit ni qui a envoyé la photo, ni dans quelle conversation,
+ni quand. Le manifeste porte tout cela --- et, accessoirement, les identifiants dont la
+restauration a besoin pour remettre chaque fichier en face de son message.
+
+\section{Les éléments manquants}
+\label{sec:manquants}
+
+Un média peut manquer à l'appel pour deux raisons qui n'ont rien à voir, et l'écran doit
+les distinguer~: promettre un téléchargement qui échouera serait pire que de ne rien
+promettre.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X l@{}}
+\toprule
+\thd{Cause} & \thd{Situation} & \thd{Traitement}\\
+\midrule
+Jamais téléchargé &
+Reçu, mais le téléchargement automatique était coupé, ou il a échoué. Encore présent sur le
+serveur. &
+Récupérable\\
+Purgé du serveur &
+Plus vieux que la rétention. Le serveur répond \code{410}. &
+Irrécupérable\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+La feuille d'export annonce donc, le cas échéant~: « \emph{5~éléments manquants. 3~peuvent
+être récupérés (40~Mo). 2~ne sont plus disponibles.} » avec une case à cocher pour le
+téléchargement.
+
+\begin{note}[Pourquoi cette entorse à la règle d'économie]
+Récupérer avant d'archiver consomme la bande passante que la note veut économiser. L'entorse
+est acceptée parce qu'elle est \textbf{explicite, chiffrée d'avance et non cochée par
+défaut}~: l'inscrit décide, en connaissant le coût. Ce qui est proscrit, c'est le
+téléchargement silencieux --- pas le téléchargement choisi.
+\end{note}
+
+Les irrécupérables ne disparaissent pas pour autant~: ils sont inscrits dans le manifeste
+avec leur motif. Une archive incomplète qui le dit vaut infiniment mieux qu'une archive
+incomplète qui se tait~: l'inscrit ne découvrirait le trou que le jour où il chercherait
+la photo.
+
+\section{Le dépôt sur Drive}
+
+Déposer l'archive sur le Drive personnel de l'inscrit règle le problème ouvert par la
+sauvegarde sans médias~: ses fichiers anciens survivent à son téléphone, sans qu'Alanya
+porte le coût d'une sauvegarde de plusieurs gigaoctets. L'archive va dans le dossier
+visible \code{Alanya/}, celui-là même qui accueille les sauvegardes, et la restauration
+sait la relire.
+
+\begin{alerte}[À dire clairement dans l'écran]
+Cette archive est \textbf{en clair}. C'est sa raison d'être~: elle doit s'ouvrir sans
+Alanya, sur n'importe quel ordinateur, dans dix ans. Mais cela signifie que ces photos sont
+lisibles dans le Drive de l'inscrit, par Google et par toute application à laquelle il a
+donné accès à son Drive. L'écran doit le dire avant le dépôt, pas dans les conditions
+d'utilisation.
+\end{alerte}
+
+\chapter{Sauvegarder et restaurer}
+\label{ch:sauvegarde-vue}
+
+\section{Ce qui est sauvegardé}
+
+La base locale \code{talky\_chat.sqlite}, moins ce qui n'a aucun sens sur un autre téléphone,
+plus une poignée de préférences qui n'y sont pas. Cette formulation est plus lourde que
+« la base et rien d'autre », mais elle est exacte, et la différence porte sur des choses que
+l'inscrit remarquerait.
+
+\subsection*{Une objection à traiter d'emblée}
+
+Le serveur \textbf{n'efface jamais les messages}.
+
+\begin{constat}
+\code{dataRetentionService.js} purge les statuts expirés (7~jours), l'historique d'appels
+(12~mois), le journal de connexions (90~jours), les jobs en échec, les appareils révoqués.
+La table \code{message}, elle, n'apparaît nulle part dans ces purges. Seuls les
+\emph{fichiers} médias sont purgés, par \code{mediaRetention.js}.
+\end{constat}
+
+Autrement dit, sur un téléphone neuf, l'inscrit qui se reconnecte récupérerait de toute façon
+ses conversations, ses messages et ses contacts en resynchronisant. Alors pourquoi
+sauvegarder ce que le serveur possède déjà~?
+
+\textbf{Parce que la resynchronisation se paie exactement dans la monnaie que la note protège.}
+L'application pagine~: \code{getMessages} descend 50~messages à la fois, et
+\code{loadOlderMessages} remonte l'historique par tranches de 30. Reconstruire trois ans de
+conversations de cette façon, ce sont des milliers d'allers-retours, notre bande passante
+sortante et le forfait data de l'inscrit --- pour des octets qu'une archive de quelques
+mégaoctets aurait livrés en une seule fois.
+
+\begin{note}[La bonne façon de présenter la sauvegarde]
+Pour l'essentiel de son contenu, elle n'est pas un \emph{filet de sécurité} mais une
+\emph{économie}~: elle évite de refaire par le réseau un travail déjà fait. C'est la même
+logique que l'exportation, appliquée à la base au lieu des médias. Elle redevient un vrai
+filet pour le noyau que le serveur ignore, décrit ci-dessous.
+\end{note}
+
+\subsection*{Trois natures de données, trois raisons différentes}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X l@{}}
+\toprule
+\thd{Nature} & \thd{Exemples} & \thd{Motif}\\
+\midrule
+Le serveur l'a aussi &
+Messages, conversations, contacts, profil, réactions, listes de contacts, trajets &
+Économie\\[4pt]
+Seul l'appareil l'a &
+Traductions ML~Kit (\code{translatedContent}, \code{sourceLang},
+\code{translationState})~; appels de plus de 12~mois~; préférences d'affichage et de
+téléchargement &
+Filet\\[4pt]
+À ne pas restaurer &
+Chemins de fichiers locaux, file d'envoi, jetons de session, verrou biométrique &
+Nuisible\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+La deuxième ligne mérite un mot. Les colonnes de traduction portent en commentaire, dans
+\code{app\_database.dart}, la mention explicite~: « \emph{ces trois colonnes ne voyagent
+jamais~: elles ne sont ni envoyées au serveur ni reçues de lui} ». Un inscrit qui a fait
+traduire deux ans de conversations sur son appareil perdrait tout ce travail sans
+sauvegarde --- et l'application relancerait l'identification de langue sur tout l'historique
+au premier lancement.
+
+L'historique d'appels est le second cas net~: le serveur le purge à 12~mois, l'appareil le
+garde. Passé un an, la sauvegarde est le seul endroit où ces appels existent encore.
+
+\subsection*{Les préférences ne sont pas dans la base}
+
+C'est la correction qui justifiait cette section. Les réglages ne vivent pas dans Drift mais
+dans \code{SharedPreferences}, un magasin séparé qu'une sauvegarde de la seule base
+laisserait entièrement de côté~: langue, thème, échelle de police, réduction des animations,
+téléchargement automatique, visibilité des médias, mode d'aperçu des notifications.
+
+Toutes ne doivent pas voyager pour autant. Beaucoup sont déjà côté serveur et reviennent
+seules à la connexion~; d'autres sont propres au matériel.
+
+\begin{constat}
+\code{PrivacyPrefsService} ne fait que \emph{mettre en cache} la réponse de
+\code{getPrivacyPrefs()} sous la clé \code{privacy\_prefs\_json\_v1}. Les préférences de
+confidentialité, de notification et les plages « ne pas déranger » ont chacune leur
+contrôleur côté serveur. Les sauvegarder les dupliquerait, avec le risque qu'une valeur
+périmée écrase la valeur serveur au moment de la restauration.
+\end{constat}
+
+Le détail de ce tri figure au chapitre~\ref{ch:sauvegarde-tech}, §\ref{sec:tri}.
+
+\subsection*{Quel poids, réellement}
+
+\begin{alerte}[« Quelques mégaoctets » mérite d'être nuancé]
+Le poids de la sauvegarde n'est pas dicté par le nombre de messages mais par les
+\textbf{vignettes vidéo}. \code{mediaThumb} stocke une image JPEG encodée en base64 sur la
+ligne du message, de l'ordre de 15~Ko pièce. Cinq cents vidéos reçues, et les vignettes
+pèsent à elles seules davantage que tout le texte de l'historique.
+\end{alerte}
+
+Ordre de grandeur pour un compte chargé --- 20\,000 messages, 500~vidéos --- une fois
+compressé~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}X r r@{}}
+\toprule
+\thd{Poste} & \thd{Brut} & \thd{Après gzip}\\
+\midrule
+Texte, métadonnées, index & \textasciitilde{}7~Mo & \textasciitilde{}2~Mo\\
+Vignettes vidéo (\code{mediaThumb}, base64) & \textasciitilde{}7,5~Mo & \textasciitilde{}5,5~Mo\\
+\midrule
+\thd{Total} & \textasciitilde{}15~Mo & \textbf{\textasciitilde{}7,5~Mo}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+La compression est efficace sur le texte, et rattrape sur les vignettes le tiers de
+surcoût que l'encodage base64 avait ajouté. L'estimation reste à confirmer par la mesure~:
+\code{StorageInfoService} expose déjà \code{databaseBytes}, il suffit de l'instrumenter sur
+quelques comptes réels avant de figer les seuils d'alerte.
+
+\begin{note}[Pourquoi garder les vignettes malgré leur poids]
+Elles sont ce qui rend l'historique restauré immédiatement lisible. Les fichiers pleins
+arrivent en tâche de fond pendant plusieurs minutes~; sans les vignettes, l'inscrit
+contemplerait pendant tout ce temps des colonnes de rectangles gris à la place de ses
+souvenirs. Cinq mégaoctets pour que la restauration ait l'air réussie dès la première
+seconde, c'est bien acheté.
+\end{note}
+
+\section{Où, et sous quelle forme}
+
+Dans le dossier \code{Alanya/} du Drive de l'inscrit --- visible, pas caché. Il voit ses
+sauvegardes, connaît leur poids, peut les effacer pour faire de la place. Le champ d'accès
+demandé à Google se limite aux fichiers créés par l'application~: Alanya ne voit rien
+d'autre de son Drive.
+
+L'archive est \textbf{chiffrée}, avec une clé dérivée du compte Alanya et fournie par le
+serveur à la connexion. L'inscrit n'a rien à retenir, et la restauration est transparente.
+
+\begin{alerte}[Ce n'est pas du chiffrement de bout en bout]
+La clé étant dérivée côté serveur, Alanya peut techniquement déchiffrer une sauvegarde.
+Google, lui, ne le peut pas. C'est un arbitrage assumé contre l'alternative --- un mot de
+passe choisi par l'inscrit --- dont le mode de panne (mot de passe oublié = sauvegarde
+perdue à jamais) est le premier motif de support sur ce type de fonction. Ce point doit
+figurer dans la politique de confidentialité~; le taire serait une faute.
+\end{alerte}
+
+\section{Deux sauvegardes, jamais une seule}
+
+On conserve la sauvegarde courante \textbf{et} la précédente. La nouvelle n'écrase l'ancienne
+qu'une fois écrite, relue et vérifiée. Le coût est dérisoire --- la base pèse quelques
+mégaoctets --- et il ferme le scénario qui rend une sauvegarde inutile~: une écriture
+interrompue qui détruit la dernière bonne copie.
+
+\section{Quand elle se déclenche}
+
+La fréquence est au choix de l'inscrit~: \emph{quotidienne}, \emph{hebdomadaire},
+\emph{mensuelle}, \emph{jamais}. C'est la convention que WhatsApp a installée et qu'il
+saura lire sans explication. Une sauvegarde manuelle reste possible à tout moment, et c'est
+elle qu'on met en avant juste avant un changement de téléphone.
+
+\begin{constat}
+La condition « seulement en Wi-Fi » est réalisable~: \code{ConnectivityService} distingue
+déjà les réseaux non facturés (\code{wifi}, \code{ethernet}) des données mobiles.
+\end{constat}
+
+\section{Quand elle échoue}
+
+Quota Google plein, réseau coupé, autorisation retirée~: les échecs passagers sont réessayés
+en silence. Ce n'est qu'après \textbf{plusieurs jours consécutifs sans aucune sauvegarde
+réussie} que l'application le signale visiblement, avec la cause et la marche à suivre.
+Alerter à chaque coupure réseau apprendrait à l'inscrit à ignorer nos alertes --- et il les
+ignorerait aussi le jour où elles comptent.
+
+\section{L'inscrit sans compte Google}
+
+Tous n'en ont pas, et certains refuseront d'en connecter un. Ils ne doivent pas rester sans
+filet~: l'application écrit alors la même archive dans le stockage du téléphone, sous
+\code{Download/Alanya/Sauvegardes/}, à charge pour l'inscrit de la recopier où il veut. Même
+format, même chiffrement, même restauration. Seule la destination change.
+
+\section{La restauration sur un nouveau téléphone}
+\label{ch:restauration}
+
+À la première connexion sur un appareil neuf, l'application cherche une sauvegarde et
+propose de la restaurer. Le déroulement est coupé en deux, parce que les deux moitiés n'ont
+pas du tout le même poids.
+
+\begin{enumerate}[leftmargin=*]
+  \item \thd{La base, en étape bloquante.} Quelques mégaoctets, quelques secondes, un écran
+        dédié. Aucune ambiguïté sur l'état des données~: quand l'inscrit entre dans
+        l'application, son historique est là.
+  \item \thd{Les médias, en tâche de fond.} Les archives d'export trouvées dans le dossier
+        \code{Alanya/} sont rapatriées et redistribuées derrière, reprise après coupure
+        comprise, avec un bandeau qui dit où ça en est. L'application est utilisable pendant
+        ce temps.
+\end{enumerate}
+
+\begin{alerte}[Toujours prévoir la sortie]
+Une étape bloquante sans échappatoire enferme l'inscrit dont la sauvegarde est corrompue ou
+illisible~: il ne peut plus entrer dans l'application du tout. L'écran de restauration doit
+donc toujours porter un « Ignorer et continuer sans restaurer », et l'opération doit rester
+relançable ensuite depuis les réglages.
+\end{alerte}
+
+\section{Suppression du compte}
+
+Quand l'inscrit supprime son compte Alanya, l'écran de suppression lui \textbf{propose}
+d'effacer aussi sa sauvegarde, sans le lui imposer. Ce fichier est dans son espace
+personnel~: le détruire d'autorité se défendrait mal, et certains voudront le garder pour
+revenir.
+
+% =====================================================================
+\part{Comment on le construit}
+% =====================================================================
+
+\chapter{Le format d'archive}
+\label{ch:format}
+
+\section{Le manifeste}
+
+\begin{lstlisting}[style=Alanya, language={}]
+{
+  "format": "alanya-export/1",
+  "alanyaID": 241030112,
+  "generatedAt": "2026-08-30T10:24:07Z",
+  "period": { "from": "2026-03-01", "to": "2026-03-31" },
+  "filters": { "conversationID": 12, "kind": "all", "owner": "all" },
+  "retentionDaysKnown": 30,
+  "items": [
+    {
+      "msgID": 90412, "clientId": "c_8f21ab", "conversationID": 12,
+      "conversationName": "Ama Nguema", "senderID": 77, "senderName": "Ama Nguema",
+      "isMine": false, "type": 1, "sentAt": "2026-03-14T09:12:44Z",
+      "path": "Alanya Images/2026-03-14_ama-nguema_0001.jpg",
+      "originalName": "IMG_2231.jpg", "bytes": 2841233,
+      "sha256": "9f2c...", "mediaUrl": "/uploads/media/2026-03-14/media_90412_...jpg"
+    }
+  ],
+  "missing": [
+    { "msgID": 90455, "sentAt": "2026-03-19T18:02:00Z", "reason": "expired" },
+    { "msgID": 90460, "sentAt": "2026-03-21T07:40:11Z", "reason": "neverDownloaded" }
+  ]
+}
+\end{lstlisting}
+
+Trois champs méritent qu'on s'y arrête.
+
+\begin{itemize}[leftmargin=*]
+  \item \code{msgID} et \code{clientId} ensemble, jamais l'un sans l'autre. \code{msgID}
+        vaut 0 tant que le serveur n'a pas confirmé le message~; \code{clientId} est stable
+        dès l'origine. La restauration se cale sur \code{clientId} et n'utilise
+        \code{msgID} que comme confirmation.
+  \item \code{sha256} rend la restauration \textbf{idempotente}. Rejouer une archive déjà
+        restaurée ne duplique rien, et un fichier tronqué par une coupure est détecté au
+        lieu d'être installé.
+  \item \code{missing} avec son motif~: c'est ce qui transforme une archive incomplète en
+        archive honnête.
+\end{itemize}
+
+\section{L'assemblage, et pourquoi il ne compresse pas}
+
+\begin{note}[Détail qui change tout sur un export de plusieurs gigaoctets]
+Photos JPEG, vidéos MP4, vocaux M4A et PDF sont \textbf{déjà compressés}. Les repasser dans
+l'algorithme \emph{deflate} du zip coûte beaucoup de temps processeur et de batterie pour un
+gain de taille voisin de zéro --- parfois négatif. L'archive est donc écrite en mode
+\emph{stocké} pour ces familles, et compressée uniquement pour le manifeste et l'index HTML.
+Le zip ne sert pas à réduire, il sert à \textbf{tenir ensemble}.
+\end{note}
+
+L'assemblage lit les fichiers un par un depuis leur emplacement d'origine et les écrit au fil
+de l'eau dans l'archive. Aucune copie intermédiaire~: une mise en scène dans un dossier
+temporaire doublerait l'espace disque nécessaire, ce qui, sur un téléphone qu'on cherche
+précisément à soulager, serait une faute.
+
+\begin{alerte}
+Vérifier l'espace libre \emph{avant} de commencer, et refuser proprement si l'archive ne
+tient pas. Un export qui remplit le disque à 98~\% laisse l'appareil dans un état pire que
+celui d'où l'on partait.
+\end{alerte}
+
+\section{Reprise après interruption}
+
+L'export se découpe en trois phases dont la reprise n'a pas le même coût.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Phase} & \thd{Ressource} & \thd{Reprise}\\
+\midrule
+1. Récupération des manquants & réseau &
+Gratuite~: les fichiers déjà descendus sont dans le cache, la phase les saute.\\
+2. Assemblage du zip & disque et processeur &
+Recommencée d'un trait. Sans réseau, c'est rapide~; un zip ne se reprend pas au milieu.\\
+3. Dépôt sur Drive & réseau &
+Native~: l'API Drive gère les téléversements reprenables.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Les deux phases coûteuses sont donc reprenables, et la seule qui ne l'est pas ne coûte pas
+de réseau. C'est ce découpage qui permet de tenir la promesse « tâche de fond reprenable »
+sans construire de machinerie de reprise maison.
+
+\section{Le service de premier plan et sa limite de six heures}
+\label{sec:fgs}
+
+Un export long tourne dans un service de premier plan. Android encadre désormais ce type de
+service, et il faut le regarder en face avant de promettre quoi que ce soit.
+
+\begin{constat}[Vérifié dans la documentation Android]
+Les services de premier plan de type \code{dataSync} --- comme \code{mediaProcessing} ---
+sont plafonnés à \textbf{six heures par tranche de 24~heures}, pour les applications ciblant
+l'API~35 ou plus. Au terme, le système appelle \code{Service.onTimeout()} et laisse quelques
+secondes pour appeler \code{stopSelf()}~; passé ce délai il lève
+\code{RemoteServiceException}, c'est-à-dire un plantage. Le compteur repart quand l'inscrit
+ramène l'application au premier plan. Alanya cible l'API~36~: elle est concernée.
+\end{constat}
+
+\begin{note}[Six heures, rapportées à ce qu'on fait, c'est immense]
+L'assemblage du zip est local au disque~: des minutes. Le téléversement d'une sauvegarde,
+c'est huit mégaoctets. Seul le rapatriement de plusieurs gigaoctets d'archives sur un réseau
+lent pourrait en approcher --- et il est déjà reprenable, donc une expiration ne fait que
+reporter la suite. Le plafond n'est pas une contrainte pour cette fonctionnalité~; c'en
+serait une pour un traitement d'un seul tenant, et c'est une raison de plus de ne pas en
+faire un.
+\end{note}
+
+Trois exigences suffisent, et aucune n'est coûteuse~:
+
+\begin{enumerate}[leftmargin=*]
+  \item Déclarer \code{FOREGROUND\_SERVICE\_DATA\_SYNC} et
+        \code{android:foregroundServiceType="dataSync"} dans le manifeste --- qui déclare
+        aujourd'hui \code{phone\_call}, \code{microphone}, \code{camera} et \code{location},
+        mais pas celui-ci.
+  \item Implémenter \code{Service.onTimeout()}~: persister la progression, notifier, appeler
+        \code{stopSelf()} \textbf{en quelques secondes}. Ne pas le faire est un plantage, pas
+        un avertissement.
+  \item Reprendre au tick suivant, ce que le découpage en trois phases permet déjà.
+\end{enumerate}
+
+\begin{note}[Et cela se teste, sans attendre six heures]
+\begin{lstlisting}[style=Alanya, language={}]
+adb shell am compat enable FGS_INTRODUCE_TIME_LIMITS com.alanya237.alanya
+adb shell device_config put activity_manager data_sync_fgs_timeout_duration 30000
+\end{lstlisting}
+Le délai tombe à trente secondes. Le comportement d'expiration devient un test, au lieu d'un
+espoir.
+\end{note}
+
+\section{Mesurer avant d'annoncer}
+\label{sec:mesure}
+
+La feuille d'export annonce un poids avant que l'inscrit ne s'engage. Ce chiffre ne peut pas
+venir de la base.
+
+\begin{alerte}[La colonne ment, et pas qu'un peu]
+\code{mediaSize} est nullable --- « nul pour les médias envoyés avant que l'app ne relève la
+taille des images et vidéos ». Sommer la colonne fait donc compter \textbf{zéro octet} pour
+tout média ancien. Le même défaut touchait l'écran \emph{Mes médias}~: son total était
+sous-évalué, et surtout son tri « Plus lourds » reléguait les anciens en fin de liste ---
+un tri censé faire remonter les gros fichiers cachait précisément les plus anciens.
+\end{alerte}
+
+La mesure se fait donc au disque. C'est bon marché~: quelques centaines d'appels \code{stat},
+de l'ordre de la milliseconde, et le contrôle d'existence des fichiers en coûtait déjà autant.
+
+\begin{constat}[Correctif déjà appliqué]
+\code{ChatDao.setMediaSize(clientId, bytes)} et le rattrapage dans \code{\_onRows} sont
+écrits et testés. Un \code{stat} donne l'existence et le poids d'un seul appel~; quand la
+colonne est nulle, la taille mesurée est réécrite en base. \textbf{L'écran répare la donnée
+en la lisant}~: le total, le tri et les pastilles de poids deviennent justes
+définitivement, et l'export héritera d'une base déjà assainie.
+\end{constat}
+
+Le même code sert les deux usages --- l'affichage et l'estimation d'export --- pour qu'ils ne
+puissent pas diverger.
+
+\chapter{La sauvegarde}
+\label{ch:sauvegarde-tech}
+
+\section{Fabriquer l'instantané}
+
+\begin{enumerate}[leftmargin=*]
+  \item \code{VACUUM INTO} vers un fichier temporaire. C'est la seule manière d'obtenir un
+        instantané \textbf{cohérent} de SQLite sans arrêter l'application~: copier
+        \code{talky\_chat.sqlite} pendant qu'une écriture est en cours produirait une base
+        corrompue.
+  \item \thd{Neutralisation} des colonnes d'état local, \emph{sur la copie} et jamais sur la
+        base vivante (§\ref{sec:tri}), et purge des messages fantômes.
+  \item Ajout du \code{prefs.json} issu de la liste blanche des préférences.
+  \item Compression \emph{gzip} --- ici elle est payante, une base SQLite se comprime bien.
+  \item Chiffrement AES-GCM avec la clé du compte.
+  \item Téléversement, sous le nom
+        \code{alanya-backup-<alanyaID>-<horodatage>.enc}.
+  \item Vérification de la taille et de l'empreinte relues, \emph{puis seulement} suppression
+        de l'avant-dernière.
+\end{enumerate}
+
+Un second fichier, \code{alanya-backup-<alanyaID>-latest.json}, reste \textbf{en clair}~: il
+porte la date, la taille, le nombre de messages et la version de schéma. L'écran de réglages
+peut ainsi afficher « dernière sauvegarde~: hier, 21~h~04, 8,2~Mo » sans avoir à déchiffrer
+quoi que ce soit, ni même à demander la clé au serveur.
+
+\section{Le tri : ce qui monte, ce qui reste}
+\label{sec:tri}
+
+\subsection{Les colonnes à neutraliser}
+
+Douze tables composent la base. Aucune n'est exclue en bloc --- ce sont des \emph{colonnes},
+au sein de \code{LocalMessages}, qu'il faut vider avant l'instantané. Toutes décrivent l'état
+de cet appareil-ci, et les restaurer telles quelles produirait des pannes silencieuses.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Colonne} & \thd{Pourquoi elle ne doit pas être restaurée}\\
+\midrule
+\code{localMediaPath} &
+Chemin absolu vers \code{media\_cache} sur l'\emph{ancien} téléphone. Restauré tel quel, il
+fait croire à l'application que le fichier est là~: la grille \emph{Mes médias} affiche des
+éléments qui n'existent pas, et la bulle échoue à l'ouverture.\\[4pt]
+\code{pendingUploadPath} &
+Fichier en attente d'envoi, resté sur l'ancien appareil. L'outbox tenterait indéfiniment
+d'envoyer un fichier introuvable.\\[4pt]
+\code{syncPending}, \code{lastEmittedAt}, \code{retryCount}, \code{failureCode} &
+État de la file d'envoi. Une sauvegarde prise pendant une coupure réseau ressusciterait, des
+mois plus tard, des messages en attente que le serveur a peut-être déjà reçus.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Le cas \code{localMediaPath} n'est pas qu'un détail d'hygiène]
+Il faut le vider \emph{et} laisser la restauration des archives d'export le renseigner à
+nouveau, fichier par fichier, à mesure qu'elle réinstalle les médias. C'est le point de
+jonction entre les deux mécanismes de ce dossier~: la sauvegarde rétablit les messages, les
+archives rétablissent les fichiers, et cette colonne est la couture entre les deux.
+\end{note}
+
+Les messages fantômes se traitent au même moment~: \code{ChatDao.purgeGhostMessages} existe
+déjà pour les optimistes anciens jamais confirmés. L'appeler avant l'instantané évite de
+sauvegarder des lignes que l'application effacerait de toute façon au premier lancement.
+
+\subsection{Les préférences : une liste blanche, jamais une liste noire}
+
+\code{SharedPreferences} contient une quarantaine de clés, dont des jetons d'accès. La
+sauvegarde ne doit embarquer que celles qu'on a explicitement désignées.
+
+\begin{alerte}[Ce sens-là et pas l'autre]
+Avec une liste noire, toute clé ajoutée plus tard entrerait dans la sauvegarde par défaut ---
+y compris un jeton, si quelqu'un en introduit un sans penser à ce document. La liste blanche
+fait payer l'oubli du bon côté~: une préférence nouvelle ne sera simplement pas restaurée,
+et personne n'y perdra sa sécurité.
+\end{alerte}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}X X@{}}
+\toprule
+\thd{Ce qui monte} & \thd{Ce qui reste, et pourquoi}\\
+\midrule
+\code{app\_locale}, \code{theme\_mode},
+\code{app\_font\_scale}, \code{app\_reduce\_motion} &
+\code{*\_access\_token}, \code{*\_refresh\_token}, \code{*\_api\_base} --- jetons de session,
+sans valeur ailleurs et dangereux à recopier\\[4pt]
+\code{auto\_download\_media}, \code{media\_wifi\_only},
+\code{media\_data\_saver}, \code{media\_visibility} &
+\code{privacy\_prefs\_json\_v1} --- simple cache du serveur, qui le renverra\\[4pt]
+\code{notif\_preview\_mode} &
+\code{biometric\_lock\_enabled} --- lié au matériel de l'ancien appareil\\[4pt]
+\code{call\_ringtone\_selected\_id} (l'identifiant, jamais le chemin) &
+\code{call\_ringtone\_active\_path}, \code{call\_ringtone\_native\_name} --- chemins locaux
+vers des fichiers absents\\[4pt]
+ &
+\code{pending\_*}, \code{notif\_dedup\_v1}, \code{ended\_call\_ids\_v1},
+\code{status\_seen\_ids}, \code{countries\_cache\_v1} --- files et caches propres à
+l'appareil\\[4pt]
+ &
+\code{media\_retention\_days\_learned} --- réappris au premier \code{410}\\[4pt]
+ &
+\code{exported\_media\_msg\_ids\_v2} --- journal d'export local, dénué de sens ailleurs\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Les préférences retenues voyagent dans un \code{prefs.json} joint à l'instantané, à
+l'intérieur de l'archive chiffrée. Les sonneries de liste ne figurent nulle part~: elles sont
+déjà synchronisées par compte côté serveur.
+
+\subsection{Le garde-fou : un test qui refuse les clés non classées}
+
+Une liste blanche écrite une fois se périme en silence. Six mois plus tard, quelqu'un ajoute
+une préférence, ne connaît pas ce document, et elle n'est simplement jamais restaurée --- sans
+que rien ne le signale.
+
+La parade idéale serait un registre \code{PrefKeys} référencé partout. Elle touche les
+trente-deux fichiers qui utilisent \code{SharedPreferences}~: trop cher pour ce qu'elle
+rapporte ici.
+
+La parade retenue tient en une quarantaine de lignes~: \textbf{un test qui balaie les
+sources}. Il collecte les littéraux de clés déclarés dans \code{lib/}, et vérifie que chacun
+figure dans exactement un des trois ensembles.
+
+\begin{lstlisting}[style=Alanya, language={}]
+lib/core/services/backup/backup_prefs_policy.dart
+  kBackedUpKeys     app_locale, theme_mode, app_font_scale, app_reduce_motion,
+                    auto_download_media, media_wifi_only, media_data_saver,
+                    media_visibility, notif_preview_mode,
+                    call_ringtone_selected_id
+  kServerOwnedKeys  privacy_prefs_json_v1, ...   -> le serveur les renverra
+  kDeviceLocalKeys  *_access_token, biometric_lock_enabled, pending_*, ...
+\end{lstlisting}
+
+\begin{note}[Un test qui lit le code source, c'est inhabituel --- et c'est le seul qui tienne]
+Un test qui interrogerait \code{SharedPreferences} à l'exécution ne verrait que les clés
+déjà écrites sur l'appareil de test, donc jamais celle qu'on vient d'ajouter. Seule
+l'inspection des sources voit une clé \emph{déclarée}. Le fichier de classification devient
+du même coup la documentation de la règle, et l'échec du test nomme la clé fautive~: la
+décision est forcée, pas suggérée.
+\end{note}
+
+\section{La clé, et son numéro de version}
+\label{sec:cle}
+
+Le serveur expose un point d'accès authentifié qui renvoie une clé dérivée d'un secret
+serveur et de l'\code{alanyaID}. Elle n'est jamais écrite en clair sur le téléphone~: on la
+demande au moment de sauvegarder, on la demande au moment de restaurer, on l'oublie entre
+les deux.
+
+C'est cette dérivation, et non le compte Google, qui rattache une sauvegarde à son
+propriétaire~: \textbf{une archive du compte~A posée dans le Drive de~B reste illisible
+pour~B}. C'est pourquoi le rattachement peut rester souple.
+
+\subsection{Le jour où le secret doit tourner}
+
+\begin{alerte}[Sans numéro de version, la rotation est une catastrophe]
+Fuite, changement d'hébergeur, simple hygiène~: un secret serveur finit toujours par devoir
+être remplacé. Si les archives ne portent aucune indication de la clé qui les a chiffrées,
+ce remplacement rend \textbf{toutes les sauvegardes existantes illisibles d'un coup}, sans
+recours ni avertissement. Posé maintenant, le correctif tient en un champ. Ajouté après
+coup, il faut composer avec un parc d'archives anonymes.
+\end{alerte}
+
+Chaque archive porte donc un en-tête \textbf{en clair}, devant le contenu chiffré~:
+
+\begin{lstlisting}[style=Alanya, language={}]
+ALNB | version de format | kid | algorithme | nonce | alanyaID | <contenu chiffre>
+\end{lstlisting}
+
+\code{kid} est le numéro de version de la clé. Il dit \emph{comment} déchiffrer sans qu'il
+soit besoin de détenir la clé, ce qui permet de décider avant d'agir.
+
+\subsection{Deux points d'accès, une table qu'on n'efface jamais}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Point d'accès} & \thd{Rôle}\\
+\midrule
+\mGET{} \code{/backup/key} & Le \code{kid} courant et sa clé --- pour écrire.\\
+\mGET{} \code{/backup/key/:kid} & La clé d'une version donnée --- pour relire une archive
+ancienne.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Côté base, une table \code{backup\_key\_secrets(kid, secret, created\_at, retired\_at)} dont
+\textbf{aucune ligne n'est jamais supprimée}. Retirer une version signifie uniquement
+\emph{cesser d'écrire avec}, jamais \emph{cesser de servir}. La clé effectivement utilisée
+est dérivée du secret de la version et de l'\code{alanyaID}, si bien qu'une même version
+produit une clé différente pour chaque compte.
+
+La rotation se réduit alors à insérer une ligne et à la marquer courante. Les nouvelles
+sauvegardes emploient le nouveau secret, les anciennes restent lisibles. Aucune campagne de
+rechiffrement, aucune interruption, aucune archive perdue.
+
+\subsection{Deux compléments à poser en même temps}
+
+\begin{itemize}[leftmargin=*]
+  \item \thd{Le \code{kid} figure aussi dans le \code{latest.json} en clair.} L'écran de
+        restauration peut ainsi annoncer « sauvegarde illisible, version de clé inconnue »
+        \emph{avant} de télécharger huit mégaoctets pour rien.
+  \item \thd{Les appels à \code{/backup/key} sont journalisés et limités en débit.} Puisque
+        le serveur peut déchiffrer, ce point d'accès est le joyau de la couronne. Une trace
+        d'audit fait toute la différence entre « Alanya peut déchiffrer » --- phrase
+        inquiétante --- et « Alanya peut déchiffrer, et chaque accès laisse une trace »
+        --- phrase défendable devant un inscrit comme devant un régulateur.
+\end{itemize}
+
+\section{Rattachement : un Drive par compte Alanya}
+
+La sauvegarde est marquée de l'\code{alanyaID}, pas du compte Google. Se reconnecter depuis
+un autre compte Google fonctionne, du moment qu'on ouvre le même compte Alanya~; deux
+comptes Alanya sur un même téléphone gardent deux sauvegardes distinctes.
+
+\begin{note}[Pourquoi ne pas figer le couple des deux comptes]
+Figer punirait le cas le plus banal~: on change de téléphone, et c'est souvent l'occasion
+d'un autre compte Google~; ou bien l'accès à la boîte Gmail est perdu. La sauvegarde
+deviendrait irrécupérable, ce qui vide la fonction de son sens. Et le risque que cette
+souplesse semble ouvrir --- restaurer la sauvegarde d'autrui --- est déjà fermé par le
+chiffrement. Figer n'ajouterait aucune sécurité, seulement un mode de panne.
+\end{note}
+
+\section{Restaurer une base plus ancienne que l'application}
+
+La base locale porte une version de schéma (aujourd'hui~26). Deux cas, deux traitements~:
+
+\begin{itemize}[leftmargin=*]
+  \item \thd{Sauvegarde plus ancienne que l'application.} Cas normal. Les migrations Drift
+        s'exécutent à l'ouverture, comme pour n'importe quelle mise à jour.
+  \item \thd{Sauvegarde plus récente que l'application.} L'inscrit a rétrogradé, ou installe
+        une version ancienne. La restauration doit \textbf{refuser}, en invitant à mettre
+        l'application à jour. Ouvrir une base au schéma futur, c'est la corrompre.
+\end{itemize}
+
+\chapter{La restauration}
+\label{ch:restauration-tech}
+
+\section{Le vrai risque n'est pas celui qu'on croit}
+
+Une restauration écrit des milliers de lignes dans \code{localMessages}. Or l'application
+possède déjà une machinerie qui écrit dans cette même table, à partir du serveur, et qui
+part \textbf{toute seule}.
+
+\begin{alerte}[Ce que ferait la conception naïve]
+\code{bootstrapEmptyConversationMessages()} se déclenche sans qu'on le lui demande, et sa
+condition d'entrée est exactement l'état d'un téléphone neuf. Son commentaire le dit~:
+« \emph{précharge les messages des conversations qui ont un aperçu serveur mais aucun message
+local confirmé (install fraîche, logout\ldots)} ». Sans précaution, la connexion sur le
+nouveau téléphone déclencherait donc le rapatriement de tout l'historique par le réseau ---
+pendant que la restauration écrit les mêmes lignes sur la même clé primaire. Il y aurait
+course d'écriture~; mais surtout, \textbf{la dépense réseau que la sauvegarde existait pour
+éviter aurait lieu quand même}. On aurait payé la sauvegarde pour n'économiser rien.
+\end{alerte}
+
+\section{Deux bonnes nouvelles dans le code existant}
+
+\begin{constat}
+\textbf{Les curseurs sont déjà justes.} Le bootstrap saute toute conversation qui possède
+déjà un message serveur~: \code{if (await \_dao.maxServerMsgId(c.conversID) > 0) continue;}
+(\code{conversation\_sync.dart}). Une fois la base restaurée, il ne cible plus rien et se tait
+de lui-même. Et \code{syncGlobalDelta} lit \code{\_dao.conversationCursors()}, donc la
+synchronisation delta repart naturellement de la crête restaurée. \textbf{Aucune plomberie de
+curseur n'est à construire.}
+\end{constat}
+
+\begin{constat}
+\textbf{La séquence de démarrage est linéaire et le socket arrive en dernier.} Dans
+\code{main.dart}, l'enchaînement après authentification est ordonné, et le socket n'est
+connecté qu'après les \code{bind} --- un commentaire du fichier explique pourquoi. Chaque
+chemin de synchronisation est par ailleurs gardé par \code{if (\_myId == 0) return;}, et
+\code{\_myId} n'est posé que par \code{ChatRepository.bind()}.
+\end{constat}
+
+\section{Quand demande-t-on le compte Google ?}
+\label{sec:quand-google}
+
+Proposer une restauration suppose de savoir qu'une sauvegarde existe. Chercher dans Drive
+imposerait de connecter Google \emph{avant} que l'inscrit soit entré dans l'application ---
+au tout premier démarrage, sur un téléphone qu'il vient d'allumer. C'est le pire moment pour
+réclamer un compte tiers, et on le réclamerait aussi à ceux qui n'ont jamais rien
+sauvegardé.
+
+\textbf{La réponse est de ne pas interroger Drive du tout à ce stade}~: le serveur peut le
+savoir à sa place.
+
+À chaque sauvegarde réussie, l'application déclare au serveur de simples métadonnées --- date,
+taille, \code{kid}, et l'adresse Google \textbf{masquée}. Aucun contenu, jamais. À la
+connexion sur un appareil neuf, le serveur les rend, et l'application sait qu'une sauvegarde
+existe sans avoir touché à Google.
+
+\begin{lstlisting}[style=Alanya, language={}]
+identifiants verifies
+  -> le serveur annonce : sauvegarde 29/08, 8,2 Mo
+     compte a...@gmail.com
+  -> "Restaurer" / "Ignorer"      <- Google demande ici
+  -> connexion Google + lecture Drive
+  -> restauration (bloquante)
+  -> chatProvider.bind(myId)
+  -> statusProvider.bind(myId)
+  -> connexion du socket
+\end{lstlisting}
+
+Trois gains, et le troisième est le moins évident~:
+
+\begin{itemize}[leftmargin=*]
+  \item Un inscrit véritablement nouveau \textbf{n'est jamais sollicité} pour un compte
+        Google.
+  \item L'écran ne pose plus une question spéculative~; il annonce un fait daté et chiffré,
+        ce qui rend le choix « Restaurer / Ignorer » réellement éclairé.
+  \item Le cas « mauvais compte Google » cesse d'être une impasse. Sans cette métadonnée,
+        l'application ne sait dire que « aucune sauvegarde trouvée » --- indiscernable d'une
+        absence réelle. Avec elle~: « une sauvegarde existe, connectez-vous avec
+        \code{a\ldots@gmail.com} ».
+\end{itemize}
+
+\begin{alerte}[L'adresse est stockée masquée, jamais en clair]
+C'est une donnée personnelle dont nous n'avons aucun besoin complet~: la première lettre et
+le domaine suffisent à guider l'inscrit vers le bon compte. En conserver davantage serait
+accumuler du risque pour rien.
+\end{alerte}
+
+Il faut enfin garder une entrée manuelle « restaurer une sauvegarde » dans les réglages~:
+pour les sauvegardes antérieures à cette métadonnée, et pour le cas où le serveur l'aurait
+perdue.
+
+\section{La solution : un ordre, pas un verrou}
+
+\begin{lstlisting}[style=Alanya, language={}]
+identifiants verifies
+  -> ecran de restauration (bloquant)      <- le point d'insertion
+  -> chatProvider.bind(myId)
+  -> statusProvider.bind(myId)
+  -> connexion du socket
+\end{lstlisting}
+
+Rien ne court encore, donc rien ne peut se percuter. Il n'y a ni verrou à poser, ni file
+d'attente à gérer, ni état concurrent à arbitrer.
+
+\begin{note}[Une décision produit qui paie une dette technique]
+C'est le choix d'une \emph{restauration bloquante} qui rend cette solution possible. Une
+restauration en arrière-plan aurait imposé un verrou, une reprise de curseur et un arbitrage
+entre deux écrivains. La contrepartie --- quelques secondes d'attente au premier démarrage
+--- achète la disparition complète d'une classe de bugs.
+\end{note}
+
+\section{L'état de restauration, et pourquoi il est indispensable}
+
+C'est la seule pièce réellement nouvelle~: un état persisté hors de la base, puisque la base
+est justement ce qu'on est en train de remplacer.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{État} & \thd{Signification}\\
+\midrule
+\code{inconnu} & On n'a pas encore cherché de sauvegarde.\\
+\code{proposée} & Une sauvegarde existe, l'inscrit n'a pas tranché.\\
+\code{en cours} & Écriture commencée. \textbf{La base est dans un état intermédiaire.}\\
+\code{faite} & Terminée et vérifiée.\\
+\code{ignorée} & L'inscrit a refusé. On ne repropose plus au démarrage.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Une demi-restauration est pire que pas de restauration]
+Si l'application est tuée au milieu de l'écriture, la base contient des messages pour
+\emph{certaines} conversations seulement. Au redémarrage, le bootstrap les considère comme
+complètes --- puisque \code{maxServerMsgId > 0} --- et les saute définitivement.
+\textbf{Les trous deviennent permanents, et silencieux.} C'est précisément parce que la
+logique de curseur est correcte qu'un état intermédiaire est toxique. La règle est donc
+sans nuance~: trouver l'état \code{en cours} au démarrage impose de vider la base et de
+reproposer la restauration depuis le début.
+\end{alerte}
+
+\section{Les cinq répétitions à écrire avant le code}
+
+Une restauration ne se vérifie pas en la relisant. Ces cinq scénarios doivent être des tests,
+et ils doivent exister avant l'implémentation qu'ils décrivent.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Scénario} & \thd{Comportement attendu}\\
+\midrule
+Archive tronquée & Détectée à la vérification d'intégrité. La base n'est pas touchée,
+l'inscrit peut réessayer ou ignorer.\\
+Schéma plus récent que l'app & Refus explicite, invitation à mettre à jour. Jamais
+d'ouverture d'une base au schéma futur.\\
+\code{kid} inconnu & Message clair avant tout téléchargement, grâce au \code{latest.json}
+(§\ref{sec:cle}).\\
+Coupure en pleine écriture & Au redémarrage, état \code{en cours} détecté~: purge et
+nouvelle proposition.\\
+Aucune sauvegarde trouvée & Distinguer « ce compte Google n'en contient pas » de « erreur
+réseau ». Proposer d'essayer un autre compte Google dans le premier cas.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Toujours une porte de sortie]
+Chacun de ces écrans doit porter « Ignorer et continuer sans restaurer », et l'opération doit
+rester relançable depuis les réglages. Une étape bloquante sans échappatoire enferme dehors
+l'inscrit dont la sauvegarde est illisible.
+\end{note}
+
+\subsection{Ces répétitions imposent une contrainte d'architecture}
+
+Écrire ces cinq scénarios est facile~; les rendre \emph{jouables} ne l'est que si on le
+décide avant de coder.
+
+\begin{alerte}[La règle qui rend le plan de test possible]
+\code{RestoreService} reçoit son \code{BackupTarget} et son fichier source \textbf{en
+paramètres}. Il ne va jamais les chercher dans un singleton, ni ouvrir Drive lui-même. Sans
+cette règle, les cinq scénarios ne seraient rejouables qu'à la main sur un vrai téléphone
+avec un vrai compte Google --- autant dire jamais.
+\end{alerte}
+
+Avec elle, un \code{FakeBackupTarget} sert des archives fabriquées, et chaque scénario tient
+en quelques lignes~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Fixture} & \thd{Fabrication}\\
+\midrule
+Archive tronquée & Une archive valide, coupée aux trois quarts.\\
+\code{kid} inconnu & En-tête valide, \code{kid} inexistant côté serveur.\\
+Schéma futur & Base au \code{schemaVersion} 99.\\
+Mauvais compte & Archive d'un autre \code{alanyaID}, donc indéchiffrable.\\
+Cible vide & \code{FakeBackupTarget} qui renvoie une liste vide.\\
+Coupure & Interruption injectée au milieu de l'écriture~; on vérifie qu'un
+redémarrage trouve l'état \code{en cours} et purge.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{constat}
+Le socle de test existe déjà. \code{AppDatabase.forTesting(NativeDatabase.memory())} est
+utilisé par la suite actuelle~: restaurer dans une base en mémoire et vérifier son contenu
+est directement à portée, sans émulateur ni appareil.
+\end{constat}
+
+\chapter{Ce qui reste à lever}
+\label{ch:a-lever}
+
+\section{L'inconnue qui conditionne l'architecture}
+
+Toute la restauration repose sur une hypothèse non vérifiée~: sur un téléphone neuf,
+l'application retrouve dans le Drive de l'inscrit les fichiers qu'elle y avait déposés depuis
+l'ancien. Le champ d'accès retenu limite l'application aux fichiers qu'elle a créés --- reste
+à savoir si ce droit est rattaché à \textbf{l'application} (identifiant client OAuth) ou à
+\textbf{l'installation}.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Si le droit suit\ldots} & \thd{Conséquence}\\
+\midrule
+l'application & La sauvegarde est visible sur le nouveau téléphone. La conception fonctionne
+telle qu'écrite.\\
+l'installation & L'application est aveugle à une archive pourtant présente. La restauration
+automatique disparaît.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Les trois issues en cas de réponse défavorable, et aucune n'est indolore~: basculer sur le
+dossier caché (on perd le dossier visible que l'inscrit peut gérer, et la vérification Google
+s'alourdit), faire choisir le fichier à la main par le sélecteur Google (la restauration
+automatique disparaît du parcours, au pire moment --- le premier démarrage d'un téléphone
+neuf), ou demander l'accès complet au Drive (audit annuel payant, hors de question).
+
+\subsection{Isoler d'abord}
+
+Toute la conception ne touche Drive que par quatre gestes~: lister, écrire, lire, supprimer.
+Derrière une interface \code{BackupTarget}, la réponse au test ne coûte plus qu'une classe~:
+
+\begin{lstlisting}[style=Alanya, language={}]
+abstract class BackupTarget {
+  Future<List<RemoteArchive>> list();
+  Future<void> write(File local, String name);
+  Future<File> read(String id, File into);
+  Future<void> delete(String id);
+}
+    DriveVisibleFolderTarget   <- choix par defaut
+    DriveAppDataTarget         <- repli si le test echoue
+    LocalFolderTarget          <- deja requis (sans compte Google)
+\end{lstlisting}
+
+\begin{note}[Cette abstraction ne coûte rien de plus]
+La décision prise sur les inscrits sans compte Google imposait déjà \code{LocalFolderTarget}.
+L'interface devait donc exister de toute façon~: elle protège du risque Drive par pure
+retombée.
+\end{note}
+
+\subsection{Tester ensuite --- et deux variantes, jamais une seule}
+
+\begin{enumerate}[leftmargin=*]
+  \item Déclarer l'identifiant client OAuth dans la console Google.
+  \item Depuis un simple script --- Flutter n'est pas nécessaire --- s'authentifier avec un
+        compte de test et créer \code{Alanya/test.txt}.
+  \item Rejouer l'accès de deux façons~:
+    \begin{itemize}
+      \item \thd{Réinstallation simple}~: repartir d'un jeton vierge sans rien révoquer.
+            C'est le cas réel le plus fréquent.
+      \item \thd{Révocation puis ré-autorisation}~: l'inscrit a retiré l'accès depuis son
+            compte Google, ou trop de temps a passé.
+    \end{itemize}
+  \item Redemander la liste dans chacun des deux cas.
+\end{enumerate}
+
+\begin{alerte}[Ne pas se contenter de la première variante]
+Les deux peuvent parfaitement donner des réponses différentes~: une révocation est
+susceptible de jeter les droits accordés fichier par fichier, là où une réinstallation les
+conserverait. N'éprouver que la réinstallation donnerait une fausse assurance.
+\end{alerte}
+
+Coût~: une demi-journée. À faire \textbf{avant} la première ligne du reste.
+
+\section{Les points désormais tranchés}
+
+Cette section listait cinq questions ouvertes. Elles ont toutes reçu une réponse, consignée
+au fil du document~; on n'en garde ici que la table de renvoi, pour que rien ne se perde.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X l@{}}
+\toprule
+\thd{Sujet} & \thd{Réponse} & \thd{Où}\\
+\midrule
+Service de premier plan &
+Type \code{dataSync} déclaré, \code{onTimeout()} implémenté, travail reprenable. Le plafond
+de six heures n'est pas une contrainte pour ce que nous faisons. &
+§\ref{sec:fgs}\\[4pt]
+Poids annoncé avant export &
+Mesure au disque et rattrapage en base. \textbf{Correctif déjà appliqué} au code de
+« Mes médias ». &
+§\ref{sec:mesure}\\[4pt]
+Moment de la connexion Google &
+Le serveur porte la métadonnée de sauvegarde~: Google n'est demandé qu'après un « Restaurer »
+explicite. &
+§\ref{sec:quand-google}\\[4pt]
+Plan de test &
+Six fixtures, et la règle d'injection qui les rend jouables. &
+§\ref{ch:restauration-tech}\\[4pt]
+Garde-fou de la liste blanche &
+Un test qui balaie les sources et refuse toute clé non classée. &
+§\ref{sec:tri}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Le seul point encore ouvert de ce chapitre]
+Reste la vérification que l'exportation hérite bien de l'exclusion des médias à vue unique.
+\code{watchLocalMedia} les écarte déjà côté destinataire et les conserve côté expéditeur~;
+il faut confirmer que ce comportement est celui qu'on veut dans une archive en clair.
+C'est une relecture de dix minutes, pas une décision d'architecture.
+\end{note}
+
+\chapter{Impact sur le code}
+\label{ch:impact}
+
+\section{Ce qui existe et se réutilise}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Existant} & \thd{Rôle dans cette conception}\\
+\midrule
+\code{ChatDao.watchLocalMedia} & Fournit déjà le périmètre exact à exporter, filtres compris.\\
+\code{AlanyaMediaExportService} & Arborescence des dossiers, album galerie, journal des
+identifiants déjà exportés.\\
+\code{MediaExpiryPolicy} & Distingue « récupérable » de « purgé » sans tenter la requête.\\
+\code{ConnectivityService} & Condition Wi-Fi de la sauvegarde (\code{wifi}, \code{ethernet}).\\
+\code{StorageInfoService} & Espace libre avant export, poids de la base pour la sauvegarde.\\
+\code{flutter\_local\_notifications} & Notification de progression.\\
+\code{CallMediaForegroundService} & Motif de service de premier plan déjà maîtrisé, à
+reprendre pour l'export long.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Ce qu'il faut ajouter}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Dépendance} & \thd{Pourquoi}\\
+\midrule
+\code{google\_sign\_in} & Connexion au compte Google.\\
+\code{googleapis} (Drive~v3) & Dépôt, listage, téléversement reprenable.\\
+\code{archive} & Écriture du zip au fil de l'eau, mode stocké.\\
+\code{cryptography} & AES-GCM.\\
+\code{workmanager} & Planification périodique de la sauvegarde.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Démarche Google à ne pas découvrir la veille de la publication]
+Le champ d'accès retenu se limite aux fichiers créés par l'application, c'est le moins
+exigeant de ceux qui conviennent --- nettement plus léger que l'accès complet au Drive, qui
+impose un audit de sécurité annuel et payant. Il n'en reste pas moins qu'un écran de
+consentement OAuth doit être publié et que l'application doit être vérifiée par Google avant
+mise en production. À vérifier contre la politique Google en vigueur au moment du
+développement, et à lancer \textbf{tôt}~: le délai n'est pas maîtrisé par l'équipe.
+\end{alerte}
+
+\section{Fichiers à créer}
+
+\begin{lstlisting}[style=Alanya, language={}]
+lib/core/services/export/
+  media_export_job.dart        phases, progression, reprise
+  export_manifest.dart         ecriture et relecture du manifeste
+  export_zip_builder.dart      assemblage au fil de l'eau
+  export_index_html.dart       planche-contact
+
+lib/core/services/backup/
+  backup_service.dart          orchestration
+  backup_crypto.dart           AES-GCM, en-tete ALNB, kid
+  backup_scheduler.dart        frequence, conditions, reessais
+  backup_snapshot.dart         VACUUM INTO, neutralisation, prefs.json
+  backup_target.dart           interface : list / write / read / delete
+  drive_visible_folder_target.dart   choix par defaut
+  drive_appdata_target.dart          repli si le test Drive echoue
+  local_folder_target.dart           inscrit sans compte Google
+  restore_service.dart         base bloquante, medias en fond
+  restore_state.dart           inconnu / proposee / en cours / faite / ignoree
+
+lib/screens/profile/
+  backup_screen.dart           reglages et etat
+  restore_screen.dart          etape bloquante, avec sortie
+  my_media_screen.dart         + bouton et feuille d'export
+
+lib/main.dart                  insertion de l'etape de restauration
+                               AVANT chatProvider.bind(myId)
+\end{lstlisting}
+
+\section{Côté serveur}
+
+Deux points d'accès et une table, tous décrits au §\ref{sec:cle}~:
+\mGET{} \code{/backup/key} pour écrire, \mGET{} \code{/backup/key/:kid} pour relire une
+archive ancienne, et \code{backup\_key\_secrets} dont aucune ligne n'est jamais supprimée.
+Les deux points d'accès sont authentifiés comme le reste de l'API, journalisés et limités en
+débit.
+
+La rétention, elle, n'appelle aucun développement~: elle est déjà annoncée par le champ
+\code{retentionDays} des réponses \code{410}.
+
+\chapter{Décisions arrêtées}
+\label{ch:decisions}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Sujet} & \thd{Décision}\\
+\midrule
+Bouton Exporter & Archive zip assemblée localement, remise au partage système, à
+Téléchargements, ou déposée sur Drive.\\
+Contenu exporté & Médias de la période, plus \code{manifest.json} et \code{index.html}.
+Pas les messages texte --- v2 possible.\\
+Éléments manquants & Récupérables et purgés distingués~; téléchargement proposé, chiffré
+d'avance, non coché par défaut.\\
+Contenu sauvegardé & La base, moins les colonnes d'état local, plus une liste blanche de
+préférences. Médias exclus.\\
+Tri des préférences & Liste blanche explicite. Jamais une liste noire.\\
+Clé de sauvegarde & Numérotée (\code{kid}) dans un en-tête en clair. Table de secrets dont
+aucune ligne n'est supprimée. Accès journalisé.\\
+Ordre au démarrage & La restauration s'insère \emph{avant} \code{chatProvider.bind(myId)}.
+Un ordre, pas un verrou.\\
+État de restauration & Persisté hors base. \code{en cours} au démarrage $\Rightarrow$ purge
+et nouvelle proposition.\\
+Accès au stockage & Interface \code{BackupTarget}, trois implémentations. Le résultat du
+test Drive ne coûte qu'une classe.\\
+Emplacement & Dossier \code{Alanya} visible du Drive de l'inscrit.\\
+Chiffrement sauvegarde & AES-GCM, clé dérivée du compte côté serveur. Pas de bout en bout,
+et on le dit.\\
+Chiffrement archive export & Aucun. Elle doit s'ouvrir sans Alanya. L'écran avertit.\\
+Rattachement & Un Drive par compte Alanya. Compte Google non figé.\\
+Fréquence & Au choix~: quotidienne, hebdomadaire, mensuelle, jamais. Manuelle toujours
+possible.\\
+Versions conservées & Deux~: la courante et la précédente. Écrasement seulement après
+vérification.\\
+Échecs & Réessai silencieux, alerte visible après plusieurs jours sans succès.\\
+Sans compte Google & Même archive écrite dans \code{Download/Alanya/Sauvegardes/}.\\
+Restauration & Base en étape bloquante avec sortie possible~; médias en tâche de fond
+reprenable.\\
+Suppression de compte & Effacement de la sauvegarde proposé, jamais imposé.\\
+Badge de rétention & Valeur apprise du serveur, formulée par contraste~: sans limite sur
+l'appareil, 30~jours sur les serveurs.\\
+Plateforme & Android d'abord. Abstraction de destination prête pour iCloud.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Hors périmètre de ce lot}
+
+\begin{itemize}[leftmargin=*]
+  \item Le menu \textbf{Plus} et la carte \textbf{« Il y a un an, ce jour-là »} de la
+        maquette~: fonction d'engagement, conception séparée.
+  \item \textbf{iOS et iCloud}~: l'abstraction de destination est prévue, l'implémentation
+        ne l'est pas.
+  \item Le \textbf{transfert direct d'appareil à appareil} en Wi-Fi local. C'est pourtant la
+        réponse la plus fidèle à l'esprit de la note --- aucun octet ni chez nous ni chez
+        Google. À reconsidérer si le dépôt d'archives sur Drive se révèle trop peu utilisé.
+  \item L'export du \textbf{fil de discussion lisible} en HTML.
+\end{itemize}
+
+\section{Dépendances : état réel}
+
+Cette section listait quatre préalables. Vérification faite dans le code, deux étaient déjà
+levés.
+
+\begin{constat}
+\code{evictIfNeeded()} et le plafond de 500~Mo ont été \textbf{retirés} de
+\code{media\_cache\_service.dart}. Le commentaire du fichier porte le raisonnement~: évincé
+côté appareil \emph{et} tombé côté serveur = perdu définitivement~; les deux mécanismes
+étaient anodins séparément et destructeurs ensemble. La promesse « sans limite sur
+l'appareil » est donc tenue.
+\end{constat}
+
+\begin{constat}
+Le \code{410 MEDIA\_EXPIRED} est \textbf{géré}. \code{MediaExpiryPolicy.noteResponse()}
+intercepte la réponse dans le chemin de téléchargement et mémorise la rétention annoncée~;
+\code{isExpired()} évite même d'émettre la requête. La distinction « récupérable » /
+« purgé » de la feuille d'export est donc réalisable dès maintenant.
+\end{constat}
+
+Il reste deux points, et un seul concerne le code~:
+
+\begin{enumerate}[leftmargin=*]
+  \item \thd{Le test de visibilité Drive} (§\ref{ch:a-lever}, deux variantes, une
+        demi-journée). Il ne bloque que le choix entre \code{DriveVisibleFolderTarget} et
+        \code{DriveAppDataTarget} --- une classe derrière l'interface \code{BackupTarget}.
+        Tout le reste peut être écrit sans attendre sa réponse.
+  \item \thd{L'écran de consentement OAuth publié et l'application vérifiée par Google.}
+        Ce n'est pas un préalable au code mais au \emph{déploiement}, et le délai n'est pas
+        maîtrisé par l'équipe~: à lancer le premier jour, en parallèle du développement.
+\end{enumerate}
+
+\begin{note}[Ce qui n'est plus une inconnue]
+La course entre restauration et synchronisation s'est révélée être un simple problème
+d'ordre~: les curseurs existants sont déjà justes et la séquence de démarrage est linéaire
+(chapitre~\ref{ch:restauration-tech}).
+\end{note}
+
+\vfill
+\begin{center}\small\color{AlanyaGray}\sffamily
+Fin du dossier --- exportation, sauvegarde et restauration.\\
+À valider avant écriture de code.
+\end{center}
+
+\end{document}

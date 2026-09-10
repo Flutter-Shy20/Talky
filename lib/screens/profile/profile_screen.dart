@@ -10,7 +10,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/country_utils.dart';
 import '../../core/utils/user_search.dart';
-import '../authentification/login_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/utils/profile_bio.dart';
 import '../../widgets/alanya_phone_field.dart';
@@ -55,11 +54,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Provider.of<AuthProvider>(context, listen: false);
     await authProvider.logout();
     if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
+    // `AuthWrapper` rend deja `LoginScreen` des que la session se ferme. Cet
+    // ecran est empile au-dessus de lui : il suffit de depiler. Empiler un
+    // second `LoginScreen` avec `(route) => false` effacerait la page racine,
+    // et la connexion suivante n'aurait plus personne pour lier la session.
+    Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   Future<void> _removeContact(User user) async {

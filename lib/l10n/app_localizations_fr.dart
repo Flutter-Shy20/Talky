@@ -235,6 +235,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mediaSaveFailed => 'Impossible d’enregistrer ce média';
 
   @override
+  String get mediaExpired => 'Média expiré';
+
+  @override
+  String mediaExpiredAskSender(String name) {
+    return 'Demandez à $name de vous le renvoyer';
+  }
+
+  @override
+  String get mediaExpiredResendYourself =>
+      'Renvoyez-le depuis votre galerie si vous l\'avez encore';
+
+  @override
   String get settingsRingtone => 'Sonnerie d\'appel';
 
   @override
@@ -915,6 +927,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get unableToDownloadTheMedia => 'Impossible de télécharger le média';
+
+  @override
+  String get mediaNoLongerAvailable => 'Ce média n\'est plus disponible';
 
   @override
   String get unableToUnblockThisContact => 'Impossible de débloquer ce contact';
@@ -4033,7 +4048,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get storageClearCacheConfirm =>
-      'Les fichiers en cache seront supprimés. Les médias pourront être retéléchargés.';
+      'Les fichiers en cache seront supprimés. Les médias encore présents sur le serveur pourront être retéléchargés ; les plus anciens seront définitivement perdus.';
 
   @override
   String get storageClearCacheDone => 'Cache médias vidé';
@@ -4709,6 +4724,441 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get myMediaLoadFailed => 'Impossible de charger vos médias';
+
+  @override
+  String get bytesUnitB => 'o';
+
+  @override
+  String get bytesUnitKB => 'Ko';
+
+  @override
+  String get bytesUnitMB => 'Mo';
+
+  @override
+  String get bytesUnitGB => 'Go';
+
+  @override
+  String get myMediaSortRecent => 'Récents';
+
+  @override
+  String get myMediaSortLargest => 'Plus lourds';
+
+  @override
+  String myMediaOnThisDevice(String size) {
+    return '$size sur cet appareil';
+  }
+
+  @override
+  String get myMediaFreeSpace => 'Libérer de l\'espace';
+
+  @override
+  String get myMediaFreeSpaceConfirm =>
+      'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations et se retéléchargeront à l\'ouverture.';
+
+  @override
+  String get myMediaFreeSpaceConfirmMaybeGone =>
+      'La copie locale des médias sélectionnés sera supprimée. Ils restent dans vos conversations, mais certains sont anciens : s\'ils ne sont plus disponibles sur le serveur, ils resteront introuvables.';
+
+  @override
+  String myMediaFreedSpace(String size) {
+    return '$size libérés sur cet appareil';
+  }
+
+  @override
+  String get myMediaNothingCached =>
+      'Aucun de ces médias n\'occupe d\'espace sur cet appareil';
+
+  @override
+  String get myMediaForwardUnavailable =>
+      'Ces médias ne sont plus dans vos conversations sur cet appareil';
+
+  @override
+  String get myMediaSelectAll => 'Tout sélectionner';
+
+  @override
+  String get myMediaFilterReceived => 'Reçus';
+
+  @override
+  String get myMediaFilterSent => 'Envoyés';
+
+  @override
+  String get myMediaFilterAll => 'Tous';
+
+  @override
+  String myMediaFrom(String name) {
+    return 'De $name';
+  }
+
+  @override
+  String get settingsBackup => 'Sauvegarde';
+
+  @override
+  String get settingsBackupSubtitle => 'Vos messages et réglages, chiffrés';
+
+  @override
+  String get backupTitle => 'Sauvegarde';
+
+  @override
+  String get backupSubtitle => 'Vos messages et réglages, chiffrés';
+
+  @override
+  String get backupFrequencyLabel => 'Fréquence';
+
+  @override
+  String get backupFrequencyDaily => 'Quotidienne';
+
+  @override
+  String get backupFrequencyWeekly => 'Hebdomadaire';
+
+  @override
+  String get backupFrequencyMonthly => 'Mensuelle';
+
+  @override
+  String get backupFrequencyNever => 'Jamais';
+
+  @override
+  String get backupLastNever => 'Aucune sauvegarde pour l\'instant';
+
+  @override
+  String backupLastAt(String when, String size) {
+    return 'Dernière sauvegarde : $when · $size';
+  }
+
+  @override
+  String backupCounts(int messages, int conversations) {
+    return '$messages messages · $conversations discussions';
+  }
+
+  @override
+  String get backupRunNow => 'Sauvegarder maintenant';
+
+  @override
+  String get backupRunning => 'Sauvegarde en cours…';
+
+  @override
+  String get backupSucceeded => 'Sauvegarde terminée';
+
+  @override
+  String get backupFailed => 'La sauvegarde a échoué';
+
+  @override
+  String get backupStaleWarning =>
+      'Aucune sauvegarde n\'a abouti depuis plusieurs jours. Vérifiez votre connexion et l\'espace disponible.';
+
+  @override
+  String get backupDestinationLabel => 'Destination';
+
+  @override
+  String backupDestinationDrive(String account) {
+    return 'Google Drive $account';
+  }
+
+  @override
+  String get backupDestinationDriveUnlinked =>
+      'Google Drive — aucun compte connecté sur cet appareil';
+
+  @override
+  String get backupDestinationDevice => 'Sur cet appareil';
+
+  @override
+  String get backupChangeAccount => 'Changer de compte Google';
+
+  @override
+  String get backupConnectDrive => 'Connecter Google Drive';
+
+  @override
+  String get backupUseDevice => 'Sauvegarder sur cet appareil';
+
+  @override
+  String get backupDriveConnected =>
+      'Google Drive connecté. Vos prochaines sauvegardes y seront déposées.';
+
+  @override
+  String get backupDriveRefused =>
+      'Connexion à Google annulée. Rien n\'a changé.';
+
+  @override
+  String get backupFellBack =>
+      'Drive était injoignable : la sauvegarde a été faite sur cet appareil.';
+
+  @override
+  String backupFellBackAt(String when) {
+    return 'Drive était injoignable. Une sauvegarde a été faite sur cet appareil le $when.';
+  }
+
+  @override
+  String get backupLocalRisksTitle => 'Sauvegarde sur cet appareil';
+
+  @override
+  String get backupLocalRisksBody =>
+      'Votre sauvegarde est sur ce téléphone, dans Téléchargements › Alanya › Sauvegardes.\n\n✓ Elle survit à une réinstallation d\'Alanya.\n✗ Elle ne survit pas à la perte, au vol ou à la casse du téléphone.\n✗ Elle ne survit pas à un effacement complet de l\'appareil.\n\nPour mettre vos données à l\'abri hors du téléphone, connectez Google Drive.';
+
+  @override
+  String get backupWhatIsSaved =>
+      'Sont sauvegardés : messages, discussions, contacts et réglages. Les photos, vidéos et fichiers ne le sont pas — utilisez « Exporter cette période » depuis Mes médias pour les conserver.';
+
+  @override
+  String get backupNotEndToEnd =>
+      'La sauvegarde est chiffrée. Alanya peut techniquement la déchiffrer pour vous la restaurer ; personne d\'autre ne le peut.';
+
+  @override
+  String get backupRestoreEntry => 'Restaurer une sauvegarde';
+
+  @override
+  String get backupRestoreEntryHint =>
+      'Depuis Google Drive ou un fichier de votre téléphone';
+
+  @override
+  String get restoreTitle => 'Restaurer vos données';
+
+  @override
+  String restoreFound(String when, String size) {
+    return 'Une sauvegarde du $when a été trouvée ($size).';
+  }
+
+  @override
+  String get restoreExplain =>
+      'Vos messages et réglages seront remis en place. Les photos et vidéos de plus de 30 jours ne reviendront pas : elles ne sont pas dans la sauvegarde.';
+
+  @override
+  String get restoreAction => 'Restaurer';
+
+  @override
+  String get restoreConnectGoogle => 'Se connecter à Google Drive';
+
+  @override
+  String get restoreGoogleRefused => 'Connexion à Google annulée';
+
+  @override
+  String get restoreGoogleEmpty => 'Aucune sauvegarde dans ce compte Google';
+
+  @override
+  String get restorePickFile => 'Choisir un fichier de sauvegarde';
+
+  @override
+  String get restorePickHint =>
+      'Si votre sauvegarde ne s\'affiche pas — après une réinstallation, par exemple — désignez le fichier .enc dans Téléchargements › Alanya › Sauvegardes.';
+
+  @override
+  String get restorePickCancelled => 'Aucun fichier choisi';
+
+  @override
+  String get restorePickWrongFile =>
+      'Ce fichier n\'est pas une sauvegarde Alanya';
+
+  @override
+  String get restoreSkip => 'Ignorer et continuer';
+
+  @override
+  String get restoreRunning => 'Restauration en cours…';
+
+  @override
+  String get restoreCloseApp => 'Fermer Alanya';
+
+  @override
+  String get restoreDoneRestart =>
+      'Restauration prête. Fermez Alanya, puis rouvrez-la : vos données seront en place au démarrage.';
+
+  @override
+  String get restoreFailedMessage =>
+      'La restauration a échoué. Vous pouvez réessayer depuis les réglages.';
+
+  @override
+  String get restoreKeyUnknown =>
+      'Cette sauvegarde a été chiffrée avec une clé que nous ne reconnaissons plus.';
+
+  @override
+  String get restoreTooRecent =>
+      'Cette sauvegarde vient d\'une version plus récente d\'Alanya. Mettez l\'application à jour.';
+
+  @override
+  String get restoreInterrupted =>
+      'Une restauration précédente a été interrompue. Elle va être reprise depuis le début.';
+
+  @override
+  String get exportPeriodAction => 'Exporter cette période';
+
+  @override
+  String get exportSheetTitle => 'Exporter cette période';
+
+  @override
+  String exportSheetSummary(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count éléments · $size',
+      one: '1 élément · $size',
+      zero: 'Aucun élément',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exportSheetNothing => 'Aucun média à exporter pour ces filtres';
+
+  @override
+  String exportMissingRecoverable(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count éléments manquants peuvent être récupérés ($size)',
+      one: '1 élément manquant peut être récupéré ($size)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String exportMissingRecoverableEstimate(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Jusqu\'à $count éléments manquants peuvent être récupérés',
+      one: 'Jusqu\'à 1 élément manquant peut être récupéré',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exportMissingEstimateHint =>
+      'Le serveur n\'a pas pu être consulté : certains de ces éléments n\'y sont peut-être plus.';
+
+  @override
+  String exportDoneWithMissing(String size, int missing) {
+    return 'Archive prête : $size · $missing élément(s) indisponible(s)';
+  }
+
+  @override
+  String get exportMissingRecoverableHint =>
+      'Coché, ces éléments seront téléchargés avant l\'assemblage. Décoché, aucune donnée mobile n\'est consommée.';
+
+  @override
+  String exportMissingLost(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count éléments ne sont plus disponibles sur les serveurs',
+      one: '1 élément n\'est plus disponible sur les serveurs',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exportMissingLostHint =>
+      'Ils sont signalés dans l\'archive, mais leur contenu est définitivement perdu.';
+
+  @override
+  String get exportDestinationShare => 'Partager';
+
+  @override
+  String get exportDestinationDownloads => 'Enregistrer dans Téléchargements';
+
+  @override
+  String get exportPhaseScanning => 'Inventaire…';
+
+  @override
+  String exportPhaseRecovering(int done, int total) {
+    return 'Récupération $done / $total';
+  }
+
+  @override
+  String exportPhaseAssembling(int done, int total) {
+    return 'Assemblage $done / $total';
+  }
+
+  @override
+  String exportDone(String size) {
+    return 'Archive prête : $size';
+  }
+
+  @override
+  String get exportFailedGeneric => 'L\'exportation a échoué';
+
+  @override
+  String get exportNoSpace =>
+      'Espace insuffisant sur l\'appareil pour cette archive';
+
+  @override
+  String get exportSaveUnsupported =>
+      'Cette destination n\'est pas disponible sur cet appareil';
+
+  @override
+  String get exportSavedToDownloads =>
+      'Archive enregistrée dans Téléchargements/Alanya';
+
+  @override
+  String get exportCancelled => 'Exportation annulée';
+
+  @override
+  String get myMediaFilters => 'Filtres';
+
+  @override
+  String get myMediaFilterDiscussion => 'Discussion';
+
+  @override
+  String get myMediaAllDiscussions => 'Toutes les discussions';
+
+  @override
+  String get myMediaSearchDiscussion => 'Rechercher une discussion';
+
+  @override
+  String get myMediaFilterOrigin => 'Origine';
+
+  @override
+  String get myMediaFilterPeriod => 'Période';
+
+  @override
+  String get myMediaPeriodAny => 'Toute la période';
+
+  @override
+  String get myMediaPeriodStart => 'Début';
+
+  @override
+  String get myMediaPeriodEnd => 'Fin';
+
+  @override
+  String get myMediaPeriodLast7 => '7 jours';
+
+  @override
+  String get myMediaPeriodLast30 => '30 jours';
+
+  @override
+  String get myMediaPeriodThisYear => 'Cette année';
+
+  @override
+  String get myMediaPeriodClear => 'Effacer la période';
+
+  @override
+  String get myMediaKindAll => 'Tout';
+
+  @override
+  String get myMediaKindPhotos => 'Photos';
+
+  @override
+  String get myMediaKindVideos => 'Vidéos';
+
+  @override
+  String get myMediaKindAudio => 'Vocaux';
+
+  @override
+  String get myMediaKindFiles => 'Fichiers';
+
+  @override
+  String myMediaSummary(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count éléments · $size',
+      one: '1 élément · $size',
+      zero: 'Aucun élément',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get myMediaEmptyFiltered => 'Aucun média ne correspond à ces filtres';
+
+  @override
+  String get myMediaResetFilters => 'Réinitialiser les filtres';
 
   @override
   String dndSummaryActive(String start, String end, String days) {

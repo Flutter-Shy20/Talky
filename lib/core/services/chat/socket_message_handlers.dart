@@ -190,8 +190,11 @@ class SocketMessageHandlers {
     required int type,
     String? mediaName,
   }) async {
-    // Re-vérifie : la préférence a pu être coupée entre le test et l'appel.
-    if (!MediaDownloadPreferences.isAutoDownloadEnabled) return;
+    // Dernier verrou avant le téléchargement : la préférence a pu être coupée
+    // entre le test et l'appel, et c'est ici qu'on consulte le RÉSEAU. Le
+    // réglage « Wi-Fi uniquement » ne devient effectif que par cet appel — il
+    // s'affichait dans les réglages sans être lu nulle part.
+    if (!await MediaDownloadPreferences.shouldAutoDownloadNow()) return;
     final path = await _mediaCache.ensureCached(url, maxBytes: maxBytes);
     if (path == null) return;
     await _dao.setLocalMediaPath(msgID, path);

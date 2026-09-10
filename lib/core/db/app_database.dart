@@ -818,10 +818,19 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
+/// Emplacement du fichier de base.
+///
+/// Exposé pour que la restauration puisse mettre une base sauvegardée en
+/// place au démarrage, **avant** que quoi que ce soit n'ouvre celle-ci. Le
+/// chemin est calculé ici et nulle part ailleurs : le dupliquer serait un bug
+/// en attente, le jour où le nom du fichier changerait.
+Future<File> appDatabaseFile() async {
+  final dir = await getApplicationDocumentsDirectory();
+  return File(p.join(dir.path, 'talky_chat.sqlite'));
+}
+
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'talky_chat.sqlite'));
-    return NativeDatabase.createInBackground(file);
+    return NativeDatabase.createInBackground(await appDatabaseFile());
   });
 }

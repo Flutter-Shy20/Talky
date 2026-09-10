@@ -8,7 +8,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_logo.dart';
-import '../home/home_screen.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import 'qr_login_screen.dart';
@@ -36,13 +35,15 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordController.text,
     );
 
-    if (authProvider.isLoggedIn && mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-        (route) => false,
-      );
-    }
+    // Aucune navigation ici, et c'est volontaire.
+    //
+    // `LoginScreen` est un ENFANT de l'`AuthWrapper`, pas une page empilee :
+    // celui-ci ecoute `AuthProvider` et bascule seul sur l'accueil des que
+    // `isLoggedIn` passe a vrai. L'empilement qui se trouvait ici menait donc
+    // au meme ecran -- mais avec `(route) => false`, il effacait au passage la
+    // page racine, celle qui porte tout le cycle de vie de la session :
+    // liaison de la messagerie, socket, presence, proposition de restauration.
+    // Tout ce travail se poursuivait alors dans le vide.
   }
 
   @override

@@ -80,6 +80,17 @@
   "mediaAlreadyInDownloads": "Already in Downloads",
   "mediaSaveAgain": "Save again",
   "mediaSaveFailed": "Could not save this media",
+  "mediaExpired": "Media expired",
+  "mediaExpiredAskSender": "Ask {name} to send it again",
+  "@mediaExpiredAskSender": {
+    "description": "Expired media alert: suggested action when the media came from someone else",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaExpiredResendYourself": "Send it again from your gallery if you still have it",
   "settingsRingtone": "Call ringtone",
   "ringtoneScreenTitle": "Call ringtone",
   "ringtoneSectionSystem": "Default ringtone",
@@ -256,6 +267,7 @@
   "unableToUpdateTheCountry": "Unable to update the country",
   "errorStartingTheCall": "Error starting the call",
   "unableToDownloadTheMedia": "Unable to download the media",
+  "mediaNoLongerAvailable": "This media is no longer available",
   "unableToUnblockThisContact": "Unable to unblock this contact",
   "unableToLoadNumbers": "Unable to load numbers",
   "searchByNameUsernameOr": "Search by name, username or ...",
@@ -1770,7 +1782,7 @@
   "storageOther": "Other data",
   "storageClearMediaCache": "Clear media cache",
   "storageClearTemp": "Clear temporary files",
-  "storageClearCacheConfirm": "Cached files will be removed. Media can be downloaded again.",
+  "storageClearCacheConfirm": "Cached files will be removed. Media still on the server can be downloaded again; older ones will be lost for good.",
   "storageClearCacheDone": "Media cache cleared",
   "storageClearTempDone": "Temporary files cleared",
   "networkDataTitle": "Network & data",
@@ -2043,6 +2055,266 @@
   "deleteAccountLogoutNow": "Sign out",
   "myMediaEmpty": "No shared media yet",
   "myMediaLoadFailed": "Could not load your media",
+  "bytesUnitB": "B",
+  "bytesUnitKB": "KB",
+  "bytesUnitMB": "MB",
+  "bytesUnitGB": "GB",
+  "myMediaSortRecent": "Recent",
+  "myMediaSortLargest": "Largest",
+  "myMediaOnThisDevice": "{size} on this device",
+  "@myMediaOnThisDevice": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaFreeSpace": "Free up space",
+  "myMediaFreeSpaceConfirm": "The local copy of the selected media will be removed. They stay in your chats and will download again when opened.",
+  "myMediaFreeSpaceConfirmMaybeGone": "The local copy of the selected media will be removed. They stay in your chats, but some are old: if they are no longer available on the server, they will stay unavailable.",
+  "myMediaFreedSpace": "{size} freed on this device",
+  "@myMediaFreedSpace": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaNothingCached": "None of these media take up space on this device",
+  "myMediaForwardUnavailable": "These media are no longer in your chats on this device",
+  "myMediaSelectAll": "Select all",
+  "myMediaFilterReceived": "Received",
+  "myMediaFilterSent": "Sent",
+  "myMediaFilterAll": "All",
+  "myMediaFrom": "From {name}",
+  "@myMediaFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackup": "Backup",
+  "settingsBackupSubtitle": "Your messages and settings, encrypted",
+  "backupTitle": "Backup",
+  "backupSubtitle": "Your messages and settings, encrypted",
+  "backupFrequencyLabel": "Frequency",
+  "backupFrequencyDaily": "Daily",
+  "backupFrequencyWeekly": "Weekly",
+  "backupFrequencyMonthly": "Monthly",
+  "backupFrequencyNever": "Never",
+  "backupLastNever": "No backup yet",
+  "backupLastAt": "Last backup: {when} · {size}",
+  "@backupLastAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCounts": "{messages} messages · {conversations} chats",
+  "@backupCounts": {
+    "placeholders": {
+      "messages": {
+        "type": "int"
+      },
+      "conversations": {
+        "type": "int"
+      }
+    }
+  },
+  "backupRunNow": "Back up now",
+  "backupRunning": "Backing up…",
+  "backupSucceeded": "Backup complete",
+  "backupFailed": "The backup failed",
+  "backupStaleWarning": "No backup has succeeded for several days. Check your connection and available space.",
+  "backupDestinationLabel": "Destination",
+  "backupDestinationDrive": "Google Drive {account}",
+  "@backupDestinationDrive": {
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDestinationDriveUnlinked": "Google Drive — no account connected on this device",
+  "backupDestinationDevice": "On this device",
+  "backupChangeAccount": "Change Google account",
+  "backupConnectDrive": "Connect Google Drive",
+  "backupUseDevice": "Back up to this device",
+  "backupDriveConnected": "Google Drive connected. Your next backups will go there.",
+  "backupDriveRefused": "Google sign-in cancelled. Nothing changed.",
+  "backupFellBack": "Drive was unreachable: the backup was made on this device.",
+  "backupFellBackAt": "Drive was unreachable. A backup was made on this device on {when}.",
+  "@backupFellBackAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "backupLocalRisksTitle": "Backup on this device",
+  "backupLocalRisksBody": "Your backup is on this phone, in Downloads › Alanya › Sauvegardes.\n\n✓ It survives reinstalling Alanya.\n✗ It does not survive losing, breaking or having the phone stolen.\n✗ It does not survive a full device wipe.\n\nTo keep your data safe off the phone, connect Google Drive.",
+  "backupWhatIsSaved": "Backed up: messages, chats, contacts and settings. Photos, videos and files are not — use “Export this period” from My media to keep them.",
+  "backupNotEndToEnd": "The backup is encrypted. Alanya can technically decrypt it to restore it for you; nobody else can.",
+  "backupRestoreEntry": "Restore a backup",
+  "backupRestoreEntryHint": "From Google Drive or a file on your phone",
+  "restoreTitle": "Restore your data",
+  "restoreFound": "A backup from {when} was found ({size}).",
+  "@restoreFound": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreExplain": "Your messages and settings will be put back. Photos and videos older than 30 days will not return: they are not in the backup.",
+  "restoreAction": "Restore",
+  "restoreConnectGoogle": "Connect to Google Drive",
+  "restoreGoogleRefused": "Google sign-in cancelled",
+  "restoreGoogleEmpty": "No backup in this Google account",
+  "restorePickFile": "Choose a backup file",
+  "restorePickHint": "If your backup does not show up — after a reinstall, for instance — point to the .enc file in Downloads › Alanya › Sauvegardes.",
+  "restorePickCancelled": "No file chosen",
+  "restorePickWrongFile": "This file is not an Alanya backup",
+  "restoreSkip": "Skip and continue",
+  "restoreRunning": "Restoring…",
+  "restoreCloseApp": "Close Alanya",
+  "restoreDoneRestart": "Restore ready. Close Alanya, then open it again: your data will be in place on startup.",
+  "restoreFailedMessage": "The restore failed. You can try again from settings.",
+  "restoreKeyUnknown": "This backup was encrypted with a key we no longer recognise.",
+  "restoreTooRecent": "This backup comes from a newer version of Alanya. Please update the app.",
+  "restoreInterrupted": "A previous restore was interrupted. It will start again from the beginning.",
+  "exportPeriodAction": "Export this period",
+  "exportSheetTitle": "Export this period",
+  "exportSheetSummary": "{count, plural, =0{No items} =1{1 item · {size}} other{{count} items · {size}}}",
+  "@exportSheetSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "exportSheetNothing": "No media to export for these filters",
+  "exportMissingRecoverable": "{count, plural, =1{1 missing item can be recovered ({size})} other{{count} missing items can be recovered ({size})}}",
+  "@exportMissingRecoverable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "exportMissingRecoverableEstimate": "{count, plural, =1{Up to 1 missing item can be recovered} other{Up to {count} missing items can be recovered}}",
+  "@exportMissingRecoverableEstimate": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportMissingEstimateHint": "The server could not be reached: some of these items may no longer be there.",
+  "exportDoneWithMissing": "Archive ready: {size} · {missing} item(s) unavailable",
+  "@exportDoneWithMissing": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "missing": {
+        "type": "int"
+      }
+    }
+  },
+  "exportMissingRecoverableHint": "If ticked, these items are downloaded before assembly. If not, no mobile data is used.",
+  "exportMissingLost": "{count, plural, =1{1 item is no longer available on the servers} other{{count} items are no longer available on the servers}}",
+  "@exportMissingLost": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportMissingLostHint": "They are listed in the archive, but their content is permanently lost.",
+  "exportDestinationShare": "Share",
+  "exportDestinationDownloads": "Save to Downloads",
+  "exportPhaseScanning": "Taking stock…",
+  "exportPhaseRecovering": "Recovering {done} / {total}",
+  "@exportPhaseRecovering": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "exportPhaseAssembling": "Assembling {done} / {total}",
+  "@exportPhaseAssembling": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "exportDone": "Archive ready: {size}",
+  "@exportDone": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "exportFailedGeneric": "The export failed",
+  "exportNoSpace": "Not enough space on the device for this archive",
+  "exportSaveUnsupported": "This destination is not available on this device",
+  "exportSavedToDownloads": "Archive saved to Downloads/Alanya",
+  "exportCancelled": "Export cancelled",
+  "myMediaFilters": "Filters",
+  "myMediaFilterDiscussion": "Chat",
+  "myMediaAllDiscussions": "All chats",
+  "myMediaSearchDiscussion": "Search for a chat",
+  "myMediaFilterOrigin": "Source",
+  "myMediaFilterPeriod": "Period",
+  "myMediaPeriodAny": "All time",
+  "myMediaPeriodStart": "Start",
+  "myMediaPeriodEnd": "End",
+  "myMediaPeriodLast7": "7 days",
+  "myMediaPeriodLast30": "30 days",
+  "myMediaPeriodThisYear": "This year",
+  "myMediaPeriodClear": "Clear period",
+  "myMediaKindAll": "All",
+  "myMediaKindPhotos": "Photos",
+  "myMediaKindVideos": "Videos",
+  "myMediaKindAudio": "Voice",
+  "myMediaKindFiles": "Files",
+  "myMediaSummary": "{count, plural, =0{No items} =1{1 item · {size}} other{{count} items · {size}}}",
+  "@myMediaSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "myMediaEmptyFiltered": "No media matches these filters",
+  "myMediaResetFilters": "Reset filters",
   "dndSummaryActive": "{start} – {end} · {days}",
   "@dndSummaryActive": {
     "placeholders": {

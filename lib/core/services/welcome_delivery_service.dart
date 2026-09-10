@@ -72,10 +72,13 @@ class WelcomeDeliveryService {
         );
         return;
       case 'statuses':
+        // `isFirst` et non `false` : cet appel vise un onglet precis, il doit
+        // donc empiler -- mais en preservant la page racine, seule porteuse de
+        // la session. Le retour arriere revient a l'accueil au lieu de quitter.
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen(initialTab: 2)),
-          (_) => false,
+          (route) => route.isFirst,
         );
         return;
       case 'help':

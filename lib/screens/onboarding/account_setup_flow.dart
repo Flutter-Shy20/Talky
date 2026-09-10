@@ -11,11 +11,17 @@ import 'steps/credentials_step.dart';
 import 'steps/personalize_step.dart';
 import 'steps/profile_step.dart';
 import 'widgets/onboarding_shell.dart';
-import '../../core/services/welcome_delivery_service.dart';
 
 /// Parcours post-inscription : identifiants → profil (optionnel) → personnalisation.
 class AccountSetupFlow extends StatefulWidget {
-  const AccountSetupFlow({super.key});
+  const AccountSetupFlow({super.key, this.onCompleted});
+
+  /// Appele quand la mise en route est terminee -- ou passee.
+  ///
+  /// Ce flux n'est pas une page empilee : `PostAuthGate` le rend comme enfant.
+  /// Il ne peut donc pas se retirer par la navigation, et l'y forcer detruirait
+  /// la page racine. Il annonce qu'il a fini ; c'est au parent de basculer.
+  final VoidCallback? onCompleted;
 
   static const stepCount = 3;
 
@@ -105,16 +111,10 @@ class _AccountSetupFlowState extends State<AccountSetupFlow> {
     OnboardingService.pendingSignupPassword = null;
     OnboardingService.pendingRecoveryCode = null;
     if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-      (_) => false,
-    );
-    if (!mounted) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      unawaited(WelcomeDeliveryService.deliverAndOpenChat(context));
-    });
+    // Le message de bienvenue n'est plus livre ici : `HomeScreen` s'en charge
+    // des qu'il se monte, de facon idempotente. Le faire aussi depuis ce flux
+    // supposait qu'il reste monte apres la bascule, ce qui n'est plus le cas.
+    widget.onCompleted?.call();
   }
 
   Future<void> _skipAll() async {
@@ -268,7 +268,11 @@ class _PostAuthGateState extends State<PostAuthGate> {
       );
     }
     if (_needsOnboarding == true) {
-      return const AccountSetupFlow();
+      // `_needsOnboarding` n'est calcule qu'une fois, dans `initState`. Sans ce
+      // rappel, rien ne ferait jamais sortir de la mise en route.
+      return AccountSetupFlow(
+        onCompleted: () => setState(() => _needsOnboarding = false),
+      );
     }
     return const HomeScreen();
   }
