@@ -327,8 +327,10 @@ class AddContactItem extends StatelessWidget {
         size: AppSizes.avatarMd,
         qrBadge: user.addedViaQr == true,
       ),
-      title: Text(
-        user.nom.isNotEmpty ? user.nom : user.pseudo,
+      title: AccountBadgeLabel(
+        name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+        accountType: user.accountType,
+        verificationStatus: user.verificationStatus,
         style: context.text.titleSmall,
       ),
       subtitle: Column(

@@ -473,7 +473,12 @@ class _ContactTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(displayName, style: context.text.titleSmall),
+                      AccountBadgeLabel(
+                        name: displayName,
+                        accountType: user.accountType,
+                        verificationStatus: user.verificationStatus,
+                        style: context.text.titleSmall,
+                      ),
                       if (user.pseudo.isNotEmpty)
                         Text(
                           '@${user.pseudo}',

@@ -312,10 +312,13 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                user.nom.isNotEmpty
+                                              AccountBadgeLabel(
+                                                name: user.nom.isNotEmpty
                                                     ? user.nom
                                                     : user.pseudo,
+                                                accountType: user.accountType,
+                                                verificationStatus:
+                                                    user.verificationStatus,
                                                 style: context.text.titleSmall,
                                               ),
                                               if (user.pseudo.isNotEmpty)

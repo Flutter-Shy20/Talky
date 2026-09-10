@@ -404,8 +404,10 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
             ),
         ],
       ),
-      title: Text(
-        user.nom.isNotEmpty ? user.nom : user.pseudo,
+      title: AccountBadgeLabel(
+        name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+        accountType: user.accountType,
+        verificationStatus: user.verificationStatus,
         style: context.text.titleSmall,
       ),
       subtitle: Text(
