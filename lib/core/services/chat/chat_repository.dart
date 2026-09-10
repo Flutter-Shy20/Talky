@@ -658,14 +658,12 @@ class ChatRepository {
       return ForwardResult(
         succeeded: 0,
         failed: 0,
-        errors: [LocaleController.instance.l10n.userNotConnected],
       );
     }
     if (!canForwardAlbum(sourceItems)) {
       return ForwardResult(
         succeeded: 0,
         failed: 1,
-        errors: [LocaleController.instance.l10n.albumCannotBeForwarded],
       );
     }
     if (targetConversationIDs.isEmpty) {
@@ -691,7 +689,6 @@ class ChatRepository {
 
     var succeeded = 0;
     var failed = 0;
-    final errors = <String>[];
 
     for (final convId in targetConversationIDs) {
       try {
@@ -702,12 +699,11 @@ class ChatRepository {
         succeeded++;
       } catch (e) {
         failed++;
-        errors.add(e.toString());
         debugPrint('[ChatRepo] forward album vers $convId échoué: $e');
       }
     }
 
-    return ForwardResult(succeeded: succeeded, failed: failed, errors: errors);
+    return ForwardResult(succeeded: succeeded, failed: failed);
   }
 
   List<LocalMessage> _sortAlbumItems(List<LocalMessage> sourceItems) {
@@ -805,7 +801,6 @@ class ChatRepository {
       return ForwardResult(
         succeeded: 0,
         failed: 0,
-        errors: [LocaleController.instance.l10n.userNotConnected],
       );
     }
     if (sources.isEmpty || targetConversationIDs.isEmpty) {
@@ -815,7 +810,6 @@ class ChatRepository {
       return ForwardResult(
         succeeded: 0,
         failed: 1,
-        errors: [LocaleController.instance.l10n.oneOrMoreMessagesCannotBe],
       );
     }
 
@@ -845,7 +839,6 @@ class ChatRepository {
 
     var succeeded = 0;
     var failed = 0;
-    final errors = <String>[];
 
     for (final convId in targetConversationIDs) {
       try {
@@ -860,12 +853,11 @@ class ChatRepository {
         succeeded++;
       } catch (e) {
         failed++;
-        errors.add(e.toString());
         debugPrint('[ChatRepo] forward vers $convId échoué: $e');
       }
     }
 
-    return ForwardResult(succeeded: succeeded, failed: failed, errors: errors);
+    return ForwardResult(succeeded: succeeded, failed: failed);
   }
 
   List<LocalMessage> _sortForwardSources(List<LocalMessage> sources) {
