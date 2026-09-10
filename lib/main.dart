@@ -16,6 +16,7 @@ import 'providers/chat_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
+import 'core/services/billing/entitlement_service.dart';
 import 'core/db/app_database.dart';
 import 'dart:convert';
 import 'core/services/backup/restore_state.dart';
@@ -261,6 +262,11 @@ class _TalkyAppState extends State<TalkyApp> {
   // écran de réglages ne l'ait lu.
   late final TranslationSettings _translationSettings = TranslationSettings()
     ..load();
+  // Droits Alanya Plus : instanciés ici et non paresseusement, pour que les
+  // services sans contexte (traduction, sonneries) lisent le cache dès le
+  // premier message reçu.
+  late final EntitlementService _entitlements =
+      EntitlementService(api: _apiClient)..loadFromCache();
   late final MessageTranslationService _translation =
       MessageTranslationService(
     dao: ChatDao(_database),
@@ -309,6 +315,7 @@ class _TalkyAppState extends State<TalkyApp> {
         ChangeNotifierProvider(
             create: (_) => MediaDownloadPreferences()..load()),
         Provider<TalkyApiClient>.value(value: _apiClient),
+        ChangeNotifierProvider<EntitlementService>.value(value: _entitlements),
         Provider<AppDatabase>.value(value: _database),
         Provider<LocalCacheRepository>.value(value: _localCache),
         Provider<TripRepository>.value(value: _trips),
