@@ -19,6 +19,7 @@ enum ErrorDomain {
   statut,
   profil,
   admin,
+  abonnement,
   generique,
 }
 

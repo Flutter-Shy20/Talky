@@ -150,6 +150,23 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
     case 'INVALID_EXTENSION':
       return l10n.errCodeInvalidExtension;
 
+    // Alanya Plus. `SUBSCRIPTION_REQUIRED` n'arrive ici qu'en repli :
+    // `afficherErreur` en fait le panneau de l'offre, pas une SnackBar.
+    case 'SUBSCRIPTION_REQUIRED':
+      return l10n.errCodeSubscriptionRequired;
+    case 'BILLING_NOT_ACTIVE':
+      return l10n.errCodeBillingNotActive;
+    case 'PAYMENT_PENDING':
+      return l10n.errCodePaymentPending;
+    case 'INVALID_MSISDN':
+      return l10n.errCodeInvalidMsisdn;
+    case 'INVALID_CHANNEL':
+      return l10n.errCodeInvalidChannel;
+    case 'PLAN_NOT_FOUND':
+      return l10n.errCodePlanNotFound;
+    case 'PAYMENT_PROVIDER_ERROR':
+      return l10n.errCodePaymentProviderError;
+
     // Droits
     case 'INSUFFICIENT_ROLE':
       return l10n.errCodeInsufficientRole;
@@ -249,6 +266,8 @@ String _messagePourDomaine(AppLocalizations l10n, ErrorDomain domaine) {
       return l10n.errDomaineProfil;
     case ErrorDomain.admin:
       return l10n.errDomaineAdmin;
+    case ErrorDomain.abonnement:
+      return l10n.errDomaineAbonnement;
     case ErrorDomain.generique:
       return l10n.errGenerique;
   }

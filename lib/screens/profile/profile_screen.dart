@@ -16,6 +16,10 @@ import '../../widgets/alanya_phone_field.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
+import '../../core/services/billing/entitlement_service.dart';
+import '../../core/services/billing/plus_status.dart';
+import '../../widgets/billing/plus_card.dart';
+import '../billing/subscription_screen.dart';
 import '../chats/contact_detail_screen.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'settings_screen.dart';
@@ -158,6 +162,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               user: user,
               isLoading: isLoading,
             ),
+            // Alanya Plus, avant tout le reste : c'est l'emphase voulue sur
+            // l'offre. La carte se masque d'elle-même quand elle n'a rien à
+            // dire (droits inconnus, compte exempté).
+            if (!isLoading)
+              PlusCard(verified: user?.verificationStatus == 2),
             if (!isLoading &&
                 user != null &&
                 user.email.trim().isEmpty) ...[
@@ -290,6 +299,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           builder: (_) => const AccountHubScreen()),
                     );
                   }),
+                  if (_showsSubscription(context)) ...[
+                    const Divider(height: 1),
+                    _buildMenuItem(
+                      Icons.workspace_premium_outlined,
+                      context.l10n.subscriptionTitle,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SubscriptionScreen()),
+                      ),
+                    ),
+                  ],
                   const Divider(height: 1),
                   // Juste sous la grille des contacts préférés : les listes
                   // organisent ces contacts-là, la proximité fait le lien.
@@ -380,6 +401,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ),
     );
   }
+
+  /// « Mon abonnement » n'a de sens qu'une fois l'offre payante annoncée, ou
+  /// pour qui a déjà un abonnement (offert pendant le lancement, par ex.).
+  bool _showsSubscription(BuildContext context) =>
+      switch (plusStatusOf(context.watch<EntitlementService>().current)) {
+        PlusStatus.hidden || PlusStatus.launchFree => false,
+        _ => true,
+      };
 
   Widget _buildMenuItem(
       IconData icon, String title, VoidCallback onTap) {

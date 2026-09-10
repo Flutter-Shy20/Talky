@@ -1901,6 +1901,16 @@ class SocketEvents {
   /// « Mon code » régénère à la réception — le jeton est à usage unique.
   static const qrContactScanned = 'qr:contact_scanned';
 
+  /// Un paiement Alanya Plus a changé d'état chez le fournisseur :
+  /// { paymentId, status }. C'est la seule confirmation qui compte — la
+  /// réponse de `POST /billing/checkout` ne dit jamais « payé ».
+  static const paymentUpdated = 'payment:updated';
+
+  /// Les droits Alanya Plus du compte ont changé (paiement, abonnement
+  /// offert, bascule de l'interrupteur) : { at }. Le téléphone relit
+  /// `GET /billing/me`.
+  static const entitlementsUpdated = 'entitlements:updated';
+
   // Présence
   static const presenceOnline   = 'presence:online';
   static const presenceOffline  = 'presence:offline';

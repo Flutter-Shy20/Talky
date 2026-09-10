@@ -17,6 +17,14 @@ enum PlusFeature {
 
   const PlusFeature(this.code);
   final String code;
+
+  /// Depuis le code serveur (`feature` d'un refus `SUBSCRIPTION_REQUIRED`).
+  static PlusFeature? fromCode(Object? code) {
+    for (final f in values) {
+      if (f.code == code) return f;
+    }
+    return null;
+  }
 }
 
 /// Phase du payant : tout gratuit, grâce annoncée, ou réservé aux abonnés.
@@ -78,6 +86,7 @@ class Entitlements {
     this.exempt = false,
     this.features = const {},
     this.validUntil,
+    this.lapsedAt,
   });
 
   /// Serveur antérieur à l'abonnement, ou droits indisponibles : tout est
@@ -99,6 +108,10 @@ class Entitlements {
   /// fait respecter ce qu'il voit, et un droit en cache vaut mieux qu'un
   /// verrou posé faute de réseau.
   final DateTime? validUntil;
+
+  /// Fin du dernier abonnement, quand il est terminé et qu'aucun n'a pris le
+  /// relais. Nul pour qui n'a jamais été abonné.
+  final DateTime? lapsedAt;
 
   /// Une fonctionnalité inconnue du serveur n'est pas verrouillée.
   bool has(PlusFeature feature) => !known || (features[feature.code] ?? true);
@@ -131,6 +144,7 @@ class Entitlements {
       exempt: json['exempt'] == true,
       features: features,
       validUntil: _date(json['validUntil']),
+      lapsedAt: _date(json['lapsedAt']),
     );
   }
 
@@ -143,5 +157,6 @@ class Entitlements {
         'exempt': exempt,
         'features': features,
         'validUntil': validUntil?.toUtc().toIso8601String(),
+        'lapsedAt': lapsedAt?.toUtc().toIso8601String(),
       };
 }

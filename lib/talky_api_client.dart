@@ -193,6 +193,7 @@ class TalkyApiClient {
           msg.toString(),
           response.statusCode,
           code: body is Map ? body['code']?.toString() : null,
+          details: body is Map ? Map<String, dynamic>.from(body) : null,
         );
       }
       return body;
@@ -635,7 +636,20 @@ class TalkyException implements Exception {
   /// l'utilisateur.
   final Object? cause;
 
-  TalkyException(this.message, this.statusCode, {this.code, this.cause});
+  /// Corps JSON de la réponse d'erreur, quand il y en a un.
+  ///
+  /// Porte les précisions qui accompagnent certains codes : la fonctionnalité
+  /// d'un `SUBSCRIPTION_REQUIRED`, le paiement d'un `PAYMENT_PENDING`. Jamais
+  /// affiché tel quel, pour la même raison que [message].
+  final Map<String, dynamic>? details;
+
+  TalkyException(
+    this.message,
+    this.statusCode, {
+    this.code,
+    this.cause,
+    this.details,
+  });
 
   @override
   String toString() => 'TalkyException: $message (Status: $statusCode'

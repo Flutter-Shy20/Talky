@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../talky_api_client.dart' show TalkyException;
+import '../../widgets/billing/paywall_sheet.dart';
 import '../navigation/app_navigator.dart';
+import '../services/billing/entitlement_service.dart';
+import '../services/billing/entitlements.dart';
 import '../theme/app_theme.dart';
 import 'app_error.dart';
 import 'error_presenter.dart';
@@ -11,12 +17,23 @@ import 'error_presenter.dart';
 /// n'a aucun moyen de glisser un texte ici, donc aucun moyen de retomber dans
 /// `showSnackBar(Text('$e'))`. Un écran qui sait dire mieux que le repli de son
 /// domaine appelle `presenterErreur` et compose sa propre SnackBar.
+///
+/// Seule exception : un refus `SUBSCRIPTION_REQUIRED` ouvre le panneau
+/// Alanya Plus de la fonctionnalité demandée. Aucun écran n'a à le prévoir.
 void afficherErreur(
   BuildContext context,
   Object? erreur, {
   required ErrorDomain domaine,
 }) {
   if (!context.mounted) return;
+  final refus = refusAlanyaPlus(erreur);
+  if (refus != null) {
+    unawaited(showPaywall(context, refus.feature));
+    // Les droits en cache disaient oui, le serveur vient de dire non.
+    final droits = EntitlementService.maybeInstance;
+    if (droits != null) unawaited(droits.refresh());
+    return;
+  }
   final texte = presenterErreur(context.l10n, erreur, domaine: domaine);
   _montrer(ScaffoldMessenger.maybeOf(context), texte, context.colors.error);
 }
@@ -28,6 +45,16 @@ void afficherErreur(
 void afficherErreurGlobale(Object? erreur, {required ErrorDomain domaine}) {
   final texte = presenterErreurGlobale(erreur, domaine: domaine);
   _montrer(appMessengerKey.currentState, texte, null);
+}
+
+/// Le refus « réservé à Alanya Plus », et la fonctionnalité qu'il vise.
+/// Nul pour toute autre erreur.
+({PlusFeature? feature})? refusAlanyaPlus(Object? erreur) {
+  final cause = erreur is AppError ? erreur.cause : erreur;
+  if (cause is! TalkyException || cause.code != 'SUBSCRIPTION_REQUIRED') {
+    return null;
+  }
+  return (feature: PlusFeature.fromCode(cause.details?['feature']));
 }
 
 void _montrer(ScaffoldMessengerState? messenger, String texte, Color? fond) {

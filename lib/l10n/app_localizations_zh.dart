@@ -5997,4 +5997,445 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errAucuneAppPourFichier => '没有应用可以打开此文件。';
+
+  @override
+  String get plusBrand => 'Alanya Plus';
+
+  @override
+  String get plusFeatureTranslation => '翻译';
+
+  @override
+  String get plusFeatureBackup => '备份';
+
+  @override
+  String get plusFeatureTrips => '行程';
+
+  @override
+  String get plusFeatureRingtones => '铃声';
+
+  @override
+  String get plusFeatureStyle => '样式';
+
+  @override
+  String get plusFeatureBadge => '认证标记';
+
+  @override
+  String plusAmount(String amount) {
+    return '$amount 中非法郎';
+  }
+
+  @override
+  String get plusPerMonth => '/ 月';
+
+  @override
+  String get plusPerYear => '/ 年';
+
+  @override
+  String plusPerNMonths(int count) {
+    return '/ $count 个月';
+  }
+
+  @override
+  String get plusPlanMonthly => '月度';
+
+  @override
+  String get plusPlanYearly => '年度';
+
+  @override
+  String get plusRenew => '续订';
+
+  @override
+  String get plusResubscribe => '重新订阅';
+
+  @override
+  String get paywallFromLabel => '低至';
+
+  @override
+  String get paywallSeeOffer => '查看方案';
+
+  @override
+  String get paywallTranslationTitle => '翻译您的消息';
+
+  @override
+  String get paywallTranslationBody =>
+      '翻译是 Alanya Plus 的一部分。它在您的手机上运行，即使离线也能使用，您的消息永远不会离开设备。';
+
+  @override
+  String get paywallBackupTitle => '备份您的聊天';
+
+  @override
+  String get paywallBackupBody =>
+      '备份是 Alanya Plus 的一部分：加密保存在您的手机或 Drive 上。您现有的备份始终可以恢复。';
+
+  @override
+  String get paywallTripsTitle => '开始可信行程';
+
+  @override
+  String get paywallTripsBody =>
+      '可信行程和 SOS 是 Alanya Plus 的一部分：您的亲友会跟随您的行程，如果您未能到达，他们会收到提醒。已开始的行程在结束前仍可使用 SOS。';
+
+  @override
+  String get paywallRingtonesTitle => '每个列表一种铃声';
+
+  @override
+  String get paywallRingtonesBody =>
+      '列表铃声是 Alanya Plus 的一部分：无需看屏幕就能分辨家人、同事或朋友。';
+
+  @override
+  String get paywallGenericTitle => 'Alanya Plus 功能';
+
+  @override
+  String get paywallGenericBody => '此功能属于 Alanya Plus。';
+
+  @override
+  String get errCodeSubscriptionRequired => '此功能属于 Alanya Plus。';
+
+  @override
+  String get errCodeBillingNotActive => 'Alanya Plus 目前免费：无需付款。';
+
+  @override
+  String get errCodePaymentPending => '已有一笔付款正在等待您确认。';
+
+  @override
+  String get errCodeInvalidMsisdn => '此移动支付号码无效。';
+
+  @override
+  String get errCodeInvalidChannel => '不支持此付款方式。';
+
+  @override
+  String get errCodePlanNotFound => '此方案已不再提供。请重新加载。';
+
+  @override
+  String get errCodePaymentProviderError => '支付服务没有响应。请稍后重试。';
+
+  @override
+  String get errDomaineAbonnement => '您的订阅操作未能完成。';
+
+  @override
+  String get plusCardLaunchKicker => '推广期间免费';
+
+  @override
+  String get plusCardLaunchTitle => 'Alanya Plus 免费为您开放';
+
+  @override
+  String get plusCardLaunchBody => '推广期间，翻译、备份、行程和列表铃声均免费。方案开始收费前，我们会提前通知您。';
+
+  @override
+  String plusCardGraceTitle(String date) {
+    return '自 $date 起收费';
+  }
+
+  @override
+  String plusCardGraceBody(String date) {
+    return '在此之前，翻译、备份、行程和列表铃声仍然免费。现在订阅：您的第一个周期将于 $date 开始。';
+  }
+
+  @override
+  String plusCardGraceDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '还剩 $count 天免费',
+      zero: '最后一个免费日',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardUpgradeTitle => '升级到 Alanya Plus';
+
+  @override
+  String get plusCardDiscover => '了解方案';
+
+  @override
+  String plusCardActiveUntil(String date) {
+    return '有效期至 $date';
+  }
+
+  @override
+  String plusCardEndsOn(String date) {
+    return '将于 $date 到期';
+  }
+
+  @override
+  String plusCardEndsSoonBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '还剩 $count 天。续订以保留您的功能。',
+      zero: '最后一天。续订以保留您的功能。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardAutoRenewOn => '已开启自动续订。';
+
+  @override
+  String get plusCardAutoRenewOff => '请记得在到期前续订。';
+
+  @override
+  String get plusCardBadgeActive => '您的认证标记显示在您的名字旁。';
+
+  @override
+  String plusCardStartsOn(String date) {
+    return '您的订阅将于 $date 开始';
+  }
+
+  @override
+  String get plusCardScheduledBody => '在此之前，一切对您仍然免费。';
+
+  @override
+  String plusCardLapsedKicker(String date) {
+    return '已于 $date 结束';
+  }
+
+  @override
+  String get plusCardLapsedTitle => '您的 Plus 功能已暂停';
+
+  @override
+  String get plusCardLapsedBody => '您的设置已保留。重新订阅即可恢复全部功能，包括认证标记。';
+
+  @override
+  String get plusOfferUnlocks => 'Plus 解锁的功能';
+
+  @override
+  String get plusOfferFreeNote =>
+      '推广期间 Alanya Plus 免费：目前无需付款。方案开始收费前，我们会提前通知您。';
+
+  @override
+  String get plusOfferUnavailable => '暂时无法付款。请稍后再试。';
+
+  @override
+  String get plusOfferDuration => '时长';
+
+  @override
+  String plusOfferContinue(String amount) {
+    return '继续 — $amount';
+  }
+
+  @override
+  String get plusOfferNoCommitment => '无需长期承诺';
+
+  @override
+  String plusOfferEquivalent(String amount) {
+    return '相当于每月 $amount';
+  }
+
+  @override
+  String plusOfferMonthsFree(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '赠送 $count 个月',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String plusOfferFirstPeriod(String start, String end) {
+    return '第一个周期：$start 至 $end。';
+  }
+
+  @override
+  String plusOfferNextPeriod(String start, String end) {
+    return '下一个周期：$start 至 $end，紧接当前周期。';
+  }
+
+  @override
+  String get plusOfferNoRefund => '每个周期需预先支付，且不予退款。';
+
+  @override
+  String get checkoutTitle => '付款';
+
+  @override
+  String get checkoutPayWith => '付款方式';
+
+  @override
+  String get checkoutNumber => '扣款号码';
+
+  @override
+  String get checkoutNumberHint => '6XX XX XX XX';
+
+  @override
+  String get checkoutNumberInvalid => '请输入喀麦隆手机号码：以 6 开头的 9 位数字。';
+
+  @override
+  String get checkoutAutoRenew => '自动续订';
+
+  @override
+  String checkoutAutoRenewHint(String operator) {
+    return '$operator 将在到期前一天请您确认。';
+  }
+
+  @override
+  String get checkoutSimulated =>
+      '模拟付款：不会扣除任何费用。号码以 01 结尾：余额不足 · 02：拒绝 · 03：无响应。';
+
+  @override
+  String checkoutPay(String amount) {
+    return '支付 $amount';
+  }
+
+  @override
+  String get checkoutWaitingTitle => '请在手机上确认';
+
+  @override
+  String checkoutWaitingBody(String operator, String amount) {
+    return '输入您的 $operator 密码以确认支付 $amount。此页面会自动更新。';
+  }
+
+  @override
+  String checkoutExpiresIn(String time) {
+    return '请求将在 $time 后过期';
+  }
+
+  @override
+  String get checkoutStepSent => '请求已发送';
+
+  @override
+  String checkoutStepSentTo(String number) {
+    return '发送至 $number';
+  }
+
+  @override
+  String get checkoutStepConfirm => '用密码确认';
+
+  @override
+  String get checkoutStepPending => '等待中';
+
+  @override
+  String get checkoutStepActivated => '订阅已激活';
+
+  @override
+  String checkoutStepActivatedHint(String operator) {
+    return '$operator 回复后立即激活';
+  }
+
+  @override
+  String get checkoutLeave => '离开此页面';
+
+  @override
+  String get checkoutLeaveHint => '即使您离开此页面，确认后订阅也会立即激活。';
+
+  @override
+  String get checkoutSuccessTitle => 'Alanya Plus 已激活';
+
+  @override
+  String checkoutSuccessBody(String plan, String start, String end) {
+    return '$plan，$start 至 $end。';
+  }
+
+  @override
+  String get checkoutSuccessScheduled => '在此之前，一切对您仍然免费。';
+
+  @override
+  String get checkoutSuccessFeatures => '翻译、备份、行程和列表铃声已开启。';
+
+  @override
+  String get checkoutSuccessFeaturesScheduled => '翻译、备份、行程和列表铃声将持续开启，不会中断。';
+
+  @override
+  String get checkoutDone => '完成';
+
+  @override
+  String get checkoutFailedTitle => '付款未成功';
+
+  @override
+  String get checkoutFailedInsufficient => '此移动支付账户余额不足。';
+
+  @override
+  String get checkoutFailedDeclined => '付款在手机上被拒绝。';
+
+  @override
+  String get checkoutFailedTimeout => '未能及时收到确认。您可以重试。';
+
+  @override
+  String get checkoutFailedGeneric => '付款失败。您可以重试。';
+
+  @override
+  String get subscriptionTitle => '我的订阅';
+
+  @override
+  String get subscriptionAutoRenew => '自动续订';
+
+  @override
+  String get subscriptionAutoRenewHint => '到期前一天，您的运营商会请您确认付款。';
+
+  @override
+  String get subscriptionNextDuration => '下次续订时长';
+
+  @override
+  String get subscriptionPayments => '付款记录';
+
+  @override
+  String get subscriptionPeriods => '订阅周期';
+
+  @override
+  String subscriptionRenewAmount(String amount) {
+    return '续订 — $amount';
+  }
+
+  @override
+  String get subscriptionNoPayments => '暂无付款记录。';
+
+  @override
+  String get subscriptionSourcePaid => '已付款';
+
+  @override
+  String get subscriptionSourceTrial => '试用';
+
+  @override
+  String get subscriptionSourceGift => '赠送';
+
+  @override
+  String get subscriptionSourceCompensation => '补偿';
+
+  @override
+  String subscriptionEndsIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天后',
+      zero: '今天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get subscriptionNoneTitle => '暂无有效订阅';
+
+  @override
+  String get subscriptionNoneBody => 'Alanya Plus 可解锁翻译、备份、可信行程和列表铃声。';
+
+  @override
+  String get subscriptionExemptTitle => '您的账户已包含 Alanya Plus';
+
+  @override
+  String get paymentStatusSucceeded => '成功';
+
+  @override
+  String get paymentStatusFailed => '失败';
+
+  @override
+  String get paymentStatusExpired => '已过期';
+
+  @override
+  String get paymentStatusRefunded => '已退款';
+
+  @override
+  String get paymentStatusPending => '处理中';
+
+  @override
+  String get plusLockedTranslation => '翻译为 Alanya Plus 专享功能。';
+
+  @override
+  String get plusLockedBackup => '新的备份为 Alanya Plus 专享功能。您现有的备份仍可恢复。';
+
+  @override
+  String get plusLockedRingtones => '列表铃声为 Alanya Plus 专享功能。您的设置已保留，订阅后即可恢复。';
+
+  @override
+  String get plusLockedTrips =>
+      '新行程和行程外的 SOS 为 Alanya Plus 专享功能。已开始的行程在结束前仍可使用 SOS。';
 }

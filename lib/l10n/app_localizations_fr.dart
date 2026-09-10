@@ -6314,4 +6314,479 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errAucuneAppPourFichier =>
       'Aucune application ne peut ouvrir ce fichier.';
+
+  @override
+  String get plusBrand => 'Alanya Plus';
+
+  @override
+  String get plusFeatureTranslation => 'Traduction';
+
+  @override
+  String get plusFeatureBackup => 'Sauvegarde';
+
+  @override
+  String get plusFeatureTrips => 'Trajets';
+
+  @override
+  String get plusFeatureRingtones => 'Sonneries';
+
+  @override
+  String get plusFeatureStyle => 'Style';
+
+  @override
+  String get plusFeatureBadge => 'Coche';
+
+  @override
+  String plusAmount(String amount) {
+    return '$amount F';
+  }
+
+  @override
+  String get plusPerMonth => '/ mois';
+
+  @override
+  String get plusPerYear => '/ an';
+
+  @override
+  String plusPerNMonths(int count) {
+    return '/ $count mois';
+  }
+
+  @override
+  String get plusPlanMonthly => 'Mensuel';
+
+  @override
+  String get plusPlanYearly => 'Annuel';
+
+  @override
+  String get plusRenew => 'Renouveler';
+
+  @override
+  String get plusResubscribe => 'Me réabonner';
+
+  @override
+  String get paywallFromLabel => 'À partir de';
+
+  @override
+  String get paywallSeeOffer => 'Voir l\'offre';
+
+  @override
+  String get paywallTranslationTitle => 'Traduire vos messages';
+
+  @override
+  String get paywallTranslationBody =>
+      'La traduction fait partie d\'Alanya Plus. Elle fonctionne sur votre téléphone, même sans connexion, et vos messages ne quittent jamais l\'appareil.';
+
+  @override
+  String get paywallBackupTitle => 'Sauvegarder vos discussions';
+
+  @override
+  String get paywallBackupBody =>
+      'La sauvegarde fait partie d\'Alanya Plus : chiffrée, sur votre téléphone ou votre Drive. Vos sauvegardes existantes restent toujours restaurables.';
+
+  @override
+  String get paywallTripsTitle => 'Partir en trajet de confiance';
+
+  @override
+  String get paywallTripsBody =>
+      'Les trajets de confiance et le SOS font partie d\'Alanya Plus : vos proches suivent votre trajet et sont prévenus si vous n\'arrivez pas. Un trajet déjà commencé garde son SOS jusqu\'à la fin.';
+
+  @override
+  String get paywallRingtonesTitle => 'Une sonnerie par liste';
+
+  @override
+  String get paywallRingtonesBody =>
+      'Les sonneries par liste font partie d\'Alanya Plus : reconnaissez la famille, le bureau ou les amis avant même de regarder l\'écran.';
+
+  @override
+  String get paywallGenericTitle => 'Fonctionnalité Alanya Plus';
+
+  @override
+  String get paywallGenericBody =>
+      'Cette fonctionnalité fait partie d\'Alanya Plus.';
+
+  @override
+  String get errCodeSubscriptionRequired =>
+      'Cette fonctionnalité fait partie d\'Alanya Plus.';
+
+  @override
+  String get errCodeBillingNotActive =>
+      'Alanya Plus est gratuit pour le moment : rien à payer.';
+
+  @override
+  String get errCodePaymentPending =>
+      'Un paiement attend déjà votre confirmation.';
+
+  @override
+  String get errCodeInvalidMsisdn =>
+      'Ce numéro mobile money n\'est pas valide.';
+
+  @override
+  String get errCodeInvalidChannel =>
+      'Ce moyen de paiement n\'est pas proposé.';
+
+  @override
+  String get errCodePlanNotFound =>
+      'Cette formule n\'est plus proposée. Rechargez l\'offre.';
+
+  @override
+  String get errCodePaymentProviderError =>
+      'Le service de paiement ne répond pas. Réessayez dans un instant.';
+
+  @override
+  String get errDomaineAbonnement =>
+      'L\'opération sur votre abonnement n\'a pas abouti.';
+
+  @override
+  String get plusCardLaunchKicker => 'Gratuit pendant le lancement';
+
+  @override
+  String get plusCardLaunchTitle => 'Alanya Plus vous est offert';
+
+  @override
+  String get plusCardLaunchBody =>
+      'Traduction, sauvegarde, trajets et sonneries par liste sont gratuits pendant le lancement. Nous vous préviendrons avant que l\'offre devienne payante.';
+
+  @override
+  String plusCardGraceTitle(String date) {
+    return 'Payant à partir du $date';
+  }
+
+  @override
+  String plusCardGraceBody(String date) {
+    return 'Traduction, sauvegarde, trajets et sonneries par liste restent gratuits jusque-là. Abonnez-vous maintenant : votre première période commencera le $date.';
+  }
+
+  @override
+  String plusCardGraceDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'encore $count jours gratuits',
+      one: 'encore 1 jour gratuit',
+      zero: 'dernier jour gratuit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardUpgradeTitle => 'Passez à Alanya Plus';
+
+  @override
+  String get plusCardDiscover => 'Découvrir l\'offre';
+
+  @override
+  String plusCardActiveUntil(String date) {
+    return 'Actif jusqu\'au $date';
+  }
+
+  @override
+  String plusCardEndsOn(String date) {
+    return 'Prend fin le $date';
+  }
+
+  @override
+  String plusCardEndsSoonBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Encore $count jours. Renouvelez pour garder vos fonctionnalités.',
+      one: 'Encore 1 jour. Renouvelez pour garder vos fonctionnalités.',
+      zero: 'Dernier jour. Renouvelez pour garder vos fonctionnalités.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardAutoRenewOn => 'Renouvellement automatique activé.';
+
+  @override
+  String get plusCardAutoRenewOff => 'Pensez à renouveler avant l\'échéance.';
+
+  @override
+  String get plusCardBadgeActive =>
+      'Votre coche est affichée à côté de votre nom.';
+
+  @override
+  String plusCardStartsOn(String date) {
+    return 'Votre abonnement commence le $date';
+  }
+
+  @override
+  String get plusCardScheduledBody =>
+      'D\'ici là, tout reste gratuit pour vous.';
+
+  @override
+  String plusCardLapsedKicker(String date) {
+    return 'Terminé le $date';
+  }
+
+  @override
+  String get plusCardLapsedTitle => 'Vos fonctionnalités Plus sont en pause';
+
+  @override
+  String get plusCardLapsedBody =>
+      'Vos réglages sont conservés. Réabonnez-vous pour tout retrouver, coche comprise.';
+
+  @override
+  String get plusOfferUnlocks => 'Ce que Plus débloque';
+
+  @override
+  String get plusOfferFreeNote =>
+      'Alanya Plus est gratuit pendant le lancement : rien à payer pour l\'instant. Nous vous préviendrons avant que l\'offre devienne payante.';
+
+  @override
+  String get plusOfferUnavailable =>
+      'Le paiement n\'est pas disponible pour le moment. Réessayez plus tard.';
+
+  @override
+  String get plusOfferDuration => 'Durée';
+
+  @override
+  String plusOfferContinue(String amount) {
+    return 'Continuer — $amount';
+  }
+
+  @override
+  String get plusOfferNoCommitment => 'sans engagement';
+
+  @override
+  String plusOfferEquivalent(String amount) {
+    return 'soit $amount par mois';
+  }
+
+  @override
+  String plusOfferMonthsFree(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count mois offerts',
+      one: '1 mois offert',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String plusOfferFirstPeriod(String start, String end) {
+    return 'Première période : du $start au $end.';
+  }
+
+  @override
+  String plusOfferNextPeriod(String start, String end) {
+    return 'Nouvelle période : du $start au $end, à la suite de l\'actuelle.';
+  }
+
+  @override
+  String get plusOfferNoRefund =>
+      'Chaque période se paie d\'avance et n\'est pas remboursable.';
+
+  @override
+  String get checkoutTitle => 'Paiement';
+
+  @override
+  String get checkoutPayWith => 'Payer avec';
+
+  @override
+  String get checkoutNumber => 'Numéro à débiter';
+
+  @override
+  String get checkoutNumberHint => '6XX XX XX XX';
+
+  @override
+  String get checkoutNumberInvalid =>
+      'Entrez un numéro mobile camerounais : 9 chiffres commençant par 6.';
+
+  @override
+  String get checkoutAutoRenew => 'Renouveler automatiquement';
+
+  @override
+  String checkoutAutoRenewHint(String operator) {
+    return '$operator vous demandera de confirmer la veille de l\'échéance.';
+  }
+
+  @override
+  String get checkoutSimulated =>
+      'Paiement simulé : aucun argent n\'est débité. Numéro finissant par 01 : solde insuffisant · 02 : refus · 03 : sans réponse.';
+
+  @override
+  String checkoutPay(String amount) {
+    return 'Payer $amount';
+  }
+
+  @override
+  String get checkoutWaitingTitle => 'Confirmez sur votre téléphone';
+
+  @override
+  String checkoutWaitingBody(String operator, String amount) {
+    return 'Composez votre code $operator pour valider $amount. Cet écran se met à jour tout seul.';
+  }
+
+  @override
+  String checkoutExpiresIn(String time) {
+    return 'la demande expire dans $time';
+  }
+
+  @override
+  String get checkoutStepSent => 'Demande envoyée';
+
+  @override
+  String checkoutStepSentTo(String number) {
+    return 'à $number';
+  }
+
+  @override
+  String get checkoutStepConfirm => 'Confirmation par votre code';
+
+  @override
+  String get checkoutStepPending => 'en attente';
+
+  @override
+  String get checkoutStepActivated => 'Abonnement activé';
+
+  @override
+  String checkoutStepActivatedHint(String operator) {
+    return 'dès la réponse de $operator';
+  }
+
+  @override
+  String get checkoutLeave => 'Quitter cet écran';
+
+  @override
+  String get checkoutLeaveHint =>
+      'L\'abonnement s\'activera dès la confirmation, même si vous quittez cet écran.';
+
+  @override
+  String get checkoutSuccessTitle => 'Alanya Plus est actif';
+
+  @override
+  String checkoutSuccessBody(String plan, String start, String end) {
+    return '$plan, du $start au $end.';
+  }
+
+  @override
+  String get checkoutSuccessScheduled =>
+      'D\'ici là, tout reste gratuit pour vous.';
+
+  @override
+  String get checkoutSuccessFeatures =>
+      'Traduction, sauvegarde, trajets et sonneries par liste sont actifs.';
+
+  @override
+  String get checkoutSuccessFeaturesScheduled =>
+      'Traduction, sauvegarde, trajets et sonneries par liste restent actifs sans interruption.';
+
+  @override
+  String get checkoutDone => 'Terminé';
+
+  @override
+  String get checkoutFailedTitle => 'Le paiement n\'a pas abouti';
+
+  @override
+  String get checkoutFailedInsufficient =>
+      'Solde insuffisant sur ce compte mobile money.';
+
+  @override
+  String get checkoutFailedDeclined =>
+      'Le paiement a été refusé sur le téléphone.';
+
+  @override
+  String get checkoutFailedTimeout =>
+      'Aucune confirmation n\'est arrivée à temps. Vous pouvez réessayer.';
+
+  @override
+  String get checkoutFailedGeneric =>
+      'Le paiement a échoué. Vous pouvez réessayer.';
+
+  @override
+  String get subscriptionTitle => 'Mon abonnement';
+
+  @override
+  String get subscriptionAutoRenew => 'Renouvellement automatique';
+
+  @override
+  String get subscriptionAutoRenewHint =>
+      'La veille de l\'échéance, votre opérateur vous demandera de confirmer le paiement.';
+
+  @override
+  String get subscriptionNextDuration => 'Durée au prochain renouvellement';
+
+  @override
+  String get subscriptionPayments => 'Paiements';
+
+  @override
+  String get subscriptionPeriods => 'Périodes';
+
+  @override
+  String subscriptionRenewAmount(String amount) {
+    return 'Renouveler — $amount';
+  }
+
+  @override
+  String get subscriptionNoPayments => 'Aucun paiement pour l\'instant.';
+
+  @override
+  String get subscriptionSourcePaid => 'Payé';
+
+  @override
+  String get subscriptionSourceTrial => 'Essai';
+
+  @override
+  String get subscriptionSourceGift => 'Offert';
+
+  @override
+  String get subscriptionSourceCompensation => 'Compensation';
+
+  @override
+  String subscriptionEndsIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'dans $count jours',
+      one: 'dans 1 jour',
+      zero: 'aujourd\'hui',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get subscriptionNoneTitle => 'Aucun abonnement en cours';
+
+  @override
+  String get subscriptionNoneBody =>
+      'Alanya Plus débloque la traduction, la sauvegarde, les trajets de confiance et les sonneries par liste.';
+
+  @override
+  String get subscriptionExemptTitle =>
+      'Alanya Plus est inclus avec votre compte';
+
+  @override
+  String get paymentStatusSucceeded => 'Réussi';
+
+  @override
+  String get paymentStatusFailed => 'Échoué';
+
+  @override
+  String get paymentStatusExpired => 'Expiré';
+
+  @override
+  String get paymentStatusRefunded => 'Remboursé';
+
+  @override
+  String get paymentStatusPending => 'En attente';
+
+  @override
+  String get plusLockedTranslation =>
+      'La traduction est réservée à Alanya Plus.';
+
+  @override
+  String get plusLockedBackup =>
+      'Les nouvelles sauvegardes sont réservées à Alanya Plus. Vos sauvegardes existantes restent restaurables.';
+
+  @override
+  String get plusLockedRingtones =>
+      'Les sonneries par liste sont réservées à Alanya Plus. Vos réglages sont conservés et reprendront dès l\'abonnement.';
+
+  @override
+  String get plusLockedTrips =>
+      'Les nouveaux trajets et le SOS hors trajet sont réservés à Alanya Plus. Un trajet déjà commencé garde son SOS jusqu\'à la fin.';
 }

@@ -10935,6 +10935,732 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aucune application ne peut ouvrir ce fichier.'**
   String get errAucuneAppPourFichier;
+
+  /// No description provided for @plusBrand.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus'**
+  String get plusBrand;
+
+  /// No description provided for @plusFeatureTranslation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction'**
+  String get plusFeatureTranslation;
+
+  /// No description provided for @plusFeatureBackup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde'**
+  String get plusFeatureBackup;
+
+  /// No description provided for @plusFeatureTrips.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajets'**
+  String get plusFeatureTrips;
+
+  /// No description provided for @plusFeatureRingtones.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sonneries'**
+  String get plusFeatureRingtones;
+
+  /// No description provided for @plusFeatureStyle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Style'**
+  String get plusFeatureStyle;
+
+  /// No description provided for @plusFeatureBadge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coche'**
+  String get plusFeatureBadge;
+
+  /// No description provided for @plusAmount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{amount} F'**
+  String plusAmount(String amount);
+
+  /// No description provided for @plusPerMonth.
+  ///
+  /// In fr, this message translates to:
+  /// **'/ mois'**
+  String get plusPerMonth;
+
+  /// No description provided for @plusPerYear.
+  ///
+  /// In fr, this message translates to:
+  /// **'/ an'**
+  String get plusPerYear;
+
+  /// No description provided for @plusPerNMonths.
+  ///
+  /// In fr, this message translates to:
+  /// **'/ {count} mois'**
+  String plusPerNMonths(int count);
+
+  /// No description provided for @plusPlanMonthly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mensuel'**
+  String get plusPlanMonthly;
+
+  /// No description provided for @plusPlanYearly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuel'**
+  String get plusPlanYearly;
+
+  /// No description provided for @plusRenew.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renouveler'**
+  String get plusRenew;
+
+  /// No description provided for @plusResubscribe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Me réabonner'**
+  String get plusResubscribe;
+
+  /// No description provided for @paywallFromLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'À partir de'**
+  String get paywallFromLabel;
+
+  /// No description provided for @paywallSeeOffer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir l\'offre'**
+  String get paywallSeeOffer;
+
+  /// No description provided for @paywallTranslationTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduire vos messages'**
+  String get paywallTranslationTitle;
+
+  /// No description provided for @paywallTranslationBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'La traduction fait partie d\'Alanya Plus. Elle fonctionne sur votre téléphone, même sans connexion, et vos messages ne quittent jamais l\'appareil.'**
+  String get paywallTranslationBody;
+
+  /// No description provided for @paywallBackupTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarder vos discussions'**
+  String get paywallBackupTitle;
+
+  /// No description provided for @paywallBackupBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'La sauvegarde fait partie d\'Alanya Plus : chiffrée, sur votre téléphone ou votre Drive. Vos sauvegardes existantes restent toujours restaurables.'**
+  String get paywallBackupBody;
+
+  /// No description provided for @paywallTripsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partir en trajet de confiance'**
+  String get paywallTripsTitle;
+
+  /// No description provided for @paywallTripsBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les trajets de confiance et le SOS font partie d\'Alanya Plus : vos proches suivent votre trajet et sont prévenus si vous n\'arrivez pas. Un trajet déjà commencé garde son SOS jusqu\'à la fin.'**
+  String get paywallTripsBody;
+
+  /// No description provided for @paywallRingtonesTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une sonnerie par liste'**
+  String get paywallRingtonesTitle;
+
+  /// No description provided for @paywallRingtonesBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les sonneries par liste font partie d\'Alanya Plus : reconnaissez la famille, le bureau ou les amis avant même de regarder l\'écran.'**
+  String get paywallRingtonesBody;
+
+  /// No description provided for @paywallGenericTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fonctionnalité Alanya Plus'**
+  String get paywallGenericTitle;
+
+  /// No description provided for @paywallGenericBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette fonctionnalité fait partie d\'Alanya Plus.'**
+  String get paywallGenericBody;
+
+  /// No description provided for @errCodeSubscriptionRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette fonctionnalité fait partie d\'Alanya Plus.'**
+  String get errCodeSubscriptionRequired;
+
+  /// No description provided for @errCodeBillingNotActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus est gratuit pour le moment : rien à payer.'**
+  String get errCodeBillingNotActive;
+
+  /// No description provided for @errCodePaymentPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un paiement attend déjà votre confirmation.'**
+  String get errCodePaymentPending;
+
+  /// No description provided for @errCodeInvalidMsisdn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro mobile money n\'est pas valide.'**
+  String get errCodeInvalidMsisdn;
+
+  /// No description provided for @errCodeInvalidChannel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce moyen de paiement n\'est pas proposé.'**
+  String get errCodeInvalidChannel;
+
+  /// No description provided for @errCodePlanNotFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette formule n\'est plus proposée. Rechargez l\'offre.'**
+  String get errCodePlanNotFound;
+
+  /// No description provided for @errCodePaymentProviderError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le service de paiement ne répond pas. Réessayez dans un instant.'**
+  String get errCodePaymentProviderError;
+
+  /// No description provided for @errDomaineAbonnement.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'opération sur votre abonnement n\'a pas abouti.'**
+  String get errDomaineAbonnement;
+
+  /// No description provided for @plusCardLaunchKicker.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gratuit pendant le lancement'**
+  String get plusCardLaunchKicker;
+
+  /// No description provided for @plusCardLaunchTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus vous est offert'**
+  String get plusCardLaunchTitle;
+
+  /// No description provided for @plusCardLaunchBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction, sauvegarde, trajets et sonneries par liste sont gratuits pendant le lancement. Nous vous préviendrons avant que l\'offre devienne payante.'**
+  String get plusCardLaunchBody;
+
+  /// No description provided for @plusCardGraceTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Payant à partir du {date}'**
+  String plusCardGraceTitle(String date);
+
+  /// No description provided for @plusCardGraceBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction, sauvegarde, trajets et sonneries par liste restent gratuits jusque-là. Abonnez-vous maintenant : votre première période commencera le {date}.'**
+  String plusCardGraceBody(String date);
+
+  /// No description provided for @plusCardGraceDaysLeft.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{dernier jour gratuit} =1{encore 1 jour gratuit} other{encore {count} jours gratuits}}'**
+  String plusCardGraceDaysLeft(int count);
+
+  /// No description provided for @plusCardUpgradeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passez à Alanya Plus'**
+  String get plusCardUpgradeTitle;
+
+  /// No description provided for @plusCardDiscover.
+  ///
+  /// In fr, this message translates to:
+  /// **'Découvrir l\'offre'**
+  String get plusCardDiscover;
+
+  /// No description provided for @plusCardActiveUntil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Actif jusqu\'au {date}'**
+  String plusCardActiveUntil(String date);
+
+  /// No description provided for @plusCardEndsOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prend fin le {date}'**
+  String plusCardEndsOn(String date);
+
+  /// No description provided for @plusCardEndsSoonBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Dernier jour. Renouvelez pour garder vos fonctionnalités.} =1{Encore 1 jour. Renouvelez pour garder vos fonctionnalités.} other{Encore {count} jours. Renouvelez pour garder vos fonctionnalités.}}'**
+  String plusCardEndsSoonBody(int count);
+
+  /// No description provided for @plusCardAutoRenewOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renouvellement automatique activé.'**
+  String get plusCardAutoRenewOn;
+
+  /// No description provided for @plusCardAutoRenewOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pensez à renouveler avant l\'échéance.'**
+  String get plusCardAutoRenewOff;
+
+  /// No description provided for @plusCardBadgeActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre coche est affichée à côté de votre nom.'**
+  String get plusCardBadgeActive;
+
+  /// No description provided for @plusCardStartsOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre abonnement commence le {date}'**
+  String plusCardStartsOn(String date);
+
+  /// No description provided for @plusCardScheduledBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'D\'ici là, tout reste gratuit pour vous.'**
+  String get plusCardScheduledBody;
+
+  /// No description provided for @plusCardLapsedKicker.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminé le {date}'**
+  String plusCardLapsedKicker(String date);
+
+  /// No description provided for @plusCardLapsedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos fonctionnalités Plus sont en pause'**
+  String get plusCardLapsedTitle;
+
+  /// No description provided for @plusCardLapsedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos réglages sont conservés. Réabonnez-vous pour tout retrouver, coche comprise.'**
+  String get plusCardLapsedBody;
+
+  /// No description provided for @plusOfferUnlocks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce que Plus débloque'**
+  String get plusOfferUnlocks;
+
+  /// No description provided for @plusOfferFreeNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus est gratuit pendant le lancement : rien à payer pour l\'instant. Nous vous préviendrons avant que l\'offre devienne payante.'**
+  String get plusOfferFreeNote;
+
+  /// No description provided for @plusOfferUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le paiement n\'est pas disponible pour le moment. Réessayez plus tard.'**
+  String get plusOfferUnavailable;
+
+  /// No description provided for @plusOfferDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée'**
+  String get plusOfferDuration;
+
+  /// No description provided for @plusOfferContinue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer — {amount}'**
+  String plusOfferContinue(String amount);
+
+  /// No description provided for @plusOfferNoCommitment.
+  ///
+  /// In fr, this message translates to:
+  /// **'sans engagement'**
+  String get plusOfferNoCommitment;
+
+  /// No description provided for @plusOfferEquivalent.
+  ///
+  /// In fr, this message translates to:
+  /// **'soit {amount} par mois'**
+  String plusOfferEquivalent(String amount);
+
+  /// No description provided for @plusOfferMonthsFree.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 mois offert} other{{count} mois offerts}}'**
+  String plusOfferMonthsFree(int count);
+
+  /// No description provided for @plusOfferFirstPeriod.
+  ///
+  /// In fr, this message translates to:
+  /// **'Première période : du {start} au {end}.'**
+  String plusOfferFirstPeriod(String start, String end);
+
+  /// No description provided for @plusOfferNextPeriod.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle période : du {start} au {end}, à la suite de l\'actuelle.'**
+  String plusOfferNextPeriod(String start, String end);
+
+  /// No description provided for @plusOfferNoRefund.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque période se paie d\'avance et n\'est pas remboursable.'**
+  String get plusOfferNoRefund;
+
+  /// No description provided for @checkoutTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paiement'**
+  String get checkoutTitle;
+
+  /// No description provided for @checkoutPayWith.
+  ///
+  /// In fr, this message translates to:
+  /// **'Payer avec'**
+  String get checkoutPayWith;
+
+  /// No description provided for @checkoutNumber.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro à débiter'**
+  String get checkoutNumber;
+
+  /// No description provided for @checkoutNumberHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'6XX XX XX XX'**
+  String get checkoutNumberHint;
+
+  /// No description provided for @checkoutNumberInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Entrez un numéro mobile camerounais : 9 chiffres commençant par 6.'**
+  String get checkoutNumberInvalid;
+
+  /// No description provided for @checkoutAutoRenew.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renouveler automatiquement'**
+  String get checkoutAutoRenew;
+
+  /// No description provided for @checkoutAutoRenewHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'{operator} vous demandera de confirmer la veille de l\'échéance.'**
+  String checkoutAutoRenewHint(String operator);
+
+  /// No description provided for @checkoutSimulated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paiement simulé : aucun argent n\'est débité. Numéro finissant par 01 : solde insuffisant · 02 : refus · 03 : sans réponse.'**
+  String get checkoutSimulated;
+
+  /// No description provided for @checkoutPay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Payer {amount}'**
+  String checkoutPay(String amount);
+
+  /// No description provided for @checkoutWaitingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmez sur votre téléphone'**
+  String get checkoutWaitingTitle;
+
+  /// No description provided for @checkoutWaitingBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Composez votre code {operator} pour valider {amount}. Cet écran se met à jour tout seul.'**
+  String checkoutWaitingBody(String operator, String amount);
+
+  /// No description provided for @checkoutExpiresIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'la demande expire dans {time}'**
+  String checkoutExpiresIn(String time);
+
+  /// No description provided for @checkoutStepSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande envoyée'**
+  String get checkoutStepSent;
+
+  /// No description provided for @checkoutStepSentTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'à {number}'**
+  String checkoutStepSentTo(String number);
+
+  /// No description provided for @checkoutStepConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmation par votre code'**
+  String get checkoutStepConfirm;
+
+  /// No description provided for @checkoutStepPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'en attente'**
+  String get checkoutStepPending;
+
+  /// No description provided for @checkoutStepActivated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Abonnement activé'**
+  String get checkoutStepActivated;
+
+  /// No description provided for @checkoutStepActivatedHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'dès la réponse de {operator}'**
+  String checkoutStepActivatedHint(String operator);
+
+  /// No description provided for @checkoutLeave.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter cet écran'**
+  String get checkoutLeave;
+
+  /// No description provided for @checkoutLeaveHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'abonnement s\'activera dès la confirmation, même si vous quittez cet écran.'**
+  String get checkoutLeaveHint;
+
+  /// No description provided for @checkoutSuccessTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus est actif'**
+  String get checkoutSuccessTitle;
+
+  /// No description provided for @checkoutSuccessBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'{plan}, du {start} au {end}.'**
+  String checkoutSuccessBody(String plan, String start, String end);
+
+  /// No description provided for @checkoutSuccessScheduled.
+  ///
+  /// In fr, this message translates to:
+  /// **'D\'ici là, tout reste gratuit pour vous.'**
+  String get checkoutSuccessScheduled;
+
+  /// No description provided for @checkoutSuccessFeatures.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction, sauvegarde, trajets et sonneries par liste sont actifs.'**
+  String get checkoutSuccessFeatures;
+
+  /// No description provided for @checkoutSuccessFeaturesScheduled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction, sauvegarde, trajets et sonneries par liste restent actifs sans interruption.'**
+  String get checkoutSuccessFeaturesScheduled;
+
+  /// No description provided for @checkoutDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminé'**
+  String get checkoutDone;
+
+  /// No description provided for @checkoutFailedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le paiement n\'a pas abouti'**
+  String get checkoutFailedTitle;
+
+  /// No description provided for @checkoutFailedInsufficient.
+  ///
+  /// In fr, this message translates to:
+  /// **'Solde insuffisant sur ce compte mobile money.'**
+  String get checkoutFailedInsufficient;
+
+  /// No description provided for @checkoutFailedDeclined.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le paiement a été refusé sur le téléphone.'**
+  String get checkoutFailedDeclined;
+
+  /// No description provided for @checkoutFailedTimeout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune confirmation n\'est arrivée à temps. Vous pouvez réessayer.'**
+  String get checkoutFailedTimeout;
+
+  /// No description provided for @checkoutFailedGeneric.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le paiement a échoué. Vous pouvez réessayer.'**
+  String get checkoutFailedGeneric;
+
+  /// No description provided for @subscriptionTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon abonnement'**
+  String get subscriptionTitle;
+
+  /// No description provided for @subscriptionAutoRenew.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renouvellement automatique'**
+  String get subscriptionAutoRenew;
+
+  /// No description provided for @subscriptionAutoRenewHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'La veille de l\'échéance, votre opérateur vous demandera de confirmer le paiement.'**
+  String get subscriptionAutoRenewHint;
+
+  /// No description provided for @subscriptionNextDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée au prochain renouvellement'**
+  String get subscriptionNextDuration;
+
+  /// No description provided for @subscriptionPayments.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paiements'**
+  String get subscriptionPayments;
+
+  /// No description provided for @subscriptionPeriods.
+  ///
+  /// In fr, this message translates to:
+  /// **'Périodes'**
+  String get subscriptionPeriods;
+
+  /// No description provided for @subscriptionRenewAmount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renouveler — {amount}'**
+  String subscriptionRenewAmount(String amount);
+
+  /// No description provided for @subscriptionNoPayments.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun paiement pour l\'instant.'**
+  String get subscriptionNoPayments;
+
+  /// No description provided for @subscriptionSourcePaid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Payé'**
+  String get subscriptionSourcePaid;
+
+  /// No description provided for @subscriptionSourceTrial.
+  ///
+  /// In fr, this message translates to:
+  /// **'Essai'**
+  String get subscriptionSourceTrial;
+
+  /// No description provided for @subscriptionSourceGift.
+  ///
+  /// In fr, this message translates to:
+  /// **'Offert'**
+  String get subscriptionSourceGift;
+
+  /// No description provided for @subscriptionSourceCompensation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compensation'**
+  String get subscriptionSourceCompensation;
+
+  /// No description provided for @subscriptionEndsIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{aujourd\'hui} =1{dans 1 jour} other{dans {count} jours}}'**
+  String subscriptionEndsIn(int count);
+
+  /// No description provided for @subscriptionNoneTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun abonnement en cours'**
+  String get subscriptionNoneTitle;
+
+  /// No description provided for @subscriptionNoneBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus débloque la traduction, la sauvegarde, les trajets de confiance et les sonneries par liste.'**
+  String get subscriptionNoneBody;
+
+  /// No description provided for @subscriptionExemptTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus est inclus avec votre compte'**
+  String get subscriptionExemptTitle;
+
+  /// No description provided for @paymentStatusSucceeded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réussi'**
+  String get paymentStatusSucceeded;
+
+  /// No description provided for @paymentStatusFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échoué'**
+  String get paymentStatusFailed;
+
+  /// No description provided for @paymentStatusExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Expiré'**
+  String get paymentStatusExpired;
+
+  /// No description provided for @paymentStatusRefunded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Remboursé'**
+  String get paymentStatusRefunded;
+
+  /// No description provided for @paymentStatusPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente'**
+  String get paymentStatusPending;
+
+  /// No description provided for @plusLockedTranslation.
+  ///
+  /// In fr, this message translates to:
+  /// **'La traduction est réservée à Alanya Plus.'**
+  String get plusLockedTranslation;
+
+  /// No description provided for @plusLockedBackup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les nouvelles sauvegardes sont réservées à Alanya Plus. Vos sauvegardes existantes restent restaurables.'**
+  String get plusLockedBackup;
+
+  /// No description provided for @plusLockedRingtones.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les sonneries par liste sont réservées à Alanya Plus. Vos réglages sont conservés et reprendront dès l\'abonnement.'**
+  String get plusLockedRingtones;
+
+  /// No description provided for @plusLockedTrips.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les nouveaux trajets et le SOS hors trajet sont réservés à Alanya Plus. Un trajet déjà commencé garde son SOS jusqu\'à la fin.'**
+  String get plusLockedTrips;
 }
 
 class _AppLocalizationsDelegate
