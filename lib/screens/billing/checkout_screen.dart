@@ -324,7 +324,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   letterSpacing: 0.5,
                 ),
                 decoration: InputDecoration(
-                  prefixText: '+237 ',
+                  // `prefixText` ne s'affiche qu'au focus, et réserve sa place
+                  // avant : l'indicatif doit rester visible, champ vide ou non.
+                  prefixIcon: Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                        start: AppSpacing.md, end: AppSpacing.xs),
+                    child: Text(
+                      '+237',
+                      style: context.text.titleMedium?.copyWith(
+                        fontFeatures: kTabularFigures,
+                        letterSpacing: 0.5,
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  prefixIconConstraints:
+                      const BoxConstraints(minWidth: 0, minHeight: 0),
                   hintText: l10n.checkoutNumberHint,
                   errorText: _numberError,
                   filled: true,

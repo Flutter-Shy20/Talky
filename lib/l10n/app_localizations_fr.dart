@@ -6597,7 +6597,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Entrez un numéro mobile camerounais : 9 chiffres commençant par 6.';
 
   @override
-  String get checkoutAutoRenew => 'Renouveler automatiquement';
+  String get checkoutAutoRenew => 'Renouvellement automatique';
 
   @override
   String checkoutAutoRenewHint(String operator) {
@@ -6869,6 +6869,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get verificationStepPieces => 'Pièces reçues';
+
+  @override
+  String verificationPiecesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pièces',
+      one: '1 pièce',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get verificationStepReview => 'Examen par Alanya';

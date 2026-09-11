@@ -6789,6 +6789,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get verificationStepPieces => 'Documents received';
 
   @override
+  String verificationPiecesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count documents',
+      one: '1 document',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get verificationStepReview => 'Review by Alanya';
 
   @override

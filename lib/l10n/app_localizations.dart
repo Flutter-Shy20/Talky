@@ -11359,7 +11359,7 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutAutoRenew.
   ///
   /// In fr, this message translates to:
-  /// **'Renouveler automatiquement'**
+  /// **'Renouvellement automatique'**
   String get checkoutAutoRenew;
 
   /// No description provided for @checkoutAutoRenewHint.
@@ -11805,6 +11805,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Pièces reçues'**
   String get verificationStepPieces;
+
+  /// No description provided for @verificationPiecesCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 pièce} other{{count} pièces}}'**
+  String verificationPiecesCount(int count);
 
   /// No description provided for @verificationStepReview.
   ///

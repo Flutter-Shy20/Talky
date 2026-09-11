@@ -176,13 +176,20 @@ class _PlusCardState extends State<PlusCard> {
                       foreground: palette.ink,
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      plusFeatureName(l10n, f),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: context.text.labelSmall
-                          ?.copyWith(color: palette.inkMuted),
+                    // Cinq colonnes sur 360 dp : « Sauvegarde » n'y tient
+                    // pas entier. Réduire le corps plutôt que tronquer le mot.
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          plusFeatureName(l10n, f),
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          style: context.text.labelSmall
+                              ?.copyWith(color: palette.inkMuted),
+                        ),
+                      ),
                     ),
                   ],
                 ),

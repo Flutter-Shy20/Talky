@@ -6021,7 +6021,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String plusAmount(String amount) {
-    return '$amount 中非法郎';
+    return '$amount FCFA';
   }
 
   @override
@@ -6514,6 +6514,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get verificationStepPieces => '证件已收到';
+
+  @override
+  String verificationPiecesCount(int count) {
+    return '$count 份';
+  }
 
   @override
   String get verificationStepReview => 'Alanya 审核';

@@ -273,7 +273,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   PlusTimelineStep(
                     state: PlusStepState.done,
                     title: l10n.verificationStepPieces,
-                    subtitle: '${state.documents.length}',
+                    subtitle:
+                        l10n.verificationPiecesCount(state.documents.length),
                   ),
                   PlusTimelineStep(
                     state: PlusStepState.current,

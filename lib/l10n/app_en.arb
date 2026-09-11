@@ -3062,6 +3062,8 @@
   "verificationPendingBody": "Submitted on {date} · answer within 5 working days",
   "verificationStepSent": "Request sent",
   "verificationStepPieces": "Documents received",
+  "verificationPiecesCount": "{count, plural, =1{1 document} other{{count} documents}}",
+  "@verificationPiecesCount": {"placeholders": {"count": {"type": "int"}}},
   "verificationStepReview": "Review by Alanya",
   "verificationStepInProgress": "in progress",
   "verificationStepDecision": "Decision",
