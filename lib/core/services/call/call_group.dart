@@ -277,7 +277,7 @@ extension CallGroup on CallService {
     await pc.setLocalDescription(offer);
 
     _apiClient.sendSocketEvent(SocketEvents.groupOffer, {
-      'roomId': _groupRoomId,
+      'roomId': meshSignalRoomId(_groupRoomId, _confSessionId),
       'fromUserId': '',
       'toUserId': userId,
       'offer': {'sdp': offer.sdp, 'type': offer.type},
@@ -320,7 +320,7 @@ extension CallGroup on CallService {
     await pc.setLocalDescription(answer);
 
     _apiClient.sendSocketEvent(SocketEvents.groupAnswer, {
-      'roomId': _groupRoomId,
+      'roomId': meshSignalRoomId(_groupRoomId, _confSessionId),
       'fromUserId': '',
       'toUserId': fromUserId,
       'answer': {'sdp': answer.sdp, 'type': answer.type},
@@ -358,7 +358,7 @@ extension CallGroup on CallService {
 
     pc.onIceCandidate = (candidate) {
       _apiClient.sendSocketEvent(SocketEvents.groupIceCandidate, {
-        'roomId': _groupRoomId,
+        'roomId': meshSignalRoomId(_groupRoomId, _confSessionId),
         'fromUserId': '',
         'toUserId': userId,
         'candidate': {

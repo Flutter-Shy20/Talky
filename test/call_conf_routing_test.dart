@@ -293,4 +293,16 @@ void main() {
       },
     );
   });
+
+  group('meshSignalRoomId', () {
+    test('en grille : la salle affichée', () {
+      expect(meshSignalRoomId('conf_1_1', 'conf_1_1'), 'conf_1_1');
+    });
+    test('retombé à deux dans une session : la session, pas rien', () {
+      expect(meshSignalRoomId(null, 'conf_1_1'), 'conf_1_1');
+    });
+    test('appel de groupe ordinaire : sa salle', () {
+      expect(meshSignalRoomId('grp_9', null), 'grp_9');
+    });
+  });
 }

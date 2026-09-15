@@ -118,6 +118,15 @@ OriginLinkRole originLinkRole({
   return meshLinkIsOrigin ? OriginLinkRole.surveiller : OriginLinkRole.ignorer;
 }
 
+/// Salle à annoncer au serveur pour la signalisation du maillage.
+///
+/// Retombé à deux dans une session, `_groupRoomId` est nul : le serveur, qui
+/// garde ce relais par la session, jetait alors offres, réponses et candidats.
+/// Après un transfert, le lien survivant est maillé : son redémarrage ICE se
+/// perdait, et il tombait au premier trou réseau.
+String? meshSignalRoomId(String? groupRoomId, String? confSessionId) =>
+    groupRoomId ?? confSessionId;
+
 /// Décide si un ready peut être mis en file / émis côté client restant.
 ///
 /// [transferTargetId] = C (cible du transfert). Sans match exact, aucun ready :
