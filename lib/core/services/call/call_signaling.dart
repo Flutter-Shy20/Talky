@@ -300,7 +300,9 @@ extension CallSignaling on CallService {
     // Appel terminé par l'autre côté, ou stop multi-device (answered/rejected elsewhere).
     _apiClient.onSocketEvent(SocketEvents.callEnded, (data) async {
       final map = data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
-      final callId = map['callId']?.toString();
+      // Adressé à un invité, il vise son invitation — l'identifiant que son
+      // CallKit connaît —, pas la session.
+      final callId = endedCallId(map);
       final reason = map['reason']?.toString();
       final claimedElsewhere = reason == 'answered_elsewhere' ||
           reason == 'rejected_elsewhere' ||
@@ -778,8 +780,13 @@ extension CallSignaling on CallService {
 
       final sessionId = data['sessionId']?.toString();
       if (sessionId == null) return;
-      if (_isTerminalCallId(sessionId)) {
-        debugPrint('[CallService] 🛡 call_conf_invite ignoré: session déjà soldée');
+      // Chaque invitation a son identifiant — le sessionId à la première,
+      // `…_r<n>` ensuite. C'est lui que ce téléphone présente et marque
+      // terminé : réinvité dans une session qu'il a déjà quittée, il ne doit
+      // pas tomber sur la marque de son départ.
+      final inviteId = conferenceInviteId(data) ?? sessionId;
+      if (_isTerminalCallId(inviteId)) {
+        debugPrint('[CallService] 🛡 call_conf_invite ignoré: invitation déjà soldée ($inviteId)');
         return;
       }
 
@@ -797,7 +804,7 @@ extension CallSignaling on CallService {
 
       _confSessionId = sessionId;
       _isVideo = data['isVideo'] == true;
-      _adoptServerCallId(sessionId);
+      _adoptServerCallId(inviteId);
       final mode = data['mode']?.toString();
       if (mode == 'transfer' || mode == 'join') _confMode = mode!;
 
@@ -820,7 +827,7 @@ extension CallSignaling on CallService {
       if (!sameSession) {
         _status = CallStatus.incoming;
         final presentation = _resolveIncomingPresentation(
-          callId: sessionId,
+          callId: inviteId,
           intent: IncomingPresentationIntent.signal,
         );
         _armIncomingRingSafety();
@@ -833,7 +840,8 @@ extension CallSignaling on CallService {
             unawaited(
               _callKit
                   .showIncoming(
-                    callId: sessionId,
+                    // L'invitation pour CallKit, la session dans roomId.
+                    callId: inviteId,
                     callerId: _confInvitedBy?.id ?? '',
                     callerName: _confInvitedBy?.name ?? resolveL10n().groupCall,
                     callerPhoto: _confInvitedBy?.photo,
@@ -852,7 +860,7 @@ extension CallSignaling on CallService {
             IncomingPresentationAction.showFlutterIncoming) {
           // Manquait entièrement, comme côté groupe : l'invitation à une
           // session à trois s'affichait sans un son.
-          _startFlutterIncomingRinging(sessionId);
+          _startFlutterIncomingRinging(inviteId);
         }
       } else {
         debugPrint('[CallService] 🔀 call_conf_invite fusionné session=$sessionId');

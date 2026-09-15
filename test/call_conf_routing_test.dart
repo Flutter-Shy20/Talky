@@ -365,4 +365,27 @@ void main() {
       expect(confFailedKeepsSession({}), isFalse);
     });
   });
+
+  group("identifiant d'invitation", () {
+    test("second tour : l'invitation a son propre identifiant", () {
+      expect(
+        conferenceInviteId({'sessionId': 'conf_7_1', 'inviteId': 'conf_7_1_r2'}),
+        'conf_7_1_r2',
+      );
+    });
+    test('serveur plus ancien : aucun, on retombe sur la session', () {
+      expect(conferenceInviteId({'sessionId': 'conf_7_1'}), isNull);
+      expect(conferenceInviteId({'sessionId': 'conf_7_1', 'inviteId': ''}), isNull);
+    });
+    test('call_ended adressé à un invité : son invitation', () {
+      expect(
+        endedCallId({'callId': 'conf_7_1', 'inviteId': 'conf_7_1_r2'}),
+        'conf_7_1_r2',
+      );
+    });
+    test('call_ended ordinaire : son callId', () {
+      expect(endedCallId({'callId': '42'}), '42');
+      expect(endedCallId({}), isNull);
+    });
+  });
 }

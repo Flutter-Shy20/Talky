@@ -819,6 +819,17 @@ class CallService extends ChangeNotifier {
     return _handledTerminalCallIds.containsKey(callId);
   }
 
+  /// Lève la marque « terminé » de [callId], ici et pour l'isolate FCM.
+  ///
+  /// Réservé à une session qu'on rejoint sur une invitation fraîche : l'avoir
+  /// quittée plus tôt l'avait marquée, et la reprise d'appel comme la file du
+  /// join auraient refusé ce retour pendant deux minutes.
+  void _forgetTerminalCallId(String? callId) {
+    if (callId == null || callId.isEmpty) return;
+    _handledTerminalCallIds.remove(callId);
+    unawaited(EndedCallRegistry.unmark(callId));
+  }
+
   void _cancelOutgoingTimeout() {
     _outgoingTimeoutTimer?.cancel();
     _outgoingTimeoutTimer = null;

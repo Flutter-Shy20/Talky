@@ -61,6 +61,27 @@ class EndedCallRegistry {
     }
   }
 
+  /// Lève la marque de [callId] (no-op si vide ou absente).
+  ///
+  /// Une session qu'on rejoint sur une invitation fraîche n'est plus un appel
+  /// soldé. Sans cela, la reprise d'appel et la file du join, qui consultent
+  /// la marque du `sessionId`, refusaient pendant deux minutes quelqu'un
+  /// réinvité dans une session qu'il venait de quitter.
+  static Future<void> unmark(String? callId) async {
+    final id = callId?.trim() ?? '';
+    if (id.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      final map = _read(prefs);
+      if (map.remove(id) == null) return;
+      await prefs.setString(_prefsKey, jsonEncode(map));
+      debugPrint('[EndedCallRegistry] unmark callId=$id');
+    } catch (e) {
+      debugPrint('[EndedCallRegistry] unmark error: $e');
+    }
+  }
+
   static Map<String, int> _read(SharedPreferences prefs) {
     final raw = prefs.getString(_prefsKey);
     if (raw == null || raw.isEmpty) return {};

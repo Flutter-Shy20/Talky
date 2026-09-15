@@ -273,11 +273,16 @@ extension CallOutgoingRestore on CallService {
       return true;
     }
 
+    // Entré dans une session par une invitation de second tour, ce téléphone
+    // tient l'appel sous l'identifiant de l'invitation ; le serveur, lui,
+    // annonce la session.
     if (acceptsResumeForLocalStatus(
           callStatusName: _status.name,
           awaitingAutoAnswer: _autoAnswerOnNextIncoming || _isAutoAnsweringFromPush,
         ) &&
-        (_remoteUserId == peerId || _currentCallId == serverCallId)) {
+        (_remoteUserId == peerId ||
+            _currentCallId == serverCallId ||
+            _confSessionId == serverCallId)) {
       return true;
     }
 

@@ -170,6 +170,25 @@ bool confFailedKeepsSession(Map data) {
   return v == true || v?.toString() == 'true';
 }
 
+/// Identifiant de l'invitation portée par [data], s'il y en a un.
+///
+/// Le serveur en donne un par invitation : le `sessionId` à la première,
+/// `…_r<n>` ensuite ; un serveur plus ancien n'en envoie pas. C'est lui que ce
+/// téléphone présente à CallKit et marque terminé — réinvité dans une session
+/// qu'il a quittée, il ne tombe pas sur la marque de son départ.
+String? conferenceInviteId(Map data) {
+  final id = data['inviteId']?.toString();
+  return (id == null || id.isEmpty) ? null : id;
+}
+
+/// Identifiant qu'un `call_ended` vise sur ce téléphone.
+///
+/// Adressé à un invité, il porte aussi l'identifiant de son invitation, le
+/// seul que son CallKit connaisse ; les autres destinataires n'ont que
+/// `callId`.
+String? endedCallId(Map data) =>
+    conferenceInviteId(data) ?? data['callId']?.toString();
+
 /// Décide si un ready peut être mis en file / émis côté client restant.
 ///
 /// [transferTargetId] = C (cible du transfert). Sans match exact, aucun ready :

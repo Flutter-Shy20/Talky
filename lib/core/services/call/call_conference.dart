@@ -68,13 +68,21 @@ extension CallConference on CallService {
         photo: myPhoto,
       );
 
+      // Invitation de second tour : ce téléphone a pu quitter cette session
+      // plus tôt et l'avoir marquée terminée. Il la rejoint : la marque
+      // tomberait sinon sur la file du join et sur la reprise d'appel.
+      if (_currentCallId != null && _currentCallId != sessionId) {
+        _forgetTerminalCallId(sessionId);
+      }
       _emitOrQueueConfJoin(sessionId);
 
       _status = CallStatus.connected;
       _startDurationTimer();
       _startSpeakingDetection(groupMode: true);
       if (!kIsWeb) {
-        _adoptServerCallId(sessionId);
+        // L'identifiant de l'invitation, sous lequel CallKit la présente déjà ;
+        // à défaut, celui de la session.
+        _adoptServerCallId(_currentCallId ?? sessionId);
         await _acquireCallSession(
           isVideo: _isVideo,
           displayName: LocaleController.instance.l10n.groupCall,
@@ -135,9 +143,12 @@ extension CallConference on CallService {
     if (_confSessionId == null) return;
     _pendingConfJoinSessionId = null;
     _apiClient.sendSocketEvent(SocketEvents.callConfReject, {});
-    _markTerminalCallId(_confSessionId);
+    // L'invitation, pas la session : c'est sous son identifiant que CallKit la
+    // présente, et la session pourra réinviter ce téléphone plus tard.
+    final inviteId = _currentCallId ?? _confSessionId;
+    _markTerminalCallId(inviteId);
     await _ringtone.stop();
-    await _callKit.endAll(callId: _confSessionId);
+    await _callKit.endAll(callId: inviteId);
     await _terminateConference();
   }
 
