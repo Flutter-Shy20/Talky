@@ -169,10 +169,16 @@ extension CallConference on CallService {
     final myPhoto = _localUserPhoto;
 
     final pc = _webrtc.peerConnection;
-    if (pc != null) _groupPeerConnections[peerId] = pc;
-    final remote = _webrtc.remoteStream;
-    if (remote != null) _groupRemoteStreams[peerId] = remote;
-    _groupRemoteDescSet.add(peerId);
+    final role = originLinkRole(
+      meshLinkExists: _groupPeerConnections.containsKey(peerId),
+      meshLinkIsOrigin: pc != null && identical(_groupPeerConnections[peerId], pc),
+    );
+    if (role == OriginLinkRole.verser) {
+      if (pc != null) _groupPeerConnections[peerId] = pc;
+      final remote = _webrtc.remoteStream;
+      if (remote != null) _groupRemoteStreams[peerId] = remote;
+      _groupRemoteDescSet.add(peerId);
+    }
 
     _groupRoster[peerId] = GroupParticipantInfo(
       id: peerId,
@@ -191,7 +197,7 @@ extension CallConference on CallService {
     _myRosterId = myId.toString();
 
     _groupRoomId = _confSessionId;
-    _guardOriginLinkFailure(peerId);
+    if (role != OriginLinkRole.ignorer) _guardOriginLinkFailure(peerId);
     _startSpeakingDetection(groupMode: true);
     debugPrint('[CallService] 🔗 connexion 1-à-1 versée dans le maillage (pair=$peerId)');
   }

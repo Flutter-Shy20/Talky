@@ -268,4 +268,29 @@ void main() {
       expect(decline.action, IncomingCallActionType.decline);
     });
   });
+
+  group('originLinkRole — bascule à trois', () {
+    test('premier ajout : la connexion 1-à-1 est versée dans le maillage', () {
+      expect(
+        originLinkRole(meshLinkExists: false, meshLinkIsOrigin: false),
+        OriginLinkRole.verser,
+      );
+    });
+    test("rebascule, l'invité était parti : le lien d'origine reste surveillé", () {
+      expect(
+        originLinkRole(meshLinkExists: true, meshLinkIsOrigin: true),
+        OriginLinkRole.surveiller,
+      );
+    });
+    test(
+      'rebascule après un transfert : le lien vivant est maillé, '
+      "la connexion d'origine n'y touche pas",
+      () {
+        expect(
+          originLinkRole(meshLinkExists: true, meshLinkIsOrigin: false),
+          OriginLinkRole.ignorer,
+        );
+      },
+    );
+  });
 }

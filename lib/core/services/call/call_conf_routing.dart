@@ -90,6 +90,34 @@ List<String> conferenceTileIds({
 /// Clé idempotente pour call_conf_ready (sessionId|peerId).
 String confReadyKey(String sessionId, String peerId) => '$sessionId|$peerId';
 
+/// Ce que la bascule à trois fait de la connexion 1-à-1 d'origine.
+enum OriginLinkRole {
+  /// Premier ajout : elle devient le premier lien du maillage, surveillée.
+  verser,
+
+  /// Rebascule, et c'est encore elle qui porte le lien : surveillée seulement.
+  surveiller,
+
+  /// Rebascule, le lien passe par une autre connexion : on n'y touche pas.
+  ignorer,
+}
+
+/// Rôle de la connexion d'origine quand un appel à deux passe à trois.
+///
+/// Au premier ajout, rien n'existe encore dans le maillage : la connexion
+/// 1-à-1 y est versée. Retombé à deux puis rebasculé, le lien vers l'autre y
+/// est déjà. S'il passe par une autre connexion, celle d'origine est fermée
+/// (son pair est parti) ou n'a jamais été négociée (l'ancien invité en a une,
+/// créée par `_initLocalStream`) : la verser écraserait le lien vivant, et la
+/// surveiller ferait retirer ce pair au premier `Closed` d'une connexion morte.
+OriginLinkRole originLinkRole({
+  required bool meshLinkExists,
+  required bool meshLinkIsOrigin,
+}) {
+  if (!meshLinkExists) return OriginLinkRole.verser;
+  return meshLinkIsOrigin ? OriginLinkRole.surveiller : OriginLinkRole.ignorer;
+}
+
 /// Décide si un ready peut être mis en file / émis côté client restant.
 ///
 /// [transferTargetId] = C (cible du transfert). Sans match exact, aucun ready :
