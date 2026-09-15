@@ -13,6 +13,8 @@ import '../../widgets/alanya_phone_field.dart';
 import '../../widgets/common/app_skeleton.dart';
 import '../../widgets/country_selector_tile.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class AdminCreateUserScreen extends StatefulWidget {
   const AdminCreateUserScreen({super.key, this.initialReservedPhone});
@@ -101,7 +103,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
       });
     } on TalkyException catch (e) {
       if (!mounted) return;
-      _show(e.message);
+      _show(presenterErreur(context.l10n, e, domaine: ErrorDomain.admin));
     } catch (_) {
       // Liste optionnelle — ignorée si indisponible.
     } finally {
@@ -255,7 +257,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
       if (!mounted) return;
       Navigator.pop(context, true);
     } catch (e) {
-      _show('$e');
+      _show(presenterErreur(context.l10n, e, domaine: ErrorDomain.admin));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

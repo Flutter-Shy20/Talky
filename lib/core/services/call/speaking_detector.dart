@@ -66,8 +66,26 @@ class SpeakingDetector extends ChangeNotifier {
     _timer = Timer.periodic(pollInterval, (_) => _poll(peerConnectionsProvider()));
   }
 
+  /// Un sondage est en cours — voir `_poll`.
+  bool _polling = false;
+
   Future<void> _poll(Map<String, RTCPeerConnection> peerConnections) async {
     if (peerConnections.isEmpty) return;
+    // Méthode asynchrone appelée par un Timer.periodic de 350 ms, sans garde :
+    // sur un maillage à trois, trois `getStats()` successifs peuvent dépasser
+    // l'intervalle. Les sondages se chevauchaient alors — charge doublée, et
+    // compteurs d'hystérésis incrémentés deux fois par intervalle réel, donc
+    // seuils effectivement divisés par deux.
+    if (_polling) return;
+    _polling = true;
+    try {
+      await _pollOnce(peerConnections);
+    } finally {
+      _polling = false;
+    }
+  }
+
+  Future<void> _pollOnce(Map<String, RTCPeerConnection> peerConnections) async {
 
     bool localCaptured = false;
 

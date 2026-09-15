@@ -550,12 +550,6 @@ abstract class AppLocalizations {
   /// **'Renvoyez-le depuis votre galerie si vous l\'avez encore'**
   String get mediaExpiredResendYourself;
 
-  /// No description provided for @settingsCalls.
-  ///
-  /// In fr, this message translates to:
-  /// **'Appels'**
-  String get settingsCalls;
-
   /// No description provided for @settingsRingtone.
   ///
   /// In fr, this message translates to:
@@ -796,42 +790,6 @@ abstract class AppLocalizations {
   /// **'APPEL ENTRANT'**
   String get callIncoming;
 
-  /// No description provided for @errorWithDetails.
-  ///
-  /// In fr, this message translates to:
-  /// **'Échec : {error}'**
-  String errorWithDetails(String error);
-
-  /// No description provided for @actionFailedWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Action impossible : {error}'**
-  String actionFailedWithError(String error);
-
-  /// No description provided for @cannotUnblockWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible de débloquer : {error}'**
-  String cannotUnblockWithError(String error);
-
-  /// No description provided for @loadErrorWithDetails.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur chargement : {error}'**
-  String loadErrorWithDetails(String error);
-
-  /// No description provided for @cannotOpenFileApp.
-  ///
-  /// In fr, this message translates to:
-  /// **'Aucune app pour ouvrir ce fichier ({message})'**
-  String cannotOpenFileApp(String message);
-
-  /// No description provided for @cannotOpenFileAppAlt.
-  ///
-  /// In fr, this message translates to:
-  /// **'Aucune application pour ouvrir ce fichier ({message})'**
-  String cannotOpenFileAppAlt(String message);
-
   /// No description provided for @membersCount.
   ///
   /// In fr, this message translates to:
@@ -1023,54 +981,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Sélectionnez jusqu\'à {count} membres pour l\'appel vocal'**
   String selectUpToVoice(int count);
-
-  /// No description provided for @cannotLoadMeeting.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible de charger la réunion : {error}'**
-  String cannotLoadMeeting(String error);
-
-  /// No description provided for @cannotJoinMeeting.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible de rejoindre : {error}'**
-  String cannotJoinMeeting(String error);
-
-  /// No description provided for @cannotCreateMeeting.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible de créer la réunion : {error}'**
-  String cannotCreateMeeting(String error);
-
-  /// No description provided for @meetingConnectFailed.
-  ///
-  /// In fr, this message translates to:
-  /// **'Échec de la connexion à la réunion : {error}'**
-  String meetingConnectFailed(String error);
-
-  /// No description provided for @uploadFailedWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Échec de l\'upload : {error}'**
-  String uploadFailedWithError(String error);
-
-  /// No description provided for @sendFailedWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Échec de l\'envoi : {error}'**
-  String sendFailedWithError(String error);
-
-  /// No description provided for @recordFailedWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Échec de l\'enregistrement : {error}'**
-  String recordFailedWithError(String error);
-
-  /// No description provided for @roleChangeError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur changement de rôle: {error}'**
-  String roleChangeError(String error);
 
   /// No description provided for @noResultsFor.
   ///
@@ -2662,6 +2572,42 @@ abstract class AppLocalizations {
   /// **'Réunion terminée'**
   String get meetingEnded;
 
+  /// No description provided for @meetingBlockedByCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un appel est en cours : impossible de rejoindre la réunion.'**
+  String get meetingBlockedByCall;
+
+  /// No description provided for @meetingJoinExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette réunion est échue.'**
+  String get meetingJoinExpired;
+
+  /// No description provided for @meetingJoinNotInvited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réunion introuvable.'**
+  String get meetingJoinNotInvited;
+
+  /// No description provided for @meetingParticipantJoined.
+  ///
+  /// In fr, this message translates to:
+  /// **'A rejoint'**
+  String get meetingParticipantJoined;
+
+  /// No description provided for @meetingParticipantPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente'**
+  String get meetingParticipantPending;
+
+  /// No description provided for @meetingExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échue'**
+  String get meetingExpired;
+
   /// No description provided for @newMeeting.
   ///
   /// In fr, this message translates to:
@@ -3015,6 +2961,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Haut-parleur'**
   String get speaker;
+
+  /// No description provided for @audioOutputEarpiece.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écouteur'**
+  String get audioOutputEarpiece;
+
+  /// No description provided for @audioOutputWired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Casque filaire'**
+  String get audioOutputWired;
+
+  /// No description provided for @audioOutputBluetooth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bluetooth'**
+  String get audioOutputBluetooth;
+
+  /// No description provided for @changeAudioOutput.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer la sortie audio'**
+  String get changeAudioOutput;
 
   /// No description provided for @newCall.
   ///
@@ -4216,18 +4186,6 @@ abstract class AppLocalizations {
   /// **'📞 Appel vocal'**
   String get voiceCallPreview;
 
-  /// No description provided for @anErrorOccurred.
-  ///
-  /// In fr, this message translates to:
-  /// **'Une erreur est survenue: {error}'**
-  String anErrorOccurred(String error);
-
-  /// No description provided for @errorColon.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur: {error}'**
-  String errorColon(String error);
-
   /// No description provided for @deletePhotoAction.
   ///
   /// In fr, this message translates to:
@@ -4282,12 +4240,6 @@ abstract class AppLocalizations {
   /// **'Enregistrez un vocal ou importez un fichier audio'**
   String get recordOrImportAudio;
 
-  /// No description provided for @unableToPostStatusWithError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible de publier le statut : {error}'**
-  String unableToPostStatusWithError(String error);
-
   /// No description provided for @tapToAddYourStatus.
   ///
   /// In fr, this message translates to:
@@ -4336,17 +4288,11 @@ abstract class AppLocalizations {
   /// **'Timeout réseau'**
   String get networkTimeout;
 
-  /// No description provided for @networkErrorWithDetails.
+  /// No description provided for @networkError.
   ///
   /// In fr, this message translates to:
-  /// **'Erreur réseau: {error}'**
-  String networkErrorWithDetails(String error);
-
-  /// No description provided for @invalidResponseWithCode.
-  ///
-  /// In fr, this message translates to:
-  /// **'Réponse invalide ({code})'**
-  String invalidResponseWithCode(Object code);
+  /// **'Connexion impossible. Vérifiez votre réseau et réessayez.'**
+  String get networkError;
 
   /// No description provided for @noRefreshToken.
   ///
@@ -4618,24 +4564,6 @@ abstract class AppLocalizations {
   /// **'Utilisé'**
   String get usedLabel;
 
-  /// No description provided for @banUnbanError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur ban/unban: {error}'**
-  String banUnbanError(String error);
-
-  /// No description provided for @deleteErrorWithDetails.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur suppression: {error}'**
-  String deleteErrorWithDetails(String error);
-
-  /// No description provided for @loadUsersError.
-  ///
-  /// In fr, this message translates to:
-  /// **'Erreur chargement utilisateurs: {error}'**
-  String loadUsersError(String error);
-
   /// No description provided for @limitReachedParticipants.
   ///
   /// In fr, this message translates to:
@@ -4731,24 +4659,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aujourd\'hui {time}'**
   String todayTimeShort(String time);
-
-  /// No description provided for @sourceFileNotFound.
-  ///
-  /// In fr, this message translates to:
-  /// **'Fichier source introuvable : {path}'**
-  String sourceFileNotFound(String path);
-
-  /// No description provided for @copyImpossible.
-  ///
-  /// In fr, this message translates to:
-  /// **'Copie impossible : {error}'**
-  String copyImpossible(String error);
-
-  /// No description provided for @copyFailedPath.
-  ///
-  /// In fr, this message translates to:
-  /// **'Copie échouée : {path}'**
-  String copyFailedPath(String path);
 
   /// No description provided for @albumCannotBeForwarded.
   ///
@@ -7654,12 +7564,6 @@ abstract class AppLocalizations {
   /// **'Télécharger'**
   String get exportDownload;
 
-  /// No description provided for @exportFailed.
-  ///
-  /// In fr, this message translates to:
-  /// **'Export impossible : {error}'**
-  String exportFailed(String error);
-
   /// No description provided for @deleteAccountTitle.
   ///
   /// In fr, this message translates to:
@@ -7744,12 +7648,6 @@ abstract class AppLocalizations {
   /// **'Votre compte sera définitivement supprimé le {date}. Vous pouvez annuler d\'ici là.'**
   String deleteAccountGraceBody(String date);
 
-  /// No description provided for @deleteAccountFailed.
-  ///
-  /// In fr, this message translates to:
-  /// **'Suppression impossible : {error}'**
-  String deleteAccountFailed(String error);
-
   /// No description provided for @biometricLock.
   ///
   /// In fr, this message translates to:
@@ -7785,12 +7683,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Biométrie indisponible sur cet appareil'**
   String get biometricLockUnavailable;
-
-  /// No description provided for @biometricLockFailed.
-  ///
-  /// In fr, this message translates to:
-  /// **'Biométrie : {error}'**
-  String biometricLockFailed(String error);
 
   /// No description provided for @accountSecuritySectionProtection.
   ///
@@ -10689,6 +10581,366 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Suit le réglage général'**
   String get translateModeAutoSubtitle;
+
+  /// No description provided for @errDelaiDepasse.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur met trop de temps à répondre. Réessayez.'**
+  String get errDelaiDepasse;
+
+  /// No description provided for @errReseauSuspect.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion sécurisée impossible. Vérifiez votre réseau.'**
+  String get errReseauSuspect;
+
+  /// No description provided for @errSessionExpiree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre session a expiré. Reconnectez-vous.'**
+  String get errSessionExpiree;
+
+  /// No description provided for @errIntrouvable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Introuvable. Ce contenu a peut-être été supprimé.'**
+  String get errIntrouvable;
+
+  /// No description provided for @errConflit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Action impossible dans l\'état actuel.'**
+  String get errConflit;
+
+  /// No description provided for @errTropDeRequetes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de tentatives. Patientez un instant.'**
+  String get errTropDeRequetes;
+
+  /// No description provided for @errServeur.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le service est momentanément indisponible. Réessayez.'**
+  String get errServeur;
+
+  /// No description provided for @errPermission.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autorisation refusée. Vérifiez les réglages de votre appareil.'**
+  String get errPermission;
+
+  /// No description provided for @errPeripherique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Périphérique indisponible ou déjà utilisé par une autre application.'**
+  String get errPeripherique;
+
+  /// No description provided for @errStockage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accès au fichier impossible. Vérifiez l\'espace disponible.'**
+  String get errStockage;
+
+  /// No description provided for @errGenerique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une erreur est survenue. Réessayez.'**
+  String get errGenerique;
+
+  /// No description provided for @errDomaineAuth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion impossible. Réessayez.'**
+  String get errDomaineAuth;
+
+  /// No description provided for @errDomaineChat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Message non envoyé. Réessayez.'**
+  String get errDomaineChat;
+
+  /// No description provided for @errDomaineAppel.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'appel n\'a pas pu aboutir. Réessayez.'**
+  String get errDomaineAppel;
+
+  /// No description provided for @errDomaineReunion.
+  ///
+  /// In fr, this message translates to:
+  /// **'La réunion n\'a pas pu s\'ouvrir. Réessayez.'**
+  String get errDomaineReunion;
+
+  /// No description provided for @errDomaineQr.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code n\'a pas pu être utilisé. Réessayez.'**
+  String get errDomaineQr;
+
+  /// No description provided for @errDomaineMedia.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le fichier n\'a pas pu être traité. Réessayez.'**
+  String get errDomaineMedia;
+
+  /// No description provided for @errDomaineTrajet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le trajet n\'a pas pu être mis à jour. Réessayez.'**
+  String get errDomaineTrajet;
+
+  /// No description provided for @errDomaineStatut.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le statut n\'a pas pu être publié. Réessayez.'**
+  String get errDomaineStatut;
+
+  /// No description provided for @errDomaineProfil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modification impossible. Réessayez.'**
+  String get errDomaineProfil;
+
+  /// No description provided for @errDomaineAdmin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Opération impossible. Réessayez.'**
+  String get errDomaineAdmin;
+
+  /// No description provided for @errAppelHorsLigne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel impossible sans connexion.'**
+  String get errAppelHorsLigne;
+
+  /// No description provided for @errChatHorsLigne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Message en attente : il partira au retour du réseau.'**
+  String get errChatHorsLigne;
+
+  /// No description provided for @errMediaStockage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrement impossible. Vérifiez l\'espace disponible sur l\'appareil.'**
+  String get errMediaStockage;
+
+  /// No description provided for @errCodeRefreshExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre session a expiré. Reconnectez-vous.'**
+  String get errCodeRefreshExpired;
+
+  /// No description provided for @errCodeDeviceRevoked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet appareil a été déconnecté. Reconnectez-vous.'**
+  String get errCodeDeviceRevoked;
+
+  /// No description provided for @errCodeAccountDeletionPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce compte est en cours de suppression.'**
+  String get errCodeAccountDeletionPending;
+
+  /// No description provided for @errCodeRegisterRateLimited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de créations de compte. Réessayez plus tard.'**
+  String get errCodeRegisterRateLimited;
+
+  /// No description provided for @errCodeQrSessionExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code QR a expiré. Affichez-en un nouveau.'**
+  String get errCodeQrSessionExpired;
+
+  /// No description provided for @errCodeDeviceNotOwner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet appareil n\'est pas autorisé pour cette action.'**
+  String get errCodeDeviceNotOwner;
+
+  /// No description provided for @errCodeAddAlreadyUsed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code a déjà été utilisé.'**
+  String get errCodeAddAlreadyUsed;
+
+  /// No description provided for @errCodeAddMePolicyDenied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette personne n\'accepte pas les ajouts par code.'**
+  String get errCodeAddMePolicyDenied;
+
+  /// No description provided for @errCodeMeetingExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette réunion a expiré.'**
+  String get errCodeMeetingExpired;
+
+  /// No description provided for @errCodeMeetingEnded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette réunion est terminée.'**
+  String get errCodeMeetingEnded;
+
+  /// No description provided for @errCodeMeetingOrganiserRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seul l\'organisateur peut faire cela.'**
+  String get errCodeMeetingOrganiserRequired;
+
+  /// No description provided for @errCodeAccountAlreadyInMeeting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce compte participe déjà à la réunion sur un autre appareil.'**
+  String get errCodeAccountAlreadyInMeeting;
+
+  /// No description provided for @errCodeSessionBusy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un appel est en cours. Terminez-le d\'abord.'**
+  String get errCodeSessionBusy;
+
+  /// No description provided for @errCodeMaxDurationReached.
+  ///
+  /// In fr, this message translates to:
+  /// **'La durée maximale est atteinte.'**
+  String get errCodeMaxDurationReached;
+
+  /// No description provided for @errCodeBlockedBySender.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous ne pouvez pas contacter cette personne.'**
+  String get errCodeBlockedBySender;
+
+  /// No description provided for @errCodeNotAMember.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous ne faites plus partie de ce groupe.'**
+  String get errCodeNotAMember;
+
+  /// No description provided for @errCodeGroupAdminsOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réservé aux administrateurs du groupe.'**
+  String get errCodeGroupAdminsOnly;
+
+  /// No description provided for @errCodeGroupOwnerRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seul le propriétaire du groupe peut faire cela.'**
+  String get errCodeGroupOwnerRequired;
+
+  /// No description provided for @errCodeConversationNotFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette conversation n\'existe plus.'**
+  String get errCodeConversationNotFound;
+
+  /// No description provided for @errCodeOfficialReadonly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce compte officiel n\'accepte pas de réponse.'**
+  String get errCodeOfficialReadonly;
+
+  /// No description provided for @errCodeListMemberLimit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette liste a atteint son nombre maximal de membres.'**
+  String get errCodeListMemberLimit;
+
+  /// No description provided for @errCodeSystemListReadonly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette liste système ne peut pas être modifiée.'**
+  String get errCodeSystemListReadonly;
+
+  /// No description provided for @errCodeInviteBlocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette personne ne peut pas être invitée.'**
+  String get errCodeInviteBlocked;
+
+  /// No description provided for @errCodeBusinessOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réservé aux comptes professionnels.'**
+  String get errCodeBusinessOnly;
+
+  /// No description provided for @errCodeTrustListEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre cercle de confiance est vide. Ajoutez-y quelqu\'un d\'abord.'**
+  String get errCodeTrustListEmpty;
+
+  /// No description provided for @errCodeTripAlreadyActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un trajet est déjà en cours.'**
+  String get errCodeTripAlreadyActive;
+
+  /// No description provided for @errCodeTripTerminal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce trajet est déjà terminé.'**
+  String get errCodeTripTerminal;
+
+  /// No description provided for @errCodeTripStillOpen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminez d\'abord le trajet en cours.'**
+  String get errCodeTripStillOpen;
+
+  /// No description provided for @errCodeSosRateLimited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alerte déjà envoyée. Patientez avant d\'en envoyer une autre.'**
+  String get errCodeSosRateLimited;
+
+  /// No description provided for @errCodeInvalidEta.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'heure d\'arrivée indiquée n\'est pas valide.'**
+  String get errCodeInvalidEta;
+
+  /// No description provided for @errCodeInvalidDestination.
+  ///
+  /// In fr, this message translates to:
+  /// **'La destination indiquée n\'est pas valide.'**
+  String get errCodeInvalidDestination;
+
+  /// No description provided for @errCodeMediaExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce média a expiré et n\'est plus disponible.'**
+  String get errCodeMediaExpired;
+
+  /// No description provided for @errCodeInvalidExtension.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce type de fichier n\'est pas accepté.'**
+  String get errCodeInvalidExtension;
+
+  /// No description provided for @errCodeInsufficientRole.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos droits ne permettent pas cette action.'**
+  String get errCodeInsufficientRole;
+
+  /// No description provided for @errCodeFieldImmutable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce champ ne peut plus être modifié.'**
+  String get errCodeFieldImmutable;
+
+  /// No description provided for @errAucuneAppPourFichier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune application ne peut ouvrir ce fichier.'**
+  String get errAucuneAppPourFichier;
 }
 
 class _AppLocalizationsDelegate

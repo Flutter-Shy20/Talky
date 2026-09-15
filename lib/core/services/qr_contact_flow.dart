@@ -11,6 +11,8 @@ import '../navigation/app_navigator.dart';
 import '../theme/app_colors.dart';
 import '../utils/app_log.dart';
 import 'local_cache_repository.dart';
+import '../errors/app_error.dart';
+import '../errors/error_presenter.dart';
 
 /// Ajout d'un contact par code QR, partagé entre les deux chemins qui y
 /// mènent : le scan de la caméra et l'ouverture d'un lien `…/q/u/<jeton>`.
@@ -219,7 +221,9 @@ class QrContactFlow {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            e.statusCode == 404 ? l10n.qrScanErrorUnknown : e.message,
+            e.statusCode == 404
+                ? l10n.qrScanErrorUnknown
+                : presenterErreur(l10n, e, domaine: ErrorDomain.qr),
           ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.error,

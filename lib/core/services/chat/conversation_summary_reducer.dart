@@ -63,17 +63,7 @@ class ConversationSummaryReducer {
       if (latest.msgID > 0 &&
           await _dao.hasPendingNewerThan(conversID, latest.sendAt)) {
         // Unread toujours dérivé (même pendant pending).
-        final unread = await _dao.countUnread(conversID, myId);
-        final mentionne = await _hasUnreadMention(conversID, myId);
-        if (unread != conv.unreadCount ||
-            mentionne != conv.hasUnreadMention) {
-          await (_db.update(_db.localConversations)
-                ..where((c) => c.conversID.equals(conversID)))
-              .write(LocalConversationsCompanion(
-            unreadCount: Value(unread),
-            hasUnreadMention: Value(mentionne),
-          ));
-        }
+        await _updateCountersOnly(conversID, myId, conv);
         return;
       }
 
@@ -94,17 +84,34 @@ class ConversationSummaryReducer {
           !conv.lastMessageAt!.isBefore(latest.sendAt);
 
       if (journalPlusRecent) {
-        final unread = await _dao.countUnread(conversID, myId);
-        final mentionne = await _hasUnreadMention(conversID, myId);
-        if (unread != conv.unreadCount ||
-            mentionne != conv.hasUnreadMention) {
-          await (_db.update(_db.localConversations)
-                ..where((c) => c.conversID.equals(conversID)))
-              .write(LocalConversationsCompanion(
-            unreadCount: Value(unread),
-            hasUnreadMention: Value(mentionne),
-          ));
-        }
+        await _updateCountersOnly(conversID, myId, conv);
+        return;
+      }
+
+      // L'historique local peut être en retard sur l'aperçu, et le retard ne
+      // se voit pas d'ici : `latest` est bien le dernier message *que l'on
+      // possède*, pas le dernier message de la conversation.
+      //
+      // Au premier démarrage après une connexion, le bootstrap de
+      // [ConversationSync] remplit `messages` via POST /messages/sync, qui trie
+      // par `msgID` CROISSANT : la première page ne rapporte que les messages
+      // les plus anciens. Réécrire l'aperçu à partir de ce `latest` faisait
+      // reculer `lastMessageAt` de plusieurs mois, et la conversation plongeait
+      // au bas d'une liste triée par `lastMessageAt DESC` — la « discussion
+      // disparue » que seul un tirer-pour-rafraîchir ramenait, puisque le
+      // merge HTTP y réimposait l'aperçu serveur.
+      //
+      // Un recul n'est légitime que s'il s'explique en local : le message qui
+      // portait l'aperçu a été supprimé pour moi, auquel cas il est toujours
+      // en base (masqué par le filtre `deletedForID` ci-dessus) et
+      // [ChatDao.hasMessageNewerThan] le voit. Sinon c'est un trou
+      // d'historique : on laisse l'aperçu tranquille et on ne dérive que les
+      // compteurs, eux toujours calculés sur les messages présents.
+      final apercuPlusRecentQueLeLocal = conv.lastMessageAt != null &&
+          conv.lastMessageAt!.isAfter(latest.sendAt);
+      if (apercuPlusRecentQueLeLocal &&
+          !await _dao.hasMessageNewerThan(conversID, latest.sendAt)) {
+        await _updateCountersOnly(conversID, myId, conv);
         return;
       }
 
@@ -153,6 +160,29 @@ class ConversationSummaryReducer {
         hasUnreadMention: Value(mentionne),
       ));
     });
+  }
+
+  /// Ne dérive que les compteurs, sans toucher à l'aperçu : le chemin des trois
+  /// cas où le dernier message local n'est pas ce que la conversation doit
+  /// afficher (envoi optimiste plus récent, journal d'appel plus récent,
+  /// historique local incomplet). Les compteurs, eux, restent dérivés des
+  /// messages présents dans tous les cas.
+  Future<void> _updateCountersOnly(
+    int conversID,
+    int myId,
+    LocalConversation conv,
+  ) async {
+    final unread = await _dao.countUnread(conversID, myId);
+    final mentionne = await _hasUnreadMention(conversID, myId);
+    if (unread == conv.unreadCount && mentionne == conv.hasUnreadMention) {
+      return;
+    }
+    await (_db.update(_db.localConversations)
+          ..where((c) => c.conversID.equals(conversID)))
+        .write(LocalConversationsCompanion(
+      unreadCount: Value(unread),
+      hasUnreadMention: Value(mentionne),
+    ));
   }
 
   /// Réutilise la requête du bouton de saut : une seule définition de « mention

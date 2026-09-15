@@ -36,22 +36,47 @@ extension CallOneToOne on CallService {
     notify();
 
     try {
-      final iceServers = await _apiClient.fetchIceServers(force: true);
-      await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
+      final type = isVideo ? CallType.video : CallType.audio;
       _webrtc.onLocalStream  = (_) { notify(); };
       _webrtc.onRemoteStream = (_) { notify(); };
 
-      // Initialiser le routage audio : haut-parleur par défaut en vidéo,
-      // écouteur (oreille) par défaut en audio.
-      if (!kIsWeb) {
-        _isSpeakerOn = isVideo;
-        await audio.AudioHelper.setSpeakerphoneOn(isVideo);
-        debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ${isVideo ? "ON" : "OFF"})');
-      }
+      // Capture et serveurs ICE sont indépendants : les lancer de front met le
+      // micro en route sans attendre le réseau. Voir `answerCall` pour le
+      // détail du raisonnement — c'est là que le décalage se voyait le plus.
+      final mediaFuture = _webrtc.acquireLocalMedia(type);
+      final iceFuture = _apiClient.fetchIceServers();
 
-      // ICE candidates envoyés au destinataire
+      // Borner l'acquisition : entre le décrochage et l'envoi de la réponse,
+      // plus aucune horloge ne couvre l'appel — `_armAwaitingOfferTimeout` et
+      // `_armIncomingRingSafety` viennent d'être désarmés, et rien ne surveille
+      // l'état `connecting`. Or `acquireLocalMedia` demande la permission micro
+      // si elle n'a jamais été accordée : au démarrage à froid depuis l'écran
+      // verrouillé, MainActivity s'affiche par-dessus le verrou mais la boîte
+      // de dialogue système, elle, non — la réponse n'arrive qu'après
+      // déverrouillage, et l'attente ne se terminait jamais.
+      try {
+        await mediaFuture.timeout(CallService._mediaAcquireTimeout);
+      } on TimeoutException {
+        debugPrint('[CallService] ⏰ acquisition média sans réponse → teardown');
+        _errorMessage = LocaleController.instance.l10n.callFailed;
+        await _terminateCall();
+        return;
+      }
+      notify();
+
+      // Sortie audio : un casque déjà connecté l'emporte, sinon haut-parleur
+      // en vidéo et écouteur en audio, comme avant.
+      await _initAudioRoute(isVideo: isVideo);
+
+      await _webrtc.buildPeerConnection(type, iceServers: await iceFuture);
+
+      // ICE candidates envoyés au destinataire. Ils sont aussi conservés :
+      // tant que le téléphone d'en face sonne, le serveur n'a pas d'appareil
+      // où les router, et WebRTC ne repasse jamais deux fois par le même
+      // candidat. Sans ce doublon local, le destinataire décroche sans un seul
+      // candidat distant. Voir `_replayOutgoingIce`.
       _webrtc.onIceCandidate = (candidate) {
-        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
+        final payload = <String, dynamic>{
           'targetUserId': targetUserId.toString(),
           'candidate': {
             'candidate': candidate.candidate,
@@ -60,7 +85,13 @@ extension CallOneToOne on CallService {
           },
           'generation': _webrtc.iceGeneration,
           if (_currentCallId != null) 'callId': _currentCallId,
-        });
+        };
+        if (_outgoingIceOutbox.length < CallService._maxOutgoingIceReplay) {
+          _outgoingIceOutbox.add(
+            (generation: _webrtc.iceGeneration, payload: payload),
+          );
+        }
+        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, payload);
       };
 
       _wireOneToOneConnectionStateHandlers();
@@ -111,27 +142,10 @@ extension CallOneToOne on CallService {
       debugPrint('[CallService] Erreur initiateCall: $e');
       debugPrint('[CallService] Type d\'erreur: ${e.runtimeType}');
 
-      // Déterminer le type d'erreur pour afficher un message clair
-      String errorMsg = LocaleController.instance.l10n.errorStartingTheCall;
-      final errorStr = e.toString().toLowerCase();
-
-      if (errorStr.contains('permission')) {
-        errorMsg = LocaleController.instance.l10n.permissionDeniedPleaseAllowMicrophoneCamera;
-      } else if (errorStr.contains('microphone') || errorStr.contains('audio')) {
-        errorMsg = LocaleController.instance.l10n.microphoneErrorPleaseCheckYourPermissions;
-      } else if (errorStr.contains('camera') || errorStr.contains('video')) {
-        errorMsg = LocaleController.instance.l10n.cameraErrorPleaseCheckYourPermissions;
-      } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
-        errorMsg = LocaleController.instance.l10n.mediaAccessErrorMakeSureHttps;
-      } else if (errorStr.contains('notfounderror')) {
-        errorMsg = LocaleController.instance.l10n.noMicrophoneCameraDeviceFoundOn;
-      } else if (errorStr.contains('notreadableerror')) {
-        errorMsg = LocaleController.instance.l10n.cannotAccessMicrophoneCameraCheckThat;
-      } else {
-        errorMsg = LocaleController.instance.l10n.errorColon(e.toString());
-      }
-
-      _errorMessage = errorMsg;
+      // Le tri se faisait sur `e.toString().contains(...)`. Le message de
+      // getUserMedia n'est stable ni entre versions de flutter_webrtc, ni
+      // entre Android et iOS, et la branche par défaut affichait l'exception.
+      _errorMessage = presenterErreurGlobale(e, domaine: ErrorDomain.appel);
       await _releaseCallSession();
       await _webrtc.dispose();
       _resetCallState();
@@ -176,34 +190,68 @@ extension CallOneToOne on CallService {
 
     await _ringtone.stop();
     _errorMessage = null;
-    final socketReady = await _apiClient.ensureSocketReady();
-    if (!socketReady) {
-      debugPrint('[CallService] ** Socket non prêt après 5s (connected=${_apiClient.isSocketConnected})');
-      _errorMessage = LocaleController.instance.l10n.socketNotConnected;
-      // Teardown complet (au lieu d'un simple idle) : ferme CallKit, coupe la
-      // sonnerie et réinitialise l'état pour ne pas laisser d'écran/état fantôme.
-      // Le nettoyage côté appelant est assuré par le timeout serveur (no-answer).
-      await _terminateCall();
-      return;
-    }
-    debugPrint('[CallService] !! Socket connecté, envoi answer');
 
     final offer = _pendingOffer!;
     _pendingOffer = null;
 
     try {
-      final iceServers = await _apiClient.fetchIceServers(force: true);
-      await _webrtc.init(_isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
+      final type = _isVideo ? CallType.video : CallType.audio;
       _webrtc.onLocalStream  = (_) { notify(); };
       _webrtc.onRemoteStream = (_) { notify(); };
 
-      if (!kIsWeb) {
-        _isSpeakerOn = _isVideo;
-        await audio.AudioHelper.setSpeakerphoneOn(_isVideo);
-      }
+      // Le micro d'abord, le réseau ensuite.
+      //
+      // Ces trois attentes sont indépendantes, et elles étaient enchaînées :
+      // l'attente du socket (jusqu'à 5 s au réveil par push), puis un
+      // aller-retour HTTPS vers `/turn/credentials`, puis seulement
+      // `getUserMedia`. La capture ne dépend pourtant ni du socket ni des
+      // serveurs ICE — c'est ce qui faisait s'allumer le micro plusieurs
+      // secondes après le décrochage, là où WhatsApp paraît instantané parce
+      // que rien n'est placé entre le tap et l'ouverture du périphérique.
+      //
+      // `fetchIceServers` ne lève jamais : elle retombe sur les STUN publics
+      // en interne. `ensureSocketReady` est neutralisée par prudence — si
+      // l'acquisition média échoue la première, plus personne ne l'attendrait.
+      final mediaFuture = _webrtc.acquireLocalMedia(type);
+      final iceFuture = _apiClient.fetchIceServers();
+      final socketFuture =
+          _apiClient.ensureSocketReady().catchError((_) => false);
 
+      await mediaFuture;
+      notify();
+
+      await _initAudioRoute(isVideo: _isVideo);
+
+      if (!await socketFuture) {
+        debugPrint('[CallService] ** Socket non prêt après 5s (connected=${_apiClient.isSocketConnected})');
+        _errorMessage = LocaleController.instance.l10n.socketNotConnected;
+        // Teardown complet (au lieu d'un simple idle) : ferme CallKit, coupe la
+        // sonnerie et réinitialise l'état pour ne pas laisser d'écran/état
+        // fantôme — et libère la capture qu'on vient tout juste d'ouvrir.
+        // Le nettoyage côté appelant est assuré par le timeout serveur.
+        await _terminateCall();
+        return;
+      }
+      debugPrint('[CallService] !! Socket connecté, envoi answer');
+
+      await _webrtc.buildPeerConnection(type, iceServers: await iceFuture);
+
+      // Le répondeur garde ses candidats, comme l'appelant garde les siens.
+      //
+      // Il n'avait pas de tampon : ses candidats partaient directement, et
+      // `sendSocketEvent` les jette en rendant `false` quand le socket n'est
+      // pas prêt — valeur ignorée ici. Côté serveur, `ice_candidate` sort aussi
+      // sans rien dire tant que la propriété d'appareil n'est pas revendiquée,
+      // ce qui n'arrive qu'au traitement de `answer_call`.
+      //
+      // Or les candidats relais, ceux qui passent par TURN, sont les derniers
+      // rassemblés — plusieurs secondes après le décrochage, exactement la
+      // fenêtre où un socket monté au démarrage à froid peut hoqueter. Et
+      // WebRTC ne repasse jamais par `onIceCandidate` pour un candidat déjà
+      // émis. Sur un réseau qui exige TURN, l'appelant se retrouvait sans
+      // aucune paire testable : silence des deux côtés.
       _webrtc.onIceCandidate = (candidate) {
-        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
+        final payload = <String, dynamic>{
           'targetUserId': _remoteUserId.toString(),
           'candidate': {
             'candidate': candidate.candidate,
@@ -212,7 +260,13 @@ extension CallOneToOne on CallService {
           },
           'generation': _webrtc.iceGeneration,
           if (_currentCallId != null) 'callId': _currentCallId,
-        });
+        };
+        if (_outgoingIceOutbox.length < CallService._maxOutgoingIceReplay) {
+          _outgoingIceOutbox.add(
+            (generation: _webrtc.iceGeneration, payload: payload),
+          );
+        }
+        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, payload);
       };
 
       _wireOneToOneConnectionStateHandlers();
@@ -223,14 +277,56 @@ extension CallOneToOne on CallService {
 
       final answer = await _webrtc.createAnswer();
 
-      _apiClient.sendSocketEvent(SocketEvents.answerCall, {
-        'callerId': _remoteUserId.toString(),
-        'callId': _currentCallId,
-        'answer': {
-          'sdp': answer.sdp,
-          'type': answer.type,
+      // La réponse WebRTC est le seul message que l'appelant attend, et elle
+      // partait sans accusé ni file — contrairement au raccrochage, qui a reçu
+      // les deux. Perdue sur un socket zombie, elle ne repartait jamais :
+      // l'appelé affichait « en cours » avec son chronomètre, l'appelant
+      // restait sur « connexion », et aucun média ne passait jusqu'à l'échec
+      // ICE puis au délai global.
+      //
+      // Entre la vérification du socket et cette émission, il s'écoule
+      // `buildPeerConnection`, `handleOffer` et `createAnswer` — plusieurs
+      // centaines de millisecondes d'allers-retours natifs, sur un socket monté
+      // quelques secondes plus tôt au démarrage à froid.
+      final reponseAccusee = await _apiClient.sendSocketEventAcked(
+        SocketEvents.answerCall,
+        {
+          'callerId': _remoteUserId.toString(),
+          'callId': _currentCallId,
+          'answer': {
+            'sdp': answer.sdp,
+            'type': answer.type,
+          },
         },
-      });
+      );
+      if (!reponseAccusee) {
+        debugPrint(
+          '[CallService] ** réponse WebRTC sans accusé → reconstruction et '
+          'seconde tentative',
+        );
+        // Le socket paraissait prêt et n'a rien accusé : il est mort sans le
+        // dire. On le reconstruit et on réémet une fois — l'appel n'a pas
+        // d'autre chance, et le serveur traite une seconde réponse par son
+        // refus explicite plutôt que par un dégât.
+        await _apiClient.forceReconnect();
+        final secondeChance = await _apiClient.sendSocketEventAcked(
+          SocketEvents.answerCall,
+          {
+            'callerId': _remoteUserId.toString(),
+            'callId': _currentCallId,
+            'answer': {
+              'sdp': answer.sdp,
+              'type': answer.type,
+            },
+          },
+        );
+        if (!secondeChance) {
+          debugPrint('[CallService] ** réponse WebRTC perdue → teardown');
+          _errorMessage = LocaleController.instance.l10n.callFailed;
+          await _terminateCall();
+          return;
+        }
+      }
 
       _status = CallStatus.connected;
       _startDurationTimer();
@@ -259,23 +355,7 @@ extension CallOneToOne on CallService {
       debugPrint('[CallService] Erreur answerCall: $e');
       debugPrint('[CallService] Type d\'erreur: ${e.runtimeType}');
 
-      // Déterminer le type d'erreur pour afficher un message clair
-      String errorMsg = LocaleController.instance.l10n.errorAcceptingCall;
-      final errorStr = e.toString().toLowerCase();
-
-      if (errorStr.contains('permission')) {
-        errorMsg = LocaleController.instance.l10n.permissionDeniedPleaseAllowMicrophoneCamera;
-      } else if (errorStr.contains('microphone') || errorStr.contains('audio')) {
-        errorMsg = LocaleController.instance.l10n.microphoneErrorPleaseCheckYourPermissions;
-      } else if (errorStr.contains('camera') || errorStr.contains('video')) {
-        errorMsg = LocaleController.instance.l10n.cameraErrorPleaseCheckYourPermissions;
-      } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
-        errorMsg = LocaleController.instance.l10n.mediaAccessErrorMakeSureHttps;
-      } else {
-        errorMsg = LocaleController.instance.l10n.errorColon(e.toString());
-      }
-
-      _errorMessage = errorMsg;
+      _errorMessage = presenterErreurGlobale(e, domaine: ErrorDomain.appel);
       await rejectCall();
     }
   }
@@ -286,13 +366,19 @@ extension CallOneToOne on CallService {
     _markTerminalCallId(_currentCallId);
 
     await _ringtone.stop();
-    await _callKit.endAll(callId: _currentCallId);
+    await _callKit.endAll(callId: _callKitCallId ?? _currentCallId);
 
     if (_remoteUserId != null) {
       _apiClient.sendSocketEvent(SocketEvents.rejectCall, {
         'callerId': _remoteUserId.toString(),
       });
     }
+
+    // Atteint depuis le catch d'answerCall, donc après un init() qui a pu
+    // réussir : sans ces deux libérations, le micro restait chaud (et le
+    // service de premier plan debout) après un décrochage raté.
+    await _releaseCallSession();
+    await _webrtc.dispose();
 
     _resetCallState();
     _status = CallStatus.idle;
@@ -335,21 +421,53 @@ extension CallOneToOne on CallService {
     }
   }
 
+  /// Le raccrochage n'attend pas : on rend la main tout de suite et le sort de
+  /// l'émission se règle en arrière-plan.
   void _emitEndCallOrEnqueue(Map<String, dynamic> payload) {
-    if (_apiClient.isSocketReady) {
-      try {
-        _apiClient.sendSocketEvent(SocketEvents.endCall, payload);
-      } catch (e) {
-        debugPrint('[CallService] endCall socket error: $e');
-        _pendingEndCalls.add(payload);
-      }
-    } else {
+    unawaited(_emettreRaccrochage(payload));
+  }
+
+  /// Émet le raccrochage, et **le remet en file s'il n'est pas accusé**.
+  ///
+  /// `isSocketReady` ne prouve rien sur un socket zombie : le TCP est mort,
+  /// mais Socket.IO ne le constate qu'au bout de son ping — 25 s d'intervalle,
+  /// 20 s de patience. Pendant ces quarante-cinq secondes, le raccrochage part
+  /// dans le vide sans un mot, et le pair reste sur « Reconnexion… » jusqu'à
+  /// son propre délai alors que l'appel est fini de ce côté-ci. Le cas est
+  /// d'autant plus probable que l'appel a duré.
+  ///
+  /// Un accusé tranche. Sans lui, la mise en file seule ne suffirait pas : le
+  /// rejeu attend `auth:verified`, qui n'arrivera jamais tant que personne ne
+  /// reconstruit le socket. Ici l'appel est déjà terminé localement — il n'y a
+  /// plus de signalisation à couper, c'est donc le moment de le faire.
+  ///
+  /// Réémettre est sans danger : le serveur traite un second `end_call` par sa
+  /// sortie « déjà hors appel », qui ne touche à rien.
+  Future<void> _emettreRaccrochage(Map<String, dynamic> payload) async {
+    if (!_apiClient.isSocketReady) {
       debugPrint('[CallService] ⏳ Socket non prêt → end_call mis en file');
       _pendingEndCalls.add(payload);
       if (!_apiClient.isSocketConnected) {
         _apiClient.connectSocket();
       }
+      return;
     }
+
+    bool accuse;
+    try {
+      accuse =
+          await _apiClient.sendSocketEventAcked(SocketEvents.endCall, payload);
+    } catch (e) {
+      debugPrint('[CallService] endCall socket error: $e');
+      accuse = false;
+    }
+    if (accuse) return;
+
+    debugPrint(
+      '[CallService] ** end_call sans accusé → file + reconstruction du socket',
+    );
+    _pendingEndCalls.add(payload);
+    unawaited(_apiClient.forceReconnect());
   }
 
   /// [fromEndCall] : true si déjà sous la garde `_isEndingCall` de [endCall].
@@ -402,7 +520,7 @@ extension CallOneToOne on CallService {
       _webrtc.onConnectionFailure = null;
       _webrtc.onConnectionStateChanged = null;
       _clearAllGroupPeers(disarmOriginFailure: true);
-      await _callKit.endAll(callId: _currentCallId);
+      await _callKit.endAll(callId: _callKitCallId ?? _currentCallId);
       await _webrtc.dispose();
       _durationTimer?.cancel();
       // Après la libération de la session audio : le son part sur le canal
@@ -433,12 +551,18 @@ extension CallOneToOne on CallService {
     _remoteUserId = null;
     _remoteUserName = null;
     _remoteUserPhoto = null;
+    _outgoingIceOutbox.clear();
     _pendingOffer = null;
     _currentCallId = null;
+    _callKitCallId = null;
+    _serverCallIdKnown = false;
     _callDuration = 0;
     _isMuted = false;
     _isVideoOn = true;
     _isSpeakerOn = false;
+    _stopWatchingAudioOutputs();
+    _audioRoute = CallAudioRoute.earpiece;
+    _audioRoutes = const [CallAudioRoute.earpiece, CallAudioRoute.speaker];
     _isRemoteMuted = false;
     _isRemoteVideoOn = true;
     _durationTimer?.cancel();

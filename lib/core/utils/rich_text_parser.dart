@@ -22,11 +22,46 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'alanya_phone_formatter.dart';
+
 /// Détecte les URLs (http, https, ou commençant par www.).
 final RegExp _urlRegExp = RegExp(
   r'((?:https?://|www\.)[^\s]+)',
   caseSensitive: false,
 );
+
+/// Détecte une adresse e-mail. Volontairement plus étroite que la RFC, qui
+/// autorise des formes que personne n'écrit dans un message : ce qui compte
+/// ici est de ne jamais décorer en lien une arobase ordinaire.
+///
+/// Le domaine exige au moins un point, sinon « rendez-vous @ midi » suffirait.
+/// La ponctuation de fin de phrase reste dehors d'elle-même : « écris à
+/// jean@exemple.com. » s'arrête à `.com`, le dernier point n'étant suivi
+/// d'aucun caractère de domaine.
+final RegExp _emailRegExp = RegExp(
+  r'[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+',
+  caseSensitive: false,
+);
+
+/// Détecte un numéro Alanya isolé dans du texte.
+///
+/// Les longueurs viennent d'[AlanyaPhoneFormatter], source de vérité de l'app
+/// (3, 4 ou 8 chiffres aujourd'hui) : la détection suivra si elles changent,
+/// plutôt que de dériver dans son coin.
+///
+/// Les gardes `(?<!\d)` / `(?!\d)` interdisent de tailler un numéro dans un
+/// nombre plus long : un « 123456 » n'en contient aucun, et un « 12345678 » en
+/// est un seul — pas deux de quatre chiffres.
+final RegExp _alanyaNumberRegExp = _buildAlanyaNumberRegExp();
+
+RegExp _buildAlanyaNumberRegExp() {
+  // De la plus longue à la plus courte : le moteur essaie les alternatives
+  // dans l'ordre, et « 12345678 » doit se lire en huit chiffres.
+  final longueurs = [...AlanyaPhoneFormatter.validLengths]
+    ..sort((a, b) => b.compareTo(a));
+  final alternatives = longueurs.map((n) => '\\d{$n}').join('|');
+  return RegExp('(?<!\\d)(?:$alternatives)(?!\\d)');
+}
 
 /// Ouvre une URL dans le navigateur externe. Ajoute https:// si absent (www.…).
 /// On n'utilise pas `canLaunchUrl` (qui peut renvoyer false à tort sur
@@ -67,6 +102,20 @@ String _trimUrlTail(String url) {
 /// Wrapper public de [_openUrl], à utiliser partout où un lien doit être
 /// rendu tappable (bulles de discussion, onglet « Liens », etc.).
 Future<void> openUrl(String raw) => _openUrl(raw);
+
+/// Confie [adresse] au client mail du système. Même prudence que [_openUrl] :
+/// pas de `canLaunchUrl`, qui répond non à tort sur Android 11+ dès que
+/// l'app ne déclare pas la requête de paquet correspondante.
+Future<void> _openEmail(String adresse) async {
+  final uri = Uri(scheme: 'mailto', path: adresse);
+  try {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (_) {
+    try {
+      await launchUrl(uri);
+    } catch (_) {/* aucun client mail installé — ignoré */}
+  }
+}
 
 /// Renvoie la première URL trouvée dans [text] (nettoyée de sa ponctuation
 /// de fin), ou `null` si aucune URL n'y figure.
@@ -119,28 +168,66 @@ class MentionSpec {
   });
 }
 
-/// Découpe [text] en segments : texte normal + liens tappables (bleu souligné)
-/// + mentions surlignées.
+/// Ce qu'il faut savoir pour décorer un segment, transporté d'un étage de
+/// découpage au suivant plutôt que répété en cinq paramètres.
+class _SpanOptions {
+  const _SpanOptions({
+    required this.linkColor,
+    this.mentions,
+    this.onAlanyaNumber,
+    this.recognizerSink,
+  });
+
+  final Color linkColor;
+  final MentionSpec? mentions;
+
+  /// Nul = les numéros restent du texte ordinaire. C'est le cas partout où le
+  /// texte n'est qu'un aperçu (liste des discussions, bandeau de réponse) :
+  /// on n'y souligne pas ce qui n'est pas tappable.
+  final void Function(String numero)? onAlanyaNumber;
+
+  /// Les recognizers créés y sont déposés pour que l'appelant les libère.
+  final List<GestureRecognizer>? recognizerSink;
+}
+
+/// Le texte passe par quatre tamis successifs, dans cet ordre : URL, e-mail,
+/// numéro Alanya, mention. Chacun découpe ce qu'il reconnaît et confie le
+/// reste au suivant — l'ordre n'est donc pas cosmétique. L'URL passe en
+/// premier pour qu'une adresse dans un lien (`?mail=a@b.com`) ne soit pas
+/// re-découpée, et les chiffres d'une URL ne deviennent pas un numéro. La
+/// mention passe en dernier : son « @ » ne peut plus être celui d'un e-mail.
+TextSpan _tappable(
+  String text,
+  TextStyle style,
+  Color color,
+  VoidCallback onTap,
+  List<GestureRecognizer>? sink,
+) {
+  final recognizer = TapGestureRecognizer()..onTap = onTap;
+  sink?.add(recognizer);
+  return TextSpan(
+    text: text,
+    style: style.copyWith(
+      color: color,
+      decoration: TextDecoration.underline,
+      decorationColor: color,
+    ),
+    recognizer: recognizer,
+  );
+}
+
+/// Premier tamis : les URLs.
 void _appendWithLinks(
-    List<InlineSpan> out, String text, TextStyle style, Color linkColor,
-    [MentionSpec? mentions]) {
+    List<InlineSpan> out, String text, TextStyle style, _SpanOptions opts) {
   int last = 0;
   for (final match in _urlRegExp.allMatches(text)) {
     if (match.start > last) {
-      _appendWithMentions(
-          out, text.substring(last, match.start), style, mentions);
+      _appendWithEmails(out, text.substring(last, match.start), style, opts);
     }
     final raw = match.group(0)!;
     final url = _trimUrlTail(raw);
-    out.add(TextSpan(
-      text: url,
-      style: style.copyWith(
-        color: linkColor,
-        decoration: TextDecoration.underline,
-        decorationColor: linkColor,
-      ),
-      recognizer: TapGestureRecognizer()..onTap = () => _openUrl(url),
-    ));
+    out.add(_tappable(url, style, opts.linkColor, () => _openUrl(url),
+        opts.recognizerSink));
     // Ponctuation finale rattachée au texte normal.
     if (url.length < raw.length) {
       out.add(TextSpan(text: raw.substring(url.length), style: style));
@@ -148,7 +235,56 @@ void _appendWithLinks(
     last = match.end;
   }
   if (last < text.length) {
-    _appendWithMentions(out, text.substring(last), style, mentions);
+    _appendWithEmails(out, text.substring(last), style, opts);
+  }
+}
+
+/// Deuxième tamis : les adresses e-mail, confiées au client mail du système.
+void _appendWithEmails(
+    List<InlineSpan> out, String text, TextStyle style, _SpanOptions opts) {
+  int last = 0;
+  for (final match in _emailRegExp.allMatches(text)) {
+    if (match.start > last) {
+      _appendWithAlanyaNumbers(
+          out, text.substring(last, match.start), style, opts);
+    }
+    final adresse = match.group(0)!;
+    out.add(_tappable(adresse, style, opts.linkColor, () => _openEmail(adresse),
+        opts.recognizerSink));
+    last = match.end;
+  }
+  if (last < text.length) {
+    _appendWithAlanyaNumbers(out, text.substring(last), style, opts);
+  }
+}
+
+/// Troisième tamis : les numéros Alanya.
+///
+/// Tout nombre isolé de la bonne longueur est retenu — y compris un « 250 »
+/// qui ne parlait que d'une quantité. Le choix est assumé : le tap coûte au
+/// pire un « Numéro indisponible », alors qu'exiger une écriture particulière
+/// raterait la façon dont les gens se passent réellement un numéro.
+void _appendWithAlanyaNumbers(
+    List<InlineSpan> out, String text, TextStyle style, _SpanOptions opts) {
+  final onTap = opts.onAlanyaNumber;
+  if (onTap == null) {
+    _appendWithMentions(out, text, style, opts.mentions);
+    return;
+  }
+
+  int last = 0;
+  for (final match in _alanyaNumberRegExp.allMatches(text)) {
+    if (match.start > last) {
+      _appendWithMentions(
+          out, text.substring(last, match.start), style, opts.mentions);
+    }
+    final numero = match.group(0)!;
+    out.add(_tappable(numero, style, opts.linkColor, () => onTap(numero),
+        opts.recognizerSink));
+    last = match.end;
+  }
+  if (last < text.length) {
+    _appendWithMentions(out, text.substring(last), style, opts.mentions);
   }
 }
 
@@ -242,19 +378,29 @@ List<InlineSpan> parseRichSpans(
   TextStyle base, {
   Color? linkColor,
   MentionSpec? mentions,
+  void Function(String numero)? onAlanyaNumber,
+  List<GestureRecognizer>? recognizerSink,
 }) {
-  return _parse(text, base, linkColor ?? const Color(0xFF1B6EF3), mentions);
+  return _parse(
+    text,
+    base,
+    _SpanOptions(
+      linkColor: linkColor ?? const Color(0xFF1B6EF3),
+      mentions: mentions,
+      onAlanyaNumber: onAlanyaNumber,
+      recognizerSink: recognizerSink,
+    ),
+  );
 }
 
-List<InlineSpan> _parse(
-    String text, TextStyle style, Color linkColor, [MentionSpec? mentions]) {
+List<InlineSpan> _parse(String text, TextStyle style, _SpanOptions opts) {
   final spans = <InlineSpan>[];
   final buffer = StringBuffer();
 
   void flush() {
     if (buffer.isNotEmpty) {
-      // Au lieu d'un simple TextSpan, on détecte les liens dans ce segment.
-      _appendWithLinks(spans, buffer.toString(), style, linkColor, mentions);
+      // Au lieu d'un simple TextSpan, on passe ce segment aux tamis.
+      _appendWithLinks(spans, buffer.toString(), style, opts);
       buffer.clear();
     }
   }
@@ -269,7 +415,7 @@ List<InlineSpan> _parse(
         flush();
         final inner = text.substring(i + 1, close);
         // Analyse récursive → les marqueurs internes se combinent au style courant.
-        spans.addAll(_parse(inner, transform(style), linkColor, mentions));
+        spans.addAll(_parse(inner, transform(style), opts));
         i = close + 1;
         continue;
       }

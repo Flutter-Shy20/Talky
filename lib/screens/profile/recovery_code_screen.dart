@@ -9,6 +9,8 @@ import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/account/warning_banner.dart';
 import '../../widgets/common/status_chip.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Reconsultation du code de récupération.
 ///
@@ -43,7 +45,8 @@ class _RecoveryCodeScreenState extends State<RecoveryCodeScreen> {
       if (!mounted) return;
       setState(() => _code = code);
     } on TalkyException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error =
+          presenterErreur(context.l10n, e, domaine: ErrorDomain.profil));
     } catch (e, st) {
       AppLog.e('RecoveryCode', 'Lecture du code échouée', e, st);
       if (mounted) setState(() => _error = l10n.recoveryCodeRevealFailed);

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CupertinoIcons.video_camera_solid (U+F4CD) — voir callkit_ic_phone.xml pour
+  le repère.
+
+  Ce nom est celui du plugin, à dessein : `CallkitIncomingActivity` impose
+  `R.drawable.ic_video` au bouton « Accepter » dès que le type d'appel est
+  vidéo, sans passer par le layout. Le qualificatif `anydpi` prime sur les
+  drawable-*dpi de la librairie, ce qui substitue notre glyphe au sien sans
+  forker le plugin.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="34dp"
+    android:height="34dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M73 181Q73 153 77.5 148.5Q82 144 110 144H292Q320 144 324.5 148.5Q329 153 329 181V327Q329 355 324.5 359.5Q320 364 292 364H110Q82 364 77.5 359.5Q73 355 73 327ZM354 212L409 168Q424 157 435 171Q439 175 439 182V326Q439 333 433.5 338.5Q428 344 420 344Q413 344 409 340L354 296Q347 291 347 282V226Q347 217 354 212Z" />
+</vector>

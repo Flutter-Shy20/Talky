@@ -10,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/call_ui_theme.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/services/call/call_conf_routing.dart';
 import '../../widgets/calls/call_action_button.dart';
 import '../../widgets/calls/call_connecting_overlay.dart';
 import '../../widgets/common/app_avatar.dart';
@@ -108,9 +109,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     if (cs.isConference) {
       await cs.acceptConferenceInvite();
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
-      );
+      _openOngoingOrReport(cs);
       return;
     }
 
@@ -138,29 +137,41 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         callerInfo: callerInfo,
       );
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
-      );
+      _openOngoingOrReport(cs);
       return;
     }
 
     await cs.answerCall();
 
     if (!mounted) return;
+    _openOngoingOrReport(cs);
+  }
 
-    if (cs.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(cs.errorMessage!),
-        backgroundColor: AppColors.error,
-        duration: const Duration(seconds: 4),
-      ));
-      Navigator.of(context).maybePop();
+  /// Ouvre l'écran d'appel, ou referme en expliquant.
+  ///
+  /// `joinGroupCall` et `acceptConferenceInvite` avalent leurs erreurs et
+  /// repassent en `idle` : pousser l'écran sans vérifier donnait un « appel en
+  /// cours » à 00:00, sans média, sans message et sans fermeture automatique.
+  /// La branche 1-à-1 vérifiait déjà `errorMessage` ; les trois le font
+  /// maintenant, et le statut est vérifié en plus.
+  void _openOngoingOrReport(CallService cs) {
+    if (shouldOpenOngoingScreen(
+      callStatusName: cs.status.name,
+      errorMessage: cs.errorMessage,
+    )) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
+      );
       return;
     }
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
-    );
+    final message = cs.errorMessage ?? context.l10n.errorAcceptingCall;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: AppColors.error,
+      duration: const Duration(seconds: 4),
+    ));
+    Navigator.of(context).maybePop();
   }
 
   @override

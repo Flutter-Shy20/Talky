@@ -6,11 +6,13 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
 import '../../providers/admin_provider.dart';
-import '../../talky_api_client.dart';
 import '../../widgets/alanya_phone_field.dart';
 import '../../widgets/common/app_skeleton.dart';
 import 'admin_create_user_screen.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/errors/afficher_erreur.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class AdminReservedPhonesScreen extends StatefulWidget {
   const AdminReservedPhonesScreen({super.key});
@@ -78,18 +80,11 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
         _total = result.total;
         _page = result.page;
       });
-    } on TalkyException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.message);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = '$e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.loadErrorWithDetails('$e'))),
-      );
+      final texte = presenterErreur(context.l10n, e, domaine: ErrorDomain.admin);
+      setState(() => _error = texte);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
     } finally {
       if (mounted) {
         setState(() {
@@ -124,11 +119,9 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
       _phoneCtrl.clear();
       _labelCtrl.clear();
       await _load(page: 1);
-    } on TalkyException catch (e) {
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      afficherErreur(context, e, domaine: ErrorDomain.admin);
     }
   }
 
@@ -136,11 +129,9 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
     try {
       await context.read<AdminProvider>().removeReservedPhone(phone);
       await _load();
-    } on TalkyException catch (e) {
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      afficherErreur(context, e, domaine: ErrorDomain.admin);
     }
   }
 

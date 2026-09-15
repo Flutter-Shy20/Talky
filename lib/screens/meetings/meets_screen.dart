@@ -10,6 +10,7 @@ import '../../providers/auth_provider.dart';
 import '../../talky_models.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
+import '../../core/services/meeting/meeting_join_refusal.dart';
 import '../../core/services/meeting_service.dart';
 import '../../talky_api_client.dart';
 import '../../core/services/push_service.dart';
@@ -21,6 +22,8 @@ import 'participant_picker_screen.dart';
 import '../shared/schedule_screen.dart';
 import '../../core/theme/locale_controller.dart';
 import 'package:intl/intl.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class MeetsScreen extends StatefulWidget {
   const MeetsScreen({super.key});
@@ -179,35 +182,52 @@ class _MeetsScreenState extends State<MeetsScreen>
     final meetingService =
         Provider.of<MeetingService>(context, listen: false);
     final now = DateTime.now();
+    final me = context.read<AuthProvider>().currentUser;
+    final myName = me != null ? (me.nom.isNotEmpty ? me.nom : me.pseudo) : '';
 
-    try {
-      final me = context.read<AuthProvider>().currentUser;
-      final myName = me != null
-          ? (me.nom.isNotEmpty ? me.nom : me.pseudo)
-          : '';
+    // L'écran de réunion s'ouvre d'abord ; création, invitations, caméra et
+    // entrée dans la salle se font derrière lui. On retenait l'affichage le
+    // temps de trois requêtes, de l'ouverture du capteur vidéo et d'un
+    // aller-retour socket — plusieurs secondes de bouton mort après le clic,
+    // sans rien à l'écran pour dire que quelque chose se passait.
+    //
+    // `createAndJoin` pose le statut `joining` avant son premier `await` : la
+    // route est donc poussée sur une réunion déjà active, et `MeetingStatus`
+    // suffit à la refermer si l'ouverture échoue.
+    final ouverture = meetingService
+        .createAndJoin(
+          objet: context.l10n.meetingNamed(now.toString().substring(0, 16)),
+          startTime: now.toUtc().toIso8601String(),
+          room: 'mtg-${now.millisecondsSinceEpoch}',
+          myId: _myId,
+          myName: myName,
+        )
+        .then((_) => participants.isEmpty
+            ? null
+            : meetingService.inviteParticipants(
+                participants.map((u) => u.alanyaID).toList()));
 
-      await meetingService.createAndJoin(
-        objet: context.l10n.meetingNamed(now.toString().substring(0, 16)),
-        startTime: now.toUtc().toIso8601String(),
-        room: 'mtg-${now.millisecondsSinceEpoch}',
-        myId: _myId,
-        myName: myName,
-      );
+    // Le résultat n'est lu qu'au retour de l'écran, qui peut durer toute la
+    // réunion : sans ce preneur posé tout de suite, un échec remonterait
+    // entre-temps en exception asynchrone non gérée.
+    final echec =
+        ouverture.then<Object?>((_) => null, onError: (Object e) => e);
 
-      if (participants.isNotEmpty) {
-        final ids = participants.map((u) => u.alanyaID).toList();
-        await meetingService.inviteParticipants(ids);
-      }
+    await meetingService.navigateToMeetingUi(context);
 
-      if (!mounted) return;
-      await meetingService.navigateToMeetingUi(context);
-      if (mounted) _loadMeetings();
-    } catch (e) {
-      if (!mounted) return;
+    final erreur = await echec;
+    if (!mounted) return;
+    if (erreur != null) {
+      final message =
+          refusPourErreur(erreur) == MeetingJoinRefusal.sessionOccupee
+              ? context.l10n.meetingBlockedByCall
+              : presenterErreur(context.l10n, erreur,
+              domaine: ErrorDomain.reunion);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.cannotCreateMeeting('$e'))),
+        SnackBar(content: Text(message)),
       );
     }
+    _loadMeetings();
   }
 
   Future<void> _openSchedule() async {

@@ -22,6 +22,8 @@ import '../../widgets/alanya_phone_field.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/alanya_qr_view.dart';
 import 'qr_scanner_screen.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Diamètre du médaillon d'avatar qui déborde le haut de la carte.
 const double _kMedallionSize = 88;
@@ -166,9 +168,8 @@ class _QrCodeScreenState extends State<QrCodeScreen>
     unawaited(_creerCode());
   }
 
-  String _errorMessage(Object error) => error is TalkyException
-      ? error.message
-      : context.l10n.qrLoginNetworkError;
+  String _errorMessage(Object error) =>
+      presenterErreur(context.l10n, error, domaine: ErrorDomain.qr);
 
   // ── Actions ────────────────────────────────────────────────────────────
 

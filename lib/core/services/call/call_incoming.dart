@@ -51,11 +51,30 @@ extension CallIncoming on CallService {
     _remoteUserName = callerName;
     _remoteUserPhoto = normalizeBackendUrl(callerPhoto);
     _isVideo = isVideo;
-    _currentCallId = callId.isNotEmpty ? callId : null;
+    _adoptServerCallId(callId);
     _autoAnswerOnNextIncoming = true;
     _autoAnswerCallerId = callerId;
     _isAutoAnsweringFromPush = true;
     _clearIncomingPresentation(callId: callId.isNotEmpty ? callId : null);
+
+    // L'acceptation est connue : le filet de 55 s n'a plus lieu d'être. À son
+    // expiration il appelle `notifyCallEndedFromExternal` SANS
+    // `localOnlyIfIncoming`, donc il *refuse* un appel accepté resté en
+    // « entrant » — exactement le sort réservé aux appels de groupe jusqu'ici.
+    _cancelIncomingRingSafety();
+
+    final genre = acceptedSessionKind(isConference: isConf, roomId: roomId);
+
+    if (genre == AcceptedSessionKind.groupe) {
+      final salon = roomId!.trim();
+      _groupRoomId = salon;
+      _status = CallStatus.incoming;
+      _ensureRemoteIdentityResolved();
+      notify();
+      debugPrint('[CallService] ⚡ décrochage groupe depuis un push → joinGroupCall');
+      await _rejoindreGroupeDepuisPush(salon);
+      return;
+    }
 
     if (isConf) {
       final sessionId = (roomId != null && roomId.isNotEmpty)
@@ -94,6 +113,94 @@ extension CallIncoming on CallService {
       // _pendingOffer, il ne faut donc pas déclencher un teardown à tort).
       _armAwaitingOfferTimeout();
     }
+  }
+
+  /// Adopte un décrochage que le natif a enregistré sans que Flutter le sache.
+  ///
+  /// Depuis que `MainActivity` lit le décrochage dans son intent de lancement,
+  /// l'entrée CallKit passe à « acceptée » de façon synchrone, sans course. Mais
+  /// application en arrière-plan, le moteur Flutter est vivant et endormi : au
+  /// réveil il reprenait l'entrant — revendiquant la présentation et relançant
+  /// sa sonnerie sur un appel que l'utilisateur venait de décrocher.
+  ///
+  /// À interroger **avant** toute reprise. Rend `true` si l'appel a été adopté,
+  /// auquel cas l'appelant n'a plus rien à faire.
+  Future<bool> adoptNativeAcceptIfAny() async {
+    if (kIsWeb) return false;
+    final presentationId = _activeIncomingPresentationCallId;
+    final actif = await _callKit.getActiveCall();
+    if (!shouldAdoptNativeAccept(
+      statusIsIncoming: _status == CallStatus.incoming,
+      autoAnsweringFromPush: _isAutoAnsweringFromPush,
+      presentationId: presentationId,
+      activeCallId: actif?['callId'] as String?,
+      activeAccepted: actif?['isAccepted'] == true,
+    )) {
+      return false;
+    }
+    debugPrint(
+      '[CallService] ⚡ décrochage natif adopté au réveil: $presentationId',
+    );
+    await acceptIncomingCallFromPush(
+      callId: (actif!['callId'] as String?) ?? '',
+      callerId: (actif['callerId'] as String?) ?? '',
+      callerName: (actif['callerName'] as String?) ?? '',
+      callerPhoto: actif['callerPhoto'] as String?,
+      isVideo: actif['isVideo'] == true,
+      roomId: actif['roomId'] as String?,
+      sessionKind: actif['sessionKind'] as String?,
+      mode: actif['mode'] as String?,
+    );
+    return true;
+  }
+
+  /// Rejoint un appel de groupe accepté depuis une notification.
+  ///
+  /// `joinGroupCall` n'avait qu'un appelant dans toute l'application — le bouton
+  /// de l'écran entrant. Décrocher depuis la notification ne menait donc nulle
+  /// part : l'appel restait « entrant » jusqu'au refus du filet de sécurité.
+  ///
+  /// L'identité locale est posée par le fournisseur au démarrage
+  /// (`setLocalIdentity`). Si elle manque — session pas encore restaurée —, on
+  /// ne peut pas rejoindre : on laisse alors l'entrant se présenter et
+  /// l'utilisateur reprend la main, plutôt que d'attendre en silence.
+  Future<void> _rejoindreGroupeDepuisPush(String roomId) async {
+    final moi = _localUserId;
+    if (moi == null) {
+      debugPrint(
+        '[CallService] ** identité locale absente → décrochage groupe différé',
+      );
+      _isAutoAnsweringFromPush = false;
+      _autoAnswerOnNextIncoming = false;
+      _armIncomingRingSafety();
+      notify();
+      return;
+    }
+
+    // L'entrée CallKit de l'invitation porte le salon ; `joinGroupCall` en
+    // ouvrira une autre sous `group_$roomId`. Retirer la première, sinon deux
+    // entrées coexistent pour un seul appel.
+    await _callKit.endAll(callId: roomId);
+    await _ringtone.stop();
+
+    final invitant = _remoteUserId == null
+        ? null
+        : GroupParticipantInfo(
+            id: _remoteUserId.toString(),
+            name: (_remoteUserName?.isNotEmpty == true)
+                ? _remoteUserName!
+                : LocaleController.instance.l10n.participantFallback,
+            photo: _remoteUserPhoto,
+          );
+
+    await joinGroupCall(
+      roomId: roomId,
+      myId: moi,
+      myName: _localUserName,
+      myPhoto: _localUserPhoto,
+      isVideo: _isVideo,
+      callerInfo: invitant,
+    );
   }
 
   /// Vérifie qu'une notification d'appel entrant peut préparer l'écran entrant.
@@ -178,7 +285,7 @@ extension CallIncoming on CallService {
     _remoteUserName = callerName;
     _remoteUserPhoto = normalizeBackendUrl(callerPhoto);
     _isVideo = isVideo;
-    _currentCallId = callId.isNotEmpty ? callId : null;
+    _adoptServerCallId(callId);
 
     final isConf = isConferenceCallIncoming(
       sessionKind: sessionKind,
@@ -204,19 +311,19 @@ extension CallIncoming on CallService {
 
     _status = CallStatus.incoming;
     _ensureRemoteIdentityResolved();
-    // CallKit possède déjà l'UI en BG ; en FG (tap notif / preview) → Flutter.
+    // Ce chemin n'existe que parce que CallKit a une entrée : c'est lui qui
+    // possède l'entrant, sauf si l'application est au premier plan. On le lui
+    // dit explicitement plutôt que de s'en remettre au cache — au démarrage à
+    // froid, `main.dart` vient tout juste de lire cette entrée.
     final presentationId = callId.isNotEmpty ? callId : (_groupRoomId ?? '');
-    if (_isAppForeground) {
-      _claimIncomingPresentation(
-        presentationId,
-        IncomingPresentationOwner.flutterScreen,
-      );
-    } else {
-      _claimIncomingPresentation(
-        presentationId,
-        IncomingPresentationOwner.nativeCallKit,
-      );
-    }
+    _resolveIncomingPresentation(
+      callId: presentationId,
+      intent: IncomingPresentationIntent.prepareFromCallKit,
+      callKitActive: true,
+    );
+    // Même règle que sur les chemins socket : jamais de statut « entrant »
+    // sans horloge locale pour le débloquer.
+    _armIncomingRingSafety();
     notify();
     // Filet anti-fantôme (1-à-1) : si l'offre WebRTC de confirmation n'arrive
     // jamais via le socket, on démonte au lieu de laisser un écran d'appel entrant
@@ -346,7 +453,19 @@ extension CallIncoming on CallService {
         _confSessionId = resolvedCallId;
       }
       _apiClient.sendSocketEvent(SocketEvents.callConfReject, {});
-      _terminateConference();
+      await _terminateConference();
+      return;
+    }
+
+    // Un salon de groupe n'est pas un appel à deux : le poster faisait
+    // réécrire par le serveur le dernier appel à deux entre les mêmes
+    // personnes. Voir `shouldPostRejectToServer` — le refus d'un groupe est
+    // purement local, comme `rejectGroupCall` le documente depuis toujours.
+    if (!shouldPostRejectToServer(resolvedCallId)) {
+      debugPrint(
+        '[CallService] refus local (pas un appel à deux): $resolvedCallId',
+      );
+      await _terminateCall();
       return;
     }
 
@@ -400,20 +519,24 @@ extension CallIncoming on CallService {
           mode: action.mode,
         );
         break;
+      // Refus explicite et sonnerie expirée arrivent tous deux ici. Seul le
+      // premier se signale au serveur — voir `reportForTerminalAction`.
       case IncomingCallActionType.decline:
-        await rejectIncomingCallFromPush(
-          callerId: action.callerId,
-          callId: action.callId,
-          isConference: action.isConference,
-        );
-        break;
       case IncomingCallActionType.timeout:
-        // Timeout CallKit : refus compte (sonnerie expirée).
-        await rejectIncomingCallFromPush(
-          callerId: action.callerId,
-          callId: action.callId,
-          isConference: action.isConference,
-        );
+        if (reportForTerminalAction(action.action.name) ==
+            TerminalCallReport.refus) {
+          await rejectIncomingCallFromPush(
+            callerId: action.callerId,
+            callId: action.callId,
+            isConference: action.isConference,
+          );
+        } else {
+          await notifyCallEndedFromExternal(
+            callId: action.callId,
+            callerId: action.callerId,
+            localOnlyIfIncoming: true,
+          );
+        }
         break;
       case IncomingCallActionType.ended:
         // Dismiss OS / nettoyage local — ne pas reject_call (autre device peut
@@ -454,15 +577,45 @@ extension CallIncoming on CallService {
       return;
     }
 
+    // `reconnecting` compte comme un appel vivant : sans lui, un `call_ended`
+    // FCM reçu pendant une reconnexion tombait dans la branche générique, qui
+    // remet l'état à zéro sans libérer le micro, la caméra ni la session.
     if (_status == CallStatus.outgoing ||
         _status == CallStatus.connecting ||
-        _status == CallStatus.connected) {
-      if (id.isEmpty || id == _currentCallId) {
+        _status == CallStatus.connected ||
+        _status == CallStatus.reconnecting) {
+      // `id` peut venir du serveur (FCM call_ended) comme de CallKit : sur un
+      // appel sortant ce sont deux identifiants différents.
+      // Troisième terme : sortant dont le serveur n'a pas encore annoncé
+      // l'identifiant — ni `_currentCallId` ni `_callKitCallId` ne peuvent
+      // désigner l'appel 2169 dont parle le push, et le refus de l'appelé
+      // n'arrivait donc jamais jusqu'au teardown.
+      if (id.isEmpty ||
+          _matchesCurrentCallId(id) ||
+          acceptsOutgoingTerminalEvent(
+            callStatusName: _status.name,
+            eventCallId: id,
+            currentCallId: _currentCallId,
+            currentCallIdIsLocal: !_serverCallIdKnown,
+          )) {
         await endCall();
-      } else {
-        _markTerminalCallId(id);
-        await _terminateCall();
+        return;
       }
+      // Un `call_ended` qui désigne un AUTRE appel ne touche pas à celui-ci.
+      //
+      // Il tombait jusqu'ici dans un teardown complet : un push en retard —
+      // celui de l'appel précédent, que le serveur envoie sans priorité et avec
+      // une validité de 24 h — raccrochait la communication en cours. Même
+      // famille que `call_ended` de groupe et `meeting:ended`, qui ont leur
+      // garde depuis l'audit ; ce point d'entrée-là avait été manqué.
+      //
+      // On le marque terminal quand même : c'est ce qui empêche son écran
+      // fantôme de se rouvrir, et c'est tout ce qu'il y a à en faire.
+      debugPrint(
+        '[CallService] 🛡 call_ended ignoré: $id ne désigne pas l\'appel en cours',
+      );
+      _markOneTerminalCallId(id);
+      await _callKit.endAll(callId: id);
       return;
     }
 
@@ -572,12 +725,21 @@ extension CallIncoming on CallService {
     _pendingEndCalls.clear();
     for (final payload in pending) {
       debugPrint('[CallService] 🔁 Rejeu end_call en file → $payload');
-      try {
-        _apiClient.sendSocketEvent(SocketEvents.endCall, payload);
-      } catch (e) {
-        debugPrint('[CallService] rejeu end_call échoué: $e');
-        _pendingEndCalls.add(payload);
-      }
+      // Accusé ici aussi : un rejeu perdu se perd définitivement, puisque
+      // c'est déjà le filet. Sans accusé il repartait sur le socket fraîchement
+      // authentifié en espérant qu'il tienne.
+      unawaited(
+        _apiClient
+            .sendSocketEventAcked(SocketEvents.endCall, payload)
+            .then((accuse) {
+          if (accuse) return;
+          debugPrint('[CallService] rejeu end_call sans accusé → remis en file');
+          _pendingEndCalls.add(payload);
+        }).catchError((e) {
+          debugPrint('[CallService] rejeu end_call échoué: $e');
+          _pendingEndCalls.add(payload);
+        }),
+      );
     }
   }
 }

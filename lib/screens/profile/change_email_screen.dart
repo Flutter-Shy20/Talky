@@ -7,8 +7,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/validators.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
-import '../../talky_api_client.dart';
 import '../../widgets/account/warning_banner.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Wizard guidé en 2 étapes : nouvelle adresse → code OTP.
 class ChangeEmailScreen extends StatefulWidget {
@@ -71,16 +72,10 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _otpFocus.requestFocus();
       });
-    } on TalkyException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = context.l10n.errorColon('$e');
+        _error = presenterErreur(context.l10n, e, domaine: ErrorDomain.profil);
         _loading = false;
       });
     }
@@ -100,16 +95,10 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
         SnackBar(content: Text(context.l10n.changeEmailSuccess)),
       );
       Navigator.pop(context, true);
-    } on TalkyException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = context.l10n.errorColon('$e');
+        _error = presenterErreur(context.l10n, e, domaine: ErrorDomain.profil);
         _loading = false;
       });
     }

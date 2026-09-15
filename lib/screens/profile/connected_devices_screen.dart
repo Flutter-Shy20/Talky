@@ -13,6 +13,8 @@ import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/account/warning_banner.dart';
 import '../../widgets/common/common.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Tous les appareils sur lesquels le compte est ouvert — pas seulement ceux
 /// ajoutés par QR — avec déconnexion à distance ligne par ligne.
@@ -139,7 +141,7 @@ class _ConnectedDevicesScreenState extends State<ConnectedDevicesScreen> {
       if (!mounted) return;
       setState(() => _revocations.remove(appareil.id));
       _afficher(
-        e is TalkyException ? e.message : context.l10n.qrLoginNetworkError,
+        presenterErreur(context.l10n, e, domaine: ErrorDomain.qr),
         AppColors.error,
       );
     }

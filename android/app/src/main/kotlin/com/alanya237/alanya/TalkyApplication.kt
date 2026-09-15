@@ -3,7 +3,10 @@ package com.alanya237.alanya
 import android.app.Application
 import android.content.SharedPreferences
 import android.util.Log
+import com.hiennv.flutter_callkit_incoming.CallkitConstants
+import com.hiennv.flutter_callkit_incoming.CallkitEventCallback
 import com.hiennv.flutter_callkit_incoming.CallkitNotificationService
+import com.hiennv.flutter_callkit_incoming.FlutterCallkitIncomingPlugin
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -32,13 +35,45 @@ class TalkyApplication : Application() {
             if (key == KEY_ACTIVE) onActiveCallsChanged()
         }
 
+    /**
+     * Distingue un refus d'une expiration — voir [CallDeclineRegistry].
+     *
+     * Le registre du plugin ne garde que des références faibles : ce champ est
+     * la référence forte obligatoire, comme pour [activeCallsListener].
+     */
+    private val callkitEventCallback = object : CallkitEventCallback {
+        override fun onCallEvent(
+            event: CallkitEventCallback.CallEvent,
+            callData: android.os.Bundle,
+        ) {
+            if (event != CallkitEventCallback.CallEvent.DECLINE) return
+            // Lecture directe de la clé plutôt que `Data.fromBundle` : celui-ci
+            // déréférence `extra` sans garde de nullité et lèverait sur un
+            // bundle incomplet.
+            val id = callData.getString(CallkitConstants.EXTRA_CALLKIT_ID, "").trim()
+            if (id.isEmpty()) return
+            Log.i(TAG, "refus utilisateur explicite id=$id")
+            CallDeclineRegistry.markDeclined(id)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
+        // AVANT tout démarrage de Flutter : le plugin flutter_secure_storage
+        // bascule définitivement sur son chiffrement hérité si l'ouverture du
+        // magasin chiffré échoue au premier accès, et toute lecture lève alors
+        // BadPaddingException. Voir SecureStorageRepair.
+        if (SecureStorageRepair.verifyAndRepair(this)) {
+            Log.w(TAG, "magasin sécurisé réparé — la session précédente est perdue")
+        }
         callkitPrefs = getSharedPreferences(CALLKIT_PREFS, MODE_PRIVATE)
         activeCallsSnapshot = readActiveCalls()
         callkitPrefs.registerOnSharedPreferenceChangeListener(activeCallsListener)
         Log.i(TAG, "CallKit ACTIVE_CALLS listener armé (snapshot=${activeCallsSnapshot.length()})")
         CallIncomingHelper.ensureInitialized(this)
+        // Avant tout affichage : c'est ce rappel qui permettra de ne pas
+        // confondre un refus avec une notification expirée.
+        FlutterCallkitIncomingPlugin.registerEventCallback(callkitEventCallback)
     }
 
     private fun onActiveCallsChanged() {
@@ -103,9 +138,20 @@ class TalkyApplication : Application() {
             }
             if (stillThere) continue
 
-            // Appel retiré : annuler sa notification d'appel en cours si elle
-            // existe (accepté puis terminé) — évite la notif fantôme.
+            // Appel retiré : annuler ses DEUX notifications possibles.
+            //
+            // `cancelOngoingNotification` vise `("ongoing_$id").hashCode()` —
+            // l'appel en cours. La notification d'appel ENTRANT, elle, porte
+            // `id.hashCode()`, et personne ne l'annulait sur ce chemin :
+            // `CallkitIncomingBroadcastReceiver` s'en remet au gestionnaire du
+            // plugin, qui est nul tant qu'aucun moteur Flutter n'existe.
+            //
+            // Elle survivait donc au refus, jusqu'à son expiration de 40 s. Et
+            // pendant ces 40 s, retaper « Accepter » relançait toute la chaîne
+            // d'acceptation : l'application répondait automatiquement à un appel
+            // que l'utilisateur venait de refuser.
             CallIncomingHelper.cancelOngoingNotification(this, id)
+            CallIncomingHelper.clearIncomingNotification(this, id)
 
             if (CallDismissRegistry.consumeIfProgrammatic(id)) {
                 Log.i(TAG, "ACTIVE_CALLS: dismiss programmatique id=$id (pas de reject)")
@@ -126,8 +172,33 @@ class TalkyApplication : Application() {
                 Log.w(TAG, "ACTIVE_CALLS: retrait sans callerId id=$id")
                 continue
             }
-            Log.i(TAG, "ACTIVE_CALLS: refus/timeout détecté caller=$callerId callId=$callId")
-            CallRejectHelper.enqueueAndPost(this, callerId, callId)
+            // Refus explicite ou notification expirée ? Les deux se présentent
+            // ici à l'identique — une entrée a disparu — et on postait un refus
+            // dans les deux cas. Le serveur écrivait alors « rejeté » cinq
+            // secondes avant que son propre minuteur n'ait écrit « sans
+            // réponse » : un appel qu'on n'a pas entendu s'inscrivait comme
+            // raccroché au nez du correspondant, chez les deux.
+            //
+            // Une expiration n'a rien à signaler : le minuteur serveur de 45 s
+            // la classe correctement, et lui seul sait le faire.
+            if (CallDeclineRegistry.consumeIfDeclined(id)) {
+                // Un salon de groupe (`group_…`) ou une session (`conf_…`) n'est
+                // pas un appel à deux : posté sur /calls/reject, il faisait
+                // réécrire par le serveur le dernier appel à deux entre les
+                // mêmes personnes. Le refus d'un groupe est purement local.
+                if (callId != null && !callId.matches(Regex("^\\d+$"))) {
+                    Log.i(TAG, "ACTIVE_CALLS: refus local (pas un appel à deux) callId=$callId")
+                } else {
+                    Log.i(TAG, "ACTIVE_CALLS: refus utilisateur caller=$callerId callId=$callId")
+                    CallRejectHelper.enqueueAndPost(this, callerId, callId)
+                }
+            } else {
+                Log.i(
+                    TAG,
+                    "ACTIVE_CALLS: entrée expirée callId=$callId — " +
+                        "aucun refus posté, le minuteur serveur tranche",
+                )
+            }
             CallNativeBridge.notifyCallEnded(callId, callerId)
         }
     }

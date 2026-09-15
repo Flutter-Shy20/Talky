@@ -144,10 +144,11 @@ class ConversationSync {
   /// manqué). Utilise POST /messages/sync avec curseur 0 (= msgID > 0).
   Future<void> bootstrapEmptyConversationMessages() async {
     if (_myId() == 0) return;
+    var ingested = false;
     var guard = 0;
     while (guard++ < 20) {
       final cursors = await _emptyConversationBootstrapCursors();
-      if (cursors.isEmpty) return;
+      if (cursors.isEmpty) break;
       debugPrint(
         '[ConversationSync] bootstrap ${cursors.length} conv(s) sans messages locaux',
       );
@@ -163,6 +164,7 @@ class ConversationSync {
           final affected =
               await _ingestSyncMessages(maps, prefetchMedia: true);
           if (affected.isNotEmpty) {
+            ingested = true;
             await _recomputeMany(affected);
           }
         }
@@ -179,7 +181,16 @@ class ConversationSync {
       if (c.lastMessageAt == null) continue;
       if (await _dao.maxServerMsgId(c.conversID) > 0) continue;
       await syncMessages(c.conversID);
+      ingested = true;
     }
+
+    // Les pages ci-dessus s'arrêtent aux messages les plus anciens (l'API trie
+    // par msgID croissant) et [_emptyConversationBootstrapCursors] ne redemande
+    // que les conversations restées à zéro message : une conversation servie à
+    // moitié sort des curseurs dès sa première page et n'y revient jamais. Ce
+    // delta la reprend à son curseur — sans lui, son historique restait
+    // tronqué jusqu'au sync liste suivant (5 min, cf. ChatSyncTimer).
+    if (ingested) await syncGlobalDelta();
   }
 
   Future<Map<int, int>> _emptyConversationBootstrapCursors() async {

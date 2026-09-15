@@ -12,6 +12,8 @@ import '../core/utils/alanya_phone_formatter.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
 import '../core/theme/locale_controller.dart';
+import '../core/errors/app_error.dart';
+import '../core/errors/error_presenter.dart';
 
 class AuthProvider extends ChangeNotifier {
   final TalkyApiClient _apiClient;
@@ -258,12 +260,11 @@ class AuthProvider extends ChangeNotifier {
       await _storage.saveUser(_currentUser!);
       currentSessionEndReason = SessionEndReason.none;
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
-    } on TalkyException catch (e) {
-      _error = e.message;
-      debugPrint('[AuthProvider] Login TalkyException: ${e.message} (Status: ${e.statusCode})');
     } catch (e) {
-      _error = LocaleController.instance.l10n.anErrorOccurred('$e');
-      debugPrint('[AuthProvider] Login Exception: $e');
+      // Le message du serveur ne va plus à l'écran : c'est de la prose
+      // française non traduite, parfois technique. Le presenter choisit un
+      // texte prévu à partir du code, et journalise le détail.
+      _error = presenterErreurGlobale(e, domaine: ErrorDomain.auth);
     } finally {
       _setLoading(false);
     }
@@ -293,12 +294,11 @@ class AuthProvider extends ChangeNotifier {
       await _storage.saveUser(_currentUser!);
       currentSessionEndReason = SessionEndReason.none;
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
-    } on TalkyException catch (e) {
-      _error = e.message;
-      debugPrint('[AuthProvider] LoginQr TalkyException: ${e.message} (Status: ${e.statusCode})');
     } catch (e) {
-      _error = LocaleController.instance.l10n.anErrorOccurred('$e');
-      debugPrint('[AuthProvider] LoginQr Exception: $e');
+      // Le message du serveur ne va plus à l'écran : c'est de la prose
+      // française non traduite, parfois technique. Le presenter choisit un
+      // texte prévu à partir du code, et journalise le détail.
+      _error = presenterErreurGlobale(e, domaine: ErrorDomain.auth);
     } finally {
       _setLoading(false);
     }
@@ -355,12 +355,11 @@ class AuthProvider extends ChangeNotifier {
       currentSessionEndReason = SessionEndReason.none;
       notifyListeners();
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
-    } on TalkyException catch (e) {
-      _error = e.message;
-      debugPrint('[AuthProvider] Register TalkyException: ${e.message} (Status: ${e.statusCode})');
     } catch (e) {
-      _error = LocaleController.instance.l10n.anErrorOccurred('$e');
-      debugPrint('[AuthProvider] Register Exception: $e');
+      // Le message du serveur ne va plus à l'écran : c'est de la prose
+      // française non traduite, parfois technique. Le presenter choisit un
+      // texte prévu à partir du code, et journalise le détail.
+      _error = presenterErreurGlobale(e, domaine: ErrorDomain.auth);
     } finally {
       _setLoading(false);
     }

@@ -1,15 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../secure_storage_guard.dart';
 
 /// Buffer messages notification chiffré (remplace SharedPreferences en clair).
 class NotificationBufferStore {
   NotificationBufferStore._();
 
   static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: kSecureStorageAndroidOptions,
   );
   static const _maxMessages = 7;
 
@@ -18,7 +21,10 @@ class NotificationBufferStore {
   static String _key(int conversationId) => 'notif_buf_$conversationId';
 
   static Future<List<Map<String, String>>> read(int conversationId) async {
-    final raw = await _storage.read(key: _key(conversationId));
+    final raw = await SecureStorageGuard.readString(
+      _storage,
+      _key(conversationId),
+    );
     if (raw == null || raw.isEmpty) return [];
     try {
       final decoded = jsonDecode(raw) as List;
@@ -34,6 +40,7 @@ class NotificationBufferStore {
     required int conversationId,
     required String sender,
     required String body,
+    String avatar = '',
   }) async {
     final completer = Completer<List<Map<String, String>>>();
     final previous = _appendChain;
@@ -44,6 +51,7 @@ class NotificationBufferStore {
             conversationId: conversationId,
             sender: sender,
             body: body,
+            avatar: avatar,
           ),
         );
       } catch (e, st) {
@@ -57,27 +65,39 @@ class NotificationBufferStore {
     required int conversationId,
     required String sender,
     required String body,
+    String avatar = '',
   }) async {
     final messages = await read(conversationId);
     messages.add({
       'sender': sender,
       'body': body,
       'ts': DateTime.now().toUtc().toIso8601String(),
+      // Photo de l'auteur de CETTE ligne : en groupe, chaque ligne a la sienne.
+      // Clé omise si vide — les entrées écrites avant cette version se relisent
+      // donc sans changement.
+      if (avatar.isNotEmpty) 'avatar': avatar,
     });
     final trimmed = messages.length > _maxMessages
         ? messages.sublist(messages.length - _maxMessages)
         : messages;
-    await _storage.write(
-      key: _key(conversationId),
-      value: jsonEncode(trimmed),
-    );
+    try {
+      await SecureStorageGuard.writeString(
+        _storage,
+        _key(conversationId),
+        jsonEncode(trimmed),
+      );
+    } catch (e) {
+      // Un buffer de notification est jetable : mieux vaut afficher la
+      // notification avec la liste en mémoire que faire échouer le handler FCM.
+      debugPrint('[NotificationBuffer] écriture conv=$conversationId échouée : $e');
+    }
     return trimmed;
   }
 
   static Future<void> clear(int conversationId) async {
     final previous = _appendChain;
     _appendChain = previous.then((_) async {
-      await _storage.delete(key: _key(conversationId));
+      await SecureStorageGuard.deleteKey(_storage, _key(conversationId));
     });
     await _appendChain;
   }

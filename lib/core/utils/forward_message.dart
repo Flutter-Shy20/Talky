@@ -8,16 +8,19 @@ import 'media_album.dart';
 import '../theme/locale_controller.dart';
 import '../services/media_expiry_policy.dart';
 
+/// Bilan d'un transfert vers plusieurs conversations.
+///
+/// Ne porte plus de liste `errors` : elle collectait des `e.toString()` que
+/// personne n'a jamais lus — ni l'écran, ni les journaux. Le détail de chaque
+/// échec part au `debugPrint` du dépôt, à l'endroit où il se produit.
 class ForwardResult {
   const ForwardResult({
     required this.succeeded,
     required this.failed,
-    this.errors = const [],
   });
 
   final int succeeded;
   final int failed;
-  final List<String> errors;
 
   bool get hasSuccess => succeeded > 0;
 }

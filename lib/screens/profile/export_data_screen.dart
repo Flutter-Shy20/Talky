@@ -13,6 +13,8 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/profile/settings_group.dart';
 import 'delete_account_screen.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Export RGPD phase 1 (sync) et phase 2 (async avec messages).
 class ExportDataScreen extends StatefulWidget {
@@ -55,7 +57,7 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportFailed('$e'))),
+        SnackBar(content: Text(presenterErreur(l10n, e, domaine: ErrorDomain.profil))),
       );
     } finally {
       if (mounted) setState(() => _exportingPhase1 = false);
@@ -80,7 +82,7 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportFailed('$e'))),
+        SnackBar(content: Text(presenterErreur(l10n, e, domaine: ErrorDomain.profil))),
       );
     } finally {
       if (mounted) setState(() => _exportingPhase2 = false);
@@ -124,7 +126,7 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportFailed('$e'))),
+        SnackBar(content: Text(presenterErreur(l10n, e, domaine: ErrorDomain.profil))),
       );
     } finally {
       if (mounted) setState(() => _downloading = false);

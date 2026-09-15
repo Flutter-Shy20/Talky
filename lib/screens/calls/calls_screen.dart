@@ -14,6 +14,7 @@ import '../../core/theme/app_theme.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../core/services/call/call_history_rules.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'call_detail_screen.dart';
 import 'keypad_screen.dart';
@@ -33,6 +34,8 @@ class _CallsScreenState extends State<CallsScreen> {
   List<Call> _recentCalls = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
+  /// Rafraîchissement en cours — voir `canLoadMorePage`.
+  bool _isRefreshing = false;
   bool _hasMore = true;
   // !! ID mis en cache — pas de FutureBuilder dans chaque ListTile
   int _myId = 0;
@@ -110,6 +113,11 @@ class _CallsScreenState extends State<CallsScreen> {
       .toList();
 
   Future<void> _loadRecentCalls() async {
+    // Le rafraîchissement et le chargement de page suivante écrivent tous deux
+    // `_hasMore`, et `_isLoading` n'était posé que si le cache local était vide :
+    // les deux pouvaient se courir après, le plus lent écrasant la conclusion du
+    // plus rapide. Ce drapeau-ci les exclut vraiment l'un de l'autre.
+    _isRefreshing = true;
     _hasMore = true; // un refresh rouvre la pagination fermée par une erreur
     // 1) Hydrate immédiatement depuis le cache local (instantané, offline-safe).
     try {
@@ -156,13 +164,23 @@ class _CallsScreenState extends State<CallsScreen> {
           _hasMore = false;
         });
       }
+    } finally {
+      _isRefreshing = false;
     }
   }
 
   /// Page suivante : on repart du plus ancien appel déjà en main. Le curseur
   /// porte sur la liste complète (masqués compris) pour ne pas sauter de ligne.
   Future<void> _loadMoreCalls() async {
-    if (_isLoadingMore || !_hasMore || _isLoading || _recentCalls.isEmpty) return;
+    if (!canLoadMorePage(
+      isLoadingMore: _isLoadingMore,
+      isLoading: _isLoading,
+      isRefreshing: _isRefreshing,
+      hasMore: _hasMore,
+      hasCalls: _recentCalls.isNotEmpty,
+    )) {
+      return;
+    }
     setState(() => _isLoadingMore = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
@@ -335,12 +353,45 @@ class _CallsScreenState extends State<CallsScreen> {
             return (otherUser?.nom ?? '').toLowerCase().contains(_search);
           }).toList();
     if (filtered.isEmpty) {
-      return EmptyState(
-        icon: Icons.call_outlined,
-        title: _search.isEmpty ? context.l10n.noRecentCalls : context.l10n.noResults,
-        message: _search.isEmpty
-            ? context.l10n.yourPastAndReceivedCallsWill
-            : context.l10n.tryAnotherName,
+      // Écran vide ne veut pas dire historique épuisé : masquer localement la
+      // première page, ou y chercher un nom qui n'apparaît qu'à la suivante,
+      // remplaçait la liste par un cul-de-sac — plus de défilement pour
+      // appeler la page suivante, plus de tirer-pour-rafraîchir. On garde donc
+      // la surface défilable, et on continue de dérouler l'historique tant
+      // qu'il en reste : aucun geste ne pourrait révéler une correspondance
+      // située trois pages plus loin.
+      final keepsLoading = _hasMore && _recentCalls.isNotEmpty;
+      if (keepsLoading && !_isLoadingMore) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _loadMoreCalls();
+        });
+      }
+      return RefreshIndicator(
+        onRefresh: _loadRecentCalls,
+        child: CustomScrollView(
+          controller: _scrollCtrl,
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyState(
+                icon: Icons.call_outlined,
+                title:
+                    _search.isEmpty ? context.l10n.noRecentCalls : context.l10n.noResults,
+                message: _search.isEmpty
+                    ? context.l10n.yourPastAndReceivedCallsWill
+                    : context.l10n.tryAnotherName,
+                action: keepsLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : null,
+              ),
+            ),
+          ],
+        ),
       );
     }
     final colors = context.colors;
@@ -366,9 +417,16 @@ class _CallsScreenState extends State<CallsScreen> {
           }
           final call = filtered[index];
           // !! Calcul direct — pas de FutureBuilder
-          final otherUser = call.idCaller != _myId ? call.caller : call.receiver;
+          // `idCaller != _myId` dit déjà que l'appel est entrant : le journal
+          // affichait pourtant la flèche « sortant » pour tout appel non manqué.
+          final isIncoming = call.idCaller != _myId;
+          final otherUser = isIncoming ? call.caller : call.receiver;
           final isMissed = call.isMissed;
           final isVideo = call.isVideo;
+          final direction = callDirection(
+            isMissed: isMissed,
+            isIncoming: isIncoming,
+          );
 
           return ListTile(
             contentPadding: const EdgeInsets.symmetric(
@@ -395,7 +453,11 @@ class _CallsScreenState extends State<CallsScreen> {
               child: Row(
                 children: [
                   Icon(
-                    isMissed ? Icons.call_missed : Icons.call_made,
+                    switch (direction) {
+                      CallDirection.missed => Icons.call_missed,
+                      CallDirection.incoming => Icons.call_received,
+                      CallDirection.outgoing => Icons.call_made,
+                    },
                     size: 16,
                     color: isMissed ? colors.error : context.semantic.success,
                   ),
@@ -403,7 +465,7 @@ class _CallsScreenState extends State<CallsScreen> {
                   Flexible(
                     child: Text(
                       '${_formatDate(call.createdAt)} • ${isVideo ? context.l10n.video2 : context.l10n.audio2}'
-                      '${call.duree != null && call.duree! > 0 ? " • ${call.formattedDuration}" : ""}',
+                      '${call.hasDuration ? " • ${call.formattedDuration}" : ""}',
                       style: context.text.bodyMedium,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -472,10 +534,17 @@ class _CallsScreenState extends State<CallsScreen> {
     try {
       final date = DateTime.parse(dateStr).toLocal();
       final now = DateTime.now();
+      final hm = '${date.hour.toString().padLeft(2, '0')}:'
+          '${date.minute.toString().padLeft(2, '0')}';
       if (date.day == now.day && date.month == now.month && date.year == now.year) {
-        return context.l10n.todayTimeShort('${date.hour}:${date.minute.toString().padLeft(2, '0')}');
+        return context.l10n.todayTimeShort(hm);
       }
-      return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+      // L'année manquait, et l'heure n'avait pas son zéro de tête : un appel
+      // de mars 2025 était indistinguable d'un appel de mars 2026, et
+      // « 3/3 9:05 » ne s'alignait pas avec « 3/3 14:05 ». L'écran de détail
+      // utilise déjà `dateAtTimeFull` — c'est la même donnée, elle mérite la
+      // même forme.
+      return context.l10n.dateAtTimeFull(date.day, date.month, date.year, hm);
     } catch (_) {
       return context.l10n.recently;
     }

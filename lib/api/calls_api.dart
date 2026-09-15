@@ -7,11 +7,15 @@ extension CallsApi on TalkyApiClient {
   ///
   /// [before] = idCall du plus ancien appel déjà en main : la réponse reprend
   /// juste en dessous. Une page plus courte que [limit] signale la fin.
+  ///
+  /// Le curseur est transmis tel quel dès qu'il existe — voir `sendsCursor`. Le
+  /// filtrer sur `> 0` confondait un `idCall` à 0 avec « pas de curseur » et
+  /// défaisait la protection que le serveur applique sur un curseur inconnu.
   Future<List<dynamic>> getCallHistory({int? before, int limit = 50}) async {
     final uri = Uri.parse('${TalkyApiClient.baseUrl}/calls').replace(
       queryParameters: {
         'limit': '$limit',
-        if (before != null && before > 0) 'before': '$before',
+        if (sendsCursor(before)) 'before': '$before',
       },
     );
     final data = await _handleRequest(() => _client.get(uri, headers: _headers));

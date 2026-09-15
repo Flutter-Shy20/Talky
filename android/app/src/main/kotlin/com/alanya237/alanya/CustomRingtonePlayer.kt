@@ -52,8 +52,20 @@ object CustomRingtonePlayer {
                 setDataSource(filePath)
                 isLooping = true
                 setOnPreparedListener { it.start() }
-                setOnErrorListener { _, what, extra ->
-                    Log.e(TAG, "MediaPlayer error what=$what extra=$extra")
+                setOnErrorListener { mp, what, extra ->
+                    // L'erreur était consommée sans rien libérer : `player`
+                    // restait non nul, et le `start()` suivant sortait sur
+                    // « déjà en lecture ». L'appel entrant d'après était donc
+                    // silencieux, jusqu'au prochain stop().
+                    Log.e(TAG, "MediaPlayer error what=$what extra=$extra — libération")
+                    if (player === mp) {
+                        player = null
+                    }
+                    try {
+                        mp.release()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "release après erreur: ${e.message}")
+                    }
                     true
                 }
                 prepareAsync()

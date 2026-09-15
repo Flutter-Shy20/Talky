@@ -58,7 +58,49 @@ PipLayoutBounds computePipBounds({
   );
 }
 
+/// Dimensions de la fenêtre flottante globale — celle qui remplace le bandeau
+/// quand un appel vidéo est minimisé. Un peu plus grande que le PiP de l'écran
+/// d'appel : elle porte le visage du correspondant, et non plus sa propre
+/// image en repère.
+const double kFloatingWindowWidth = 120;
+const double kFloatingWindowHeight = 180;
+
+/// Bornes de la fenêtre flottante : tout l'écran, moins les zones sûres.
+///
+/// [computePipBounds] réserve la barre du haut et les contrôles du bas de
+/// l'écran d'appel ; ils n'existent pas ici, la fenêtre flottant au-dessus de
+/// n'importe quel écran de l'application. Seules les zones sûres comptent —
+/// encoche, barre d'état, barre de navigation.
+PipLayoutBounds computeFloatingWindowBounds({
+  required Size screenSize,
+  required EdgeInsets safeArea,
+}) {
+  const margin = AppSpacing.md;
+  return PipLayoutBounds(
+    minX: margin,
+    minY: safeArea.top + margin,
+    maxX: screenSize.width - kFloatingWindowWidth - margin,
+    maxY: screenSize.height -
+        safeArea.bottom -
+        kFloatingWindowHeight -
+        margin,
+  );
+}
+
 /// Position par défaut : coin supérieur droit.
+/// Clé de l'enfant du PiP, pour l'`AnimatedSwitcher`.
+///
+/// Elle valait `ValueKey(identityHashCode(child))`, or l'enfant est reconstruit
+/// à chaque build : la clé changeait donc à chaque image. La transition se
+/// rejouait sans fin et le rendu vidéo était détruit puis recréé en boucle —
+/// avec un `notify()` par seconde pour la durée et un autre toutes les 350 ms
+/// pour le détecteur de locuteur, le PiP clignotait en permanence.
+///
+/// Ce qui doit déclencher la transition, c'est le *changement de nature* de
+/// l'enfant — passer de la vidéo à l'avatar quand la caméra se coupe — pas sa
+/// réinstanciation.
+Key pipChildKey(Widget child) => ValueKey(child.runtimeType);
+
 Offset defaultPipOffset(PipLayoutBounds bounds) {
   return Offset(bounds.maxX, bounds.minY);
 }
@@ -169,7 +211,7 @@ class _DraggableVideoPiPState extends State<DraggableVideoPiP> {
           child: AnimatedSwitcher(
             duration: AppDurations.fast,
             child: _PipFrame(
-              key: ValueKey(identityHashCode(widget.child)),
+              key: pipChildKey(widget.child),
               child: widget.child,
             ),
           ),

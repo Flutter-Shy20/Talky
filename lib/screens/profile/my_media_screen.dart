@@ -27,6 +27,8 @@ import '../../widgets/common/common.dart';
 import '../../widgets/video_message_preview.dart';
 import '../chats/forward_message_screen.dart';
 import '../chats/media_viewer_screen.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 import 'export_period_sheet.dart';
 import '../../core/services/media_expiry_policy.dart';
 
@@ -215,7 +217,7 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
         if (!mounted) return;
         setState(() {
           _initial = false;
-          _error = '$e';
+          _error = presenterErreur(context.l10n, e, domaine: ErrorDomain.media);
         });
       },
     );
@@ -633,7 +635,7 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
     if (res.type == ResultType.done || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(context.l10n.cannotOpenFileApp(res.message)),
+        content: Text(context.l10n.errAucuneAppPourFichier),
         backgroundColor: context.colors.error,
       ),
     );

@@ -16,8 +16,9 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../providers/status_provider.dart';
-import '../../talky_api_client.dart';
 import '../../widgets/common/common.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 enum _StatusType { text, photo, video, audio }
 
@@ -453,14 +454,10 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
           _publishing = false;
         });
         if (_drafts.isNotEmpty) _jumpTo(0);
-        final detail = e is TalkyException ? e.message : e.toString();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              detail.isNotEmpty
-                  ? context.l10n.unableToPostStatusWithError(detail)
-                  : context.l10n.unableToPostTheStatusTry,
-            ),
+            content: Text(presenterErreur(context.l10n, e,
+                domaine: ErrorDomain.statut)),
           ),
         );
       }

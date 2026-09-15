@@ -32,6 +32,8 @@ import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
 import 'select_members_screen.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 /// Entrées du menu ⋮ de l'écran des discussions.
 enum _ChatsMenuAction { contactLists, newGroup, markAllRead }
@@ -714,7 +716,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
                       conv.lastMessage != null &&
                       !(isSelf && (conv.lastMessageStatus ?? 1) >= 1
                           && (conv.lastMessageStatus ?? 1) <= 3)) ...[
-                    _previewStatusIcon(conv.lastMessageStatus),
+                    _previewStatusIcon(
+                      conv.lastMessageStatus,
+                      pendingSince: conv.lastMessageAt,
+                    ),
                     AppSpacing.hGapXs,
                   ],
                   // Marqueur de mention non lue. Il précède le texte RÉEL du
@@ -811,8 +816,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   // Accusé affiché sur l'aperçu : ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge · !
-  Widget _previewStatusIcon(int? status) {
-    return MessageStatusIcon(status: status, size: 13, onBubble: false);
+  Widget _previewStatusIcon(int? status, {DateTime? pendingSince}) {
+    return MessageStatusIcon(
+      status: status,
+      size: 13,
+      onBubble: false,
+      pendingSince: pendingSince,
+    );
   }
 
   /// Ouvre la visionneuse sur les statuts du contact [authorId] (démarre au
@@ -1054,7 +1064,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       if (!mounted) return;
       _exitSelectionMode();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(context.l10n.errorWithDetails('$e'))));
+      messenger.showSnackBar(SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))));
     }
   }
 
@@ -1085,7 +1095,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       if (!mounted) return;
       _exitSelectionMode();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(context.l10n.errorWithDetails('$e'))));
+      messenger.showSnackBar(SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))));
     }
   }
 
@@ -1099,7 +1109,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       if (!mounted) return;
       _exitSelectionMode();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(context.l10n.errorWithDetails('$e'))));
+      messenger.showSnackBar(SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))));
     }
   }
 
@@ -1110,7 +1120,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))),
       );
     }
   }
@@ -1122,7 +1132,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))),
       );
     }
   }
@@ -1134,7 +1144,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))),
       );
     }
   }
@@ -1146,7 +1156,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+        SnackBar(content: Text(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat))),
       );
     }
   }

@@ -14,6 +14,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/utils/user_search.dart';
 import '../../widgets/common/common.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 
 class KeypadScreen extends StatefulWidget {
   const KeypadScreen({super.key});
@@ -32,11 +34,20 @@ class _KeypadScreenState extends State<KeypadScreen> {
   bool _loadingSuggestions = false;
   bool _addingContact = false;
   String _currentQuery = '';
+  /// Anti-rebond de la recherche serveur — annulable, contrairement au
+  /// `Future.delayed` qu'il remplace.
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
     _loadContacts();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   // ── Données ──────────────────────────────────────────────────────────
@@ -119,7 +130,11 @@ class _KeypadScreenState extends State<KeypadScreen> {
       return;
     }
     if (AlanyaPhoneFormatter.validate(_phoneDigits) == null) {
-      Future.delayed(const Duration(milliseconds: 400), () {
+      // `Future.delayed` ne s'annule pas : chaque frappe en armait un de plus,
+      // et tous survivaient à la fermeture de l'écran — seule la comparaison de
+      // la requête les rendait inoffensifs. Un Timer se remplace et se range.
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 400), () {
         if (_currentQuery == _phoneDigits && mounted) {
           _searchServer(_phoneDigits);
         }
@@ -173,6 +188,10 @@ class _KeypadScreenState extends State<KeypadScreen> {
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final userData = await apiClient.getUserByPhone(_phoneDigits);
+      // La recherche part sur un numéro complet et l'utilisateur peut quitter
+      // le pavé avant sa réponse — les trois autres méthodes asynchrones du
+      // fichier posent déjà cette garde.
+      if (!mounted) return;
       setState(() {
         _foundUser = userData.isNotEmpty
             ? User.fromJson(userData[0] as Map<String, dynamic>)
@@ -180,15 +199,14 @@ class _KeypadScreenState extends State<KeypadScreen> {
         _isSearching = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _foundUser = null;
         _isSearching = false;
       });
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.userNotFound)),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.userNotFound)),
+      );
     }
   }
 
@@ -333,7 +351,9 @@ class _KeypadScreenState extends State<KeypadScreen> {
         success: true,
       );
     } catch (e) {
-      if (mounted) _showSnack(context.l10n.errorColon('$e'));
+      if (mounted) {
+        _showSnack(presenterErreur(context.l10n, e, domaine: ErrorDomain.appel));
+      }
     } finally {
       if (mounted) setState(() => _addingContact = false);
     }

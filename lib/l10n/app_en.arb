@@ -91,7 +91,6 @@
     }
   },
   "mediaExpiredResendYourself": "Send it again from your gallery if you still have it",
-  "settingsCalls": "Calls",
   "settingsRingtone": "Call ringtone",
   "ringtoneScreenTitle": "Call ringtone",
   "ringtoneSectionSystem": "Default ringtone",
@@ -132,12 +131,6 @@
   "commonCallBack": "Call back",
   "callMissed": "Missed call",
   "callIncoming": "INCOMING CALL",
-  "errorWithDetails": "Failed: {error}",
-  "actionFailedWithError": "Action failed: {error}",
-  "cannotUnblockWithError": "Unable to unblock: {error}",
-  "loadErrorWithDetails": "Load error: {error}",
-  "cannotOpenFileApp": "No app to open this file ({message})",
-  "cannotOpenFileAppAlt": "No application to open this file ({message})",
   "membersCount": "Members ({count})",
   "groupMembersCount": "Group • {count} members",
   "pinnedMessagesCount": "Pinned messages ({count})",
@@ -170,14 +163,6 @@
   "maxParticipants": "Maximum {count} participants",
   "selectUpToVideo": "Select up to {count} members for the video call",
   "selectUpToVoice": "Select up to {count} members for the voice call",
-  "cannotLoadMeeting": "Unable to load meeting: {error}",
-  "cannotJoinMeeting": "Unable to join: {error}",
-  "cannotCreateMeeting": "Unable to create meeting: {error}",
-  "meetingConnectFailed": "Failed to connect to meeting: {error}",
-  "uploadFailedWithError": "Upload failed: {error}",
-  "sendFailedWithError": "Send failed: {error}",
-  "recordFailedWithError": "Recording failed: {error}",
-  "roleChangeError": "Role change error: {error}",
   "noResultsFor": "No results for \"{query}\"",
   "editedAt": "Edited at {time}",
   "labelForwarded": "{label} forwarded",
@@ -457,6 +442,12 @@
   "messagesCleared": "Messages cleared",
   "reservedNumbers": "Reserved numbers",
   "meetingEnded": "Meeting ended",
+  "meetingBlockedByCall": "A call is in progress: can't join the meeting.",
+  "meetingJoinExpired": "This meeting has expired.",
+  "meetingJoinNotInvited": "Meeting not found.",
+  "meetingParticipantJoined": "Joined",
+  "meetingParticipantPending": "Awaiting",
+  "meetingExpired": "Expired",
   "newMeeting": "New meeting",
   "alanyaPhone": "Alanya ID",
   "deletedMessage": "Deleted message",
@@ -516,6 +507,10 @@
   "rewind10S": "Rewind 10 s",
   "pdfDocument": "PDF document",
   "speaker": "Speaker",
+  "audioOutputEarpiece": "Earpiece",
+  "audioOutputWired": "Wired headset",
+  "audioOutputBluetooth": "Bluetooth",
+  "changeAudioOutput": "Change audio output",
   "newCall": "New call",
   "lastView": "Last view",
   "receivedCalls": "Received calls",
@@ -730,8 +725,6 @@
   "videoViewOnce": "🎥 Video · View once",
   "videoCallPreview": "📹 Video call",
   "voiceCallPreview": "📞 Voice call",
-  "anErrorOccurred": "An error occurred: {error}",
-  "errorColon": "Error: {error}",
   "deletePhotoAction": "Delete photo",
   "unavailableOffline": "Unavailable offline",
   "noParticipantsYet": "No participants yet",
@@ -741,7 +734,6 @@
   "voiceMessage": "Voice message",
   "paused": "Paused",
   "recordOrImportAudio": "Record a voice note or import an audio file",
-  "unableToPostStatusWithError": "Unable to post status: {error}",
   "tapToAddYourStatus": "Tap to add your status",
   "shareAContact": "Share a contact",
   "searchAContact": "Search for a contact",
@@ -750,8 +742,7 @@
   "turnOnSpeaker": "Turn on speaker",
   "notAuthenticated": "Not authenticated",
   "networkTimeout": "Network timeout",
-  "networkErrorWithDetails": "Network error: {error}",
-  "invalidResponseWithCode": "Invalid response ({code})",
+  "networkError": "Connection failed. Check your network and try again.",
   "noRefreshToken": "No refresh token",
   "refreshFailed": "Refresh failed",
   "addedToPreferredContacts": "{name} added to preferred contacts",
@@ -797,9 +788,6 @@
   "durationTapToReturn": "{duration} · Tap to return",
   "sessionBannerTapToReturn": "{duration} · {type} · Tap to return",
   "usedLabel": "Used",
-  "banUnbanError": "Ban/unban error: {error}",
-  "deleteErrorWithDetails": "Delete error: {error}",
-  "loadUsersError": "Error loading users: {error}",
   "limitReachedParticipants": "Maximum {total} participants in {media} (including you)",
   "mediaLabelVideo": "video",
   "mediaLabelAudio": "audio",
@@ -816,9 +804,6 @@
   "messagesSummaryMany": "{count} new messages",
   "dateAtTimeFull": "{day}/{month}/{year} at {time}",
   "todayTimeShort": "Today {time}",
-  "sourceFileNotFound": "Source file not found: {path}",
-  "copyImpossible": "Copy failed: {error}",
-  "copyFailedPath": "Copy failed: {path}",
   "albumCannotBeForwarded": "This album cannot be forwarded",
   "userHashId": "User #{id}",
   "listWithCount": "List ({count})",
@@ -1894,14 +1879,6 @@
   "exportInProgressHint": "Ready in ~24 h · notification when complete",
   "exportReady": "Your export is ready",
   "exportDownload": "Download",
-  "exportFailed": "Export failed: {error}",
-  "@exportFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "deleteAccountTitle": "Delete account",
   "deleteAccountEntrySubtitle": "Irreversible action",
   "deleteAccountStep1Title": "Irreversible action",
@@ -1923,28 +1900,12 @@
       }
     }
   },
-  "deleteAccountFailed": "Deletion failed: {error}",
-  "@deleteAccountFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "biometricLock": "Biometric lock",
   "biometricLockTitle": "Alanya is locked",
   "biometricLockUnlock": "Unlock",
   "biometricLockSubtitle": "Fingerprint or face unlock on open",
   "biometricLockEnableConfirm": "Confirm your fingerprint to enable the lock",
   "biometricLockUnavailable": "Biometrics unavailable on this device",
-  "biometricLockFailed": "Biometrics: {error}",
-  "@biometricLockFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "accountSecuritySectionProtection": "Protection",
   "logoutAllDevices": "Sign out all devices",
   "logoutAllDevicesSubtitle": "Ends all sessions except this one",
@@ -2143,23 +2104,43 @@
   "backupFrequencyMonthly": "Monthly",
   "backupFrequencyNever": "Never",
   "backupLastNever": "No backup yet",
-  "backupLastAt": "Last backup: {when} \u00b7 {size}",
+  "backupLastAt": "Last backup: {when} · {size}",
   "@backupLastAt": {
-    "placeholders": { "when": { "type": "String" }, "size": { "type": "String" } }
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
   },
-  "backupCounts": "{messages} messages \u00b7 {conversations} chats",
+  "backupCounts": "{messages} messages · {conversations} chats",
   "@backupCounts": {
-    "placeholders": { "messages": { "type": "int" }, "conversations": { "type": "int" } }
+    "placeholders": {
+      "messages": {
+        "type": "int"
+      },
+      "conversations": {
+        "type": "int"
+      }
+    }
   },
   "backupRunNow": "Back up now",
-  "backupRunning": "Backing up\u2026",
+  "backupRunning": "Backing up…",
   "backupSucceeded": "Backup complete",
   "backupAlreadyRunning": "A backup is already running.",
   "backupFailed": "The backup failed",
   "backupStaleWarning": "No backup has succeeded for several days. Check your connection and available space.",
   "backupDestinationLabel": "Destination",
   "backupDestinationDrive": "Google Drive {account}",
-  "@backupDestinationDrive": {"placeholders": {"account": {"type": "String"}}},
+  "@backupDestinationDrive": {
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
   "backupDestinationDriveUnlinked": "Google Drive — no account connected on this device",
   "backupDestinationDevice": "On this device",
   "backupChangeAccount": "Change Google account",
@@ -2169,17 +2150,30 @@
   "backupDriveRefused": "Google sign-in cancelled. Nothing changed.",
   "backupFellBack": "Drive was unreachable: the backup was made on this device.",
   "backupFellBackAt": "Drive was unreachable. A backup was made on this device on {when}.",
-  "@backupFellBackAt": {"placeholders": {"when": {"type": "String"}}},
+  "@backupFellBackAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "backupLocalRisksTitle": "Backup on this device",
   "backupLocalRisksBody": "Your backup is on this phone, in Downloads › Alanya › Sauvegardes.\n\n✓ It survives reinstalling Alanya.\n✗ It does not survive losing, breaking or having the phone stolen.\n✗ It does not survive a full device wipe.\n\nTo keep your data safe off the phone, connect Google Drive.",
-  "backupWhatIsSaved": "Backed up: messages, chats, contacts and settings. Photos, videos and files are not \u2014 use \u201cExport this period\u201d from My media to keep them.",
+  "backupWhatIsSaved": "Backed up: messages, chats, contacts and settings. Photos, videos and files are not — use “Export this period” from My media to keep them.",
   "backupNotEndToEnd": "The backup is encrypted. Alanya can technically decrypt it to restore it for you; nobody else can.",
   "backupRestoreEntry": "Restore a backup",
   "backupRestoreEntryHint": "From Google Drive or a file on your phone",
   "restoreTitle": "Restore your data",
   "restoreFound": "A backup from {when} was found ({size}).",
   "@restoreFound": {
-    "placeholders": { "when": { "type": "String" }, "size": { "type": "String" } }
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "restoreExplain": "Your messages and settings will be put back. Photos and videos older than 30 days will not return: they are not in the backup.",
   "restoreAction": "Restore",
@@ -2187,11 +2181,11 @@
   "restoreGoogleRefused": "Google sign-in cancelled",
   "restoreGoogleEmpty": "No backup in this Google account",
   "restorePickFile": "Choose a backup file",
-  "restorePickHint": "If your backup does not show up \u2014 after a reinstall, for instance \u2014 point to the .enc file in Downloads \u203a Alanya \u203a Sauvegardes.",
+  "restorePickHint": "If your backup does not show up — after a reinstall, for instance — point to the .enc file in Downloads › Alanya › Sauvegardes.",
   "restorePickCancelled": "No file chosen",
   "restorePickWrongFile": "This file is not an Alanya backup",
   "restoreSkip": "Skip and continue",
-  "restoreRunning": "Restoring\u2026",
+  "restoreRunning": "Restoring…",
   "restoreCloseApp": "Close Alanya",
   "restoreDoneRestart": "Restore ready. Close Alanya, then open it again: your data will be in place on startup.",
   "restoreFailedMessage": "The restore failed. You can try again from settings.",
@@ -2200,44 +2194,91 @@
   "restoreInterrupted": "A previous restore was interrupted. It will start again from the beginning.",
   "exportPeriodAction": "Export this period",
   "exportSheetTitle": "Export this period",
-  "exportSheetSummary": "{count, plural, =0{No items} =1{1 item \u00b7 {size}} other{{count} items \u00b7 {size}}}",
+  "exportSheetSummary": "{count, plural, =0{No items} =1{1 item · {size}} other{{count} items · {size}}}",
   "@exportSheetSummary": {
-    "placeholders": { "count": { "type": "int" }, "size": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "exportSheetNothing": "No media to export for these filters",
   "exportMissingRecoverable": "{count, plural, =1{1 missing item can be recovered ({size})} other{{count} missing items can be recovered ({size})}}",
   "@exportMissingRecoverable": {
-    "placeholders": { "count": { "type": "int" }, "size": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "exportMissingRecoverableEstimate": "{count, plural, =1{Up to 1 missing item can be recovered} other{Up to {count} missing items can be recovered}}",
   "@exportMissingRecoverableEstimate": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "exportMissingEstimateHint": "The server could not be reached: some of these items may no longer be there.",
-  "exportDoneWithMissing": "Archive ready: {size} \u00b7 {missing} item(s) unavailable",
+  "exportDoneWithMissing": "Archive ready: {size} · {missing} item(s) unavailable",
   "@exportDoneWithMissing": {
-    "placeholders": { "size": { "type": "String" }, "missing": { "type": "int" } }
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "missing": {
+        "type": "int"
+      }
+    }
   },
   "exportMissingRecoverableHint": "If ticked, these items are downloaded before assembly. If not, no mobile data is used.",
   "exportMissingLost": "{count, plural, =1{1 item is no longer available on the servers} other{{count} items are no longer available on the servers}}",
   "@exportMissingLost": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "exportMissingLostHint": "They are listed in the archive, but their content is permanently lost.",
   "exportDestinationShare": "Share",
   "exportDestinationDownloads": "Save to Downloads",
-  "exportPhaseScanning": "Taking stock\u2026",
+  "exportPhaseScanning": "Taking stock…",
   "exportPhaseRecovering": "Recovering {done} / {total}",
   "@exportPhaseRecovering": {
-    "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } }
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "exportPhaseAssembling": "Assembling {done} / {total}",
   "@exportPhaseAssembling": {
-    "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } }
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "exportDone": "Archive ready: {size}",
   "@exportDone": {
-    "placeholders": { "size": { "type": "String" } }
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "exportFailedGeneric": "The export failed",
   "exportNoSpace": "Not enough space on the device for this archive",
@@ -2262,7 +2303,7 @@
   "myMediaKindVideos": "Videos",
   "myMediaKindAudio": "Voice",
   "myMediaKindFiles": "Files",
-  "myMediaSummary": "{count, plural, =0{No items} =1{1 item \u00b7 {size}} other{{count} items \u00b7 {size}}}",
+  "myMediaSummary": "{count, plural, =0{No items} =1{1 item · {size}} other{{count} items · {size}}}",
   "@myMediaSummary": {
     "placeholders": {
       "count": {
@@ -2816,5 +2857,65 @@
   "translateModeAuto": "Automatic",
   "translateModeAlways": "Always",
   "translateModeNever": "Never",
-  "translateModeAutoSubtitle": "Follows the general setting"
+  "translateModeAutoSubtitle": "Follows the general setting",
+  "errDelaiDepasse": "The server is taking too long to respond. Try again.",
+  "errReseauSuspect": "Secure connection failed. Check your network.",
+  "errSessionExpiree": "Your session has expired. Please sign in again.",
+  "errIntrouvable": "Not found. This content may have been deleted.",
+  "errConflit": "This action isn't possible right now.",
+  "errTropDeRequetes": "Too many attempts. Please wait a moment.",
+  "errServeur": "The service is temporarily unavailable. Try again.",
+  "errPermission": "Permission denied. Check your device settings.",
+  "errPeripherique": "Device unavailable or already in use by another app.",
+  "errStockage": "Cannot access the file. Check available storage.",
+  "errGenerique": "Something went wrong. Try again.",
+  "errDomaineAuth": "Sign-in failed. Try again.",
+  "errDomaineChat": "Message not sent. Try again.",
+  "errDomaineAppel": "The call could not be completed. Try again.",
+  "errDomaineReunion": "The meeting could not be opened. Try again.",
+  "errDomaineQr": "This code could not be used. Try again.",
+  "errDomaineMedia": "The file could not be processed. Try again.",
+  "errDomaineTrajet": "The trip could not be updated. Try again.",
+  "errDomaineStatut": "The status could not be posted. Try again.",
+  "errDomaineProfil": "The change could not be saved. Try again.",
+  "errDomaineAdmin": "The operation failed. Try again.",
+  "errAppelHorsLigne": "You need a connection to place a call.",
+  "errChatHorsLigne": "Message queued: it will send when you're back online.",
+  "errMediaStockage": "Cannot save. Check available space on your device.",
+  "errCodeRefreshExpired": "Your session has expired. Please sign in again.",
+  "errCodeDeviceRevoked": "This device was signed out. Please sign in again.",
+  "errCodeAccountDeletionPending": "This account is being deleted.",
+  "errCodeRegisterRateLimited": "Too many sign-up attempts. Try again later.",
+  "errCodeQrSessionExpired": "This QR code has expired. Display a new one.",
+  "errCodeDeviceNotOwner": "This device isn't authorised for this action.",
+  "errCodeAddAlreadyUsed": "This code has already been used.",
+  "errCodeAddMePolicyDenied": "This person doesn't accept being added by code.",
+  "errCodeMeetingExpired": "This meeting has expired.",
+  "errCodeMeetingEnded": "This meeting has ended.",
+  "errCodeMeetingOrganiserRequired": "Only the organiser can do that.",
+  "errCodeAccountAlreadyInMeeting": "This account is already in the meeting on another device.",
+  "errCodeSessionBusy": "A call is in progress. End it first.",
+  "errCodeMaxDurationReached": "The maximum duration has been reached.",
+  "errCodeBlockedBySender": "You can't contact this person.",
+  "errCodeNotAMember": "You're no longer a member of this group.",
+  "errCodeGroupAdminsOnly": "Group admins only.",
+  "errCodeGroupOwnerRequired": "Only the group owner can do that.",
+  "errCodeConversationNotFound": "This conversation no longer exists.",
+  "errCodeOfficialReadonly": "This official account doesn't accept replies.",
+  "errCodeListMemberLimit": "This list has reached its member limit.",
+  "errCodeSystemListReadonly": "This system list can't be edited.",
+  "errCodeInviteBlocked": "This person can't be invited.",
+  "errCodeBusinessOnly": "Business accounts only.",
+  "errCodeTrustListEmpty": "Your trusted circle is empty. Add someone first.",
+  "errCodeTripAlreadyActive": "A trip is already in progress.",
+  "errCodeTripTerminal": "This trip has already ended.",
+  "errCodeTripStillOpen": "End the current trip first.",
+  "errCodeSosRateLimited": "Alert already sent. Wait before sending another.",
+  "errCodeInvalidEta": "The arrival time isn't valid.",
+  "errCodeInvalidDestination": "The destination isn't valid.",
+  "errCodeMediaExpired": "This media has expired and is no longer available.",
+  "errCodeInvalidExtension": "This file type isn't supported.",
+  "errCodeInsufficientRole": "You don't have permission for this action.",
+  "errCodeFieldImmutable": "This field can no longer be changed.",
+  "errAucuneAppPourFichier": "No app can open this file."
 }

@@ -1,15 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Règles de sauvegarde cloud et de transfert d'appareil à appareil (Android 12+).
-  Même motif que `backup_rules.xml` : le magasin chiffré de
-  flutter_secure_storage dépend d'une clé du Keystore non transférable, donc le
-  restaurer ne produit que des données illisibles (BAD_DECRYPT à la connexion).
+  Mêmes motifs que `backup_rules.xml`, qui les détaille :
+
+  — `FlutterSecureStorage.xml` dépend d'une clé du Keystore non transférable :
+    le restaurer ne produit que des données illisibles (BAD_DECRYPT à la
+    connexion).
+
+  — `FlutterSharedPreferences.xml` n'est pas chiffré et porte pourtant les
+    jetons du refus d'appel natif en clair, ainsi que le texte des réponses
+    rapides en attente. L'exclusion Android étant par fichier et non par clé,
+    on perd avec eux quelques réglages cosmétiques — et les files en attente,
+    qui ne doivent de toute façon pas rejouer sur un autre appareil.
+
+  — `talky_native_notif.xml` conserve le corps des messages par conversation.
 -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+        <exclude domain="sharedpref" path="FlutterSharedPreferences.xml" />
+        <exclude domain="sharedpref" path="talky_native_notif.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+        <exclude domain="sharedpref" path="FlutterSharedPreferences.xml" />
+        <exclude domain="sharedpref" path="talky_native_notif.xml" />
     </device-transfer>
 </data-extraction-rules>

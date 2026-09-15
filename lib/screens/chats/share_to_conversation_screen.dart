@@ -119,7 +119,6 @@ class _ShareToConversationScreenState extends State<ShareToConversationScreen> {
   }) async {
     var succeeded = 0;
     var failed = 0;
-    final errors = <String>[];
 
     for (final convId in conversationIDs) {
       try {
@@ -127,12 +126,11 @@ class _ShareToConversationScreenState extends State<ShareToConversationScreen> {
         succeeded++;
       } catch (e) {
         failed++;
-        errors.add(e.toString());
         debugPrint('[ShareToConv] envoi vers $convId échoué: $e');
       }
     }
 
-    return ForwardResult(succeeded: succeeded, failed: failed, errors: errors);
+    return ForwardResult(succeeded: succeeded, failed: failed);
   }
 
   Future<void> _sendPayload(

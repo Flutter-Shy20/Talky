@@ -81,26 +81,35 @@ extension CallSignaling on CallService {
       _pendingOffer = Map<String, dynamic>.from(offer);
       // Appel confirmé vivant par le socket → plus besoin du filet d'attente d'offre.
       _cancelAwaitingOfferTimeout();
-      _currentCallId = incomingCallId;
+      _adoptServerCallId(incomingCallId);
       _status = CallStatus.incoming;
       debugPrint('[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
 
+      // Préchauffage : la sonnerie dure plusieurs secondes, autant s'en servir.
+      //
+      // Ni l'un ni l'autre ne touche à un périphérique — aucun témoin de
+      // confidentialité ne s'allume ici, la capture reste pour le décrochage.
+      // On ne fait que mettre en cache ce que `answerCall` attendait jusqu'ici
+      // en série après le tap : les identifiants TURN (un aller-retour HTTPS)
+      // et l'accord sur micro/caméra (une boîte de dialogue système au tout
+      // premier appel). Les deux relectures y seront alors immédiates.
+      unawaited(_apiClient.fetchIceServers());
+      unawaited(
+        CallPermissionsHelper.ensureCallMediaPermissions(isVideo: _isVideo),
+      );
+
       _ensureRemoteIdentityResolved();
 
-      // Owner UI avant notify : FG → Flutter, BG → CallKit (pas IncomingCallScreen).
-      if (_isAutoAnsweringFromPush) {
-        _clearIncomingPresentation(callId: incomingCallId);
-      } else if (_isAppForeground) {
-        _claimIncomingPresentation(
-          incomingCallId,
-          IncomingPresentationOwner.flutterScreen,
-        );
-      } else {
-        _claimIncomingPresentation(
-          incomingCallId,
-          IncomingPresentationOwner.nativeCallKit,
-        );
-      }
+      // Une seule autorité décide qui présente — voir
+      // `_resolveIncomingPresentation`. L'action rendue pilote aussi
+      // l'affichage CallKit et la sonnerie, plus bas.
+      final presentation = _resolveIncomingPresentation(
+        callId: incomingCallId,
+        intent: IncomingPresentationIntent.signal,
+      );
+      // Aucun entrant ne doit rester posé sans horloge locale : c'est le seul
+      // recours si ni CallKit ni le serveur ne concluent.
+      _armIncomingRingSafety();
       notify();
 
       if (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId) {
@@ -119,14 +128,11 @@ extension CallSignaling on CallService {
         return;
       }
 
-      // Politique sonnerie / UI hors app :
-      //  - auto-réponse depuis push → pas de sonnerie.
-      //  - app en arrière-plan → CallKit (UI système + sonnerie), même si FCM
-      //    n'est pas encore arrivé / a échoué.
-      //  - app au premier plan → RingtoneService (IncomingCallScreen).
-      if (_isAutoAnsweringFromPush) {
-        debugPrint('[CallService] 🔇 Sonnerie entrante ignorée: auto-réponse en cours');
-      } else if (!_isAppForeground) {
+      // La politique tient dans l'action rendue : CallKit possède l'entrant
+      // (interface système et sonnerie), Flutter le possède (IncomingCallScreen
+      // et RingtoneService), ou personne ne le présente — auto-réponse en cours,
+      // ou entrant déjà présenté pour ce même identifiant.
+      if (presentation == IncomingPresentationAction.showNativeCallKit) {
         if (_nativeAndroidHandlesIncomingCallUi) {
           debugPrint(
             '[CallService] 📲 CallKit natif Android (socket ignoré pour UI): '
@@ -149,16 +155,58 @@ extension CallSignaling on CallService {
             }),
           );
         }
+      } else if (presentation ==
+          IncomingPresentationAction.showFlutterIncoming) {
+        _startFlutterIncomingRinging(incomingCallId ?? '');
       } else {
-        unawaited(_dismissStrayIncomingCallKit(incomingCallId));
-        _ringtone
-            .startIncomingRingtone(
-              override: ListRingtonePreferences.resolveCall(_remoteUserId!),
-            )
-            .catchError((e) {
-          debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
-        });
-        _armIncomingRingSafety();
+        debugPrint(
+          '[CallService] 🔇 Sonnerie entrante ignorée (présentation=$presentation)',
+        );
+      }
+    });
+
+    // Le serveur a créé l'appel et le destinataire sonne : il nous annonce
+    // l'identifiant sous lequel il en parlera désormais.
+    //
+    // C'est le seul moment où l'appelant peut l'apprendre avant le décrochage,
+    // et donc la seule façon pour lui de reconnaître un refus reçu pendant la
+    // sonnerie. Jusqu'ici, `_currentCallId` restait l'horodatage de
+    // `_ensureCallId()` : le refus du correspondant était jeté, le ringback
+    // continuait, et le filet des 45 secondes concluait « pas de réponse ».
+    //
+    // CallKit n'est pas suivi : son entrée reste ouverte sous l'identifiant
+    // fabriqué, conservé dans `_callKitCallId`.
+    _apiClient.onSocketEvent(SocketEvents.callRinging, (data) async {
+      final serverCallId = (data is Map ? data['callId'] : null)?.toString();
+      if (_status != CallStatus.outgoing && _status != CallStatus.connecting) {
+        debugPrint('[CallService] 🛡 call_ringing ignoré: status=$_status');
+        return;
+      }
+      if (!shouldAdoptServerCallId(
+        serverCallId: serverCallId,
+        currentCallId: _currentCallId,
+      )) {
+        return;
+      }
+      debugPrint(
+        '[CallService] 📞 call_ringing → callId serveur adopté: '
+        '$_currentCallId → $serverCallId (CallKit reste sur $_callKitCallId)',
+      );
+      _adoptServerCallId(serverCallId);
+      // Un état terminal a pu être écrit sous cet identifiant pendant qu'on
+      // l'ignorait — un refus très rapide, ou l'isolate FCM d'un push arrivé
+      // avant nous. On ne le découvrait jamais : le registre était interrogé
+      // sur une clé que personne n'écrivait.
+      if (await EndedCallRegistry.isEnded(serverCallId!)) {
+        debugPrint('[CallService] 🛡 call_ringing: $serverCallId déjà terminal → fin');
+        await notifyCallEndedFromExternal(callId: serverCallId);
+        return;
+      }
+      if (!kIsWeb) {
+        unawaited(persistOutgoingSnapshot(
+          phase: 'connecting',
+          serverCallId: serverCallId,
+        ));
       }
     });
 
@@ -186,10 +234,31 @@ extension CallSignaling on CallService {
           RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );
         debugPrint('[CallService] !! Answer acceptée → CONNECTED');
+        // Le destinataire vient d'acquérir un appareil actif : ses candidats
+        // à lui vont passer, mais les nôtres, émis pendant qu'il sonnait,
+        // n'avaient nulle part où aller. On les rejoue.
+        _replayOutgoingIce();
         _status = CallStatus.connected;
         _startDurationTimer();
         _startSpeakingDetection(groupMode: false);
         final serverCallId = data['callId']?.toString();
+        // Adopter l'identifiant du serveur. Côté appelant, `_currentCallId`
+        // n'était qu'un horodatage fabriqué pour ouvrir la session CallKit :
+        // aucune des treize affectations ne le remplaçait au décrochage. Toutes
+        // les comparaisons `callId == _currentCallId` étaient donc fausses de ce
+        // côté, et `EndedCallRegistry` écrivait une clé que personne ne
+        // relisait — la protection anti-appel-fantôme entre isolates ne
+        // protégeait que l'appelé. CallKit, lui, garde `_callKitCallId`.
+        if (shouldAdoptServerCallId(
+          serverCallId: serverCallId,
+          currentCallId: _currentCallId,
+        )) {
+          debugPrint(
+            '[CallService] callId serveur adopté: $_currentCallId → $serverCallId '
+            '(CallKit reste sur $_callKitCallId)',
+          );
+          _adoptServerCallId(serverCallId);
+        }
         unawaited(persistOutgoingSnapshot(
           phase: 'connected',
           serverCallId: serverCallId,
@@ -210,8 +279,20 @@ extension CallSignaling on CallService {
 
     // Appel rejeté par le destinataire
     _apiClient.onSocketEvent(SocketEvents.callRejected, (data) async {
-      debugPrint('[CallService] 📞 Appel rejeté');
       final callId = (data is Map ? data['callId'] : null)?.toString();
+      debugPrint('[CallService] 📞 Appel rejeté callId=$callId status=$_status');
+      // Même garde que call_busy / call_no_answer juste en dessous. Sans elle,
+      // un refus tardif — celui d'une invitation en conférence que la couche
+      // native poste en refus 1-à-1, par exemple — raccrochait l'appel en cours.
+      if (!acceptsOutgoingTerminalEvent(
+        callStatusName: _status.name,
+        eventCallId: callId,
+        currentCallId: _currentCallId,
+        currentCallIdIsLocal: !_serverCallIdKnown,
+      )) {
+        debugPrint('[CallService] 🛡 call_rejected ignoré: status=$_status callId=$callId');
+        return;
+      }
       _markTerminalCallId(callId ?? _currentCallId);
       await _terminateCall();
     });
@@ -267,6 +348,32 @@ extension CallSignaling on CallService {
         return;
       }
 
+      // La branche `claimedElsewhere` ci-dessus compare le callId ; celle-ci ne
+      // le faisait pas. Le serveur émet `call_ended` depuis treize endroits —
+      // fin, refus, grâce de déconnexion, resume_ack_timeout, transfert — et un
+      // événement en retard raccrochait l'appel suivant.
+      // Second terme : appel sortant dont le serveur n'a pas encore annoncé
+      // l'identifiant. `endsCurrentCall` ne compare alors qu'un horodatage
+      // fabriqué, et son refus laissait la sonnerie de retour tourner.
+      if (!endsCurrentCall(
+            eventCallId: callId,
+            currentCallId: _currentCallId,
+            confSessionId: _confSessionId,
+            groupRoomId: _groupRoomId,
+          ) &&
+          !acceptsOutgoingTerminalEvent(
+            callStatusName: _status.name,
+            eventCallId: callId,
+            currentCallId: _currentCallId,
+            currentCallIdIsLocal: !_serverCallIdKnown,
+          )) {
+        debugPrint(
+          '[CallService] 🛡 call_ended ignoré (autre appel) callId=$callId '
+          'courant=$_currentCallId',
+        );
+        return;
+      }
+
       // Pendant une conf à 3+ encore peuplée, un call_ended parasite ne doit
       // pas raccrocher les restants. Dès qu'il ne reste qu'un pair (retour à
       // deux), call_ended = l'autre a raccroché → on coupe l'appel.
@@ -296,6 +403,15 @@ extension CallSignaling on CallService {
         return;
       }
       if (code == 'DEVICE_ID_REQUIRED' || code == 'CALL_ID_UNAVAILABLE') {
+        if (!acceptsOutgoingTerminalEvent(
+          callStatusName: _status.name,
+          eventCallId: callId,
+          currentCallId: _currentCallId,
+          currentCallIdIsLocal: !_serverCallIdKnown,
+        )) {
+          debugPrint('[CallService] 🛡 call_error $code ignoré: status=$_status');
+          return;
+        }
         _showTransientMessage(
           LocaleController.instance.l10n.callFailed,
         );
@@ -307,9 +423,26 @@ extension CallSignaling on CallService {
     _apiClient.onSocketEvent(SocketEvents.callFailed, (data) async {
       final reason = (data is Map ? data['reason'] : null)?.toString();
       final code = (data is Map ? data['code'] : null)?.toString();
-      debugPrint('[CallService] Appel échoué: reason=$reason code=$code');
+      final failedCallId = (data is Map ? data['callId'] : null)?.toString();
+      debugPrint(
+        '[CallService] Appel échoué: reason=$reason code=$code '
+        'callId=$failedCallId status=$_status',
+      );
+      // Ce handler ne lisait pas le callId du payload et marquait
+      // `_currentCallId` comme terminal : il agissait par construction sur
+      // l'appel en cours au moment de la livraison, quel que soit l'appel
+      // auquel l'échec se rapportait.
+      if (!acceptsOutgoingTerminalEvent(
+        callStatusName: _status.name,
+        eventCallId: failedCallId,
+        currentCallId: _currentCallId,
+        currentCallIdIsLocal: !_serverCallIdKnown,
+      )) {
+        debugPrint('[CallService] 🛡 call_failed ignoré: status=$_status callId=$failedCallId');
+        return;
+      }
       _cancelOutgoingTimeout();
-      _markTerminalCallId(_currentCallId);
+      _markTerminalCallId(failedCallId ?? _currentCallId);
       await _terminateCall();
       if (code == 'CALL_BLOCKED') {
         _showTransientMessage(LocaleController.instance.l10n.callImpossible);
@@ -357,6 +490,10 @@ extension CallSignaling on CallService {
       _flushPendingRejects();
       _flushPendingConfJoin();
       _flushPendingConfReady();
+      _rejoinGroupRoomIfNeeded();
+      // Le socket est revenu : ce que le rejeu du décrochage n'avait pas pu
+      // émettre peut enfin partir.
+      _replayOutgoingIce();
     });
 
     _apiClient.onSocketEvent(SocketEvents.callResume, (data) async {
@@ -392,12 +529,28 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] 🛡 ice_candidate génération périmée gen=$gen');
         return;
       }
-      final c = data['candidate'] as Map;
+      // `as String` non nullable levait ici sur un candidat sans chaîne — or
+      // l'émetteur relaie le champ brut, et `webrtc_service` le traite lui-même
+      // comme nullable. L'exception remontait dans un écouteur socket, où
+      // personne ne l'attrape : le candidat était perdu sans un mot, sur le
+      // chemin le plus tendu de l'établissement de l'appel. Un candidat vide se
+      // jette explicitement — c'est la marque de fin de collecte.
+      final c = data['candidate'];
+      if (c is! Map) {
+        debugPrint('[CallService] 🧊 ice_candidate sans candidat exploitable');
+        return;
+      }
+      final ligne = c['candidate']?.toString();
+      if (ligne == null || ligne.isEmpty) {
+        debugPrint('[CallService] 🧊 ice_candidate vide (fin de collecte)');
+        return;
+      }
+      final index = c['sdpMLineIndex'];
       _webrtc.addIceCandidate(
         RTCIceCandidate(
-          c['candidate'] as String,
-          c['sdpMid'] as String?,
-          c['sdpMLineIndex'] as int?,
+          ligne,
+          c['sdpMid']?.toString(),
+          index is int ? index : int.tryParse(index?.toString() ?? ''),
         ),
         generation: gen,
       );
@@ -415,11 +568,27 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] 🛡 group_call_invite ignoré: réunion active');
         return;
       }
+      // Sans identifiant de salon, il n'y a rien à présenter et rien à
+      // rejoindre — mais poser le statut « entrant » suffisait à rendre
+      // l'appareil sourd : la revendication était refusée (identifiant vide),
+      // aucune interface ne s'ouvrait, aucun filet n'était armé, et tous les
+      // points d'entrée refusent un entrant tant que `_status != idle`. Plus
+      // aucun appel ne pouvait arriver, sauf un `call_ended` de forme 1-à-1
+      // venu du serveur. On refuse d'entrer dans cet état.
+      final roomId = (data['roomId'] as String?)?.trim() ?? '';
+      if (!groupInviteIsPresentable(roomId)) {
+        debugPrint(
+          '[CallService] 🛡 group_call_invite sans roomId → ignoré '
+          '(ne pas bloquer l\'appareil)',
+        );
+        return;
+      }
+
       _remoteUserId = int.tryParse(data['callerId'].toString());
       _remoteUserName = data['callerName'] as String?;
       _remoteUserPhoto = normalizeBackendUrl(data['callerPhoto']?.toString());
       _isVideo = data['isVideo'] == true;
-      _groupRoomId = data['roomId'] as String?;
+      _groupRoomId = roomId;
       // Le caller est notre seule info connue à l'instant T → on le pose dans le roster
       final callerId = data['callerId']?.toString();
       if (callerId != null && callerId.isNotEmpty) {
@@ -432,20 +601,14 @@ extension CallSignaling on CallService {
         );
       }
       _status = CallStatus.incoming;
-      if (_isAppForeground) {
-        _claimIncomingPresentation(
-          _groupRoomId,
-          IncomingPresentationOwner.flutterScreen,
-        );
-      } else {
-        _claimIncomingPresentation(
-          _groupRoomId,
-          IncomingPresentationOwner.nativeCallKit,
-        );
-      }
+      final presentation = _resolveIncomingPresentation(
+        callId: roomId,
+        intent: IncomingPresentationIntent.signal,
+      );
+      _armIncomingRingSafety();
       notify();
 
-      if (!_isAppForeground) {
+      if (presentation == IncomingPresentationAction.showNativeCallKit) {
         if (_nativeAndroidHandlesIncomingCallUi) {
           debugPrint(
             '[CallService] 📲 CallKit natif Android groupe (socket ignoré pour UI)',
@@ -468,6 +631,10 @@ extension CallSignaling on CallService {
             }),
           );
         }
+      } else if (presentation ==
+          IncomingPresentationAction.showFlutterIncoming) {
+        // Manquait entièrement : l'écran s'ouvrait en silence.
+        _startFlutterIncomingRinging(roomId);
       }
     });
 
@@ -477,13 +644,19 @@ extension CallSignaling on CallService {
       final userId = data['userId'].toString();
       final userName = (data['userName'] as String?) ?? '';
       final userPhoto = data['userPhoto'] as String?;
+      final known = _groupRoster[userId];
       _groupRoster[userId] = GroupParticipantInfo(
         id: userId,
         name: userName.isNotEmpty
             ? userName
             : LocaleController.instance.l10n.participantFallback,
         photo: userPhoto,
+        isMuted: known?.isMuted ?? false,
+        isVideoOn: known?.isVideoOn ?? true,
       );
+      _applyPendingGroupStates(userId);
+      // Même trou que côté conférence : l'arrivant ignore mes états média.
+      _broadcastMyMediaState();
       notify();
       if (_groupPeerConnections.containsKey(userId)) return;
       await _createGroupPeerAndOffer(userId);
@@ -494,6 +667,32 @@ extension CallSignaling on CallService {
       if (data is! Map) return;
       final participants = (data['participants'] as List?)?.map((e) => e.toString()).toList() ?? [];
       _groupParticipants = participants;
+      // Le serveur fait foi : qui n'y figure plus est parti pendant mon absence,
+      // et son `group_user_left` s'est perdu avec ma socket.
+      for (final id in rosterEntriesToDrop(
+        serverIds: participants,
+        localIds: _groupRoster.keys.toList(),
+        myId: _myRosterId,
+      )) {
+        debugPrint('[CallService] roster purgé de $id (absent de group_participants)');
+        _groupRoster.remove(id);
+        _pendingGroupMedia.forget(id);
+        _removeGroupPeer(id);
+      }
+      // Je viens d'entrer : les autres ne savent pas si mon micro est coupé.
+      //
+      // La branche conférence fait ce geste depuis toujours, dans le handler
+      // jumeau `call_conf_peers` ; celle du groupe ne l'a jamais fait. Les
+      // autres me plaçaient donc à leur roster avec les valeurs par défaut de
+      // `group_user_joined` — micro ouvert, caméra allumée — quel que soit mon
+      // état réel. Et l'oubli était invisible, puisque `group_participants` ne
+      // sortait jamais du serveur.
+      //
+      // C'est aussi ce qui rend la reprise après coupure honnête : au rejoin,
+      // les autres reconstruisent ma carte à partir de `group_user_joined`, et
+      // sans cette réaffirmation je leur apparaîtrais micro ouvert alors que je
+      // l'ai coupé pendant l'appel.
+      _broadcastMyMediaState();
       notify();
       // Pour les IDs sans entrée roster, on résout le nom/photo via l'API.
       for (final id in participants) {
@@ -512,6 +711,7 @@ extension CallSignaling on CallService {
                     : LocaleController.instance.l10n.participantFallback),
             photo: u['avatar_url'] as String?,
           );
+          _applyPendingGroupStates(id);
           notify();
         }).catchError((e) {
           debugPrint('[CallService] roster getUserById($id) failed: $e');
@@ -523,11 +723,36 @@ extension CallSignaling on CallService {
     _apiClient.onSocketEvent(SocketEvents.groupUserLeft, (data) {
       if (data is! Map) return;
       final userId = data['userId'].toString();
+      // Le roster doit être purgé ici, et seulement ici : c'est le serveur qui
+      // dit qu'il est parti. `_removeGroupPeer` sert aussi quand le lien média
+      // local lâche — le participant est alors toujours dans l'appel, et lui
+      // retirer son entrée le ferait disparaître de la grille à tort.
+      //
+      // Depuis que la grille part du roster plutôt que des flux, l'oubli se
+      // voyait dans l'autre sens : le partant gardait sa tuile et restait
+      // compté jusqu'à la fin de l'appel.
+      _groupRoster.remove(userId);
+      _pendingGroupMedia.forget(userId);
       _removeGroupPeer(userId);
     });
 
     // Appel de groupe terminé
-    _apiClient.onSocketEvent(SocketEvents.groupCallEnded, (_) {
+    // Le payload est vide côté serveur aujourd'hui, mais rien ne vérifiait la
+    // salle ni le statut : un événement tardif de la salle précédente détruisait
+    // le média de l'appel en cours.
+    _apiClient.onSocketEvent(SocketEvents.groupCallEnded, (data) {
+      final roomId = (data is Map ? data['roomId'] : null)?.toString();
+      if (!endsGroupCall(
+        groupRoomId: _groupRoomId,
+        eventRoomId: roomId,
+        callStatusName: _status.name,
+      )) {
+        debugPrint(
+          '[CallService] 🛡 group_call_ended ignoré: salle=$roomId '
+          'courante=$_groupRoomId status=$_status',
+        );
+        return;
+      }
       _terminateGroupCall();
     });
 
@@ -572,7 +797,7 @@ extension CallSignaling on CallService {
 
       _confSessionId = sessionId;
       _isVideo = data['isVideo'] == true;
-      _currentCallId = sessionId;
+      _adoptServerCallId(sessionId);
       final mode = data['mode']?.toString();
       if (mode == 'transfer' || mode == 'join') _confMode = mode!;
 
@@ -594,20 +819,14 @@ extension CallSignaling on CallService {
 
       if (!sameSession) {
         _status = CallStatus.incoming;
-        if (_isAppForeground) {
-          _claimIncomingPresentation(
-            sessionId,
-            IncomingPresentationOwner.flutterScreen,
-          );
-        } else {
-          _claimIncomingPresentation(
-            sessionId,
-            IncomingPresentationOwner.nativeCallKit,
-          );
-        }
+        final presentation = _resolveIncomingPresentation(
+          callId: sessionId,
+          intent: IncomingPresentationIntent.signal,
+        );
+        _armIncomingRingSafety();
         notify();
 
-        if (!_isAppForeground) {
+        if (presentation == IncomingPresentationAction.showNativeCallKit) {
           if (_nativeAndroidHandlesIncomingCallUi) {
             debugPrint('[CallService] 📲 CallKit natif Android (session à trois)');
           } else {
@@ -629,6 +848,11 @@ extension CallSignaling on CallService {
               }),
             );
           }
+        } else if (presentation ==
+            IncomingPresentationAction.showFlutterIncoming) {
+          // Manquait entièrement, comme côté groupe : l'invitation à une
+          // session à trois s'affichait sans un son.
+          _startFlutterIncomingRinging(sessionId);
         }
       } else {
         debugPrint('[CallService] 🔀 call_conf_invite fusionné session=$sessionId');
@@ -781,11 +1005,11 @@ extension CallSignaling on CallService {
       final isMuted = data['isMuted'] == true;
       if (userId == null) return;
       debugPrint('[CallService] 🎙 Group mute state: userId=$userId isMuted=$isMuted');
-      if (_groupRoster.containsKey(userId)) {
-        _groupRoster[userId]!.isMuted = isMuted;
-        speakingDetector.setSpeakerMuted(userId, isMuted);
-        notify();
-      }
+      // Un état reçu avant l'entrée de roster était perdu sans retour : le
+      // serveur ne le réémet pas, et l'émetteur n'a aucun moyen de savoir
+      // qu'on l'a jeté. On le garde de côté jusqu'à ce que le roster arrive.
+      _pendingGroupMedia.recordMuted(userId, isMuted);
+      _applyPendingGroupStates(userId);
     });
 
     // État caméra groupe : un participant a coupé/activé sa caméra
@@ -795,10 +1019,24 @@ extension CallSignaling on CallService {
       final isVideoOn = data['isVideoOn'] != false;
       if (userId == null) return;
       debugPrint('[CallService] 📹 Group video state: userId=$userId isVideoOn=$isVideoOn');
-      if (_groupRoster.containsKey(userId)) {
-        _groupRoster[userId]!.isVideoOn = isVideoOn;
-        notify();
-      }
+      _pendingGroupMedia.recordVideoOn(userId, isVideoOn);
+      _applyPendingGroupStates(userId);
     });
+  }
+
+  /// Applique à [userId] les états micro/caméra reçus, s'il est au roster.
+  ///
+  /// Appelé à la réception de l'état comme à la création de l'entrée : selon
+  /// l'ordre d'arrivée, c'est l'un ou l'autre qui déclenche.
+  void _applyPendingGroupStates(String userId) {
+    final info = _groupRoster[userId];
+    if (info == null) return;
+    final etat = _pendingGroupMedia.take(userId);
+    if (etat.isMuted != null) {
+      info.isMuted = etat.isMuted!;
+      speakingDetector.setSpeakerMuted(userId, etat.isMuted!);
+    }
+    if (etat.isVideoOn != null) info.isVideoOn = etat.isVideoOn!;
+    if (etat.isMuted != null || etat.isVideoOn != null) notify();
   }
 }

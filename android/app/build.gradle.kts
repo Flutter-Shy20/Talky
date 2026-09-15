@@ -2,6 +2,8 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("com.google.gms.google-services")
+    // Après google-services, dont il dépend pour lire google-services.json.
+    id("com.google.firebase.crashlytics")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -55,6 +57,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+
+            // Explicite, bien que ce soit déjà la valeur par défaut du plugin :
+            // avec `isMinifyEnabled`, c'est cette ligne qui décide si les traces
+            // de plantage seront lisibles ou non. Une régression ici serait
+            // muette — le rapport continuerait d'arriver, simplement
+            // indéchiffrable.
+            configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                mappingFileUploadEnabled = true
+            }
         }
     }
 
@@ -69,6 +80,11 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-messaging")
     implementation("androidx.core:core-ktx:1.15.0")
+    // Sonde de santé du magasin chiffré au démarrage (SecureStorageRepair).
+    // Même version que celle embarquée par flutter_secure_storage, qui la
+    // déclare en `implementation` : elle n'est donc pas sur notre classpath de
+    // compilation sans cette ligne.
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     // Tests JVM purs (aucun impact APK). `org.json:json` fournit la vraie
     // implémentation à la place des stubs android.jar, qui lèvent sinon
     // « not mocked » sur JSONArray/JSONObject.

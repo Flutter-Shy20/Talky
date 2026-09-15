@@ -78,19 +78,18 @@ class CallParticipantFocusOverlay extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: AnimatedScale(
-                    scale: 1,
-                    duration: AppDurations.normal,
-                    child: CallParticipantTile(
-                      userId: userId,
-                      stream: stream,
-                      name: name,
-                      photoUrl: photoUrl,
-                      isMuted: isMuted,
-                      isVideoOn: isVideoOn,
-                      isSpeaking: isSpeaking,
-                      mirror: mirror,
-                    ),
+                  // `AnimatedScale(scale: 1)` : une animation dont la valeur ne
+                  // change jamais n'anime rien. Elle ne coûtait qu'une couche de
+                  // plus dans l'arbre, mais elle laissait croire à une intention.
+                  child: CallParticipantTile(
+                    userId: userId,
+                    stream: stream,
+                    name: name,
+                    photoUrl: photoUrl,
+                    isMuted: isMuted,
+                    isVideoOn: isVideoOn,
+                    isSpeaking: isSpeaking,
+                    mirror: mirror,
                   ),
                 ),
               ],

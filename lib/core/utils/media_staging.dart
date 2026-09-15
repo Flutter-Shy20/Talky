@@ -3,7 +3,7 @@ import 'dart:math';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import '../theme/locale_controller.dart';
+import '../errors/error_kind.dart';
 
 /// Copie un média sélectionné vers un dossier outbox durable avant upload.
 ///
@@ -17,7 +17,9 @@ Future<File> stageMediaFile(
   Directory? outboxDirectory,
 }) async {
   if (!source.existsSync()) {
-    throw MediaStagingException(LocaleController.instance.l10n.sourceFileNotFound(source.path));
+    // Le chemin du fichier partait à l'écran. Il n'apprend rien à
+    // l'utilisateur et expose l'arborescence de l'appareil.
+    throw MediaStagingException('fichier source absent: ${source.path}');
   }
 
   final outboxDir = outboxDirectory ?? await _outboxDirectory();
@@ -33,11 +35,11 @@ Future<File> stageMediaFile(
   try {
     await source.copy(dest.path);
   } on FileSystemException catch (e) {
-    throw MediaStagingException(LocaleController.instance.l10n.copyImpossible('${e.message}'));
+    throw MediaStagingException('copie impossible: ${e.message}', cause: e);
   }
 
   if (!dest.existsSync()) {
-    throw MediaStagingException(LocaleController.instance.l10n.copyFailedPath(dest.path));
+    throw MediaStagingException('copie vide: ${dest.path}');
   }
   return dest;
 }
@@ -56,10 +58,21 @@ Future<Directory> _outboxDirectory() async {
   return dir;
 }
 
+/// Échec de mise en outbox d'un média.
+///
+/// [message] est un texte de **journal**, pas d'écran : il contient le chemin
+/// du fichier, qui n'apprend rien à l'utilisateur et expose l'arborescence de
+/// l'appareil. C'est le presenter qui choisit ce qui s'affiche, à partir de
+/// [kind].
 class MediaStagingException implements Exception {
-  MediaStagingException(this.message);
+  MediaStagingException(this.message, {this.cause});
 
   final String message;
+  final Object? cause;
+
+  /// Toujours un problème de stockage : fichier disparu, copie refusée, disque
+  /// plein. Le presenter en tire « Vérifiez l'espace disponible ».
+  ErrorKind get kind => ErrorKind.stockage;
 
   @override
   String toString() => 'MediaStagingException: $message';

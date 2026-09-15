@@ -105,7 +105,6 @@
     }
   },
   "mediaExpiredResendYourself": "Renvoyez-le depuis votre galerie si vous l'avez encore",
-  "settingsCalls": "Appels",
   "settingsRingtone": "Sonnerie d'appel",
   "ringtoneScreenTitle": "Sonnerie d'appel",
   "ringtoneSectionSystem": "Sonnerie par défaut",
@@ -146,54 +145,6 @@
   "commonCallBack": "Rappeler",
   "callMissed": "Appel manqué",
   "callIncoming": "APPEL ENTRANT",
-  "errorWithDetails": "Échec : {error}",
-  "@errorWithDetails": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "actionFailedWithError": "Action impossible : {error}",
-  "@actionFailedWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "cannotUnblockWithError": "Impossible de débloquer : {error}",
-  "@cannotUnblockWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "loadErrorWithDetails": "Erreur chargement : {error}",
-  "@loadErrorWithDetails": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "cannotOpenFileApp": "Aucune app pour ouvrir ce fichier ({message})",
-  "@cannotOpenFileApp": {
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
-  },
-  "cannotOpenFileAppAlt": "Aucune application pour ouvrir ce fichier ({message})",
-  "@cannotOpenFileAppAlt": {
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
-  },
   "membersCount": "Membres ({count})",
   "@membersCount": {
     "placeholders": {
@@ -442,70 +393,6 @@
     "placeholders": {
       "count": {
         "type": "int"
-      }
-    }
-  },
-  "cannotLoadMeeting": "Impossible de charger la réunion : {error}",
-  "@cannotLoadMeeting": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "cannotJoinMeeting": "Impossible de rejoindre : {error}",
-  "@cannotJoinMeeting": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "cannotCreateMeeting": "Impossible de créer la réunion : {error}",
-  "@cannotCreateMeeting": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "meetingConnectFailed": "Échec de la connexion à la réunion : {error}",
-  "@meetingConnectFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "uploadFailedWithError": "Échec de l'upload : {error}",
-  "@uploadFailedWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "sendFailedWithError": "Échec de l'envoi : {error}",
-  "@sendFailedWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "recordFailedWithError": "Échec de l'enregistrement : {error}",
-  "@recordFailedWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "roleChangeError": "Erreur changement de rôle: {error}",
-  "@roleChangeError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
       }
     }
   },
@@ -927,6 +814,12 @@
   "messagesCleared": "Messages effacés",
   "reservedNumbers": "Numéros réservés",
   "meetingEnded": "Réunion terminée",
+  "meetingBlockedByCall": "Un appel est en cours : impossible de rejoindre la réunion.",
+  "meetingJoinExpired": "Cette réunion est échue.",
+  "meetingJoinNotInvited": "Réunion introuvable.",
+  "meetingParticipantJoined": "A rejoint",
+  "meetingParticipantPending": "En attente",
+  "meetingExpired": "Échue",
   "newMeeting": "Nouvelle réunion",
   "alanyaPhone": "ID Alanya",
   "deletedMessage": "Message supprimé",
@@ -986,6 +879,10 @@
   "rewind10S": "Reculer 10 s",
   "pdfDocument": "Document PDF",
   "speaker": "Haut-parleur",
+  "audioOutputEarpiece": "Écouteur",
+  "audioOutputWired": "Casque filaire",
+  "audioOutputBluetooth": "Bluetooth",
+  "changeAudioOutput": "Changer la sortie audio",
   "newCall": "Nouvel appel",
   "lastView": "Dernière vue",
   "receivedCalls": "Appels reçus",
@@ -1227,22 +1124,6 @@
   "videoViewOnce": "🎥 Vidéo · Vue unique",
   "videoCallPreview": "📹 Appel vidéo",
   "voiceCallPreview": "📞 Appel vocal",
-  "anErrorOccurred": "Une erreur est survenue: {error}",
-  "@anErrorOccurred": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "errorColon": "Erreur: {error}",
-  "@errorColon": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "deletePhotoAction": "Supprimer la photo",
   "unavailableOffline": "Indisponible hors ligne",
   "noParticipantsYet": "Aucun participant pour le moment",
@@ -1252,14 +1133,6 @@
   "voiceMessage": "Message vocal",
   "paused": "En pause",
   "recordOrImportAudio": "Enregistrez un vocal ou importez un fichier audio",
-  "unableToPostStatusWithError": "Impossible de publier le statut : {error}",
-  "@unableToPostStatusWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "tapToAddYourStatus": "Appuyer pour ajouter votre statut",
   "shareAContact": "Partager un contact",
   "searchAContact": "Rechercher un contact",
@@ -1268,22 +1141,7 @@
   "turnOnSpeaker": "Activer le haut-parleur",
   "notAuthenticated": "Non authentifié",
   "networkTimeout": "Timeout réseau",
-  "networkErrorWithDetails": "Erreur réseau: {error}",
-  "@networkErrorWithDetails": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "invalidResponseWithCode": "Réponse invalide ({code})",
-  "@invalidResponseWithCode": {
-    "placeholders": {
-      "code": {
-        "type": "Object"
-      }
-    }
-  },
+  "networkError": "Connexion impossible. Vérifiez votre réseau et réessayez.",
   "noRefreshToken": "Pas de refresh token",
   "refreshFailed": "Refresh échoué",
   "addedToPreferredContacts": "{name} ajouté aux contacts préférés",
@@ -1465,30 +1323,6 @@
     }
   },
   "usedLabel": "Utilisé",
-  "banUnbanError": "Erreur ban/unban: {error}",
-  "@banUnbanError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "deleteErrorWithDetails": "Erreur suppression: {error}",
-  "@deleteErrorWithDetails": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "loadUsersError": "Erreur chargement utilisateurs: {error}",
-  "@loadUsersError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "limitReachedParticipants": "Maximum {total} participants en {media} (vous inclus)",
   "@limitReachedParticipants": {
     "placeholders": {
@@ -1599,30 +1433,6 @@
   "@todayTimeShort": {
     "placeholders": {
       "time": {
-        "type": "String"
-      }
-    }
-  },
-  "sourceFileNotFound": "Fichier source introuvable : {path}",
-  "@sourceFileNotFound": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
-  "copyImpossible": "Copie impossible : {error}",
-  "@copyImpossible": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "copyFailedPath": "Copie échouée : {path}",
-  "@copyFailedPath": {
-    "placeholders": {
-      "path": {
         "type": "String"
       }
     }
@@ -2782,14 +2592,6 @@
   "exportInProgressHint": "Prêt dans ~24 h · notification à l'achèvement",
   "exportReady": "Votre export est prêt",
   "exportDownload": "Télécharger",
-  "exportFailed": "Export impossible : {error}",
-  "@exportFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "deleteAccountTitle": "Supprimer le compte",
   "deleteAccountEntrySubtitle": "Action irréversible",
   "deleteAccountStep1Title": "Action irréversible",
@@ -2811,28 +2613,12 @@
       }
     }
   },
-  "deleteAccountFailed": "Suppression impossible : {error}",
-  "@deleteAccountFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "biometricLock": "Verrouillage biométrique",
   "biometricLockTitle": "Alanya est verrouillé",
   "biometricLockUnlock": "Déverrouiller",
   "biometricLockSubtitle": "Empreinte ou reconnaissance faciale à l'ouverture",
   "biometricLockEnableConfirm": "Confirmez votre empreinte pour activer le verrou",
   "biometricLockUnavailable": "Biométrie indisponible sur cet appareil",
-  "biometricLockFailed": "Biométrie : {error}",
-  "@biometricLockFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "accountSecuritySectionProtection": "Protection",
   "logoutAllDevices": "Déconnecter tous les appareils",
   "logoutAllDevicesSubtitle": "Ferme toutes les sessions sauf celle-ci",
@@ -3033,11 +2819,25 @@
   "backupLastNever": "Aucune sauvegarde pour l'instant",
   "backupLastAt": "Dernière sauvegarde : {when} · {size}",
   "@backupLastAt": {
-    "placeholders": { "when": { "type": "String" }, "size": { "type": "String" } }
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "backupCounts": "{messages} messages · {conversations} discussions",
   "@backupCounts": {
-    "placeholders": { "messages": { "type": "int" }, "conversations": { "type": "int" } }
+    "placeholders": {
+      "messages": {
+        "type": "int"
+      },
+      "conversations": {
+        "type": "int"
+      }
+    }
   },
   "backupRunNow": "Sauvegarder maintenant",
   "backupRunning": "Sauvegarde en cours…",
@@ -3047,7 +2847,13 @@
   "backupStaleWarning": "Aucune sauvegarde n'a abouti depuis plusieurs jours. Vérifiez votre connexion et l'espace disponible.",
   "backupDestinationLabel": "Destination",
   "backupDestinationDrive": "Google Drive {account}",
-  "@backupDestinationDrive": {"placeholders": {"account": {"type": "String"}}},
+  "@backupDestinationDrive": {
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
   "backupDestinationDriveUnlinked": "Google Drive — aucun compte connecté sur cet appareil",
   "backupDestinationDevice": "Sur cet appareil",
   "backupChangeAccount": "Changer de compte Google",
@@ -3057,7 +2863,13 @@
   "backupDriveRefused": "Connexion à Google annulée. Rien n'a changé.",
   "backupFellBack": "Drive était injoignable : la sauvegarde a été faite sur cet appareil.",
   "backupFellBackAt": "Drive était injoignable. Une sauvegarde a été faite sur cet appareil le {when}.",
-  "@backupFellBackAt": {"placeholders": {"when": {"type": "String"}}},
+  "@backupFellBackAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "backupLocalRisksTitle": "Sauvegarde sur cet appareil",
   "backupLocalRisksBody": "Votre sauvegarde est sur ce téléphone, dans Téléchargements › Alanya › Sauvegardes.\n\n✓ Elle survit à une réinstallation d'Alanya.\n✗ Elle ne survit pas à la perte, au vol ou à la casse du téléphone.\n✗ Elle ne survit pas à un effacement complet de l'appareil.\n\nPour mettre vos données à l'abri hors du téléphone, connectez Google Drive.",
   "backupWhatIsSaved": "Sont sauvegardés : messages, discussions, contacts et réglages. Les photos, vidéos et fichiers ne le sont pas — utilisez « Exporter cette période » depuis Mes médias pour les conserver.",
@@ -3067,7 +2879,14 @@
   "restoreTitle": "Restaurer vos données",
   "restoreFound": "Une sauvegarde du {when} a été trouvée ({size}).",
   "@restoreFound": {
-    "placeholders": { "when": { "type": "String" }, "size": { "type": "String" } }
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "restoreExplain": "Vos messages et réglages seront remis en place. Les photos et vidéos de plus de 30 jours ne reviendront pas : elles ne sont pas dans la sauvegarde.",
   "restoreAction": "Restaurer",
@@ -3090,26 +2909,55 @@
   "exportSheetTitle": "Exporter cette période",
   "exportSheetSummary": "{count, plural, =0{Aucun élément} =1{1 élément · {size}} other{{count} éléments · {size}}}",
   "@exportSheetSummary": {
-    "placeholders": { "count": { "type": "int" }, "size": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "exportSheetNothing": "Aucun média à exporter pour ces filtres",
   "exportMissingRecoverable": "{count, plural, =1{1 élément manquant peut être récupéré ({size})} other{{count} éléments manquants peuvent être récupérés ({size})}}",
   "@exportMissingRecoverable": {
-    "placeholders": { "count": { "type": "int" }, "size": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "exportMissingRecoverableEstimate": "{count, plural, =1{Jusqu'à 1 élément manquant peut être récupéré} other{Jusqu'à {count} éléments manquants peuvent être récupérés}}",
   "@exportMissingRecoverableEstimate": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "exportMissingEstimateHint": "Le serveur n'a pas pu être consulté : certains de ces éléments n'y sont peut-être plus.",
   "exportDoneWithMissing": "Archive prête : {size} · {missing} élément(s) indisponible(s)",
   "@exportDoneWithMissing": {
-    "placeholders": { "size": { "type": "String" }, "missing": { "type": "int" } }
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "missing": {
+        "type": "int"
+      }
+    }
   },
   "exportMissingRecoverableHint": "Coché, ces éléments seront téléchargés avant l'assemblage. Décoché, aucune donnée mobile n'est consommée.",
   "exportMissingLost": "{count, plural, =1{1 élément n'est plus disponible sur les serveurs} other{{count} éléments ne sont plus disponibles sur les serveurs}}",
   "@exportMissingLost": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "exportMissingLostHint": "Ils sont signalés dans l'archive, mais leur contenu est définitivement perdu.",
   "exportDestinationShare": "Partager",
@@ -3117,15 +2965,33 @@
   "exportPhaseScanning": "Inventaire…",
   "exportPhaseRecovering": "Récupération {done} / {total}",
   "@exportPhaseRecovering": {
-    "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } }
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "exportPhaseAssembling": "Assemblage {done} / {total}",
   "@exportPhaseAssembling": {
-    "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } }
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "exportDone": "Archive prête : {size}",
   "@exportDone": {
-    "placeholders": { "size": { "type": "String" } }
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "exportFailedGeneric": "L'exportation a échoué",
   "exportNoSpace": "Espace insuffisant sur l'appareil pour cette archive",
@@ -3710,5 +3576,65 @@
   "translateModeAuto": "Automatique",
   "translateModeAlways": "Toujours",
   "translateModeNever": "Jamais",
-  "translateModeAutoSubtitle": "Suit le réglage général"
+  "translateModeAutoSubtitle": "Suit le réglage général",
+  "errDelaiDepasse": "Le serveur met trop de temps à répondre. Réessayez.",
+  "errReseauSuspect": "Connexion sécurisée impossible. Vérifiez votre réseau.",
+  "errSessionExpiree": "Votre session a expiré. Reconnectez-vous.",
+  "errIntrouvable": "Introuvable. Ce contenu a peut-être été supprimé.",
+  "errConflit": "Action impossible dans l'état actuel.",
+  "errTropDeRequetes": "Trop de tentatives. Patientez un instant.",
+  "errServeur": "Le service est momentanément indisponible. Réessayez.",
+  "errPermission": "Autorisation refusée. Vérifiez les réglages de votre appareil.",
+  "errPeripherique": "Périphérique indisponible ou déjà utilisé par une autre application.",
+  "errStockage": "Accès au fichier impossible. Vérifiez l'espace disponible.",
+  "errGenerique": "Une erreur est survenue. Réessayez.",
+  "errDomaineAuth": "Connexion impossible. Réessayez.",
+  "errDomaineChat": "Message non envoyé. Réessayez.",
+  "errDomaineAppel": "L'appel n'a pas pu aboutir. Réessayez.",
+  "errDomaineReunion": "La réunion n'a pas pu s'ouvrir. Réessayez.",
+  "errDomaineQr": "Ce code n'a pas pu être utilisé. Réessayez.",
+  "errDomaineMedia": "Le fichier n'a pas pu être traité. Réessayez.",
+  "errDomaineTrajet": "Le trajet n'a pas pu être mis à jour. Réessayez.",
+  "errDomaineStatut": "Le statut n'a pas pu être publié. Réessayez.",
+  "errDomaineProfil": "Modification impossible. Réessayez.",
+  "errDomaineAdmin": "Opération impossible. Réessayez.",
+  "errAppelHorsLigne": "Appel impossible sans connexion.",
+  "errChatHorsLigne": "Message en attente : il partira au retour du réseau.",
+  "errMediaStockage": "Enregistrement impossible. Vérifiez l'espace disponible sur l'appareil.",
+  "errCodeRefreshExpired": "Votre session a expiré. Reconnectez-vous.",
+  "errCodeDeviceRevoked": "Cet appareil a été déconnecté. Reconnectez-vous.",
+  "errCodeAccountDeletionPending": "Ce compte est en cours de suppression.",
+  "errCodeRegisterRateLimited": "Trop de créations de compte. Réessayez plus tard.",
+  "errCodeQrSessionExpired": "Ce code QR a expiré. Affichez-en un nouveau.",
+  "errCodeDeviceNotOwner": "Cet appareil n'est pas autorisé pour cette action.",
+  "errCodeAddAlreadyUsed": "Ce code a déjà été utilisé.",
+  "errCodeAddMePolicyDenied": "Cette personne n'accepte pas les ajouts par code.",
+  "errCodeMeetingExpired": "Cette réunion a expiré.",
+  "errCodeMeetingEnded": "Cette réunion est terminée.",
+  "errCodeMeetingOrganiserRequired": "Seul l'organisateur peut faire cela.",
+  "errCodeAccountAlreadyInMeeting": "Ce compte participe déjà à la réunion sur un autre appareil.",
+  "errCodeSessionBusy": "Un appel est en cours. Terminez-le d'abord.",
+  "errCodeMaxDurationReached": "La durée maximale est atteinte.",
+  "errCodeBlockedBySender": "Vous ne pouvez pas contacter cette personne.",
+  "errCodeNotAMember": "Vous ne faites plus partie de ce groupe.",
+  "errCodeGroupAdminsOnly": "Réservé aux administrateurs du groupe.",
+  "errCodeGroupOwnerRequired": "Seul le propriétaire du groupe peut faire cela.",
+  "errCodeConversationNotFound": "Cette conversation n'existe plus.",
+  "errCodeOfficialReadonly": "Ce compte officiel n'accepte pas de réponse.",
+  "errCodeListMemberLimit": "Cette liste a atteint son nombre maximal de membres.",
+  "errCodeSystemListReadonly": "Cette liste système ne peut pas être modifiée.",
+  "errCodeInviteBlocked": "Cette personne ne peut pas être invitée.",
+  "errCodeBusinessOnly": "Réservé aux comptes professionnels.",
+  "errCodeTrustListEmpty": "Votre cercle de confiance est vide. Ajoutez-y quelqu'un d'abord.",
+  "errCodeTripAlreadyActive": "Un trajet est déjà en cours.",
+  "errCodeTripTerminal": "Ce trajet est déjà terminé.",
+  "errCodeTripStillOpen": "Terminez d'abord le trajet en cours.",
+  "errCodeSosRateLimited": "Alerte déjà envoyée. Patientez avant d'en envoyer une autre.",
+  "errCodeInvalidEta": "L'heure d'arrivée indiquée n'est pas valide.",
+  "errCodeInvalidDestination": "La destination indiquée n'est pas valide.",
+  "errCodeMediaExpired": "Ce média a expiré et n'est plus disponible.",
+  "errCodeInvalidExtension": "Ce type de fichier n'est pas accepté.",
+  "errCodeInsufficientRole": "Vos droits ne permettent pas cette action.",
+  "errCodeFieldImmutable": "Ce champ ne peut plus être modifié.",
+  "errAucuneAppPourFichier": "Aucune application ne peut ouvrir ce fichier."
 }

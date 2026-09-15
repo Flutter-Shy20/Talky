@@ -24,7 +24,10 @@ extension CallOutgoingRestore on CallService {
 
     debugPrint('[CallService] 🔄 restoreOutgoingFromColdStart callId=$callId');
 
+    // L'identifiant restauré est celui de CallKit, pas celui du serveur :
+    // l'instantané s'indexe dessus. `call_resume` posera l'autre.
     _currentCallId = callId;
+    _serverCallIdKnown = false;
     _remoteUserId = snap.remoteUserId;
     _remoteUserName = snap.remoteUserName;
     _remoteUserPhoto = snap.remoteUserPhoto;
@@ -45,7 +48,13 @@ extension CallOutgoingRestore on CallService {
     required String phase,
     String? serverCallId,
   }) async {
-    final callId = _currentCallId;
+    // L'instantané s'indexe sur l'identifiant de CallKit : c'est lui que la
+    // restauration après kill retrouvera. `_currentCallId` porte celui du
+    // serveur depuis le décrochage, et il a son propre champ.
+    final callId = outgoingSnapshotIdentity(
+      callKitCallId: _callKitCallId,
+      currentCallId: _currentCallId,
+    );
     final remoteId = _remoteUserId;
     if (callId == null || callId.isEmpty || remoteId == null) return;
 
@@ -111,17 +120,59 @@ extension CallOutgoingRestore on CallService {
     });
     debugPrint('[CallService] call_resume_ack callId=$serverCallId peer=$peerId');
 
+    // Session à trois ou appel de groupe : le média passe par le maillage
+    // (group_offer + génération), pas par la PeerConnection 1-à-1.
+    //
+    // Celle de l'invité n'a jamais rien négocié — `_initLocalStream` la crée,
+    // puis tout se joue sur `_groupPeerConnections`. Son `connectionState` reste
+    // donc nul, ce qui rend `isPcUsable` faux : la branche « PC morte » ci-dessous
+    // le basculait en `reconnecting`. Et pour lui, ce statut n'a aucune sortie —
+    // seul le handler 1-à-1 repasse en `connected`, et il n'est branché que par
+    // `initiateCall` / `answerCall` / la restauration d'un sortant. L'invité
+    // restait donc sur « Reconnexion… » jusqu'au raccrochage par le timeout
+    // global, et les autres le voyaient quitter la session. L'ack suffit ici :
+    // le maillage a ses propres reprises.
+    // Le socket est revenu ET le serveur confirme que l'appel est vivant : on
+    // redonne une fenêtre pleine de reconnexion.
+    //
+    // Sans cela, les 45 secondes couraient depuis la coupure — temps hors
+    // réseau compris. Une coupure de trente secondes ne laissait donc qu'une
+    // quinzaine de secondes pour un redémarrage ICE qui demande un aller-retour
+    // socket, une collecte de candidats et des tests de connectivité : l'appel
+    // restait sur « Reconnexion… » puis mourait sur le reliquat, quelques
+    // secondes après avoir enfin pu réémettre.
+    //
+    // Seul l'appelé le faisait, et jamais en session de groupe, dont la branche
+    // sort juste en dessous — ce qui explique que les deux configurations
+    // échouaient de la même façon.
+    if (_status == CallStatus.reconnecting) {
+      _cancelGlobalReconnectTimeout();
+      _armGlobalReconnectTimeout();
+      debugPrint('[CallService] ⏱ fenêtre de reconnexion redonnée (call_resume)');
+    }
+
+    if (_groupRoomId != null) {
+      debugPrint('[CallService] call_resume en session de groupe → ack seul');
+      return;
+    }
+
     // Déjà en communication : ack suffit sauf si PC morte → rejoin.
     if (_status == CallStatus.connected && !_isRestoringOutgoing) {
       if (_currentCallId == null || _currentCallId!.isEmpty) {
-        _currentCallId = serverCallId;
+        _adoptServerCallId(serverCallId);
       }
       final pcDead = _webrtc.peerConnection == null || !_webrtc.isPcUsable;
       if (pcDead && isRestartInitiator) {
         debugPrint('[CallService] call_resume: PC morte → rejoin');
         try {
           if (_webrtc.peerConnection == null) {
-            await _initWebRtcForOutgoingRestore(isVideo: _isVideo);
+            await _initWebRtcForOutgoingRestore(
+              isVideo: _isVideo,
+              asOutgoingCaller: resolveOutgoingCaller(
+                serverRole: data['role']?.toString(),
+                current: true,
+              ),
+            );
           }
           await _acquireCallSessionIfNeeded(isVideo: _isVideo);
           await _sendCallRejoinOffer(iceRestart: true);
@@ -136,8 +187,14 @@ extension CallOutgoingRestore on CallService {
 
     if (_status == CallStatus.reconnecting && !_isRestoringOutgoing) {
       if (isRestartInitiator) {
-        unawaited(_attemptIceRestart());
+        // `force` : l'offre marquée « en vol » est celle que la coupure réseau
+        // vient d'emporter. Sans lui, le verrou `_isIceRestarting` bloquait la
+        // seule tentative que le retour du socket rendait enfin possible.
+        unawaited(_attemptIceRestart(force: true));
       }
+      // Côté appelé, rien d'autre à initier : c'est l'appelant qui réémet
+      // l'offre, dans les cinq secondes. La fenêtre a déjà été redonnée
+      // ci-dessus, pour les deux rôles.
       return;
     }
 
@@ -163,7 +220,7 @@ extension CallOutgoingRestore on CallService {
 
     _cancelOutgoingRestoreTimeout();
 
-    _currentCallId = serverCallId;
+    _adoptServerCallId(serverCallId);
 
     final isVideo = data['isVideo'] == true || _isVideo;
     _isVideo = isVideo;
@@ -171,7 +228,14 @@ extension CallOutgoingRestore on CallService {
     debugPrint('[CallService] 🔄 call_resume peer=$peerId callId=$serverCallId');
 
     try {
-      await _initWebRtcForOutgoingRestore(isVideo: isVideo);
+      // Le serveur dit qui est l'appelant de cet appel — jusqu'ici ignoré.
+      await _initWebRtcForOutgoingRestore(
+        isVideo: isVideo,
+        asOutgoingCaller: resolveOutgoingCaller(
+          serverRole: data['role']?.toString(),
+          current: true,
+        ),
+      );
       await _acquireCallSessionIfNeeded(isVideo: isVideo);
       await _sendCallRejoinOffer(iceRestart: true);
     } catch (e) {
@@ -209,23 +273,27 @@ extension CallOutgoingRestore on CallService {
       return true;
     }
 
-    if ((_status == CallStatus.connecting ||
-            _status == CallStatus.connected ||
-            _status == CallStatus.reconnecting ||
-            _status == CallStatus.outgoing) &&
+    if (acceptsResumeForLocalStatus(
+          callStatusName: _status.name,
+          awaitingAutoAnswer: _autoAnswerOnNextIncoming || _isAutoAnsweringFromPush,
+        ) &&
         (_remoteUserId == peerId || _currentCallId == serverCallId)) {
       return true;
     }
 
     final snap = await PendingOutgoingCallStore.read();
-    if (snap != null && snap.remoteUserId == peerId) {
-      if (snap.serverCallId == serverCallId ||
-          snap.clientCallId == serverCallId ||
-          snap.serverCallId == null ||
-          snap.serverCallId!.isEmpty) {
-        if (!await EndedCallRegistry.isEnded(snap.clientCallId)) {
-          return true;
-        }
+    if (snap != null &&
+        snapshotMatchesResume(
+          snapServerCallId: snap.serverCallId,
+          snapClientCallId: snap.clientCallId,
+          snapPeerId: snap.remoteUserId,
+          snapStartedAtMs: snap.startedAtMs,
+          eventCallId: serverCallId,
+          eventPeerId: peerId,
+          nowMs: DateTime.now().millisecondsSinceEpoch,
+        )) {
+      if (!await EndedCallRegistry.isEnded(snap.clientCallId)) {
+        return true;
       }
     }
 
@@ -237,7 +305,7 @@ extension CallOutgoingRestore on CallService {
         if (activeId == serverCallId) return true;
         if (activeCaller == peerId.toString() &&
             (activeId.isEmpty ||
-                activeId == _currentCallId ||
+                _matchesCurrentCallId(activeId) ||
                 (snap != null && activeId == snap.clientCallId))) {
           return true;
         }
@@ -265,7 +333,7 @@ extension CallOutgoingRestore on CallService {
       '[CallService] 🔄 bootstrap restore depuis call_resume '
       'client=${snap.clientCallId} server=$serverCallId',
     );
-    _currentCallId = serverCallId;
+    _adoptServerCallId(serverCallId);
     _remoteUserId = snap.remoteUserId;
     _remoteUserName = snap.remoteUserName;
     _remoteUserPhoto = snap.remoteUserPhoto;
@@ -277,8 +345,19 @@ extension CallOutgoingRestore on CallService {
     return true;
   }
 
-  Future<void> _initWebRtcForOutgoingRestore({required bool isVideo}) async {
-    final iceServers = await _apiClient.fetchIceServers(force: true);
+  /// Recrée la pile WebRTC pour une reprise.
+  ///
+  /// [asOutgoingCaller] dit qui, des deux, initiera le prochain ICE restart. Ce
+  /// drapeau était posé à `true` inconditionnellement, y compris quand cette
+  /// méthode est appelée depuis `_processCallRejoinOffer` — donc sur le device
+  /// qui **reçoit** l'offre. Les deux côtés se croyaient alors initiateurs,
+  /// alors que tout le protocole 1-à-1 est « caller-only » : au restart suivant,
+  /// offre contre offre.
+  Future<void> _initWebRtcForOutgoingRestore({
+    required bool isVideo,
+    bool asOutgoingCaller = true,
+  }) async {
+    final iceServers = await _apiClient.fetchIceServers();
     await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
     _webrtc.onLocalStream = (_) { notify(); };
     _webrtc.onRemoteStream = (_) { notify(); };
@@ -296,12 +375,9 @@ extension CallOutgoingRestore on CallService {
       });
     };
     _wireOneToOneConnectionStateHandlers();
-    _isOutgoingCaller = true;
+    _isOutgoingCaller = asOutgoingCaller;
 
-    if (!kIsWeb) {
-      _isSpeakerOn = isVideo;
-      await audio.AudioHelper.setSpeakerphoneOn(isVideo);
-    }
+    await _initAudioRoute(isVideo: isVideo);
   }
 
   Future<void> _sendCallRejoinOffer({bool iceRestart = false}) async {
@@ -320,16 +396,42 @@ extension CallOutgoingRestore on CallService {
     );
   }
 
+  /// Les offres de reprise se traitent une à une.
+  ///
+  /// Deux peuvent arriver à quelques millisecondes d'intervalle — c'est
+  /// exactement ce que produisait un socket qui revient et livrait deux
+  /// `call_resume`. Traitées en parallèle, elles entrelacent deux
+  /// `setRemoteDescription` sur la même PeerConnection : l'une des deux échoue
+  /// sur un état de signalisation invalide, et sa réponse ne part jamais. Le
+  /// pair n'obtient alors que la réponse à l'offre périmée, qu'il jette.
   Future<void> _handleCallRejoinOffer(Map<String, dynamic> data) async {
+    final previous = _rejoinOfferChain;
+    final done = Completer<void>();
+    _rejoinOfferChain = done.future;
+    try {
+      await previous;
+    } catch (_) {
+      // L'échec de l'offre précédente ne doit pas empêcher celle-ci.
+    }
+    try {
+      await _processCallRejoinOffer(data);
+    } finally {
+      done.complete();
+    }
+  }
+
+  Future<void> _processCallRejoinOffer(Map<String, dynamic> data) async {
     final peerId = int.tryParse(data['peerId']?.toString() ?? '');
     final offerMap = data['offer'];
     if (peerId == null || offerMap is! Map || offerMap['sdp'] == null) return;
     if (_remoteUserId != null && peerId != _remoteUserId) return;
 
-    final allowed = _status == CallStatus.connected ||
-        _status == CallStatus.reconnecting ||
-        _isRestoringOutgoing ||
-        (_status == CallStatus.connecting && _remoteUserId == peerId);
+    final allowed = acceptsRejoinOfferForLocalStatus(
+      callStatusName: _status.name,
+      isRestoringOutgoing: _isRestoringOutgoing,
+      peerMatchesRemote: _remoteUserId == peerId,
+      awaitingAutoAnswer: _isAutoAnsweringFromPush || _autoAnswerOnNextIncoming,
+    );
     if (!allowed) {
       debugPrint('[CallService] 🛡 call_rejoin_offer ignoré status=$_status');
       return;
@@ -339,6 +441,19 @@ extension CallOutgoingRestore on CallService {
         ? data['generation'] as int
         : int.tryParse(data['generation']?.toString() ?? '');
     if (gen != null) {
+      // Une offre plus ancienne que la génération courante a été doublée par
+      // une plus récente : l'appliquer ferait repartir la négociation en
+      // arrière, et notre réponse serait de toute façon jetée à l'arrivée.
+      if (isStaleRejoinOffer(
+        offerGeneration: gen,
+        localGeneration: _webrtc.iceGeneration,
+      )) {
+        debugPrint(
+          '[CallService] 🛡 call_rejoin_offer génération périmée '
+          'gen=$gen courante=${_webrtc.iceGeneration}',
+        );
+        return;
+      }
       while (_webrtc.iceGeneration < gen) {
         _webrtc.bumpIceGeneration();
       }
@@ -348,7 +463,11 @@ extension CallOutgoingRestore on CallService {
 
     try {
       if (_webrtc.peerConnection == null) {
-        await _initWebRtcForOutgoingRestore(isVideo: _isVideo);
+        // On reçoit l'offre : on est l'appelé de ce restart, pas son initiateur.
+        await _initWebRtcForOutgoingRestore(
+          isVideo: _isVideo,
+          asOutgoingCaller: false,
+        );
         await _acquireCallSessionIfNeeded(isVideo: _isVideo);
       }
       await _webrtc.handleOffer(
@@ -365,12 +484,21 @@ extension CallOutgoingRestore on CallService {
         if (_currentCallId != null) 'callId': _currentCallId,
       });
 
-      if (_isRestoringOutgoing || _status == CallStatus.connecting) {
+      if (_isRestoringOutgoing ||
+          _status == CallStatus.connecting ||
+          _status == CallStatus.incoming) {
+        // `incoming` : appelé restauré après une mort de processus. La reprise
+        // est négociée, il n'attend plus rien — surtout pas l'offre initiale,
+        // que le serveur ne rejoue pas.
+        _isAutoAnsweringFromPush = false;
+        _autoAnswerOnNextIncoming = false;
+        _autoAnswerCallerId = null;
+        _cancelAwaitingOfferTimeout();
+        _cancelIncomingRingSafety();
         _completeOutgoingRestore();
       } else if (_status == CallStatus.connected ||
           _status == CallStatus.reconnecting) {
-        _onOneToOneMediaReconnected();
-        debugPrint('[CallService] Renégociation rejoin terminée');
+        _onRejoinNegotiated();
       }
     } catch (e) {
       debugPrint('[CallService] call_rejoin_offer échoué: $e');
@@ -406,11 +534,11 @@ extension CallOutgoingRestore on CallService {
           answerMap['type']?.toString() ?? 'answer',
         ),
       );
-      _markIceRestartComplete();
       if (_isRestoringOutgoing || _status == CallStatus.connecting) {
+        _markIceRestartComplete();
         _completeOutgoingRestore();
       } else {
-        _onOneToOneMediaReconnected();
+        _onRejoinNegotiated();
       }
     } catch (e) {
       debugPrint('[CallService] call_rejoin_answer échoué: $e');

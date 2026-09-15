@@ -74,7 +74,7 @@ extension CallConference on CallService {
       _startDurationTimer();
       _startSpeakingDetection(groupMode: true);
       if (!kIsWeb) {
-        _currentCallId = sessionId;
+        _adoptServerCallId(sessionId);
         await _acquireCallSession(
           isVideo: _isVideo,
           displayName: LocaleController.instance.l10n.groupCall,
@@ -86,7 +86,7 @@ extension CallConference on CallService {
     } catch (e) {
       debugPrint('[CallService] ** acceptConferenceInvite: $e');
       await _releaseCallSession();
-      _terminateConference();
+      await _terminateConference();
     }
   }
 
@@ -138,7 +138,7 @@ extension CallConference on CallService {
     _markTerminalCallId(_confSessionId);
     await _ringtone.stop();
     await _callKit.endAll(callId: _confSessionId);
-    _terminateConference();
+    await _terminateConference();
   }
 
   String _addRejectionReason(String code) {
@@ -269,13 +269,19 @@ extension CallConference on CallService {
     final mode = data['mode']?.toString();
     if (mode == 'transfer' || mode == 'join') _confMode = mode!;
 
+    final known = _groupRoster[userId];
     _groupRoster[userId] = GroupParticipantInfo(
       id: userId,
       name: (user['name'] as String?)?.isNotEmpty == true
           ? user['name'] as String
           : LocaleController.instance.l10n.participantFallback,
       photo: normalizeBackendUrl(user['photo']?.toString()),
+      // Une carte reconstruite ne doit pas rouvrir un micro déjà coupé.
+      isMuted: known?.isMuted ?? false,
+      isVideoOn: known?.isVideoOn ?? true,
     );
+    // L'arrivant ne sait rien de mes états : je les lui réaffirme.
+    _broadcastMyMediaState();
     _confPendingInvitee = null;
     if (_confMode == 'transfer' && _isTransferInitiator) {
       _transferStatus = CallTransferStatus.awaitingMediaReady;
@@ -294,18 +300,24 @@ extension CallConference on CallService {
     for (final p in peers) {
       if (p is! Map) continue;
       final id = p['id'].toString();
+      final known = _groupRoster[id];
       _groupRoster[id] = GroupParticipantInfo(
         id: id,
         name: (p['name'] as String?)?.isNotEmpty == true
             ? p['name'] as String
             : LocaleController.instance.l10n.participantFallback,
         photo: normalizeBackendUrl(p['photo']?.toString()),
+        // Un état déjà reçu prime sur les valeurs par défaut de la carte.
+        isMuted: known?.isMuted ?? false,
+        isVideoOn: known?.isVideoOn ?? true,
       );
     }
     _groupParticipants = peers
         .whereType<Map>()
         .map((p) => p['id'].toString())
         .toList();
+    // Je viens d'entrer : les autres ne savent pas si mon micro est coupé.
+    _broadcastMyMediaState();
     notify();
   }
 
@@ -555,8 +567,11 @@ extension CallConference on CallService {
     debugPrint('[CallService] ↩ retour à l\'affichage à deux (pair=$remainingId)');
   }
 
-  void _terminateConference() {
+  Future<void> _terminateConference() async {
     speakingDetector.stop();
+    // Le média de la conférence est celui du lien 1-à-1 d'origine : sans
+    // dispose, quitter une conférence laissait micro et caméra capturés.
+    await _webrtc.dispose();
     _confSessionId = null;
     _confPendingInvitee = null;
     _confInvitedBy = null;
@@ -570,6 +585,7 @@ extension CallConference on CallService {
     _pendingConfReady.clear();
     _pendingConfJoinSessionId = null;
     _groupRoster.clear();
+    _pendingGroupMedia.clear();
     _groupRoomId = null;
     _resetCallState();
     _status = CallStatus.idle;

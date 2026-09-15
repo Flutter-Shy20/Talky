@@ -36,6 +36,48 @@ class CallPermissionsHelper {
     }
   }
 
+  /// Micro (et caméra en vidéo) pour un appel — hors du chemin critique.
+  ///
+  /// Lit d'abord le statut et ne `request()` que s'il le faut. C'est toute la
+  /// différence : `webrtc_service` appelait `Permission.microphone.request()`
+  /// entre le tap sur « Répondre » et l'ouverture de la capture, si bien que
+  /// le tout premier appel ouvrait une boîte de dialogue système au milieu du
+  /// décrochage. Appelée dès la sonnerie, la permission est déjà acquise quand
+  /// le chemin critique la revérifie, et la vérification ne coûte plus rien.
+  ///
+  /// Appelable deux fois sans dommage : c'est le principe même.
+  ///
+  /// @return false si le MICRO est refusé — l'appel n'a alors pas lieu d'être.
+  ///         Une caméra refusée n'est pas bloquante : l'appel se dégrade en
+  ///         audio, comme il le faisait déjà.
+  static Future<bool> ensureCallMediaPermissions({required bool isVideo}) async {
+    if (kIsWeb) return true;
+
+    try {
+      var mic = await Permission.microphone.status;
+      if (!mic.isGranted) {
+        mic = await Permission.microphone.request();
+      }
+
+      if (isVideo) {
+        final cam = await Permission.camera.status;
+        if (!cam.isGranted) {
+          final asked = await Permission.camera.request();
+          if (!asked.isGranted) {
+            debugPrint('[CallPermissions] caméra refusée — appel en audio seul');
+          }
+        }
+      }
+
+      return mic.isGranted;
+    } catch (e) {
+      debugPrint('[CallPermissions] ensureCallMediaPermissions: $e');
+      // Ne pas bloquer l'appel sur un échec de la couche permissions :
+      // getUserMedia refusera de lui-même si l'accès n'est réellement pas là.
+      return true;
+    }
+  }
+
   static Future<bool> _canUseFullScreenIntent() async {
     try {
       final result = await _channel.invokeMethod<bool>('canUseFullScreenIntent');

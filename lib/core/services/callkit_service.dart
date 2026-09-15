@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import '../theme/locale_controller.dart';
+import 'call/call_terminal_guards.dart';
 import 'call/ended_call_registry.dart';
 import 'ringtone_preferences.dart';
 
@@ -42,6 +44,30 @@ class IncomingCallAction {
 
 enum IncomingCallActionType { incomingPreview, accept, decline, timeout, ended }
 
+/// Identifiant métier d'un événement CallKit **terminal**, ou `null` si
+/// l'événement n'en est pas un.
+///
+/// Extrait pour que la connaissance de la hiérarchie scellée de la 3.x tienne
+/// dans ce fichier : `push_service` recopiait le même aiguillage sur l'ancienne
+/// forme `{event, body}`.
+///
+/// Rend `''` quand l'événement est terminal mais sans identifiant exploitable —
+/// l'appelant préférera alors se sentir concerné plutôt que de laisser une
+/// sonnerie tourner indéfiniment.
+String? terminalCallEventId(CallEvent event) {
+  switch (event) {
+    case CallEventActionCallAccept(:final callKitParams):
+    case CallEventActionCallDecline(:final callKitParams):
+    case CallEventActionCallEnded(:final callKitParams):
+      final extra = callKitParams.extra ?? const {};
+      return (extra['callId'] ?? callKitParams.id).toString();
+    case CallEventActionCallTimeout(:final id):
+      return id;
+    default:
+      return null;
+  }
+}
+
 class CallKitService {
   CallKitService._();
   static final CallKitService instance = CallKitService._();
@@ -60,12 +86,77 @@ class CallKitService {
   /// FCM + socket en arrière-plan).
   String? _lastShownCallId;
 
+  /// callId dont CallKit présente **réellement** un entrant, ou `null`.
+  ///
+  /// À ne pas confondre avec [_lastShownCallId], qui ne retient que ce que
+  /// *Dart* a demandé d'afficher. Sur Android V2 — le mode par défaut — ce
+  /// n'est presque jamais Dart : le handler FCM sort avant d'afficher, et c'est
+  /// `CallIncomingHelper` qui pose la notification côté Kotlin. Aucun code Dart
+  /// ne le savait, et l'arbitrage de présentation était donc aveugle au cas le
+  /// plus fréquent — d'où des écrans et des sonneries en double.
+  ///
+  /// La source est l'état que le plugin persiste dans ses préférences, lu par
+  /// [getActiveCall]. Il est durable : il survit à la mort du processus, ce que
+  /// ne fait aucun drapeau en mémoire, de part ni d'autre de la frontière.
+  String? _nativeIncomingCallId;
+
+  /// Voir [_nativeIncomingCallId].
+  String? get nativeIncomingCallId => _nativeIncomingCallId;
+
+  /// CallKit présente-t-il déjà un entrant pour [callId] ?
+  ///
+  /// Alimente le paramètre `isCallKitActive` de `decideIncomingPresentation`.
+  bool isShowingIncoming(String? callId) {
+    final id = callId?.trim() ?? '';
+    if (id.isEmpty) return false;
+    return id == _nativeIncomingCallId;
+  }
+
+  /// Relit l'état CallKit persisté et met [_nativeIncomingCallId] à jour.
+  ///
+  /// Appelée à l'initialisation et à chaque retour au premier plan : ce sont
+  /// les deux instants où Dart peut avoir manqué un affichage natif.
+  Future<void> refreshNativeIncomingState() async {
+    if (kIsWeb) return;
+    final active = await getActiveCall();
+    final id = (active?['callId'] as String? ?? '').trim();
+    // Un appel déjà accepté n'est plus un entrant à présenter.
+    final accepted = active?['isAccepted'] == true;
+    final next = (id.isNotEmpty && !accepted) ? id : null;
+    if (next == _nativeIncomingCallId) return;
+    _nativeIncomingCallId = next;
+    debugPrint('[CallKit] entrant natif = ${next ?? "aucun"}');
+  }
+
   static const _nativeCallChannel = MethodChannel('com.alanya/call_native');
 
-  bool _isAppForeground() {
-    final state = WidgetsBinding.instance.lifecycleState;
-    return state == null || state == AppLifecycleState.resumed;
-  }
+  /// Fond de l'écran d'appel plein écran Android : volontairement transparent.
+  ///
+  /// Le dégradé de `IncomingCallScreen` est porté par le layout natif
+  /// (res/layout/activity_callkit_incoming.xml) ; le plugin, lui, peint cette
+  /// couleur en aplat par-dessus. Un aplat opaque effacerait donc la maquette.
+  static const _callkitBackgroundColor = '#00000000';
+
+  /// Couleur de texte de ce même écran, accordée à values/values-night.
+  ///
+  /// Le layout est une ressource Android : ses couleurs suivent le mode nuit
+  /// du **système**, pas le `ThemeMode` choisi dans l'application (aucune
+  /// ressource ne sait lire une préférence Flutter). Le texte étant le seul
+  /// élément que le plugin repeint depuis Dart, on résout la même bascule —
+  /// sinon un utilisateur en thème clair sur un système sombre lirait du texte
+  /// sombre sur notre dégradé de nuit.
+  static String get _callkitTextColor =>
+      PlatformDispatcher.instance.platformBrightness == Brightness.dark
+          ? '#FFFFFFFF' // CallUiColors.dark.onBackground
+          : '#FF1A1D23'; // CallUiColors.light.onBackground
+
+  /// Même règle que `CallService._isAppForeground`, et la même correction :
+  /// un état encore inconnu est un arrière-plan. Ici l'enjeu est l'inverse du
+  /// sien — `showIncoming` sort quand l'application est au premier plan, donc
+  /// l'ancienne réponse faisait **taire** CallKit au démarrage à froid, sur
+  /// tout chemin qui ne passe pas par l'affichage natif Android.
+  bool _isAppForeground() =>
+      appIsForeground(WidgetsBinding.instance.lifecycleState?.name);
 
   void setVoipTokenListener(void Function(String token)? listener) {
     _onVoipTokenUpdated = listener;
@@ -77,20 +168,69 @@ class CallKitService {
     _onIncomingCallPreview = listener;
   }
 
-  IncomingCallAction _parseCallAction(
-    CallEvent event,
+  /// Dernier `extra` connu pour chaque entrée CallKit.
+  ///
+  /// La 3.x a typé ses événements, et deux d'entre eux — `timeout` et
+  /// `connected` — ne portent plus que l'identifiant. Or le chemin `timeout`
+  /// enfile un refus, et ce refus a besoin du `callerId`, qui vit dans
+  /// `extra` : sans lui, l'appelant entendrait sonner jusqu'au délai serveur
+  /// de 45 secondes.
+  ///
+  /// La carte est alimentée à l'affichage et à chaque relecture de l'état
+  /// persisté. Elle est en mémoire, donc vide après une mort du processus —
+  /// mais sur Android ce cas est déjà couvert par le listener `ACTIVE_CALLS`
+  /// de `TalkyApplication`, qui lit `extra` côté natif et poste le refus.
+  final Map<String, Map<String, dynamic>> _extraById = {};
+
+  void _rememberExtra(String? id, Map<String, dynamic>? extra) {
+    final key = id?.trim() ?? '';
+    if (key.isEmpty || extra == null || extra.isEmpty) return;
+    // Borne dure : une entrée par appel, et on ne garde pas un historique.
+    if (_extraById.length > 8) _extraById.clear();
+    _extraById[key] = Map<String, dynamic>.from(extra);
+  }
+
+  IncomingCallAction _actionFromParams(
+    CallKitParams params,
     IncomingCallActionType actionType,
   ) {
-    final extra = event.body['extra'] as Map? ?? const {};
+    final extra = params.extra ?? _extraById[params.id.trim()] ?? const {};
     return IncomingCallAction(
-      callId: (extra['callId'] ?? event.body['id'] ?? '').toString(),
-      callerId: (extra['callerId'] ?? event.body['handle'] ?? '').toString(),
-      callerName: (extra['callerName'] ?? event.body['nameCaller'] ?? '')
-          .toString(),
+      callId: (extra['callId'] ?? params.id).toString(),
+      callerId: (extra['callerId'] ?? params.handle ?? '').toString(),
+      callerName: (extra['callerName'] ?? params.nameCaller ?? '').toString(),
       callerPhoto: extra['callerPhoto']?.toString(),
       isVideo: extra['isVideo'] == true ||
           extra['isVideo'] == 'true' ||
-          event.body['type'] == 1,
+          params.type == 1,
+      roomId: extra['roomId']?.toString(),
+      sessionKind: extra['sessionKind']?.toString(),
+      mode: extra['mode']?.toString(),
+      isOutgoing:
+          extra['isOutgoing'] == true || extra['isOutgoing'] == 'true',
+      action: actionType,
+    );
+  }
+
+  /// Reconstruit une action à partir du seul identifiant, pour les événements
+  /// que la 3.x a dépouillés. Voir [_extraById].
+  IncomingCallAction _actionFromId(
+    String id,
+    IncomingCallActionType actionType,
+  ) {
+    final extra = _extraById[id.trim()] ?? const {};
+    if (extra.isEmpty) {
+      debugPrint(
+        '[CallKit] ** $actionType sans extra connu pour $id — '
+        'le refus repose sur le chemin natif',
+      );
+    }
+    return IncomingCallAction(
+      callId: (extra['callId'] ?? id).toString(),
+      callerId: (extra['callerId'] ?? '').toString(),
+      callerName: (extra['callerName'] ?? '').toString(),
+      callerPhoto: extra['callerPhoto']?.toString(),
+      isVideo: extra['isVideo'] == true || extra['isVideo'] == 'true',
       roomId: extra['roomId']?.toString(),
       sessionKind: extra['sessionKind']?.toString(),
       mode: extra['mode']?.toString(),
@@ -106,6 +246,47 @@ class CallKitService {
     _eventSub ??= FlutterCallkitIncoming.onEvent.listen((event) {
       if (event != null) _handleEvent(event);
     });
+
+    // Semer l'état natif : au démarrage à froid derrière un push, la
+    // notification CallKit est déjà posée quand Dart démarre.
+    //
+    // Sans l'attendre — `init()` est sur le chemin critique du lancement, et un
+    // canal de plateforme pas encore prêt le bloquerait. L'arbitrage du
+    // démarrage à froid ne dépend pas de ce cache : `prepareIncomingFromCallKit`
+    // sait par construction que CallKit possède l'entrée et le dit lui-même.
+    unawaited(refreshNativeIncomingState());
+    unawaited(_journaliserPleinEcran());
+  }
+
+  /// Signale si l'appel entrant peut encore s'afficher en plein écran.
+  ///
+  /// Depuis le 22 janvier 2025, Google Play révoque `USE_FULL_SCREEN_INTENT` à
+  /// l'installation pour toute application qui n'a pas déclaré de
+  /// fonctionnalité d'appel dans la Play Console. Sans elle, un appel arrivant
+  /// téléphone verrouillé ne fait plus qu'une notification en bandeau : la
+  /// dégradation est majeure et parfaitement silencieuse.
+  ///
+  /// Le plugin gère le repli tout seul depuis la 3.x — il vérifie et retombe
+  /// sur une notification ordinaire. Ce qui manquait, c'est de le savoir. Le
+  /// journal est le canal de diagnostic qui marche vraiment ici ; proposer à
+  /// l'utilisateur d'aller la réaccorder (`requestFullIntentPermission`) est un
+  /// geste d'interface, à faire depuis un écran de réglages, pas au démarrage.
+  Future<void> _journaliserPleinEcran() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      final autorise = await FlutterCallkitIncoming.canUseFullScreenIntent();
+      if (autorise) {
+        debugPrint('[CallKit] plein écran autorisé');
+        return;
+      }
+      debugPrint(
+        '[CallKit] ** plein écran REFUSÉ — un appel arrivant téléphone '
+        'verrouillé ne fera qu\'une notification. Déclaration d\'appel '
+        'manquante en Play Console, ou permission retirée par l\'utilisateur.',
+      );
+    } catch (e) {
+      debugPrint('[CallKit] canUseFullScreenIntent: $e');
+    }
   }
 
   Future<void> showIncoming({
@@ -144,7 +325,10 @@ class CallKitService {
       );
       await endCall(_lastShownCallId!);
     }
-    if (id.isNotEmpty) _lastShownCallId = id;
+    if (id.isNotEmpty) {
+      _lastShownCallId = id;
+      _nativeIncomingCallId = id;
+    }
 
     final l10n = resolveL10n();
     final params = CallKitParams(
@@ -156,8 +340,6 @@ class CallKitService {
       type: isVideo ? 1 : 0,
       // Sous le timeout serveur (45 s) : la notif expire avant le « sans réponse ».
       duration: 40000,
-      textAccept: l10n.commonAccept,
-      textDecline: l10n.commonDecline,
       missedCallNotification: NotificationParams(
         showNotification: true,
         isShowCallback: false,
@@ -188,12 +370,17 @@ class CallKitService {
       android: AndroidParams(
         isCustomNotification: true,
         isShowLogo: false,
+        // Depuis la 3.x, les libellés des boutons appartiennent aux paramètres
+        // Android — ils étaient à la racine de `CallKitParams`.
+        textAccept: l10n.commonAccept,
+        textDecline: l10n.commonDecline,
         // 'silence' = res/raw/silence.wav → CallKit reste muet (le plugin
         // interprète '' comme « sonnerie système par défaut », pas comme muet).
         // La sonnerie importée est alors jouée par RingtoneService (Flutter) ou
         // CustomRingtonePlayer (natif) selon le cycle de vie de l'app.
         ringtonePath: silent ? 'silence' : RingtonePreferences.resolveAndroidCallKitRingtone(),
-        backgroundColor: '#0955fa',
+        backgroundColor: _callkitBackgroundColor,
+        textColor: _callkitTextColor,
         actionColor: '#4CAF50',
         incomingCallNotificationChannelName: l10n.incomingCallsChannel,
         missedCallNotificationChannelName: l10n.missedCalls,
@@ -230,6 +417,7 @@ class CallKitService {
       }
     }
     if (id == _lastShownCallId) _lastShownCallId = null;
+    if (id == _nativeIncomingCallId) _nativeIncomingCallId = null;
     try {
       await FlutterCallkitIncoming.endCall(id);
     } catch (e) {
@@ -266,7 +454,7 @@ class CallKitService {
         isCustomNotification: true,
         isShowLogo: false,
         ringtonePath: '',
-        backgroundColor: '#0955fa',
+        backgroundColor: _callkitBackgroundColor,
         actionColor: '#4CAF50',
         incomingCallNotificationChannelName: l10n.ongoingCallsChannel,
         missedCallNotificationChannelName: l10n.missedCalls,
@@ -301,6 +489,9 @@ class CallKitService {
       if (id == _lastShownCallId) {
         _lastShownCallId = null;
       }
+      if (id == _nativeIncomingCallId) {
+        _nativeIncomingCallId = null;
+      }
     }
     await _markProgrammaticDismissNative([id]);
     try {
@@ -329,21 +520,44 @@ class CallKitService {
     }
   }
 
+  /// Ferme les entrées CallKit — **celle de [callId] seule si elle est nommée**.
+  ///
+  /// `endAllCalls()` retire TOUTES les entrées sans considération d'identifiant,
+  /// et cette méthode est appelée partout sur les chemins push et CallKit :
+  /// refus depuis la notification, entrée invalide ou périmée, fin externe. Une
+  /// réunion en cours en arrière-plan y perdait son entrée `meeting_<id>` — donc
+  /// sa notification, son chronomètre, son retour depuis le tiroir — au moindre
+  /// appel refusé à côté. Et l'écouteur `ACTIVE_CALLS` arrête le service du
+  /// plugin dès que la liste se vide.
+  ///
+  /// Quand l'appelant sait quel appel il ferme, il n'y a aucune raison
+  /// d'emporter les autres. Le nettoyage global reste accessible en appelant
+  /// sans identifiant — c'est ce que fait `purgeStaleActiveCalls`.
   Future<void> endAll({String? callId}) async {
     if (kIsWeb) return;
     final id = callId?.trim() ?? '';
     if (id.isNotEmpty) {
       await EndedCallRegistry.markEnded(id);
+      if (id == _lastShownCallId) _lastShownCallId = null;
+      if (id == _nativeIncomingCallId) _nativeIncomingCallId = null;
+      await _markProgrammaticDismissNative([id]);
+      try {
+        await FlutterCallkitIncoming.endCall(id);
+      } catch (e) {
+        debugPrint('[CallKit] endAll(ciblé) error: $e');
+      }
+      return;
     }
     _lastShownCallId = null;
+    _nativeIncomingCallId = null;
     // endAllCalls retire TOUTES les entrées ACTIVE_CALLS : marquer chacune
     // comme retrait programmatique, pas seulement [callId].
     final toMark = <String>{if (id.isNotEmpty) id};
     try {
       final calls = await FlutterCallkitIncoming.activeCalls();
-      if (calls is List) {
+      {
         for (final c in calls) {
-          final cid = ((c as Map?)?['id'] ?? '').toString().trim();
+          final cid = c.id.trim();
           if (cid.isNotEmpty) toMark.add(cid);
         }
       }
@@ -358,50 +572,96 @@ class CallKitService {
     }
   }
 
+  /// Aiguillage des événements CallKit.
+  ///
+  /// La 3.x remplace `{event: Event, body: Map}` par une hiérarchie scellée :
+  /// chaque événement porte ce qu'il a vraiment, et le compilateur vérifie
+  /// qu'on les traite tous. Deux d'entre eux ne portent plus que
+  /// l'identifiant — voir [_extraById] pour ce que ça coûtait et comment on
+  /// le rattrape.
   void _handleEvent(CallEvent event) {
-    if (event.event == Event.actionDidUpdateDevicePushTokenVoip) {
-      final token = event.body['deviceTokenVoIP']?.toString().trim() ?? '';
-      if (token.isNotEmpty) {
-        debugPrint('[CallKit] voip token reçu len=${token.length}');
-        _onVoipTokenUpdated?.call(token);
-      }
-      return;
-    }
+    switch (event) {
+      case CallEventActionDidUpdateDevicePushTokenVoip():
+        // Le jeton ne voyage plus dans l'événement : il se demande.
+        unawaited(_relayerJetonVoip());
+        return;
 
-    if (event.event == Event.actionCallIncoming) {
-      final action = _parseCallAction(event, IncomingCallActionType.incomingPreview);
-      debugPrint('[CallKit] incoming preview callId=${action.callId}');
-      _onIncomingCallPreview?.call(action);
-      return;
-    }
+      case CallEventActionCallIncoming(:final callKitParams):
+        _rememberExtra(callKitParams.id, callKitParams.extra);
+        final action = _actionFromParams(
+          callKitParams,
+          IncomingCallActionType.incomingPreview,
+        );
+        debugPrint('[CallKit] incoming preview callId=${action.callId}');
+        _onIncomingCallPreview?.call(action);
+        return;
 
-    IncomingCallActionType? actionType;
+      case CallEventActionCallAccept(:final callKitParams):
+        _rememberExtra(callKitParams.id, callKitParams.extra);
+        _emettre(_actionFromParams(
+          callKitParams,
+          IncomingCallActionType.accept,
+        ));
+        return;
 
-    switch (event.event) {
-      case Event.actionCallAccept:
-        actionType = IncomingCallActionType.accept;
-        break;
-      case Event.actionCallDecline:
-        actionType = IncomingCallActionType.decline;
-        break;
-      case Event.actionCallEnded:
-        actionType = IncomingCallActionType.ended;
-        break;
-      case Event.actionCallTimeout:
-        actionType = IncomingCallActionType.timeout;
-        break;
-      default:
+      case CallEventActionCallDecline(:final callKitParams):
+        _rememberExtra(callKitParams.id, callKitParams.extra);
+        _emettre(_actionFromParams(
+          callKitParams,
+          IncomingCallActionType.decline,
+        ));
+        return;
+
+      case CallEventActionCallEnded(:final callKitParams):
+        _rememberExtra(callKitParams.id, callKitParams.extra);
+        _emettre(_actionFromParams(
+          callKitParams,
+          IncomingCallActionType.ended,
+        ));
+        return;
+
+      case CallEventActionCallTimeout(:final id):
+        // Sonnerie expirée : compte comme un refus, et ce refus a besoin du
+        // `callerId` que cet événement ne porte plus.
+        _emettre(_actionFromId(id, IncomingCallActionType.timeout));
+        return;
+
+      // Rien à faire ici : `start` est notre propre sortant, `connected` est
+      // déjà su, et les bascules muet/attente/DTMF/groupe ne nous concernent
+      // pas — l'appel est piloté par notre propre interface.
+      case CallEventActionCallStart():
+      case CallEventActionCallConnected():
+      case CallEventActionCallCallback():
+      case CallEventActionCallToggleHold():
+      case CallEventActionCallToggleMute():
+      case CallEventActionCallToggleDmtf():
+      case CallEventActionCallToggleGroup():
+      case CallEventActionCallToggleAudioSession():
+      case CallEventActionCallCustom():
         return;
     }
+  }
 
-    debugPrint('[CallKit] event=$actionType callId=${event.body['id']}');
+  Future<void> _relayerJetonVoip() async {
+    try {
+      final token = (await FlutterCallkitIncoming.getDevicePushTokenVoIP())
+              ?.trim() ??
+          '';
+      if (token.isEmpty) return;
+      debugPrint('[CallKit] voip token reçu len=${token.length}');
+      _onVoipTokenUpdated?.call(token);
+    } catch (e) {
+      debugPrint('[CallKit] getDevicePushTokenVoIP: $e');
+    }
+  }
 
-    final action = _parseCallAction(event, actionType);
-    // Exclusif, pas cumulatif : avec un listener actif, l'action part par le
-    // stream UNIQUEMENT. La stocker aussi en pending la ferait traiter deux
-    // fois (stream immédiat + consumePendingAction au bootstrap) → double
-    // accept/reject. Sans listener (événement avant _bootstrap), pending est
-    // le seul canal et sera consommé au démarrage.
+  /// Exclusif, pas cumulatif : avec un listener actif, l'action part par le
+  /// stream UNIQUEMENT. La stocker aussi en pending la ferait traiter deux
+  /// fois (stream immédiat + consumePendingAction au bootstrap) → double
+  /// accept/reject. Sans listener (événement avant _bootstrap), pending est
+  /// le seul canal et sera consommé au démarrage.
+  void _emettre(IncomingCallAction action) {
+    debugPrint('[CallKit] event=${action.action} callId=${action.callId}');
     if (_actions.hasListener) {
       _actions.add(action);
     } else {
@@ -434,25 +694,29 @@ class CallKitService {
   Future<Map<String, dynamic>?> getActiveCall() async {
     if (kIsWeb) return null;
     try {
+      // La 3.x rend des `CallKitParams` typés là où la 2.x rendait des `Map`.
+      // Le code lisait `raw as Map?` : compilable — rien n'interdit à un
+      // sous-type d'implémenter `Map` — mais il aurait levé à chaque appel, et
+      // celui-ci est central : démarrage à froid, relecture de l'état natif,
+      // purge des entrées résiduelles.
       final calls = await FlutterCallkitIncoming.activeCalls();
-      if (calls is! List || calls.isEmpty) return null;
+      if (calls.isEmpty) return null;
 
-      Map? best;
+      CallKitParams? best;
       var bestShownAt = -1;
       final now = DateTime.now().millisecondsSinceEpoch;
-      for (final raw in calls) {
-        final c = raw as Map?;
-        if (c == null) continue;
-        final extra = (c['extra'] as Map?) ?? const {};
-        final accepted = c['isAccepted'] == true || c['isAccepted'] == 'true';
+      for (final c in calls) {
+        final extra = c.extra ?? const {};
         final shownAt = int.tryParse('${extra['shownAt'] ?? ''}') ?? 0;
         if (shownAt > 0) {
           final age = now - shownAt;
-          final maxAge =
-              accepted ? _maxAcceptedAge.inMilliseconds : _maxUnacceptedAge.inMilliseconds;
+          final maxAge = c.isAccepted
+              ? _maxAcceptedAge.inMilliseconds
+              : _maxUnacceptedAge.inMilliseconds;
           if (age > maxAge) {
             debugPrint(
-              '[CallKit] entrée périmée ignorée (age=${age ~/ 1000}s accepted=$accepted): ${c['id']}',
+              '[CallKit] entrée périmée ignorée '
+              '(age=${age ~/ 1000}s accepted=${c.isAccepted}): ${c.id}',
             );
             continue;
           }
@@ -465,18 +729,22 @@ class CallKitService {
         }
       }
       if (best == null) return null;
-      final extra = (best['extra'] as Map?) ?? const {};
+      final extra = best.extra ?? const {};
+      // Le natif a pu poser cette entrée sans que Dart le sache : c'est aussi
+      // ici qu'on récupère son `extra`, dont dépendent les événements que la
+      // 3.x ne porte plus qu'avec un identifiant.
+      _rememberExtra(best.id, best.extra);
       return {
-        'callId':      (extra['callId'] ?? best['id'] ?? '').toString(),
-        'callerId':    (extra['callerId'] ?? best['handle'] ?? '').toString(),
-        'callerName':  (extra['callerName'] ?? best['nameCaller'] ?? '').toString(),
+        'callId':      (extra['callId'] ?? best.id).toString(),
+        'callerId':    (extra['callerId'] ?? best.handle ?? '').toString(),
+        'callerName':  (extra['callerName'] ?? best.nameCaller ?? '').toString(),
         'callerPhoto': extra['callerPhoto']?.toString(),
         'isVideo':     extra['isVideo'] == true || extra['isVideo'] == 'true',
         'roomId':      extra['roomId']?.toString(),
         'sessionKind': extra['sessionKind']?.toString(),
         'mode':        extra['mode']?.toString(),
         'isOutgoing':  extra['isOutgoing'] == true || extra['isOutgoing'] == 'true',
-        'isAccepted':  best['isAccepted'] == true || best['isAccepted'] == 'true',
+        'isAccepted':  best.isAccepted,
       };
     } catch (e) {
       debugPrint('[CallKit] activeCalls error: $e');
@@ -491,7 +759,7 @@ class CallKitService {
     if (kIsWeb) return;
     try {
       final calls = await FlutterCallkitIncoming.activeCalls();
-      if (calls is List && calls.isNotEmpty) {
+      if (calls.isNotEmpty) {
         debugPrint('[CallKit] purge de ${calls.length} entrée(s) périmée(s)');
         await endAll();
       }

@@ -2,4 +2,41 @@
 <resources>
     <!-- Bleu du logo Alanya : teinte la petite icône et le nom de l'app dans les notifs. -->
     <color name="notification_accent">#114B86</color>
+
+    <!--
+      Écran d'appel entrant natif (res/layout/activity_callkit_incoming.xml).
+
+      Report exact de `CallUiColors.light` (lib/core/theme/call_ui_theme.dart)
+      et des alphas appliqués par `IncomingCallScreen`. Les variantes sombres
+      vivent dans values-night/colors.xml — l'écran natif suit donc le mode
+      nuit du SYSTÈME, pas le ThemeMode choisi dans l'app (une ressource
+      Android ne sait pas lire une préférence Flutter).
+    -->
+    <!-- backgroundGradient : brandSurfaceTint → brandContainer → background -->
+    <color name="callkit_gradient_start">#FFF2F3FB</color>
+    <color name="callkit_gradient_center">#FFE8EAF6</color>
+    <color name="callkit_gradient_end">#FFF6F7FB</color>
+
+    <!-- onBackground = AppColors.textPrimary -->
+    <color name="callkit_on_background">#FF1A1D23</color>
+
+    <!-- avatarHalo @15 % / avatarHaloInner @50 % -->
+    <color name="callkit_halo_ring">#263F51B5</color>
+    <color name="callkit_halo_inner">#80E8EAF6</color>
+    <!-- Onde du RippleRelativeLayout : tient lieu de battement du halo. -->
+    <color name="callkit_halo_ripple">#143F51B5</color>
+
+    <!-- Pilule « APPEL ENTRANT » : chipBackground + chipOnBackground.
+         Les alphas (texte 85 %, icône 65 %) sont posés en `android:alpha` sur
+         les vues : une teinte semi-transparente en SRC_ATOP délave le glyphe
+         au lieu de le rendre translucide. -->
+    <color name="callkit_pill_bg">#FFE8EAF6</color>
+    <color name="callkit_pill_on">#FF3F51B5</color>
+
+    <!-- actionAccept / actionReject (identiques en clair et en sombre) -->
+    <color name="callkit_action_accept">#FF1FA363</color>
+    <color name="callkit_action_reject">#FFEF4444</color>
+
+    <!-- Fond de l'avatar : AppColors.brandPrimary, comme AppAvatar. -->
+    <color name="callkit_avatar_bg">#FF3F51B5</color>
 </resources>

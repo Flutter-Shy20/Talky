@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import 'package:path/path.dart' as p;
 
 import '../../core/db/chat_dao.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/errors/error_presenter.dart';
 import '../../core/services/chat/chat_repository.dart';
 import '../../core/services/export/export_delivery.dart';
 import '../../core/services/export/export_scan.dart';
@@ -106,7 +108,8 @@ class _ExportPeriodSheetState extends State<ExportPeriodSheet> {
       setState(() => _scan = refined);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _scanError = '$e');
+      setState(() => _scanError =
+          presenterErreur(context.l10n, e, domaine: ErrorDomain.media));
     }
   }
 

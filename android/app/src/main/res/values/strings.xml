@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Pilule d'en-tête de l'écran d'appel entrant natif. Le plugin n'expose
+      aucun champ pour ce libellé : il est donc statique, et localisé par
+      Android (values-en, values-zh) selon la langue du SYSTÈME — l'écran
+      natif s'affiche app tuée, hors de portée de l'l10n Flutter.
+      Même texte que `callIncoming` (lib/l10n/app_fr.arb).
+    -->
+    <string name="callkit_incoming_label">APPEL ENTRANT</string>
+</resources>

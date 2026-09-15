@@ -125,6 +125,27 @@ extension SocketApi on TalkyApiClient {
     });
   }
 
+  /// Rejoue `auth:login` après un refus passager, avec un recul croissant.
+  void _scheduleAuthRetry() {
+    _authRetryTimer?.cancel();
+    final attente = socketAuthRetryDelay(_authRetryCount);
+    _authRetryCount += 1;
+    debugPrint(
+      '[Socket] ré-authentification dans ${attente.inSeconds}s '
+      '(tentative $_authRetryCount)',
+    );
+    _authRetryTimer = Timer(attente, () {
+      if (_accessToken == null || isSocketReady) return;
+      _teardownSocketInstance();
+      connectSocket();
+    });
+  }
+
+  void _cancelAuthRetry() {
+    _authRetryTimer?.cancel();
+    _authRetryTimer = null;
+  }
+
   void _cancelSocketReconnectWatchdog() {
     _socketReconnectWatchdog?.cancel();
     _socketReconnectWatchdog = null;
@@ -181,6 +202,8 @@ extension SocketApi on TalkyApiClient {
       _recordEvent();
       debugPrint('[Socket] Authentifié: ${data['alanyaID']}');
       _isSocketAuthVerified = true;
+      _authRetryCount = 0;
+      _cancelAuthRetry();
       _cancelSocketReconnectWatchdog();
       final external = _socketListeners[SocketEvents.authVerified];
       if (external == null || external.isEmpty) {
@@ -204,8 +227,24 @@ extension SocketApi on TalkyApiClient {
       // Sans ça, après une reconnexion avec un token périmé le socket reste
       // connecté mais NON authentifié → plus aucun `message:received` (temps
       // réel mort jusqu'à un appel HTTP qui rafraîchit le token par hasard).
-      if (code == 'TOKEN_EXPIRED' && _refreshToken != null) {
-        _refreshSocketAuth();
+      switch (socketAuthRecovery(
+        code: code,
+        hasRefreshToken: _refreshToken != null,
+        attempts: _authRetryCount,
+      )) {
+        case SocketAuthRecovery.refreshToken:
+          _authRetryCount = 0;
+          _refreshSocketAuth();
+        case SocketAuthRecovery.retryLater:
+          // Connecté mais jamais authentifié est un état sans issue : ni
+          // `ensureSocketReady` — qui ne recrée l'instance que si elle est
+          // déconnectée — ni le chien de garde — qui exige des messages en
+          // attente — n'en sortent. Un hoquet du MySQL distant y menait, et
+          // tout le temps réel restait mort jusqu'au redémarrage de l'app.
+          _scheduleAuthRetry();
+        case SocketAuthRecovery.giveUp:
+          debugPrint('[Socket] auth:error définitif (code=$code) — pas de reprise');
+          _cancelAuthRetry();
       }
     });
 
@@ -239,10 +278,15 @@ extension SocketApi on TalkyApiClient {
       _scheduleSocketReconnectWatchdog();
     });
     _socket!.onError((err) => debugPrint('[Socket] Erreur: $err'));
+    // Socket.IO émet `connect` à *chaque* connexion réussie, reconnexions
+    // comprises, et `reconnect` en plus. Ré-émettre `auth:login` ici doublait
+    // donc l'authentification à chaque retour de réseau — et avec elle tout ce
+    // que le serveur enchaîne derrière, à commencer par `call_resume` : deux
+    // reprises simultanées, deux offres ICE, et la réponse à la première jetée
+    // comme périmée par la seconde. On laisse `onConnect` faire son travail.
     _socket!.onReconnect((_) {
-      debugPrint('[Socket] Reconnecté — ré-auth');
+      debugPrint('[Socket] Reconnecté');
       _isSocketAuthVerified = false;
-      unawaited(_emitSocketAuthLogin());
     });
 
     // Ré-attache au socket fraîchement créé les listeners externes déjà
@@ -373,11 +417,19 @@ extension SocketApi on TalkyApiClient {
     _stopConditionalHealthCheck();
     _isSocketAuthVerified = false;
     _pendingMessagesCallback = null;
-    _socketCallbackWrappers.clear();
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
-    _socketListeners.clear();
+    // Ni `_socketListeners` ni `_socketCallbackWrappers` ne sont vidés : c'est
+    // exactement le registre que `connectSocket()` relit pour ré-attacher les
+    // écouteurs au socket suivant, et son commentaire nomme le cas
+    // logout/login. Les vider ici le rendait vide au moment d'être relu.
+    //
+    // CallService et MeetingService s'inscrivent une seule fois, dans leur
+    // constructeur, et vivent aussi longtemps que l'application : personne ne
+    // les réinscrivait. Après un logout puis un login sans redémarrer l'app,
+    // plus aucun événement d'appel ni de réunion n'était livré — ni entrant, ni
+    // réponse, ni fin.
   }
 
   /// Émet un événement, et **dit si l'émission a eu lieu**.
@@ -396,6 +448,59 @@ extension SocketApi on TalkyApiClient {
     }
     _socket!.emit(event, data);
     return true;
+  }
+
+  /// Émet un événement et **attend l'accusé du serveur**.
+  ///
+  /// `sendSocketEvent` ne peut rendre qu'une chose : que l'émission a été
+  /// tentée. C'est insuffisant pour un socket zombie — TCP mort, mais
+  /// Socket.IO ne le constate qu'au bout de son ping (25 s d'intervalle, 20 s
+  /// de patience). Pendant ces quarante-cinq secondes, `isSocketReady` répond
+  /// `true` et le paquet part dans le vide sans un mot.
+  ///
+  /// Pour un message de discussion, ce n'est qu'un retard : l'outbox le
+  /// rejouera. Pour un raccrochage, c'est le pair qui reste sur
+  /// « Reconnexion… » jusqu'à son propre délai, alors que l'appel est fini
+  /// depuis longtemps de ce côté-ci. Et le cas est d'autant plus probable que
+  /// l'appel a duré — plus de temps pour que la connexion meure sans le dire.
+  ///
+  /// Rend `true` seulement si le serveur a répondu `ok` dans [timeout].
+  Future<bool> sendSocketEventAcked(
+    String event,
+    dynamic data, {
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    if (!isSocketReady) {
+      debugPrint(
+        '[Socket] ** emit accusé "$event" abandonné (socket non prêt)',
+      );
+      return false;
+    }
+    final accuse = Completer<bool>();
+    // Arité imposée par le serveur : `Function.apply` passe exactement les
+    // arguments de l'accusé. Des paramètres optionnels acceptent les deux
+    // formes sans lever à l'intérieur de la bibliothèque.
+    void onAck([dynamic reponse, dynamic _]) {
+      if (accuse.isCompleted) return;
+      final ok = reponse is Map ? reponse['ok'] != false : true;
+      accuse.complete(ok);
+    }
+
+    try {
+      _socket!.emitWithAck(event, data, ack: onAck);
+    } catch (e) {
+      debugPrint('[Socket] ** emit accusé "$event" a levé: $e');
+      return false;
+    }
+    final timer = Timer(timeout, () {
+      if (!accuse.isCompleted) accuse.complete(false);
+    });
+    final ok = await accuse.future;
+    timer.cancel();
+    if (!ok) {
+      debugPrint('[Socket] ** "$event" sans accusé — socket probablement mort');
+    }
+    return ok;
   }
 
   void onSocketEvent(String event, void Function(dynamic) callback) {

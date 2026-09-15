@@ -12,6 +12,7 @@ import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/realtime_sync_service.dart';
 import '../../core/services/call_service.dart';
+import '../../core/services/call/call_history_rules.dart';
 import '../../core/services/call/ended_call_registry.dart';
 import '../../core/services/callkit_service.dart';
 import '../../core/services/local_notification_helper.dart';
@@ -102,6 +103,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!mounted) return;
 
       _callService.addListener(_onCallStatusChanged);
+      // Avant `_onCallStatusChanged` : la reprise peut rendre la présentation
+      // à Flutter, et c'est cette évaluation-là qui ouvrira l'écran.
+      _onForegroundResumed();
       _onCallStatusChanged();
 
       _notifActionSub =
@@ -127,21 +131,54 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  /// Reprise au premier plan — appelée aussi **au montage**.
+  ///
+  /// `resumeForegroundIncoming` n'avait qu'un appelant : la transition
+  /// `resumed`. Si l'accueil se monte alors que l'application est déjà
+  /// `resumed` — aucune transition à recevoir —, la bascule ne se produisait
+  /// jamais. Sans conséquence tant que l'état de cycle de vie inconnu comptait
+  /// pour un premier plan ; depuis que `appIsForeground` dit la vérité, c'est
+  /// CallKit qui possède la présentation au démarrage, et sans cet appel il la
+  /// garderait pendant que l'utilisateur regarde l'application.
+  void _onForegroundResumed() {
+    if (!mounted) return;
+    _scheduleResumeCatchUp();
+    final callService = Provider.of<CallService>(context, listen: false);
+    unawaited(callService.syncWithEndedRegistry());
+    // Relire ce que CallKit affiche réellement : Dart a pu manquer un
+    // affichage natif pendant qu'il n'était pas là.
+    unawaited(CallKitService.instance.refreshNativeIncomingState());
+    if (callService.status == CallStatus.incoming &&
+        !callService.isAutoAnsweringFromPush) {
+      unawaited(_reprendreEntrant(callService));
+    }
+    Provider.of<ChatProvider>(context, listen: false)
+        .repository
+        .syncPushSuppressionForLifecycle(true);
+    _syncPushDeviceState(foreground: true);
+  }
+
+  /// Reprend l'entrant — mais seulement si l'utilisateur n'a pas déjà décroché.
+  ///
+  /// `MainActivity` enregistre le décrochage dans son intent de lancement, donc
+  /// avant même que ce réveil ne soit livré. Reprendre sans poser la question
+  /// revendiquait la présentation et relançait la sonnerie sur un appel déjà
+  /// accepté : c'est l'écran qui sonne encore.
+  Future<void> _reprendreEntrant(CallService callService) async {
+    if (await callService.adoptNativeAcceptIfAny()) return;
+    if (!mounted) return;
+    if (callService.status != CallStatus.incoming ||
+        callService.isAutoAnsweringFromPush) {
+      return;
+    }
+    // Retour au premier plan : retire CallKit et relance la sonnerie Dart.
+    await callService.resumeForegroundIncoming();
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _scheduleResumeCatchUp();
-      final callService = Provider.of<CallService>(context, listen: false);
-      unawaited(callService.syncWithEndedRegistry());
-      if (callService.status == CallStatus.incoming &&
-          !callService.isAutoAnsweringFromPush) {
-        // Retour au premier plan : retire CallKit et relance la sonnerie Dart.
-        unawaited(callService.resumeForegroundIncoming());
-      }
-      Provider.of<ChatProvider>(context, listen: false)
-          .repository
-          .syncPushSuppressionForLifecycle(true);
-      _syncPushDeviceState(foreground: true);
+      _onForegroundResumed();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
@@ -223,8 +260,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _showIncomingCall() {
-    _callScreenShown = true;
+    // Le drapeau APRÈS la garde de montage : posé avant, un démontage à cet
+    // instant le verrouillait définitivement — `_onCallStatusChanged` le teste
+    // avant de pousser, et plus aucun écran d'appel ne s'ouvrait de la vie de
+    // l'écran d'accueil.
     if (!mounted) return;
+    _callScreenShown = true;
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
@@ -236,8 +277,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _showOngoingCall() {
-    _callScreenShown = true;
+    // Même inversion que dans `_showIncomingCall`.
     if (!mounted) return;
+    _callScreenShown = true;
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
@@ -548,8 +590,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _missedCallsSinceVisit(List<LocalCall> calls) {
     final since = _callsLastVisit ?? DateTime.fromMillisecondsSinceEpoch(0);
     return calls.where((c) {
-      final missed = c.status == 2 || c.status == 3; // Call.isMissed
-      return missed && c.createdAt.isAfter(since);
+      // Cette ligne était une copie manuelle de `Call.isMissed`, et elle
+      // manquait le statut 0 — celui des appels annulés pendant la sonnerie,
+      // que rien ne reclassait. Le badge sous-comptait 454 appels.
+      return callWasNotAnswered(c.status) && c.createdAt.isAfter(since);
     }).length;
   }
 

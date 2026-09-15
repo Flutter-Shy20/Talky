@@ -296,10 +296,15 @@ class RingtonePreferences extends ChangeNotifier {
   /// Chemin du fichier de la sonnerie *importée* actuellement sélectionnée,
   /// ou chaîne vide si l'utilisateur est sur la sonnerie système / fournie.
   ///
-  /// Clé plate (String simple) lisible par le code natif Android — qui ne peut
-  /// pas décoder la liste `_kCustomListKey` du plugin shared_preferences — pour
-  /// jouer la sonnerie importée quand l'app est tuée (voir
+  /// Clé plate (String simple) lisible directement par le code natif Android,
+  /// pour jouer la sonnerie importée quand l'app est tuée (voir
   /// `CallIncomingHelper.resolveCustomRingtonePath`).
+  ///
+  /// Le natif sait désormais décoder la liste `_kCustomListKey` — la sentinelle
+  /// dont `shared_preferences` préfixe ses listes est gérée par
+  /// `FlutterSharedPreferencesCompat.readStringList`. Cette clé plate reste
+  /// néanmoins le chemin le plus court pour la sélection globale, et évite de
+  /// parcourir tout le catalogue pour un seul identifiant.
   static const _kActivePathKey = 'call_ringtone_active_path';
 
   /// Nom de la ressource `res/raw` (sans extension) que le chemin natif app

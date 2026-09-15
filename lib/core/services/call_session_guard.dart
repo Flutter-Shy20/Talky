@@ -6,9 +6,68 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'audio_helper.dart';
+import 'call/background_media_rules.dart';
+import 'call/call_audio_routes.dart';
+import 'call/session_video_renderers.dart';
 import 'callkit_service.dart';
 
 enum SessionMode { audio, video }
+
+/// Ce que vaut une acquisition de la session média.
+enum SessionAcquisition {
+  /// Personne ne tenait la session : on la configure.
+  fraiche,
+
+  /// Le même appel la tient déjà — imbrication légitime, on compte.
+  imbriquee,
+
+  /// Un AUTRE appel la tient. On ne compte pas, et on le dit.
+  conflit,
+}
+
+/// Faut-il rendre la session média à la demande de [releasedBy] ?
+///
+/// `acquire` refuse déjà proprement un conflit, sans compter — mais `release`
+/// décrémentait aveuglément. Une session dont l'acquisition avait été REFUSÉE
+/// faisait donc quand même tomber le compteur à zéro en se retirant, et
+/// démontait celle du voisin : service au premier plan arrêté, focus audio
+/// rendu, entrée CallKit fermée, verrou de veille et capteur de proximité
+/// relâchés — sur un appel, ou une réunion, toujours en cours.
+///
+/// Le chemin est celui qu'`acquire` documente déjà : rejoindre une réunion
+/// pendant un appel, ou décrocher un appel pendant une réunion. La correction
+/// d'`acquire` était donc à moitié faite ; c'est l'autre moitié.
+///
+/// Un appelant qui ne sait pas s'identifier garde l'ancien comportement : on ne
+/// peut pas lui refuser ce qu'on ne sait pas attribuer.
+bool shouldReleaseSession({
+  required int refCount,
+  required String? heldBy,
+  required String? releasedBy,
+}) {
+  if (refCount <= 0) return false;
+  final rendeur = releasedBy?.trim() ?? '';
+  final tenant = heldBy?.trim() ?? '';
+  if (rendeur.isEmpty || tenant.isEmpty) return true;
+  return rendeur == tenant;
+}
+
+/// Décide du sort d'un `acquire`, sans rien toucher.
+///
+/// Extraite parce que la version précédente incrémentait le compteur dans les
+/// trois cas puis sortait sans rien configurer dans les deux derniers : le
+/// `release()` d'en face ne redescendait alors jamais à zéro, et le verrou de
+/// veille, le capteur de proximité, le service au premier plan, le focus audio
+/// et l'entrée CallKit restaient tenus indéfiniment.
+SessionAcquisition classerAcquisition({
+  required int refCount,
+  required String? tenuPar,
+  required String callId,
+}) {
+  if (refCount <= 0) return SessionAcquisition.fraiche;
+  if (tenuPar == callId) return SessionAcquisition.imbriquee;
+  return SessionAcquisition.conflit;
+}
 
 /// Maintient micro + foreground service actifs pendant appels/réunions (Android).
 /// Vidéo : wakelock écran + pause caméra en veille.
@@ -21,14 +80,44 @@ class CallSessionGuard with WidgetsBindingObserver {
 
   static const _callMediaChannel =
       MethodChannel('com.alanya237.alanya/call_media');
+  static const _proximityChannel =
+      MethodChannel('com.alanya237.alanya/proximity');
 
   int _refCount = 0;
   SessionMode? _mode;
   String? _callId;
   bool _wakelockEnabled = false;
+  bool _proximityEnabled = false;
+
+  /// Dernière sortie audio connue, tenue à jour même hors session.
+  ///
+  /// `_initAudioRoute` choisit la sortie AVANT que la session ne soit acquise :
+  /// sans mémoire, la première route serait perdue et l'écran ne s'éteindrait
+  /// qu'au premier changement manuel.
+  CallAudioRoute _route = CallAudioRoute.earpiece;
   bool _videoPausedByLifecycle = false;
   bool _audioTrackEnded = false;
   bool _mediaFgsStarted = false;
+
+  /// Le Picture-in-Picture système est ouvert (renseigné par le pont natif).
+  ///
+  /// Indispensable, et pas seulement informatif : en PiP Android, l'activité
+  /// est en pause tout en restant visible, donc le seul cycle de vie ne suffit
+  /// pas à décider du sort de la caméra.
+  bool _systemPipActive = false;
+
+  /// Dernier état connu du cycle de vie. Mémorisé parce que la décision sur la
+  /// caméra se rejoue aussi à l'ouverture et à la fermeture du PiP, en dehors
+  /// de tout changement de cycle de vie.
+  bool _appBackgrounded = false;
+
+  /// True quand la plateforme autorise la capture caméra en arrière-plan.
+  ///
+  /// Android l'accorde tant qu'un service de premier plan de type `camera`
+  /// tourne — d'où la lecture de `_mediaFgsStarted` plutôt qu'un simple test
+  /// de plateforme : sans le service, l'autorisation n'existe pas. iOS le
+  /// refuse tant que `multitasking-camera-access` n'est pas accordée.
+  bool get _cameraAllowedInBackground => _isAndroid && _mediaFgsStarted;
 
   MediaStream? Function()? _getLocalStream;
   bool Function()? _isVideoOn;
@@ -37,7 +126,23 @@ class CallSessionGuard with WidgetsBindingObserver {
 
   bool get isActive => _refCount > 0;
 
-  Future<void> acquire({
+  /// Prend la session média, et **dit si elle est bien à cet appel-ci**.
+  ///
+  /// Le compteur de références sert à imbriquer plusieurs acquisitions du MÊME
+  /// appel — `answerCall` après `acceptIncomingCallFromPush`, par exemple. Il
+  /// incrémentait aussi pour un `callId` DIFFÉRENT, en sortant aussitôt sans
+  /// rien configurer : `_callId` et le mode restaient ceux de la session
+  /// précédente, et le `release()` d'en face ne pouvait plus redescendre à zéro.
+  ///
+  /// Le chemin est banal — rejoindre une réunion pendant un appel. La réunion
+  /// n'obtenait aucune entrée CallKit, celle de l'appel était marquée
+  /// « connectée », et à la fin de l'appel la notification restait affichée,
+  /// chronomètre en marche, pour toute la durée de la réunion. Avec elle : le
+  /// verrou de veille, le capteur de proximité, le service au premier plan et
+  /// le focus audio, tous jamais rendus.
+  ///
+  /// Un conflit ne compte donc plus, et se voit.
+  Future<bool> acquire({
     required SessionMode mode,
     required String callId,
     required String displayName,
@@ -49,13 +154,32 @@ class CallSessionGuard with WidgetsBindingObserver {
     bool Function()? isMuted,
     Future<void> Function()? onReplaceAudioNeeded,
   }) async {
-    if (kIsWeb) return;
+    // Le web n'a ni service au premier plan ni CallKit : rien à tenir, et donc
+    // aucun échec à signaler.
+    if (kIsWeb) return true;
+
+    switch (classerAcquisition(
+      refCount: _refCount,
+      tenuPar: _callId,
+      callId: callId,
+    )) {
+      case SessionAcquisition.imbriquee:
+        _refCount++;
+        debugPrint(
+          '[CallSessionGuard] Déjà actif pour cet appel (ref=$_refCount)',
+        );
+        return true;
+      case SessionAcquisition.conflit:
+        debugPrint(
+          '[CallSessionGuard] ⛔ conflit : session tenue par $_callId, '
+          'refus de $callId — le compteur ne bouge pas',
+        );
+        return false;
+      case SessionAcquisition.fraiche:
+        break;
+    }
 
     _refCount++;
-    if (_refCount > 1) {
-      debugPrint('[CallSessionGuard] Déjà actif (ref=$_refCount)');
-      return;
-    }
 
     _mode = mode;
     _callId = callId;
@@ -81,15 +205,12 @@ class CallSessionGuard with WidgetsBindingObserver {
       );
     }
 
-    if (mode == SessionMode.video) {
-      await WakelockPlus.enable();
-      _wakelockEnabled = true;
-      debugPrint('[CallSessionGuard] Wakelock activé (vidéo)');
-    }
+    await _applyScreenPolicy();
 
     _watchAudioTrack();
 
     debugPrint('[CallSessionGuard] Session acquise mode=$mode callId=$callId');
+    return true;
   }
 
   Future<void> markConnected() async {
@@ -97,28 +218,55 @@ class CallSessionGuard with WidgetsBindingObserver {
     await CallKitService.instance.setConnected(_callId!);
   }
 
-  Future<void> release() async {
+  /// La session média est-elle tenue par [callId] ?
+  ///
+  /// À interroger avant de démonter quoi que ce soit de partagé — la fenêtre
+  /// flottante et les rendus vidéo appartiennent eux aussi à celui qui tient la
+  /// session, et les libérer depuis une session refusée vide l'écran du voisin.
+  bool holdsSession(String? callId) {
+    if (kIsWeb) return false;
+    return shouldReleaseSession(
+      refCount: _refCount,
+      heldBy: _callId,
+      releasedBy: callId,
+    );
+  }
+
+  /// Rend la session — **si elle est bien à cet appel-ci**. Voir
+  /// [shouldReleaseSession].
+  Future<void> release({String? callId}) async {
     if (kIsWeb) return;
-    if (_refCount == 0) return;
+    if (!shouldReleaseSession(
+      refCount: _refCount,
+      heldBy: _callId,
+      releasedBy: callId,
+    )) {
+      if (_refCount > 0) {
+        debugPrint(
+          '[CallSessionGuard] ⛔ release ignoré : session tenue par $_callId, '
+          'rendue par $callId',
+        );
+      }
+      return;
+    }
     _refCount--;
     if (_refCount > 0) return;
 
     WidgetsBinding.instance.removeObserver(this);
 
-    if (_wakelockEnabled) {
-      await WakelockPlus.disable();
-      _wakelockEnabled = false;
-    }
+    // Avant tout le reste : un écran resté noir parce que le verrou de
+    // proximité a survécu à l'appel ne se distingue pas d'un téléphone en panne.
+    await _applyScreenPolicy();
 
     await _stopMediaForegroundService();
 
     await AudioHelper.releaseCallAudio();
 
-    final callId = _callId;
-    if (callId != null && callId.isNotEmpty) {
+    final tenu = _callId;
+    if (tenu != null && tenu.isNotEmpty) {
       try {
-        await CallKitService.instance.endCall(callId);
-        debugPrint('[CallSessionGuard] CallKit fermé callId=$callId');
+        await CallKitService.instance.endCall(tenu);
+        debugPrint('[CallSessionGuard] CallKit fermé callId=$tenu');
       } catch (e) {
         debugPrint('[CallSessionGuard] endCall error: $e');
       }
@@ -132,6 +280,8 @@ class CallSessionGuard with WidgetsBindingObserver {
     _onReplaceAudioNeeded = null;
     _videoPausedByLifecycle = false;
     _audioTrackEnded = false;
+    _systemPipActive = false;
+    _appBackgrounded = false;
 
     debugPrint('[CallSessionGuard] Session relâchée');
   }
@@ -146,16 +296,61 @@ class CallSessionGuard with WidgetsBindingObserver {
         state == AppLifecycleState.inactive) {
       // Uniquement réactiver la track existante — jamais getUserMedia ici.
       _ensureAudioTrackActive();
-      if (_mode == SessionMode.video) {
-        _pauseLocalVideo();
-      }
+      _appBackgrounded = true;
+      _applyLocalVideoPolicy();
     } else if (state == AppLifecycleState.resumed) {
+      _appBackgrounded = false;
       AudioHelper.reactivateCallAudio();
       _ensureAudioTrackActive();
       _maybeReplaceAudioIfNeeded();
-      if (_mode == SessionMode.video && _videoPausedByLifecycle) {
-        _resumeLocalVideo();
-      }
+      _applyLocalVideoPolicy();
+      // Rebranche ce qu'un passage par `detached` aurait coupé. Sans effet
+      // quand rien n'a été détaché : `syncMain` ignore ce qui n'a pas changé.
+      SessionVideoRenderers.instance.resync();
+    } else if (state == AppLifecycleState.detached) {
+      // L'activité est détruite — retour arrière, ou balayage depuis les
+      // applications récentes. Le moteur Flutter se détache, mais les rendus
+      // vidéo continuent d'être alimentés : la première image livrée après
+      // coup tue le processus. On coupe l'alimentation tant que le canal
+      // répond encore.
+      //
+      // Ce chemin ne devrait plus être emprunté pendant un appel vidéo, que le
+      // Picture-in-Picture retient désormais au premier plan. Il reste pour ce
+      // que le PiP ne couvre pas : l'appareil qui le refuse, et l'appel audio.
+      SessionVideoRenderers.instance.detachStreams();
+    }
+  }
+
+  /// Signale l'ouverture ou la fermeture du Picture-in-Picture système.
+  ///
+  /// Appelée par le pont natif. Elle rejoue la décision caméra : fermer le PiP
+  /// alors que l'application reste en arrière-plan doit couper ce que son
+  /// ouverture avait laissé passer.
+  void setSystemPipActive(bool active) {
+    if (_systemPipActive == active) return;
+    _systemPipActive = active;
+    debugPrint('[CallSessionGuard] PiP système=$active');
+    if (_refCount == 0) return;
+    _applyLocalVideoPolicy();
+  }
+
+  /// Coupe ou rétablit la caméra locale selon [localVideoShouldPause].
+  ///
+  /// La caméra ne se coupe plus par principe en arrière-plan : c'était le
+  /// défaut à corriger. Elle continue d'émettre dès lors que la plateforme
+  /// l'autorise, ou que le Picture-in-Picture est ouvert.
+  void _applyLocalVideoPolicy() {
+    final shouldPause = localVideoShouldPause(
+      isVideo: _mode == SessionMode.video,
+      appBackgrounded: _appBackgrounded,
+      systemPipActive: _systemPipActive,
+      cameraAllowedInBackground: _cameraAllowedInBackground,
+    );
+
+    if (shouldPause) {
+      _pauseLocalVideo();
+    } else if (_videoPausedByLifecycle) {
+      _resumeLocalVideo();
     }
   }
 
@@ -234,6 +429,75 @@ class CallSessionGuard with WidgetsBindingObserver {
     tracks.first.enabled = true;
     _videoPausedByLifecycle = false;
     debugPrint('[CallSessionGuard] Vidéo locale reprise');
+  }
+
+  /// Signale la sortie audio courante — et donc si le téléphone est à l'oreille.
+  ///
+  /// Appelée par `setAudioRoute`, l'entonnoir unique par lequel passent le choix
+  /// d'ouverture, le bouton de la barre de contrôle et les branchements de
+  /// casque détectés en cours d'appel. La politique d'écran suit ainsi la sortie
+  /// sans que rien d'autre n'ait à y penser.
+  Future<void> updateAudioRoute(CallAudioRoute route) async {
+    if (kIsWeb) return;
+    if (_route == route) return;
+    _route = route;
+    await _applyScreenPolicy();
+  }
+
+  /// Applique les deux règles d'écran à partir de l'état courant.
+  ///
+  /// Un seul endroit décide, et il est rejoué à chaque changement : acquisition,
+  /// changement de sortie audio, libération. Les règles elles-mêmes sont pures
+  /// et testées — voir `proximityBlankingApplies` et `screenWakelockApplies`.
+  Future<void> _applyScreenPolicy() async {
+    final callActive = _refCount > 0;
+
+    final wantProximity = proximityBlankingApplies(
+      route: _route,
+      callActive: callActive,
+    );
+    if (wantProximity != _proximityEnabled) {
+      await _setProximityBlanking(wantProximity);
+    }
+
+    final wantWakelock = screenWakelockApplies(
+      isVideo: _mode == SessionMode.video,
+      route: _route,
+      callActive: callActive,
+    );
+    if (wantWakelock != _wakelockEnabled) {
+      try {
+        wantWakelock
+            ? await WakelockPlus.enable()
+            : await WakelockPlus.disable();
+        _wakelockEnabled = wantWakelock;
+        debugPrint('[CallSessionGuard] Wakelock=$wantWakelock');
+      } catch (e) {
+        debugPrint('[CallSessionGuard] ** Wakelock: $e');
+      }
+    }
+  }
+
+  Future<void> _setProximityBlanking(bool enabled) async {
+    try {
+      if (enabled) {
+        // Le natif répond false quand l'appareil n'a pas de capteur : ne pas
+        // retenir un état actif qu'aucun verrou ne soutient, sinon la remise à
+        // zéro suivante serait sautée.
+        final ok = await _proximityChannel.invokeMethod<bool>('enable');
+        _proximityEnabled = ok ?? false;
+      } else {
+        await _proximityChannel.invokeMethod('disable');
+        _proximityEnabled = false;
+      }
+      debugPrint('[CallSessionGuard] Proximité=$_proximityEnabled');
+    } on MissingPluginException {
+      // Web, tests, ou build sans le pont natif : l'appel continue sans.
+      _proximityEnabled = false;
+    } catch (e) {
+      debugPrint('[CallSessionGuard] ** Proximité: $e');
+      _proximityEnabled = false;
+    }
   }
 
   bool get _isAndroid =>

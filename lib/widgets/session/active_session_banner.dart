@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/navigation/app_navigator.dart';
+import '../../core/services/call/session_overlay_rules.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/meeting_service.dart';
 import '../../core/services/playback_speed_preferences.dart';
@@ -12,7 +13,10 @@ import '../../core/services/voice_playback_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/call/system_pip.dart';
 import '../../screens/chats/chat_detail_screen.dart';
+import 'session_video_window.dart';
+import 'system_pip_layout.dart';
 
 /// Hauteur du bandeau compact (hors status bar / encoche).
 const double kActiveSessionTopBarHeight = 44.0;
@@ -28,15 +32,42 @@ class ActiveSessionChrome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: SystemPip.instance,
+      builder: (context, _) {
+        // En vignette système, c'est l'activité entière qu'Android réduit : tout
+        // ce qui n'est pas l'image du correspondant devient du bruit dans un
+        // rectangle de quelques centimètres. La vignette recouvre donc
+        // l'application.
+        //
+        // `Offstage` et non un remplacement : rendre un autre arbre démonterait
+        // le `Navigator` et l'état de tous les écrans ouverts, qui seraient
+        // reconstruits à la sortie du PiP — l'utilisateur retrouverait
+        // l'application à son point de départ, appel compris. Offstage cesse de
+        // peindre sans rien démonter.
+        final inPip = SystemPip.instance.isInPipMode;
+        return Stack(
+          children: [
+            Offstage(offstage: inPip, child: _buildChrome(context)),
+            if (inPip) const SystemPipLayout(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildChrome(BuildContext context) {
     return Consumer3<CallService, MeetingService, VoicePlaybackService>(
       builder: (context, callService, meetingService, voiceService, _) {
-        final topVisible = _isTopBannerVisible(
+        final overlays = activeSessionOverlays(
           callService,
           meetingService,
           voiceService,
         );
         final mq = MediaQuery.of(context);
-        final topInset = topVisible ? kActiveSessionTopBarHeight : 0.0;
+        // Seul le bandeau décale le contenu : la fenêtre vidéo flotte au-dessus
+        // de lui, comme le ferait n'importe quelle surface superposée.
+        final topInset = overlays.banner ? kActiveSessionTopBarHeight : 0.0;
 
         return Stack(
           children: [
@@ -58,6 +89,28 @@ class ActiveSessionChrome extends StatelessWidget {
               right: 0,
               child: ActiveSessionBannerHost(),
             ),
+            if (overlays.videoWindow)
+              // La fenêtre sert l'appel s'il y en a un, la réunion sinon — même
+              // priorité que le bandeau, décidée par `sessionOverlays`.
+              if (callService.isCallActive)
+                SessionVideoWindow(
+                  onExpand: () => callService.navigateToCallUi(),
+                  onHangUp: () => _hangUpCall(callService),
+                  fallbackName:
+                      callService.remoteUserName ?? context.l10n.unknownSender,
+                  fallbackPhotoUrl: callService.remoteUserPhoto,
+                )
+              else
+                SessionVideoWindow(
+                  onExpand: () => meetingService.navigateToMeetingUi(),
+                  onHangUp: () => meetingService.leaveMeeting(),
+                  fallbackName: meetingService.currentMeeting?.objet ??
+                      context.l10n.meeting,
+                  // En réunion, « le » flux distant n'existe pas : il y en a
+                  // autant que de participants. La vignette montre donc sa
+                  // propre caméra, seul repère qui ait un sens hors de l'écran.
+                  preferLocal: true,
+                ),
           ],
         );
       },
@@ -65,17 +118,40 @@ class ActiveSessionChrome extends StatelessWidget {
   }
 }
 
-bool _isTopBannerVisible(
+/// Surfaces à afficher pour l'état courant des trois services.
+///
+/// La décision est une fonction pure testée à part ; ceci n'est que la lecture
+/// des services — voir [sessionOverlays].
+SessionOverlays activeSessionOverlays(
   CallService call,
   MeetingService meeting,
   VoicePlaybackService voice,
 ) {
-  return _isBannerVisible(call, meeting) || voice.showMiniPlayer;
+  return sessionOverlays(
+    callActive: call.isCallActive,
+    callMinimized: call.isCallUiMinimized,
+    callIsVideo: call.isVideo,
+    meetingActive: meeting.isMeetingActive,
+    meetingMinimized: meeting.isMeetingUiMinimized,
+    // `typeMedia == 0` vaut audio+vidéo, 1 vaut audio seul — la convention de
+    // la table `meeting`, pas une inversion.
+    meetingIsVideo: meeting.currentMeeting?.typeMedia == 0,
+    voicePlaying: voice.showMiniPlayer,
+  );
 }
 
-bool _isBannerVisible(CallService call, MeetingService meeting) {
-  return call.shouldShowCallBanner ||
-      (!call.isCallActive && meeting.shouldShowMeetingBanner);
+/// Raccrocher depuis le bandeau ou la fenêtre.
+///
+/// Conf / transfert : end_call → leaveCallSession (je pars seul).
+/// leaveGroupCall vise les rooms groupe classiques, pas callSessions.
+Future<void> _hangUpCall(CallService callService) async {
+  if (callService.isConference) {
+    await callService.endCall();
+  } else if (callService.groupRoomId != null) {
+    await callService.leaveGroupCall();
+  } else {
+    await callService.endCall();
+  }
 }
 
 /// Bandeau compact en haut (style iOS / Google Meet) : appel, réunion ou vocal.
@@ -211,9 +287,14 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
   Widget build(BuildContext context) {
     return Consumer3<CallService, MeetingService, VoicePlaybackService>(
       builder: (context, callService, meetingService, voiceService, _) {
-        final showCall = callService.shouldShowCallBanner;
-        final showMeeting =
-            !callService.isCallActive && meetingService.shouldShowMeetingBanner;
+        // Un appel vidéo minimisé passe à la fenêtre flottante : le bandeau ne
+        // le reprend pas, sinon les deux annonceraient le même appel.
+        final showCall =
+            callService.shouldShowCallBanner && !callService.isVideo;
+        // Même règle que pour l'appel : une réunion vidéo passe à la fenêtre.
+        final showMeeting = !callService.isCallActive &&
+            meetingService.shouldShowMeetingBanner &&
+            meetingService.currentMeeting?.typeMedia != 0;
         final showVoice = !showCall && !showMeeting && voiceService.showMiniPlayer;
         final visible = showCall || showMeeting || showVoice;
 
@@ -698,11 +779,14 @@ class _HangUpButton extends StatelessWidget {
 }
 
 /// Indique si le bandeau de session active est affiché.
+///
+/// Ses appelants s'en servent pour décaler leur propre contenu : la fenêtre
+/// vidéo n'entre donc pas dans le compte, elle flotte sans rien pousser.
 bool isActiveSessionBannerVisible(BuildContext context) {
   final call = context.read<CallService>();
   final meeting = context.read<MeetingService>();
   final voice = context.read<VoicePlaybackService>();
-  return _isTopBannerVisible(call, meeting, voice);
+  return activeSessionOverlays(call, meeting, voice).banner;
 }
 
 /// @deprecated Utiliser [isActiveSessionBannerVisible].

@@ -1,6 +1,7 @@
 // talky_models.dart — aligné avec la DB Alanya réelle
 // Champs mappés exactement sur les colonnes MySQL
 
+import 'core/services/call/call_history_rules.dart';
 import 'core/utils/backend_url.dart';
 import 'core/utils/contact_payload.dart';
 import 'core/utils/location_payload.dart';
@@ -1027,12 +1028,29 @@ class Call {
       );
 
   bool get isVideo => type == 1;
-  bool get isMissed => status == 3 || status == 2;
-  bool get isOngoing => status == 0;
+
+  /// True si l'appel n'a jamais abouti — voir [callWasNotAnswered] pour la
+  /// raison pour laquelle le statut 0 en fait partie.
+  ///
+  /// `isOngoing` vivait ici, à `status == 0`. Il n'avait aucun appelant, et il
+  /// disait faux : un 0 dans le journal n'est pas un appel en cours mais un
+  /// appel annulé pendant la sonnerie, que rien ne reclassait ensuite.
+  bool get isMissed => callWasNotAnswered(status);
+
+  /// True si cet appel a une durée à montrer.
+  ///
+  /// Le statut compte autant que la valeur. `callHistory.start_time` a
+  /// longtemps été posé à la sonnerie et non au décrochage : tout appel sans
+  /// réponse soldé par `end_call` s'est vu attribuer son temps de sonnerie
+  /// comme durée. Le serveur ne le fait plus, mais les lignes déjà écrites —
+  /// en base comme dans `local_calls` — gardent leur fausse durée.
+  bool get hasDuration => callWasAnswered(status) && (duree ?? 0) > 0;
 
   String get statusLabel {
     switch (status) {
-      case 0: return LocaleController.instance.l10n.inProgress;
+      // 0 annonçait « En cours » — sur des lignes vieilles de plusieurs mois,
+      // faute d'être jamais reclassées. C'est un appel resté sans réponse.
+      case 0: return LocaleController.instance.l10n.noAnswer2;
       case 1: return LocaleController.instance.l10n.ended2;
       case 2: return LocaleController.instance.l10n.rejected;
       case 3: return LocaleController.instance.l10n.missed;
@@ -1119,7 +1137,7 @@ class Meeting {
 class MeetingParticipant {
   final int idMeeting;
   final int participantID; // IDparticipant en DB
-  final int status;        // 0=pending,1=accepté,2=refusé
+  final int status;        // 0=invité jamais rejoint, 1=a rejoint au moins une fois, 2=inutilisé
   final bool connecte;
   final int duree;
   // Jointure users
@@ -1942,6 +1960,12 @@ class SocketEvents {
 
   // Appels 1-1 (Backend → Flutter)
   static const incomingCall  = 'incoming_call';
+  /// L'appel est créé et le destinataire sonne : { callId, targetId, isVideo }.
+  /// Émis à la seule socket de l'appelant, qui adopte alors l'identifiant du
+  /// serveur. Sans lui, il n'apprenait le sien qu'au décrochage — et tout
+  /// événement terminal reçu pendant la sonnerie était jeté faute de
+  /// correspondance.
+  static const callRinging   = 'call_ringing';
   static const callAnswered  = 'call_answered';
   static const callRejected  = 'call_rejected';
   static const callEnded     = 'call_ended';

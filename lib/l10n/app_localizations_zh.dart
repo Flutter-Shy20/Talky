@@ -242,9 +242,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mediaExpiredResendYourself => '如果还在相册中，请重新发送';
 
   @override
-  String get settingsCalls => '通话';
-
-  @override
   String get settingsRingtone => '来电铃声';
 
   @override
@@ -365,36 +362,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get callIncoming => '来电';
-
-  @override
-  String errorWithDetails(String error) {
-    return '失败：$error';
-  }
-
-  @override
-  String actionFailedWithError(String error) {
-    return '操作失败：$error';
-  }
-
-  @override
-  String cannotUnblockWithError(String error) {
-    return '无法解除屏蔽：$error';
-  }
-
-  @override
-  String loadErrorWithDetails(String error) {
-    return '加载错误：$error';
-  }
-
-  @override
-  String cannotOpenFileApp(String message) {
-    return '没有可打开此文件的应用（$message）';
-  }
-
-  @override
-  String cannotOpenFileAppAlt(String message) {
-    return '没有可打开此文件的应用程序（$message）';
-  }
 
   @override
   String membersCount(int count) {
@@ -550,46 +517,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String selectUpToVoice(int count) {
     return '最多可选择 $count 位成员进行语音通话';
-  }
-
-  @override
-  String cannotLoadMeeting(String error) {
-    return '无法加载会议：$error';
-  }
-
-  @override
-  String cannotJoinMeeting(String error) {
-    return '无法加入：$error';
-  }
-
-  @override
-  String cannotCreateMeeting(String error) {
-    return '无法创建会议：$error';
-  }
-
-  @override
-  String meetingConnectFailed(String error) {
-    return '连接会议失败：$error';
-  }
-
-  @override
-  String uploadFailedWithError(String error) {
-    return '上传失败：$error';
-  }
-
-  @override
-  String sendFailedWithError(String error) {
-    return '发送失败：$error';
-  }
-
-  @override
-  String recordFailedWithError(String error) {
-    return '录制失败：$error';
-  }
-
-  @override
-  String roleChangeError(String error) {
-    return '变更角色时出错：$error';
   }
 
   @override
@@ -1433,6 +1360,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get meetingEnded => '会议已结束';
 
   @override
+  String get meetingBlockedByCall => '通话进行中：无法加入会议。';
+
+  @override
+  String get meetingJoinExpired => '此会议已过期。';
+
+  @override
+  String get meetingJoinNotInvited => '找不到会议。';
+
+  @override
+  String get meetingParticipantJoined => '已加入';
+
+  @override
+  String get meetingParticipantPending => '待加入';
+
+  @override
+  String get meetingExpired => '已过期';
+
+  @override
   String get newMeeting => '新建会议';
 
   @override
@@ -1608,6 +1553,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get speaker => '扬声器';
+
+  @override
+  String get audioOutputEarpiece => '听筒';
+
+  @override
+  String get audioOutputWired => '有线耳机';
+
+  @override
+  String get audioOutputBluetooth => '蓝牙';
+
+  @override
+  String get changeAudioOutput => '切换音频输出';
 
   @override
   String get newCall => '新通话';
@@ -2220,16 +2177,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get voiceCallPreview => '📞 语音通话';
 
   @override
-  String anErrorOccurred(String error) {
-    return '发生错误：$error';
-  }
-
-  @override
-  String errorColon(String error) {
-    return '错误：$error';
-  }
-
-  @override
   String get deletePhotoAction => '删除照片';
 
   @override
@@ -2257,11 +2204,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recordOrImportAudio => '录制语音或导入音频文件';
 
   @override
-  String unableToPostStatusWithError(String error) {
-    return '无法发布动态：$error';
-  }
-
-  @override
   String get tapToAddYourStatus => '点击发布您的动态';
 
   @override
@@ -2286,14 +2228,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get networkTimeout => '网络超时';
 
   @override
-  String networkErrorWithDetails(String error) {
-    return '网络错误：$error';
-  }
-
-  @override
-  String invalidResponseWithCode(Object code) {
-    return '响应无效（$code）';
-  }
+  String get networkError => '连接失败。请检查您的网络后重试。';
 
   @override
   String get noRefreshToken => '缺少刷新令牌';
@@ -2469,21 +2404,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get usedLabel => '已使用';
 
   @override
-  String banUnbanError(String error) {
-    return '封禁/解封出错：$error';
-  }
-
-  @override
-  String deleteErrorWithDetails(String error) {
-    return '删除出错：$error';
-  }
-
-  @override
-  String loadUsersError(String error) {
-    return '加载用户出错：$error';
-  }
-
-  @override
   String limitReachedParticipants(int total, String media) {
     return '$media最多 $total 位参与者（含您本人）';
   }
@@ -2553,21 +2473,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String todayTimeShort(String time) {
     return '今天 $time';
-  }
-
-  @override
-  String sourceFileNotFound(String path) {
-    return '未找到源文件：$path';
-  }
-
-  @override
-  String copyImpossible(String error) {
-    return '复制失败：$error';
-  }
-
-  @override
-  String copyFailedPath(String path) {
-    return '复制失败：$path';
   }
 
   @override
@@ -4219,11 +4124,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exportDownload => '下载';
 
   @override
-  String exportFailed(String error) {
-    return '导出失败：$error';
-  }
-
-  @override
   String get deleteAccountTitle => '注销账号';
 
   @override
@@ -4268,11 +4168,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String deleteAccountFailed(String error) {
-    return '注销失败：$error';
-  }
-
-  @override
   String get biometricLock => '生物识别锁';
 
   @override
@@ -4289,11 +4184,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get biometricLockUnavailable => '该设备不支持生物识别';
-
-  @override
-  String biometricLockFailed(String error) {
-    return '生物识别：$error';
-  }
 
   @override
   String get accountSecuritySectionProtection => '保护';
@@ -5930,4 +5820,184 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get translateModeAutoSubtitle => '跟随总体设置';
+
+  @override
+  String get errDelaiDepasse => '服务器响应超时。请重试。';
+
+  @override
+  String get errReseauSuspect => '无法建立安全连接。请检查您的网络。';
+
+  @override
+  String get errSessionExpiree => '您的会话已过期。请重新登录。';
+
+  @override
+  String get errIntrouvable => '未找到。此内容可能已被删除。';
+
+  @override
+  String get errConflit => '当前状态下无法执行此操作。';
+
+  @override
+  String get errTropDeRequetes => '尝试次数过多。请稍候。';
+
+  @override
+  String get errServeur => '服务暂时不可用。请重试。';
+
+  @override
+  String get errPermission => '权限被拒绝。请检查您的设备设置。';
+
+  @override
+  String get errPeripherique => '设备不可用或已被其他应用占用。';
+
+  @override
+  String get errStockage => '无法访问文件。请检查可用存储空间。';
+
+  @override
+  String get errGenerique => '发生错误。请重试。';
+
+  @override
+  String get errDomaineAuth => '登录失败。请重试。';
+
+  @override
+  String get errDomaineChat => '消息未发送。请重试。';
+
+  @override
+  String get errDomaineAppel => '通话未能接通。请重试。';
+
+  @override
+  String get errDomaineReunion => '无法打开会议。请重试。';
+
+  @override
+  String get errDomaineQr => '无法使用此二维码。请重试。';
+
+  @override
+  String get errDomaineMedia => '无法处理该文件。请重试。';
+
+  @override
+  String get errDomaineTrajet => '无法更新行程。请重试。';
+
+  @override
+  String get errDomaineStatut => '无法发布动态。请重试。';
+
+  @override
+  String get errDomaineProfil => '无法保存更改。请重试。';
+
+  @override
+  String get errDomaineAdmin => '操作失败。请重试。';
+
+  @override
+  String get errAppelHorsLigne => '无网络连接，无法拨打电话。';
+
+  @override
+  String get errChatHorsLigne => '消息已排队：网络恢复后将自动发送。';
+
+  @override
+  String get errMediaStockage => '无法保存。请检查设备的可用空间。';
+
+  @override
+  String get errCodeRefreshExpired => '您的会话已过期。请重新登录。';
+
+  @override
+  String get errCodeDeviceRevoked => '此设备已被登出。请重新登录。';
+
+  @override
+  String get errCodeAccountDeletionPending => '此账户正在删除中。';
+
+  @override
+  String get errCodeRegisterRateLimited => '注册尝试次数过多。请稍后再试。';
+
+  @override
+  String get errCodeQrSessionExpired => '此二维码已过期。请重新生成。';
+
+  @override
+  String get errCodeDeviceNotOwner => '此设备无权执行该操作。';
+
+  @override
+  String get errCodeAddAlreadyUsed => '此代码已被使用。';
+
+  @override
+  String get errCodeAddMePolicyDenied => '此用户不接受通过代码添加。';
+
+  @override
+  String get errCodeMeetingExpired => '此会议已过期。';
+
+  @override
+  String get errCodeMeetingEnded => '此会议已结束。';
+
+  @override
+  String get errCodeMeetingOrganiserRequired => '只有组织者才能执行此操作。';
+
+  @override
+  String get errCodeAccountAlreadyInMeeting => '该账户已在其他设备上参加此会议。';
+
+  @override
+  String get errCodeSessionBusy => '通话进行中。请先结束通话。';
+
+  @override
+  String get errCodeMaxDurationReached => '已达到最长时限。';
+
+  @override
+  String get errCodeBlockedBySender => '您无法联系此用户。';
+
+  @override
+  String get errCodeNotAMember => '您已不是该群组成员。';
+
+  @override
+  String get errCodeGroupAdminsOnly => '仅限群组管理员。';
+
+  @override
+  String get errCodeGroupOwnerRequired => '只有群主才能执行此操作。';
+
+  @override
+  String get errCodeConversationNotFound => '此会话已不存在。';
+
+  @override
+  String get errCodeOfficialReadonly => '此官方账户不接受回复。';
+
+  @override
+  String get errCodeListMemberLimit => '此列表已达到成员上限。';
+
+  @override
+  String get errCodeSystemListReadonly => '系统列表无法修改。';
+
+  @override
+  String get errCodeInviteBlocked => '无法邀请此用户。';
+
+  @override
+  String get errCodeBusinessOnly => '仅限企业账户。';
+
+  @override
+  String get errCodeTrustListEmpty => '您的信任名单为空。请先添加联系人。';
+
+  @override
+  String get errCodeTripAlreadyActive => '已有行程正在进行中。';
+
+  @override
+  String get errCodeTripTerminal => '此行程已结束。';
+
+  @override
+  String get errCodeTripStillOpen => '请先结束当前行程。';
+
+  @override
+  String get errCodeSosRateLimited => '警报已发送。请稍后再发送。';
+
+  @override
+  String get errCodeInvalidEta => '到达时间无效。';
+
+  @override
+  String get errCodeInvalidDestination => '目的地无效。';
+
+  @override
+  String get errCodeMediaExpired => '此媒体已过期，不再可用。';
+
+  @override
+  String get errCodeInvalidExtension => '不支持此文件类型。';
+
+  @override
+  String get errCodeInsufficientRole => '您没有执行此操作的权限。';
+
+  @override
+  String get errCodeFieldImmutable => '此字段无法再修改。';
+
+  @override
+  String get errAucuneAppPourFichier => '没有应用可以打开此文件。';
 }

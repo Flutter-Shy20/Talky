@@ -247,9 +247,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Renvoyez-le depuis votre galerie si vous l\'avez encore';
 
   @override
-  String get settingsCalls => 'Appels';
-
-  @override
   String get settingsRingtone => 'Sonnerie d\'appel';
 
   @override
@@ -372,36 +369,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get callIncoming => 'APPEL ENTRANT';
-
-  @override
-  String errorWithDetails(String error) {
-    return 'Échec : $error';
-  }
-
-  @override
-  String actionFailedWithError(String error) {
-    return 'Action impossible : $error';
-  }
-
-  @override
-  String cannotUnblockWithError(String error) {
-    return 'Impossible de débloquer : $error';
-  }
-
-  @override
-  String loadErrorWithDetails(String error) {
-    return 'Erreur chargement : $error';
-  }
-
-  @override
-  String cannotOpenFileApp(String message) {
-    return 'Aucune app pour ouvrir ce fichier ($message)';
-  }
-
-  @override
-  String cannotOpenFileAppAlt(String message) {
-    return 'Aucune application pour ouvrir ce fichier ($message)';
-  }
 
   @override
   String membersCount(int count) {
@@ -558,46 +525,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String selectUpToVoice(int count) {
     return 'Sélectionnez jusqu\'à $count membres pour l\'appel vocal';
-  }
-
-  @override
-  String cannotLoadMeeting(String error) {
-    return 'Impossible de charger la réunion : $error';
-  }
-
-  @override
-  String cannotJoinMeeting(String error) {
-    return 'Impossible de rejoindre : $error';
-  }
-
-  @override
-  String cannotCreateMeeting(String error) {
-    return 'Impossible de créer la réunion : $error';
-  }
-
-  @override
-  String meetingConnectFailed(String error) {
-    return 'Échec de la connexion à la réunion : $error';
-  }
-
-  @override
-  String uploadFailedWithError(String error) {
-    return 'Échec de l\'upload : $error';
-  }
-
-  @override
-  String sendFailedWithError(String error) {
-    return 'Échec de l\'envoi : $error';
-  }
-
-  @override
-  String recordFailedWithError(String error) {
-    return 'Échec de l\'enregistrement : $error';
-  }
-
-  @override
-  String roleChangeError(String error) {
-    return 'Erreur changement de rôle: $error';
   }
 
   @override
@@ -1513,6 +1440,25 @@ class AppLocalizationsFr extends AppLocalizations {
   String get meetingEnded => 'Réunion terminée';
 
   @override
+  String get meetingBlockedByCall =>
+      'Un appel est en cours : impossible de rejoindre la réunion.';
+
+  @override
+  String get meetingJoinExpired => 'Cette réunion est échue.';
+
+  @override
+  String get meetingJoinNotInvited => 'Réunion introuvable.';
+
+  @override
+  String get meetingParticipantJoined => 'A rejoint';
+
+  @override
+  String get meetingParticipantPending => 'En attente';
+
+  @override
+  String get meetingExpired => 'Échue';
+
+  @override
   String get newMeeting => 'Nouvelle réunion';
 
   @override
@@ -1688,6 +1634,18 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get speaker => 'Haut-parleur';
+
+  @override
+  String get audioOutputEarpiece => 'Écouteur';
+
+  @override
+  String get audioOutputWired => 'Casque filaire';
+
+  @override
+  String get audioOutputBluetooth => 'Bluetooth';
+
+  @override
+  String get changeAudioOutput => 'Changer la sortie audio';
 
   @override
   String get newCall => 'Nouvel appel';
@@ -2306,16 +2264,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get voiceCallPreview => '📞 Appel vocal';
 
   @override
-  String anErrorOccurred(String error) {
-    return 'Une erreur est survenue: $error';
-  }
-
-  @override
-  String errorColon(String error) {
-    return 'Erreur: $error';
-  }
-
-  @override
   String get deletePhotoAction => 'Supprimer la photo';
 
   @override
@@ -2345,11 +2293,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Enregistrez un vocal ou importez un fichier audio';
 
   @override
-  String unableToPostStatusWithError(String error) {
-    return 'Impossible de publier le statut : $error';
-  }
-
-  @override
   String get tapToAddYourStatus => 'Appuyer pour ajouter votre statut';
 
   @override
@@ -2374,14 +2317,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get networkTimeout => 'Timeout réseau';
 
   @override
-  String networkErrorWithDetails(String error) {
-    return 'Erreur réseau: $error';
-  }
-
-  @override
-  String invalidResponseWithCode(Object code) {
-    return 'Réponse invalide ($code)';
-  }
+  String get networkError =>
+      'Connexion impossible. Vérifiez votre réseau et réessayez.';
 
   @override
   String get noRefreshToken => 'Pas de refresh token';
@@ -2558,21 +2495,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get usedLabel => 'Utilisé';
 
   @override
-  String banUnbanError(String error) {
-    return 'Erreur ban/unban: $error';
-  }
-
-  @override
-  String deleteErrorWithDetails(String error) {
-    return 'Erreur suppression: $error';
-  }
-
-  @override
-  String loadUsersError(String error) {
-    return 'Erreur chargement utilisateurs: $error';
-  }
-
-  @override
   String limitReachedParticipants(int total, String media) {
     return 'Maximum $total participants en $media (vous inclus)';
   }
@@ -2642,21 +2564,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String todayTimeShort(String time) {
     return 'Aujourd\'hui $time';
-  }
-
-  @override
-  String sourceFileNotFound(String path) {
-    return 'Fichier source introuvable : $path';
-  }
-
-  @override
-  String copyImpossible(String error) {
-    return 'Copie impossible : $error';
-  }
-
-  @override
-  String copyFailedPath(String path) {
-    return 'Copie échouée : $path';
   }
 
   @override
@@ -4381,11 +4288,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get exportDownload => 'Télécharger';
 
   @override
-  String exportFailed(String error) {
-    return 'Export impossible : $error';
-  }
-
-  @override
   String get deleteAccountTitle => 'Supprimer le compte';
 
   @override
@@ -4431,11 +4333,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String deleteAccountFailed(String error) {
-    return 'Suppression impossible : $error';
-  }
-
-  @override
   String get biometricLock => 'Verrouillage biométrique';
 
   @override
@@ -4455,11 +4352,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get biometricLockUnavailable =>
       'Biométrie indisponible sur cet appareil';
-
-  @override
-  String biometricLockFailed(String error) {
-    return 'Biométrie : $error';
-  }
 
   @override
   String get accountSecuritySectionProtection => 'Protection';
@@ -6208,4 +6100,221 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get translateModeAutoSubtitle => 'Suit le réglage général';
+
+  @override
+  String get errDelaiDepasse =>
+      'Le serveur met trop de temps à répondre. Réessayez.';
+
+  @override
+  String get errReseauSuspect =>
+      'Connexion sécurisée impossible. Vérifiez votre réseau.';
+
+  @override
+  String get errSessionExpiree => 'Votre session a expiré. Reconnectez-vous.';
+
+  @override
+  String get errIntrouvable =>
+      'Introuvable. Ce contenu a peut-être été supprimé.';
+
+  @override
+  String get errConflit => 'Action impossible dans l\'état actuel.';
+
+  @override
+  String get errTropDeRequetes => 'Trop de tentatives. Patientez un instant.';
+
+  @override
+  String get errServeur =>
+      'Le service est momentanément indisponible. Réessayez.';
+
+  @override
+  String get errPermission =>
+      'Autorisation refusée. Vérifiez les réglages de votre appareil.';
+
+  @override
+  String get errPeripherique =>
+      'Périphérique indisponible ou déjà utilisé par une autre application.';
+
+  @override
+  String get errStockage =>
+      'Accès au fichier impossible. Vérifiez l\'espace disponible.';
+
+  @override
+  String get errGenerique => 'Une erreur est survenue. Réessayez.';
+
+  @override
+  String get errDomaineAuth => 'Connexion impossible. Réessayez.';
+
+  @override
+  String get errDomaineChat => 'Message non envoyé. Réessayez.';
+
+  @override
+  String get errDomaineAppel => 'L\'appel n\'a pas pu aboutir. Réessayez.';
+
+  @override
+  String get errDomaineReunion =>
+      'La réunion n\'a pas pu s\'ouvrir. Réessayez.';
+
+  @override
+  String get errDomaineQr => 'Ce code n\'a pas pu être utilisé. Réessayez.';
+
+  @override
+  String get errDomaineMedia =>
+      'Le fichier n\'a pas pu être traité. Réessayez.';
+
+  @override
+  String get errDomaineTrajet =>
+      'Le trajet n\'a pas pu être mis à jour. Réessayez.';
+
+  @override
+  String get errDomaineStatut =>
+      'Le statut n\'a pas pu être publié. Réessayez.';
+
+  @override
+  String get errDomaineProfil => 'Modification impossible. Réessayez.';
+
+  @override
+  String get errDomaineAdmin => 'Opération impossible. Réessayez.';
+
+  @override
+  String get errAppelHorsLigne => 'Appel impossible sans connexion.';
+
+  @override
+  String get errChatHorsLigne =>
+      'Message en attente : il partira au retour du réseau.';
+
+  @override
+  String get errMediaStockage =>
+      'Enregistrement impossible. Vérifiez l\'espace disponible sur l\'appareil.';
+
+  @override
+  String get errCodeRefreshExpired =>
+      'Votre session a expiré. Reconnectez-vous.';
+
+  @override
+  String get errCodeDeviceRevoked =>
+      'Cet appareil a été déconnecté. Reconnectez-vous.';
+
+  @override
+  String get errCodeAccountDeletionPending =>
+      'Ce compte est en cours de suppression.';
+
+  @override
+  String get errCodeRegisterRateLimited =>
+      'Trop de créations de compte. Réessayez plus tard.';
+
+  @override
+  String get errCodeQrSessionExpired =>
+      'Ce code QR a expiré. Affichez-en un nouveau.';
+
+  @override
+  String get errCodeDeviceNotOwner =>
+      'Cet appareil n\'est pas autorisé pour cette action.';
+
+  @override
+  String get errCodeAddAlreadyUsed => 'Ce code a déjà été utilisé.';
+
+  @override
+  String get errCodeAddMePolicyDenied =>
+      'Cette personne n\'accepte pas les ajouts par code.';
+
+  @override
+  String get errCodeMeetingExpired => 'Cette réunion a expiré.';
+
+  @override
+  String get errCodeMeetingEnded => 'Cette réunion est terminée.';
+
+  @override
+  String get errCodeMeetingOrganiserRequired =>
+      'Seul l\'organisateur peut faire cela.';
+
+  @override
+  String get errCodeAccountAlreadyInMeeting =>
+      'Ce compte participe déjà à la réunion sur un autre appareil.';
+
+  @override
+  String get errCodeSessionBusy =>
+      'Un appel est en cours. Terminez-le d\'abord.';
+
+  @override
+  String get errCodeMaxDurationReached => 'La durée maximale est atteinte.';
+
+  @override
+  String get errCodeBlockedBySender =>
+      'Vous ne pouvez pas contacter cette personne.';
+
+  @override
+  String get errCodeNotAMember => 'Vous ne faites plus partie de ce groupe.';
+
+  @override
+  String get errCodeGroupAdminsOnly => 'Réservé aux administrateurs du groupe.';
+
+  @override
+  String get errCodeGroupOwnerRequired =>
+      'Seul le propriétaire du groupe peut faire cela.';
+
+  @override
+  String get errCodeConversationNotFound =>
+      'Cette conversation n\'existe plus.';
+
+  @override
+  String get errCodeOfficialReadonly =>
+      'Ce compte officiel n\'accepte pas de réponse.';
+
+  @override
+  String get errCodeListMemberLimit =>
+      'Cette liste a atteint son nombre maximal de membres.';
+
+  @override
+  String get errCodeSystemListReadonly =>
+      'Cette liste système ne peut pas être modifiée.';
+
+  @override
+  String get errCodeInviteBlocked => 'Cette personne ne peut pas être invitée.';
+
+  @override
+  String get errCodeBusinessOnly => 'Réservé aux comptes professionnels.';
+
+  @override
+  String get errCodeTrustListEmpty =>
+      'Votre cercle de confiance est vide. Ajoutez-y quelqu\'un d\'abord.';
+
+  @override
+  String get errCodeTripAlreadyActive => 'Un trajet est déjà en cours.';
+
+  @override
+  String get errCodeTripTerminal => 'Ce trajet est déjà terminé.';
+
+  @override
+  String get errCodeTripStillOpen => 'Terminez d\'abord le trajet en cours.';
+
+  @override
+  String get errCodeSosRateLimited =>
+      'Alerte déjà envoyée. Patientez avant d\'en envoyer une autre.';
+
+  @override
+  String get errCodeInvalidEta =>
+      'L\'heure d\'arrivée indiquée n\'est pas valide.';
+
+  @override
+  String get errCodeInvalidDestination =>
+      'La destination indiquée n\'est pas valide.';
+
+  @override
+  String get errCodeMediaExpired =>
+      'Ce média a expiré et n\'est plus disponible.';
+
+  @override
+  String get errCodeInvalidExtension =>
+      'Ce type de fichier n\'est pas accepté.';
+
+  @override
+  String get errCodeInsufficientRole =>
+      'Vos droits ne permettent pas cette action.';
+
+  @override
+  String get errCodeFieldImmutable => 'Ce champ ne peut plus être modifié.';
+
+  @override
+  String get errAucuneAppPourFichier =>
+      'Aucune application ne peut ouvrir ce fichier.';
 }

@@ -6,8 +6,29 @@ import '../../db/chat_dao.dart';
 import '../../../talky_models.dart';
 import 'chat_api.dart';
 import 'message_sender.dart';
+import '../call_session_guard.dart';
 
 /// Outbox / retry d'envoi hors-ligne.
+/// Faut-il reconstruire le socket avant de rejouer l'outbox ?
+///
+/// `forceReconnect` démonte l'instance socket et la recrée. C'est légitime
+/// quand un message traîne sans accusé : le socket est probablement mort et
+/// réémettre dessus ne servirait à rien.
+///
+/// Mais ce vidage tourne sur une minuterie de soixante-quinze secondes, sans
+/// rapport avec les appels — et le socket qu'il démonte est **celui de la
+/// signalisation**. Le faire en pleine conversation coupe l'appel sous nos
+/// propres pieds : plus de relais ICE, plus d'événement de fin, et le serveur
+/// arme sa grâce de déconnexion comme si le téléphone avait disparu.
+///
+/// La messagerie peut attendre le tour suivant ; un appel, non.
+bool shouldForceReconnectForOutbox({
+  required bool hasStalePending,
+  required bool callSessionActive,
+}) =>
+    hasStalePending && !callSessionActive;
+
+
 class MessageOutbox {
   MessageOutbox({
     required ChatApi api,
@@ -48,7 +69,11 @@ class MessageOutbox {
   Future<void> _flushOutboxBody() async {
     // Pending sans ack depuis > 25s : socket probablement zombie → vrai
     // reconnect avant de ré-émettre (sinon touchEmitted tourne dans le vide).
-    if (await _dao.hasStalePending(olderThan: _stalePendingBeforeReconnect)) {
+    if (shouldForceReconnectForOutbox(
+      hasStalePending:
+          await _dao.hasStalePending(olderThan: _stalePendingBeforeReconnect),
+      callSessionActive: CallSessionGuard.instance.isActive,
+    )) {
       debugPrint('[MessageOutbox] pending stale → forceReconnect');
       await _api.forceReconnect();
     }

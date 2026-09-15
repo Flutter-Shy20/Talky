@@ -2,15 +2,20 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, ChangeNotifier;
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'call/call_terminal_guards.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../screens/meetings/ongoing_meet_screen.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import 'call/session_video_renderers.dart';
 import 'call/speaking_detector.dart';
+import 'call/system_pip.dart';
 import 'call_session_guard.dart';
 import 'callkit_service.dart';
 import '../navigation/app_navigator.dart';
 import '../theme/locale_controller.dart';
+import '../errors/app_error.dart';
+import '../errors/error_kind.dart';
 
 enum MeetingStatus { idle, joining, connected, ended }
 
@@ -33,14 +38,38 @@ class MeetingService extends ChangeNotifier {
   MeetingStatus _status = MeetingStatus.idle;
   Meeting? _currentMeeting;
 
-  // Médias locaux & WebRTC peers 
-  MediaStream? _localStream; 
+  /// Numéro de la session en cours, incrémenté à chaque fin de réunion.
+  ///
+  /// L'écran de réunion s'ouvre désormais **avant** que la réunion existe :
+  /// entre le clic et l'entrée dans la salle, le bouton « raccrocher » est déjà
+  /// là. Une création encore en vol s'en sert pour constater qu'elle est
+  /// devenue sans objet, plutôt que de ressusciter ce que le nettoyage vient de
+  /// solder — une réunion sans écran, tenant caméra et micro.
+  int _generation = 0;
+
+  /// Ce qu'on sait de la réunion dès le clic, avant la réponse du serveur :
+  /// sa nature média, et qui l'organise.
+  ///
+  /// L'écran s'ouvre pendant que le POST est en vol. Sans ces deux-là, il
+  /// déciderait des commandes caméra et du bouton « terminer pour tous » sur
+  /// une réunion qu'il ne connaît pas encore — et les verrait changer sous lui
+  /// à l'arrivée de la réponse.
+  int? _typeMediaVoulu;
+  int? _idOrganiseurVoulu;
+
+  // Médias locaux & WebRTC peers
+  MediaStream? _localStream;
+  /// Acquisition caméra/micro en vol, partagée par ceux qui l'attendent.
+  Future<MediaStream?>? _mediasEnVol;
   final Map<String, RTCPeerConnection> _peerConnections = {};
 
   // Streams distants 
   final Map<String, MediaStream> _remoteStreams = {};
   final Map<String, List<RTCIceCandidate>> _pendingIceByPeer = {};
   final Set<String> _remoteDescSetForPeer = <String>{};
+
+  /// Pairs à qui les pistes locales ont déjà été attachées.
+  final Set<String> _tracksAddedForPeer = <String>{};
 
   // Contrôles
   bool _isMuted = false;
@@ -68,6 +97,15 @@ class MeetingService extends ChangeNotifier {
   // Noms des participants connectés (alanyaID → nom affiché).
   final Map<String, String> _participantRoster = {};
 
+  /// Qui est réellement dans la salle, moi compris.
+  ///
+  /// La feuille des participants croisait les clés de `remoteStreams` avec un
+  /// `connecte` figé, rechargé seulement à l'occasion d'une invitation : un
+  /// arrivant dont le flux n'était pas encore négocié passait pour absent, et
+  /// un flux mort survivait à son propriétaire. Ni l'un ni l'autre ne dit qui
+  /// est là — la salle, elle, le sait.
+  final Set<String> _presents = {};
+
   // UI minimisée (bannière flottante active).
   bool _isMeetingUiMinimized = false;
   bool _isMeetingUiRouteOpen = false;
@@ -90,6 +128,9 @@ class MeetingService extends ChangeNotifier {
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
   int get unreadChatCount => _unreadChatCount;
   Map<String, String> get participantRoster => Map.unmodifiable(_participantRoster);
+
+  /// Identifiants des participants présents dans la salle, moi compris.
+  Set<String> get presentIds => Set.unmodifiable(_presents);
 
   /// Résout le nom affiché d'un participant (liste API + roster temps réel).
   String participantDisplayName(String userId) {
@@ -116,12 +157,31 @@ class MeetingService extends ChangeNotifier {
     return participant?.avatarUrl;
   }
 
+  /// Notre identifiant pendant la réunion.
+  ///
+  /// C'est la clé qui corrèle socket et WebRTC — celle de `_participantId`, donc
+  /// celle des tuiles. `AuthProvider` en donne une autre, prise du compte : elle
+  /// coïncide en pratique, mais divergerait si le compte changeait en cours de
+  /// session. L'écran d'appel expose déjà l'équivalent (`localUserId`).
+  String? get myId => _myId;
+
   Set<String> get activeSpeakers => speakingDetector.activeSpeakers;
   bool get amISpeaking => speakingDetector.amISpeaking;
   bool isUserSpeaking(String userId) => speakingDetector.isSpeaking(userId);
 
   bool get isMeetingActive =>
       _status == MeetingStatus.joining || _status == MeetingStatus.connected;
+
+  /// La réunion est-elle encore en train de s'ouvrir ?
+  bool get isJoining => _status == MeetingStatus.joining;
+
+  /// `type_media` de la réunion : celui du serveur dès qu'il est connu, sinon
+  /// celui qu'on a demandé. Null quand aucune réunion n'est en cours.
+  int? get typeMediaEnCours => _currentMeeting?.typeMedia ?? _typeMediaVoulu;
+
+  /// Organisateur de la réunion, connu dès la création pour la même raison.
+  int? get idOrganiseurEnCours =>
+      _currentMeeting?.idOrganiser ?? _idOrganiseurVoulu;
 
   bool get isMeetingUiMinimized => _isMeetingUiMinimized;
 
@@ -205,12 +265,31 @@ class MeetingService extends ChangeNotifier {
 
 
   void _setupSocketListeners() {
+    // Reprise après une coupure réseau.
+    //
+    // À l'authentification, le serveur ne remet la socket que dans `user_<id>`
+    // et dans la room de son appareil : celle de la réunion meurt avec la
+    // socket tombée. Les relais média restent adressés à l'utilisateur et
+    // continuent de passer, ce qui donne le change — mais arrivées, départs,
+    // micro, caméra, messages et fin de réunion sont diffusés à la salle, et
+    // n'atteignaient plus personne. Pendant ce temps la grâce de quinze
+    // secondes armée côté serveur expirait, et les autres voyaient partir
+    // quelqu'un qui se croyait toujours là.
+    _apiClient.onSocketEvent(SocketEvents.authVerified, (_) {
+      _rejoinMeetingRoomIfNeeded();
+    });
+
     // Confirmation que la room a été rejointe (inclut snapshot muteStates)
     _apiClient.onSocketEvent(SocketEvents.meetingRoomJoined, (data) {
       debugPrint('[MeetingService] Room rejointe: $data');
       if (data is Map) {
         _applyMuteStatesSnapshot(data['muteStates']);
         _applyVideoStatesSnapshot(data['videoStates']);
+        // Les instantanés micro/caméra sont l'annuaire de la salle : le serveur
+        // purge l'entrée d'un partant (`meeting:leave` comme expiration de la
+        // grâce), donc leurs clés sont exactement les présents, moi excepté.
+        _seedPresentsFromSnapshot(data['muteStates']);
+        _seedPresentsFromSnapshot(data['videoStates']);
         notifyListeners();
       }
       if (_roomJoinCompleter != null && !_roomJoinCompleter!.isCompleted) {
@@ -237,6 +316,7 @@ class MeetingService extends ChangeNotifier {
       if (userId == null) return;
 
       var changed = false;
+      if (_presents.add(_participantId(userId))) changed = true;
       final displayName = data['userName']?.toString() ??
           data['nom']?.toString() ??
           data['pseudo']?.toString();
@@ -271,12 +351,23 @@ class MeetingService extends ChangeNotifier {
       final userId = data['userID']?.toString();
       if (userId != null) {
         _participantRoster.remove(userId);
+        _presents.remove(_participantId(userId));
         _removePeer(userId);
       }
     });
 
     // Réunion terminée par l'organisateur
-    _apiClient.onSocketEvent(SocketEvents.meetingEnded, (_) {
+    _apiClient.onSocketEvent(SocketEvents.meetingEnded, (data) {
+      final recu = data is Map ? data['meetingID'] : null;
+      if (!endsCurrentMeeting(
+        currentMeetingId: _currentMeeting?.idMeeting,
+        eventMeetingId: recu,
+        meetingStatusName: _status.name,
+      )) {
+        debugPrint('[MeetingService] 🛡 meeting:ended ignoré: reçu=$recu '
+            'courante=${_currentMeeting?.idMeeting} status=$_status');
+        return;
+      }
       _terminateMeeting(emitLeave: false);
     });
 
@@ -374,6 +465,29 @@ class MeetingService extends ChangeNotifier {
     });
   }
 
+  /// Redemande sa place dans la salle après une reconnexion.
+  ///
+  /// Rejouer `meeting:join_room` est le geste attendu par le serveur : il
+  /// annule la grâce encore armée, ou reprend la place si elle a déjà expiré,
+  /// et prévient les autres par `meeting:user_joined` — ceux qui avaient déjà
+  /// retiré le partant refont alors leur lien avec lui.
+  void _rejoinMeetingRoomIfNeeded() {
+    final reunion = _currentMeeting;
+    final myId = _myId;
+    if (reunion == null || myId == null) return;
+    if (_status != MeetingStatus.connected && _status != MeetingStatus.joining) {
+      return;
+    }
+    debugPrint('[MeetingService] 🔄 socket revenu → rejoin réunion ${reunion.idMeeting}');
+    _apiClient.sendSocketEvent(SocketEvents.meetingJoinRoom, {
+      'meetingID': reunion.idMeeting,
+      'userID': int.tryParse(myId) ?? myId,
+      'userName': _participantRoster[myId] ?? '',
+      'isMuted': _isMuted,
+      'isVideoOff': _isVideoOff,
+    });
+  }
+
   void _applyRemoteMuteState(String userId, bool isMuted) {
     _remoteMutedStates[_participantId(userId)] = isMuted;
     speakingDetector.setSpeakerMuted(userId, isMuted);
@@ -384,6 +498,21 @@ class MeetingService extends ChangeNotifier {
     muteStates.forEach((key, value) {
       _applyRemoteMuteState(key.toString(), value == true);
     });
+  }
+
+  /// Ajoute aux présents les identifiants d'un instantané d'état.
+  ///
+  /// Limite connue : un participant qui n'aurait jamais annoncé ses états
+  /// micro/caméra n'y figurerait pas. Le client les envoie toujours, dans le
+  /// `join_room` lui-même — le cas n'existe pas aujourd'hui, mais il existerait
+  /// avec un autre client. La correction robuste serait une liste de présents
+  /// dans le payload `meeting:room_joined`, côté serveur.
+  void _seedPresentsFromSnapshot(dynamic states) {
+    if (states is! Map) return;
+    for (final key in states.keys) {
+      final id = _participantId(key.toString());
+      if (id.isNotEmpty) _presents.add(id);
+    }
   }
 
   void _applyVideoStatesSnapshot(dynamic videoStates) {
@@ -500,7 +629,30 @@ class MeetingService extends ChangeNotifier {
     int typeMedia = 0,
   }) async {
     _status = MeetingStatus.joining;
+    _typeMediaVoulu = typeMedia;
+    _idOrganiseurVoulu = myId;
+    final generation = _generation;
     notifyListeners();
+
+    // La caméra et le micro s'ouvrent **pendant** les allers-retours HTTP, pas
+    // après : c'est le poste le plus long des deux — permissions, ouverture du
+    // capteur, première trame — et rien dans `getUserMedia` n'a besoin de
+    // connaître la réunion. `_joinRoom` récupère la même acquisition au lieu
+    // d'en lancer une seconde.
+    final medias = prepareLocalMedia(video: typeMedia == 0);
+
+    /// Solde une réunion créée puis quittée avant qu'on y soit entré.
+    ///
+    /// Elle existe côté serveur et rien ne l'a terminée : sans ce geste, elle
+    /// resterait « en cours » dans la liste sans que personne n'y ait jamais
+    /// mis les pieds.
+    Future<void> abandonner(int idReunion) async {
+      unawaited(_fermerReunionAbandonnee(idReunion));
+      await medias;
+      // Sans effet si une autre réunion a démarré depuis : elle a repris ce
+      // flux, et `releaseLocalMediaIfNotJoined` refuse de le lui retirer.
+      await releaseLocalMediaIfNotJoined();
+    }
 
     try {
       final data = await _apiClient.createMeeting(
@@ -510,22 +662,67 @@ class MeetingService extends ChangeNotifier {
         duree: duree,
         typeMedia: typeMedia,
       );
-      _currentMeeting = Meeting.fromJson(data);
+      // Gardée hors de `_currentMeeting` : quand la génération a tourné, ce
+      // champ appartient au nettoyage — ou déjà à une autre réunion.
+      final reunion = Meeting.fromJson(data);
+      if (generation != _generation) {
+        await abandonner(reunion.idMeeting);
+        return;
+      }
+      _currentMeeting = reunion;
       _seedRosterFromMeeting();
-      await _apiClient.joinMeetingHttp(_currentMeeting!.idMeeting);
-      await _reloadCurrentMeeting(_currentMeeting!.idMeeting);
+      // La réunion est connue : l'écran peut afficher son objet et ses
+      // commandes sans attendre l'entrée dans la salle.
+      notifyListeners();
+      await _apiClient.joinMeetingHttp(reunion.idMeeting);
+      if (generation != _generation) {
+        await abandonner(reunion.idMeeting);
+        return;
+      }
+      await _reloadCurrentMeeting(reunion.idMeeting);
+      if (generation != _generation) {
+        await abandonner(reunion.idMeeting);
+        return;
+      }
       await _joinRoom(myId: myId, myName: myName);
     } catch (e) {
       debugPrint('[MeetingService] Erreur createAndJoin: $e');
-      _status = MeetingStatus.ended;
-      notifyListeners();
+      // La réunion a pu être quittée pendant l'échec : ne pas repasser au
+      // statut terminal d'une session qui n'est plus la nôtre.
+      if (generation == _generation) {
+        _status = MeetingStatus.ended;
+        notifyListeners();
+      }
       rethrow;
     }
   }
 
-  /// Prépare le stream local (caméra/micro) avant de rejoindre
-  Future<MediaStream?> prepareLocalMedia({required bool video}) async {
-    if (_localStream != null) return _localStream;
+  /// Solde côté serveur une réunion créée puis abandonnée avant l'entrée.
+  ///
+  /// Silencieux à dessein : personne n'attend ce résultat, et l'écran est déjà
+  /// refermé quand il arrive.
+  Future<void> _fermerReunionAbandonnee(int idMeeting) async {
+    try {
+      await _apiClient.updateMeetingEnd(idMeeting);
+      debugPrint('[MeetingService] réunion abandonnée refermée: $idMeeting');
+    } catch (e) {
+      debugPrint('[MeetingService] fermeture réunion abandonnée échouée: $e');
+    }
+  }
+
+  /// Prépare le stream local (caméra/micro) avant de rejoindre.
+  ///
+  /// Deux appelants peuvent la réclamer en même temps — la création lance
+  /// l'acquisition en parallèle des appels HTTP, `_joinRoom` la réclame
+  /// ensuite. Ils attendent alors la même, plutôt que d'ouvrir deux fois le
+  /// capteur.
+  Future<MediaStream?> prepareLocalMedia({required bool video}) {
+    if (_localStream != null) return Future.value(_localStream);
+    return _mediasEnVol ??= _ouvrirMediasLocaux(video: video)
+        .whenComplete(() => _mediasEnVol = null);
+  }
+
+  Future<MediaStream?> _ouvrirMediasLocaux({required bool video}) async {
     try {
       if (!kIsWeb) {
         final mic = await Permission.microphone.request();
@@ -608,38 +805,24 @@ class MeetingService extends ChangeNotifier {
     }
   }
 
-  /// Rejoindre par code de room (cherche dans la liste des réunions).
-  Future<void> joinByRoom({
-    required String roomCode,
-    required int myId,
-    required String myName,
-  }) async {
-    _status = MeetingStatus.joining;
-    notifyListeners();
-
-    try {
-      // Résolution par code côté serveur : fonctionne même si on n'est pas
-      // encore participant (contrairement à getMeetings qui filtre).
-      final data = await _apiClient.getMeetingByRoom(roomCode);
-      _currentMeeting = Meeting.fromJson(data);
-      _seedRosterFromMeeting();
-
-      await _apiClient.joinMeetingHttp(_currentMeeting!.idMeeting);
-      await _joinRoom(myId: myId, myName: myName);
-    } catch (e) {
-      debugPrint('[MeetingService] Erreur joinByRoom: $e');
-      _status = MeetingStatus.ended;
-      notifyListeners();
-      rethrow;
-    }
-  }
+  // `joinByRoom` a été retirée : aucun écran n'offrait d'entrer par code de
+  // salon, et elle était le seul appelant de `getMeetingByRoom`. La route
+  // serveur subsiste, réservée aux participants depuis le durcissement des
+  // autorisations — elle servira si un lien d'invitation voit le jour.
 
   Future<void> _joinRoom({required int myId, required String myName}) async {
+    // Une acquisition lancée en parallèle de la création est probablement déjà
+    // finie ; sinon on l'attend, on n'en ouvre pas une seconde.
+    final enVol = _mediasEnVol;
+    if (_localStream == null && enVol != null) {
+      await enVol;
+    }
     if (_localStream == null) {
       await _initLocalStream();
     }
 
     _myId = myId.toString();
+    _presents.add(_participantId(_myId!));
     _syncLocalMediaFromTracks();
 
     if (myName.isNotEmpty) {
@@ -675,7 +858,7 @@ class MeetingService extends ChangeNotifier {
 
     if (!kIsWeb && _currentMeeting != null) {
       final isVideo = _currentMeeting!.typeMedia == 0;
-      await CallSessionGuard.instance.acquire(
+      final pris = await CallSessionGuard.instance.acquire(
         mode: isVideo ? SessionMode.video : SessionMode.audio,
         callId: 'meeting_${_currentMeeting!.idMeeting}',
         displayName: _currentMeeting!.objet,
@@ -685,7 +868,27 @@ class MeetingService extends ChangeNotifier {
         isVideoOn: () => !_isVideoOff,
         isMuted: () => _isMuted,
       );
-      await CallSessionGuard.instance.markConnected();
+      if (pris) {
+        await CallSessionGuard.instance.markConnected();
+        await _bindSessionRenderers(isVideo: isVideo);
+      } else {
+        // Un appel tient déjà la session média. La réunion se poursuivait quand
+        // même : sans entrée CallKit, sans focus audio, sans fenêtre flottante
+        // (`_bindSessionRenderers` n'était pas appelé) — et sans un mot à
+        // l'utilisateur, un `debugPrint` pour tout signal.
+        //
+        // On refuse d'entrer plutôt que d'offrir une réunion amputée. Ce n'est
+        // PAS un endroit où libérer les rendus : `SessionVideoRenderers` est un
+        // singleton partagé avec l'appel, et la garde `holdsSession` du cleanup
+        // existe précisément pour ne pas démonter la fenêtre d'un appel bien
+        // vivant. La fuite disparaît parce qu'on n'entre pas, pas parce qu'on
+        // nettoie derrière soi.
+        debugPrint(
+          '[MeetingService] ⛔ session média refusée — un appel est en cours',
+        );
+        await _terminateMeeting(emitLeave: true);
+        throw StateError('SESSION_BUSY');
+      }
     }
 
     notifyListeners();
@@ -706,10 +909,22 @@ class MeetingService extends ChangeNotifier {
 
   /// Termine la réunion pour tout le monde (organisateur seulement).
   Future<void> endMeetingForAll() async {
-    if (_currentMeeting == null) return;
+    final reunion = _currentMeeting;
+    if (reunion == null) return;
     _apiClient.sendSocketEvent(SocketEvents.meetingEnd, {
-      'meetingID': _currentMeeting!.idMeeting,
+      'meetingID': reunion.idMeeting,
     });
+    // Repli : la fin pour tous n'existait que par socket, et l'écran se fermait
+    // dans tous les cas. Socket tombée — ce qui arrive sans que rien ne le dise,
+    // voir `shouldRebuildSocketDuringReconnect` —, `isEnd` restait 0 : la
+    // réunion réapparaissait « en cours » au chargement suivant, et restait
+    // rejoignable. L'échec est silencieux à dessein : le chemin socket a
+    // probablement déjà fait le travail.
+    try {
+      await _apiClient.updateMeetingEnd(reunion.idMeeting);
+    } catch (e) {
+      debugPrint('[MeetingService] repli HTTP isEnd échoué: $e');
+    }
     await _terminateMeeting(emitLeave: false);
   }
 
@@ -719,6 +934,10 @@ class MeetingService extends ChangeNotifier {
   }
 
   Future<void> _terminateMeeting({required bool emitLeave}) async {
+    // Avant tout `await` : une création encore en vol doit constater sa
+    // péremption au premier point de reprise, pas trois requêtes plus tard.
+    _generation++;
+
     if (emitLeave && _currentMeeting != null) {
       // !! Payload exact : meetingID
       _apiClient.sendSocketEvent(SocketEvents.meetingLeave, {
@@ -741,6 +960,19 @@ class MeetingService extends ChangeNotifier {
       debugPrint('[MeetingService] _cleanup error: $e');
     } finally {
       _status = MeetingStatus.ended;
+      notifyListeners();
+      // Puis `idle`, comme `CallService` le fait depuis toujours
+      // (call_one_to_one.dart). Le service s'arrêtait à `ended`, et `idle`
+      // n'était plus jamais écrit après la déclaration du champ : la bannière
+      // de session, qui attend précisément ce statut pour annoncer « Réunion
+      // terminée », ne l'annonçait donc jamais quand la réunion était minimisée.
+      //
+      // Les deux notifications sont nécessaires : la première ferme l'écran
+      // (voir shouldPopMeetingScreen, qui accepte les deux statuts), la seconde
+      // laisse la bannière constater la fin. La microtâche garantit que la
+      // première a été traitée avant que la seconde parte.
+      _status = MeetingStatus.idle;
+      await Future.microtask(() {});
       notifyListeners();
     }
   }
@@ -795,30 +1027,19 @@ class MeetingService extends ChangeNotifier {
       debugPrint('[MeetingService] ** Erreur _initLocalStream: $e');
       debugPrint('[MeetingService] Type: ${e.runtimeType}');
 
-      String errorMsg = LocaleController.instance.l10n.mediaAccessError;
-      final errorStr = e.toString().toLowerCase();
-
-      if (errorStr.contains('permission')) {
-        errorMsg = LocaleController.instance.l10n.microphoneCameraPermissionDenied;
-      } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
-        errorMsg = LocaleController.instance.l10n.mediaAccessErrorCheckHttpsOr;
-      } else if (errorStr.contains('notfounderror')) {
-        errorMsg = LocaleController.instance.l10n.noAudioVideoDeviceFound;
-      } else if (errorStr.contains('notreadableerror')) {
-        errorMsg = LocaleController.instance.l10n.cannotAccessDevicesCheckPermissions;
-      }
-
-      debugPrint('[MeetingService] Message d\'erreur: $errorMsg');
-      rethrow;
+      // Ce bloc classait la panne sur cinq branches, écrivait le message dans
+      // un `debugPrint`… puis faisait `rethrow`. Le message était donc calculé
+      // pour rien, et c'est l'exception nue qui remontait au lobby, lequel
+      // l'affichait : « Impossible de rejoindre : NotReadableError: Could not
+      // start video source ». La classification voyage désormais avec elle.
+      throw AppError(kind: kindPourException(e), cause: e);
     }
   }
 
   Future<void> _createPeerAndOffer(String userId) async {
     final pc = await _createPeerConnection(userId);
 
-    _localStream?.getTracks().forEach((track) {
-      pc.addTrack(track, _localStream!);
-    });
+    _addLocalTracksOnce(pc, userId);
 
     final offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
@@ -831,6 +1052,20 @@ class MeetingService extends ChangeNotifier {
     });
   }
 
+  /// Ajoute les pistes locales une seule fois par pair.
+  ///
+  /// `_createPeerConnection` rend la connexion existante quand il y en a une :
+  /// une renégociation — offre reçue d'un pair qui, lui, est reparti d'une
+  /// connexion neuve — repassait alors ici et rajoutait micro et caméra à des
+  /// émetteurs qui les portaient déjà. La réponse partait avec des `m=` en
+  /// double et la piste distante changeait d'index en cours de réunion.
+  void _addLocalTracksOnce(RTCPeerConnection pc, String userId) {
+    if (!_tracksAddedForPeer.add(userId)) return;
+    _localStream?.getTracks().forEach((track) {
+      pc.addTrack(track, _localStream!);
+    });
+  }
+
   Future<void> _handleOffer(String fromUserId, Map offer) async {
     final pc = await _createPeerConnection(fromUserId);
 
@@ -840,9 +1075,7 @@ class MeetingService extends ChangeNotifier {
     _remoteDescSetForPeer.add(fromUserId);
     await _flushPendingIce(fromUserId);
 
-    _localStream?.getTracks().forEach((track) {
-      pc.addTrack(track, _localStream!);
-    });
+    _addLocalTracksOnce(pc, fromUserId);
 
     final answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
@@ -898,6 +1131,7 @@ class MeetingService extends ChangeNotifier {
   void _removePeer(String userId) {
     _peerConnections[userId]?.close();
     _peerConnections.remove(userId);
+    _tracksAddedForPeer.remove(userId);
     _remoteStreams.remove(userId);
     _pendingIceByPeer.remove(userId);
     _remoteDescSetForPeer.remove(userId);
@@ -957,12 +1191,43 @@ class MeetingService extends ChangeNotifier {
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
+  /// Ouvre les rendus vidéo pour la durée de la réunion.
+  ///
+  /// Même bascule que pour les appels : ils appartenaient à
+  /// `_OngoingMeetScreenState` et mouraient avec lui, ce qui interdisait toute
+  /// fenêtre survivant à l'écran.
+  Future<void> _bindSessionRenderers({required bool isVideo}) async {
+    if (!isVideo) return;
+    final renderers = SessionVideoRenderers.instance;
+    await renderers.ensureInitialized();
+    renderers.bind(this, () {
+      renderers.syncMain(localStream: _localStream);
+      unawaited(renderers.syncGroup(Map.of(_remoteStreams)));
+    });
+    await SystemPip.instance.setEligible(true);
+  }
+
   // CLEANUP
   Future<void> _cleanup() async {
     speakingDetector.stop();
     final meetingCallId = _currentMeeting != null ? 'meeting_${_currentMeeting!.idMeeting}' : null;
     if (!kIsWeb) {
-      await CallSessionGuard.instance.release();
+      // Même garde que du côté appel : si la session média appartient à un
+      // appel — parce que notre acquisition avait été refusée —, la rendre ici
+      // démonterait SON service au premier plan, SON focus audio et SON entrée
+      // CallKit, sur une communication toujours vivante.
+      if (CallSessionGuard.instance.holdsSession(meetingCallId)) {
+        // Avant le garde : la fenêtre flottante disparaît avec la réunion, et
+        // rien ne doit rester branché sur des rendus en cours de libération.
+        await SystemPip.instance.reset();
+        await SessionVideoRenderers.instance.release();
+        await CallSessionGuard.instance.release(callId: meetingCallId);
+      } else {
+        debugPrint(
+          '[MeetingService] session média non tenue par $meetingCallId — '
+          'rien à rendre',
+        );
+      }
       if (meetingCallId != null) {
         try {
           await CallKitService.instance.endCall(meetingCallId);
@@ -988,15 +1253,33 @@ class MeetingService extends ChangeNotifier {
     _remoteStreams.clear();
     _pendingIceByPeer.clear();
     _remoteDescSetForPeer.clear();
+    _tracksAddedForPeer.clear();
     _chatMessages.clear();
     _unreadChatCount = 0;
     _isMeetingChatOpen = false;
+    // Arrêter les pistes avant de disposer le flux : `dispose()` seul rend le
+    // flux, pas la caméra ni le micro, qui restaient capturés après la réunion.
+    // Le motif correct est celui de `releaseLocalMediaIfNotJoined` ci-dessus.
+    final pistes = _localStream?.getTracks() ?? const [];
+    for (final t in pistes) {
+      try {
+        await t.stop();
+      } catch (e) {
+        debugPrint('[MeetingService] arrêt de piste échoué: $e');
+      }
+    }
     await _localStream?.dispose();
     _localStream = null;
     _durationTimer?.cancel();
+    _durationTimer = null;
     _meetingDuration = 0;
     _currentMeeting = null;
+    _typeMediaVoulu = null;
+    _idOrganiseurVoulu = null;
     _participantRoster.clear();
+    // Sans ce vidage, la réunion suivante hériterait des présents de la
+    // précédente.
+    _presents.clear();
     _myId = null;
     _roomJoinCompleter = null;
     _isMuted = false;

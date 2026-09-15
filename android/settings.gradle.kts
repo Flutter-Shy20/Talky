@@ -22,6 +22,11 @@ plugins {
     id("com.android.application") version "8.9.1" apply false
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
     id("com.google.gms.google-services") version "4.4.2" apply false
+    // Crashlytics : ce plugin ne sert pas qu'à activer le SDK. C'est lui qui
+    // téléverse le fichier de mapping R8 à chaque build de release — sans quoi
+    // les traces arrivent obfusquées, donc illisibles, et on ne s'en aperçoit
+    // qu'au premier vrai plantage.
+    id("com.google.firebase.crashlytics") version "3.0.2" apply false
 }
 
 include(":app")

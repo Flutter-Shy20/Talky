@@ -28,6 +28,27 @@ void main() {
     });
   });
 
+  group('pipChildKey', () {
+    test('same widget kind keeps its key across rebuilds', () {
+      // La clé valait identityHashCode(child) : l'enfant étant reconstruit à
+      // chaque build, elle changeait à chaque image et l'AnimatedSwitcher
+      // rejouait sa transition sans fin.
+      const a = SizedBox(width: 1);
+      const b = SizedBox(width: 2);
+
+      expect(pipChildKey(a), pipChildKey(b));
+    });
+
+    test('changing the kind of child changes the key', () {
+      expect(
+        pipChildKey(const SizedBox()),
+        isNot(pipChildKey(const Placeholder())),
+        reason: 'passer de la vidéo à l\'avatar doit bien déclencher la '
+            'transition',
+      );
+    });
+  });
+
   group('clampPipOffset', () {
     test('keeps position inside normal bounds', () {
       final bounds = normalBounds();
@@ -88,6 +109,42 @@ void main() {
       expect(reclamped, isNotNull);
       expect(reclamped!.dy, normal.maxY);
       expect(reclamped.dy, lessThan(lowPosition.dy));
+    });
+  });
+
+  group('computeFloatingWindowBounds', () {
+    PipLayoutBounds floating() => computeFloatingWindowBounds(
+          screenSize: screenSize,
+          safeArea: safeArea,
+        );
+
+    test('n\'est bornée que par les zones sûres', () {
+      final bounds = floating();
+
+      expect(bounds.minY, greaterThan(safeArea.top));
+      expect(
+        bounds.minY,
+        lessThan(normalBounds().minY),
+        reason: 'la fenêtre flotte au-dessus de n\'importe quel écran : elle '
+            'n\'a ni barre d\'appel ni contrôles à contourner',
+      );
+    });
+
+    test('laisse la fenêtre entièrement à l\'écran', () {
+      final bounds = floating();
+
+      expect(bounds.maxX + kFloatingWindowWidth, lessThan(screenSize.width));
+      expect(
+        bounds.maxY + kFloatingWindowHeight,
+        lessThanOrEqualTo(screenSize.height - safeArea.bottom),
+      );
+    });
+
+    test('reste utilisable : la zone de dépôt n\'est pas vide', () {
+      final bounds = floating();
+
+      expect(bounds.maxX, greaterThan(bounds.minX));
+      expect(bounds.maxY, greaterThan(bounds.minY));
     });
   });
 }

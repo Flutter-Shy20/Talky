@@ -58,7 +58,7 @@ extension CallGroup on CallService {
       _startDurationTimer();
       _startSpeakingDetection(groupMode: true);
       if (!kIsWeb) {
-        _currentCallId = 'group_$roomId';
+        _adoptServerCallId('group_$roomId');
         await _acquireCallSession(
           isVideo: isVideo,
           displayName: LocaleController.instance.l10n.groupCall,
@@ -70,6 +70,9 @@ extension CallGroup on CallService {
     } catch (e) {
       debugPrint('[CallService] Erreur createGroupCall: $e');
       await _releaseCallSession();
+      // _initLocalStream a pu réussir avant l'échec : sans dispose, le micro
+      // et la caméra restent capturés alors que l'appel n'a jamais démarré.
+      await _webrtc.dispose();
       _status = CallStatus.idle;
       notify();
     }
@@ -79,6 +82,36 @@ extension CallGroup on CallService {
   ///
   /// [callerInfo] (optionnel) ajoute l'appelant au roster (utile si on n'a
   /// pas reçu l'event `groupCallInvite` qui le peuple normalement).
+  /// Redemande sa place dans la salle après une reconnexion du socket.
+  ///
+  /// Rejouer `join_group_call` est sans danger : le serveur ne refuse pas une
+  /// salle pleine à quelqu'un qui y figure déjà, et depuis que la déconnexion
+  /// oublie l'appareil au lieu de le marquer parti, la revendication aboutit.
+  /// Les autres reçoivent un `group_user_joined` qui remet le revenant à leur
+  /// roster, et lui reçoit `group_participants`, qui remet le leur.
+  void _rejoinGroupRoomIfNeeded() {
+    if (!shouldRejoinGroupRoom(
+      groupRoomId: _groupRoomId,
+      callStatusName: _status.name,
+      isConference: isConference,
+      isEndingCall: _isEndingCall || _callEndedByUs,
+    )) {
+      return;
+    }
+    final myId = _localUserId ?? int.tryParse(_myRosterId ?? '');
+    if (myId == null) {
+      debugPrint('[CallService] 🛡 rejoin salle impossible: identité locale inconnue');
+      return;
+    }
+    debugPrint('[CallService] 🔄 socket revenu → rejoin salle $_groupRoomId');
+    _apiClient.sendSocketEvent(SocketEvents.joinGroupCall, {
+      'roomId': _groupRoomId,
+      'userId': myId.toString(),
+      'userName': _localUserName,
+      'userPhoto': _localUserPhoto,
+    });
+  }
+
   Future<void> joinGroupCall({
     required String roomId,
     required int myId,
@@ -89,6 +122,11 @@ extension CallGroup on CallService {
   }) async {
     _groupRoomId = roomId;
     _status = CallStatus.joining;
+    // Aucun `stop` sur ce chemin : le seul du fichier est dans
+    // `rejectGroupCall`. Rejoindre depuis l'écran entrant laissait donc la
+    // sonnerie Flutter tourner sur un appel déjà rejoint.
+    unawaited(_ringtone.stop());
+    _cancelIncomingRingSafety();
     // Moi-même dans le roster
     _groupRoster[myId.toString()] = GroupParticipantInfo(
       id: myId.toString(),
@@ -115,7 +153,7 @@ extension CallGroup on CallService {
       _startDurationTimer();
       _startSpeakingDetection(groupMode: true);
       if (!kIsWeb) {
-        _currentCallId = 'group_$roomId';
+        _adoptServerCallId('group_$roomId');
         await _acquireCallSession(
           isVideo: isVideo,
           displayName: LocaleController.instance.l10n.groupCall,
@@ -127,6 +165,7 @@ extension CallGroup on CallService {
     } catch (e) {
       debugPrint('[CallService] Erreur joinGroupCall: $e');
       await _releaseCallSession();
+      await _webrtc.dispose();
       _status = CallStatus.idle;
       notify();
     }
@@ -161,6 +200,7 @@ extension CallGroup on CallService {
     await _ringtone.stop();
     await _callKit.endAll(callId: _groupRoomId);
     _groupRoster.clear();
+    _pendingGroupMedia.clear();
     _groupRoomId = null;
     // Reset canonique complet (identité, offre, flags, timers) pour ne pas
     // laisser d'état résiduel qui contaminerait le prochain appel.
@@ -173,6 +213,19 @@ extension CallGroup on CallService {
     final wasConnected = _status == CallStatus.connected;
     speakingDetector.stop();
     _markTerminalCallId(_groupRoomId);
+    // Comme _clearAllGroupPeers : les compteurs de génération ICE survivaient à
+    // l'appel. Le group_offer du suivant repartait en génération 0 et se faisait
+    // rejeter comme périmé — ce pair-là ne se connectait plus jamais.
+    _cancelAllGroupPeerDisconnectGrace();
+    _clearGroupPeerReconnectState();
+    // Désarmer avant de fermer, comme le fait `_clearAllGroupPeers` dont le
+    // commentaire explique le piège : si le PC 1-à-1 partagé se retrouve dans
+    // le maillage, sa fermeture déclenche `onConnectionFailure` — donc un
+    // `endCall()` concurrent, et un `end_call` parasite vers le pair. Le chemin
+    // n'est pas atteignable aujourd'hui (l'écran route les conférences vers
+    // endCall d'abord), mais il le deviendra au premier ajout de chemin.
+    _webrtc.onConnectionFailure = null;
+    _webrtc.onConnectionStateChanged = null;
     for (final pc in _groupPeerConnections.values) {
       await pc.close();
     }
@@ -182,6 +235,7 @@ extension CallGroup on CallService {
     _groupPendingIce.clear();
     _groupRemoteDescSet.clear();
     _groupRoster.clear();
+    _pendingGroupMedia.clear();
     await _releaseCallSession();
     await _callKit.endAll(callId: _groupRoomId);
     await _webrtc.dispose();
@@ -200,13 +254,8 @@ extension CallGroup on CallService {
     final iceServers = await _apiClient.fetchIceServers();
     await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
 
-    // Initialiser le routage audio pour les appels de groupe aussi (mobile uniquement) :
-    // haut-parleur par défaut en vidéo, écouteur par défaut en audio.
-    if (!kIsWeb) {
-      _isSpeakerOn = isVideo;
-      await audio.AudioHelper.setSpeakerphoneOn(isVideo);
-      debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ${isVideo ? "ON" : "OFF"})');
-    }
+    // Même sortie audio que pour un appel 1-à-1, casque compris.
+    await _initAudioRoute(isVideo: isVideo);
   }
 
   Future<void> _createGroupPeerAndOffer(String userId, {bool iceRestart = false}) async {
@@ -223,7 +272,7 @@ extension CallGroup on CallService {
         : (_groupPeerIceGeneration[userId] ??= 0);
 
     final offer = iceRestart
-        ? await pc.createOffer({'iceRestart': true})
+        ? await pc.createOffer(iceRestartOfferConstraints)
         : await pc.createOffer();
     await pc.setLocalDescription(offer);
 
@@ -492,6 +541,7 @@ extension CallGroup on CallService {
     _groupPendingIce.clear();
     _groupRemoteDescSet.clear();
     _groupRoster.clear();
+    _pendingGroupMedia.clear();
   }
 
   Future<void> _flushGroupPendingIce(String userId) async {

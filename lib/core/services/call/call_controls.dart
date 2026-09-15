@@ -45,11 +45,88 @@ extension CallControls on CallService {
     await _webrtc.switchCamera();
   }
 
+  /// Réémet mes états micro et caméra vers la salle.
+  ///
+  /// Rien ne transporte ces états à l'entrée d'un participant : `call_conf_peers`
+  /// et `call_conf_joined` ne portent que l'identité, et les cartes de roster
+  /// naissent « micro ouvert, caméra allumée ». Celui qui rejoignait voyait donc
+  /// tout le monde non muet, et les autres le voyaient non muet lui aussi, quels
+  /// que soient les états réels. Chacun réaffirme les siens à chaque arrivée.
+  void _broadcastMyMediaState() {
+    final roomId = _groupRoomId;
+    if (roomId == null) return;
+    _apiClient.sendSocketEvent(SocketEvents.groupMuteState, {
+      'roomId': roomId,
+      'isMuted': _isMuted,
+    });
+    _apiClient.sendSocketEvent(SocketEvents.groupVideoState, {
+      'roomId': roomId,
+      'isVideoOn': _isVideoOn,
+    });
+  }
+
+  /// Passe à la sortie audio suivante.
+  ///
+  /// Avec les seules sorties intégrées, le bouton se comporte comme la bascule
+  /// haut-parleur d'avant. Dès qu'un casque filaire ou Bluetooth est présent, il
+  /// fait le tour des sorties disponibles.
   Future<void> toggleSpeaker() async {
-    _isSpeakerOn = !_isSpeakerOn;
-    await audio.AudioHelper.setSpeakerphoneOn(_isSpeakerOn);
-    debugPrint('[CallService] Haut-parleur: ${_isSpeakerOn ? "ON" : "OFF"}');
+    await setAudioRoute(
+      nextAudioRoute(current: _audioRoute, available: _audioRoutes),
+    );
+  }
+
+  /// Sélectionne une sortie précise.
+  Future<void> setAudioRoute(CallAudioRoute route) async {
+    _audioRoute = route;
+    _isSpeakerOn = speakerphoneForRoute(route);
+    await audio.AudioHelper.applyAudioRoute(route);
+    // La sortie audio dit où est le téléphone : sur l'écouteur interne, il est
+    // contre l'oreille et l'écran doit s'éteindre à l'approche. Ce point de
+    // passage est unique — choix d'ouverture, bouton, casque branché en cours
+    // d'appel y aboutissent tous —, donc c'est le seul endroit à prévenir.
+    await CallSessionGuard.instance.updateAudioRoute(route);
+    debugPrint('[CallService] 🔊 Sortie audio: ${route.name}');
     notify();
+  }
+
+  /// Choisit la sortie d'ouverture d'un appel et se met à l'écoute des
+  /// branchements.
+  ///
+  /// Remplace le `setSpeakerphoneOn(isVideo)` posé à l'initialisation : un
+  /// casque déjà connecté doit être pris, plutôt que de renvoyer le son dans le
+  /// haut-parleur du téléphone.
+  Future<void> _initAudioRoute({required bool isVideo}) async {
+    if (kIsWeb) return;
+    final kinds = await audio.AudioHelper.availableOutputKinds();
+    _audioRoutes = availableAudioRoutes(kinds);
+    await setAudioRoute(defaultAudioRoute(kinds: kinds, isVideo: isVideo));
+    _watchAudioOutputs(isVideo: isVideo);
+  }
+
+  /// Un casque branché ou débranché en cours d'appel doit se voir sans que
+  /// l'utilisateur ait à toucher quoi que ce soit.
+  void _watchAudioOutputs({required bool isVideo}) {
+    _audioOutputsSub?.cancel();
+    _audioOutputsSub = audio.AudioHelper.audioOutputsChanged.listen((_) async {
+      final kinds = await audio.AudioHelper.availableOutputKinds();
+      _audioRoutes = availableAudioRoutes(kinds);
+      final resolved = resolveAudioRouteAfterChange(
+        current: _audioRoute,
+        kinds: kinds,
+        isVideo: isVideo,
+      );
+      if (resolved != _audioRoute) {
+        await setAudioRoute(resolved);
+      } else {
+        notify();
+      }
+    });
+  }
+
+  void _stopWatchingAudioOutputs() {
+    _audioOutputsSub?.cancel();
+    _audioOutputsSub = null;
   }
 
   void _startDurationTimer() {

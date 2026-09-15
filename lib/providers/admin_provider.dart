@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
-import '../core/theme/locale_controller.dart';
+import '../core/errors/app_error.dart';
+import '../core/errors/error_presenter.dart';
 
 class AdminStats {
   final int totalUsers;
@@ -87,7 +88,7 @@ class AdminProvider extends ChangeNotifier {
           .toList();
       _totalUsers = (res['total'] as num?)?.toInt() ?? _users.length;
     } catch (e) {
-      _error = LocaleController.instance.l10n.loadUsersError('$e');
+      _error = presenterErreurGlobale(e, domaine: ErrorDomain.admin);
       debugPrint('[AdminProvider] loadUsers error: $e');
     } finally {
       _isLoadingUsers = false;
@@ -119,7 +120,7 @@ class AdminProvider extends ChangeNotifier {
       }
       await loadUsers(search: _searchQuery, page: _page, limit: _limit);
     } catch (e) {
-      _error = LocaleController.instance.l10n.banUnbanError('$e');
+      _error = presenterErreurGlobale(e, domaine: ErrorDomain.admin);
       notifyListeners();
     }
   }
@@ -129,7 +130,7 @@ class AdminProvider extends ChangeNotifier {
       await _api.adminSetAccountType(userId, typeCompte: typeCompte);
       await loadUsers(search: _searchQuery, page: _page, limit: _limit);
     } catch (e) {
-      _error = LocaleController.instance.l10n.roleChangeError('$e');
+      _error = presenterErreurGlobale(e, domaine: ErrorDomain.admin);
       notifyListeners();
     }
   }
@@ -141,7 +142,7 @@ class AdminProvider extends ChangeNotifier {
       _totalUsers = (_totalUsers - 1).clamp(0, 1 << 30);
       notifyListeners();
     } catch (e) {
-      _error = LocaleController.instance.l10n.deleteErrorWithDetails('$e');
+      _error = presenterErreurGlobale(e, domaine: ErrorDomain.admin);
       notifyListeners();
     }
   }

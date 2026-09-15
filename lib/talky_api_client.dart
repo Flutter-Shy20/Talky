@@ -20,8 +20,10 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'talky_models.dart';
 import 'models/qr_models.dart';
 import 'core/theme/locale_controller.dart';
+import 'core/services/call/call_history_rules.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/app_log.dart';
+import 'api/socket_auth_recovery.dart';
 
 part 'api/auth_api.dart';
 part 'api/users_api.dart';
@@ -38,8 +40,8 @@ part 'api/misc_api.dart';
 part 'api/qr_api.dart';
 part 'api/qr_auth_api.dart';
 part 'api/welcome_api.dart';
-part 'api/backup_api.dart';
 part 'api/reports_api.dart';
+part 'api/backup_api.dart';
 
 class TalkyApiClient {
   // ** Remplace par ton IP/domaine de production
@@ -53,6 +55,12 @@ class TalkyApiClient {
 
   // Callbacks Socket globaux (pour CallService, MeetingService)
   final Map<String, List<void Function(dynamic)>> _socketListeners = {};
+
+  /// Tentatives de ré-authentification consécutives du socket, remises à zéro
+  /// dès qu'une authentification aboutit. Déclarées ici et non dans l'extension
+  /// `SocketApi` : une extension Dart ne peut pas porter de champ.
+  int _authRetryCount = 0;
+  Timer? _authRetryTimer;
 
   /// Vrai uniquement après que le serveur a confirmé `auth:verified`. Le simple
   /// `_socket.connected` ne suffit pas : émettre avant l'auth fait silencieusement
@@ -100,8 +108,22 @@ class TalkyApiClient {
 
   /// ID d'installation stable (FCM multi-appareil + auth socket).
   Future<String> ensureStableDeviceId() {
-    _stableDeviceIdFuture ??= StorageService().getOrCreateDeviceId();
-    return _stableDeviceIdFuture!;
+    final memo = _stableDeviceIdFuture;
+    if (memo != null) return memo;
+    final f = StorageService().getOrCreateDeviceId();
+    _stableDeviceIdFuture = f;
+    // Un ÉCHEC ne doit pas rester en cache pour la vie du processus.
+    //
+    // `??=` ne teste que la nullité de la référence : un Future rejeté restait
+    // mémorisé, et chaque appel suivant renvoyait la même erreur. Comme
+    // `_emitSocketAuthLogin` l'attend avant d'émettre `auth:login`, et qu'il est
+    // lancé en `unawaited` depuis `onConnect`, la panne était totale et
+    // silencieuse : socket connecté, aucun indicateur hors-ligne, et plus aucun
+    // appel entrant routé — y compris après un redémarrage de l'application.
+    unawaited(f.then((_) {}, onError: (_) {
+      if (identical(_stableDeviceIdFuture, f)) _stableDeviceIdFuture = null;
+    }));
+    return f;
   }
 
   /// Identifiant matériel du téléphone (`device_ID`) à envoyer au
@@ -134,23 +156,24 @@ class TalkyApiClient {
             return _parseResponse(retried);
           } on TalkyException catch (e) {
             if (e.statusCode == 401 || e.statusCode == 403) {
-              throw TalkyException(LocaleController.instance.l10n.sessionExpired, 401);
+              throw TalkyException(resolveL10n().sessionExpired, 401);
             }
             rethrow;
           }
         }
-        throw TalkyException(LocaleController.instance.l10n.notAuthenticated, 401);
+        throw TalkyException(resolveL10n().notAuthenticated, 401);
       }
       return _parseResponse(response);
     } on TalkyException {
       rethrow;
-    } on TimeoutException {
-      throw TalkyException(LocaleController.instance.l10n.networkTimeout, 0);
+    } on TimeoutException catch (e) {
+      throw TalkyException(resolveL10n().networkTimeout, 0, cause: e);
     } catch (e) {
-      throw TalkyException(
-        LocaleController.instance.l10n.networkErrorWithDetails('$e'),
-        0,
-      );
+      // La cause voyage désormais telle quelle plutôt que d'être aplatie dans
+      // le texte. `networkErrorWithDetails('$e')` produisait un message *déjà
+      // formaté pour l'écran* contenant le `toString()` de l'exception, qui
+      // ressortait tel quel dans une SnackBar à l'autre bout de l'application.
+      throw TalkyException(resolveL10n().networkError, 0, cause: e);
     }
   }
 
@@ -159,23 +182,32 @@ class TalkyApiClient {
       final body = jsonDecode(response.body);
       if (response.statusCode >= 400) {
         final msg = body is Map
-            ? (body['error'] ?? LocaleController.instance.l10n.serverError)
-            : LocaleController.instance.l10n.serverError;
-        throw TalkyException(msg.toString(), response.statusCode);
+            ? (body['error'] ?? resolveL10n().serverError)
+            : resolveL10n().serverError;
+        // Le `code` était jeté ici, et c'est la cause de tout le reste : privée
+        // du code machine, l'application ne pouvait plus distinguer les cas
+        // qu'en lisant la prose du serveur — d'où les `message.contains(...)`
+        // semés dans les écrans, et l'affichage de cette prose faute de mieux.
+        throw TalkyException(
+          msg.toString(),
+          response.statusCode,
+          code: body is Map ? body['code']?.toString() : null,
+        );
       }
       return body;
     } catch (e) {
       if (e is TalkyException) rethrow;
       throw TalkyException(
-        LocaleController.instance.l10n.invalidResponseWithCode(response.statusCode),
+        resolveL10n().serverError,
         response.statusCode,
+        cause: e,
       );
     }
   }
 
   Future<void> _refreshAccessToken() async {
     if (_refreshToken == null) {
-      throw TalkyException(LocaleController.instance.l10n.noRefreshToken, 401);
+      throw TalkyException(resolveL10n().noRefreshToken, 401);
     }
     if (_refreshInFlight != null) {
       return _refreshInFlight!;
@@ -193,7 +225,7 @@ class TalkyApiClient {
     if (refreshTokenUsed == null) {
       final stored = await StorageService().getRefreshToken();
       if (stored == null) {
-        throw TalkyException(LocaleController.instance.l10n.noRefreshToken, 401);
+        throw TalkyException(resolveL10n().noRefreshToken, 401);
       }
       _refreshToken = stored;
       refreshTokenUsed = stored;
@@ -210,7 +242,7 @@ class TalkyApiClient {
       data = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
     } catch (_) {
       throw TalkyException(
-        LocaleController.instance.l10n.refreshFailed,
+        resolveL10n().refreshFailed,
         response.statusCode,
       );
     }
@@ -218,7 +250,7 @@ class TalkyApiClient {
       _accessToken = data['accessToken'] as String?;
       _refreshToken = data['refreshToken'] as String?;
       if (_accessToken == null || _refreshToken == null) {
-        throw TalkyException(LocaleController.instance.l10n.refreshFailed, 500);
+        throw TalkyException(resolveL10n().refreshFailed, 500);
       }
       await _persistTokensAfterRefresh();
       reauthSocketIfConnected();
@@ -233,7 +265,7 @@ class TalkyApiClient {
       }
     }
     throw TalkyException(
-      data['error']?.toString() ?? LocaleController.instance.l10n.refreshFailed,
+      data['error']?.toString() ?? resolveL10n().refreshFailed,
       response.statusCode,
     );
   }
@@ -251,20 +283,20 @@ class TalkyApiClient {
       data = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
     } catch (_) {
       throw TalkyException(
-        LocaleController.instance.l10n.refreshFailed,
+        resolveL10n().refreshFailed,
         response.statusCode,
       );
     }
     if (response.statusCode != 200) {
       throw TalkyException(
-        data['error']?.toString() ?? LocaleController.instance.l10n.refreshFailed,
+        data['error']?.toString() ?? resolveL10n().refreshFailed,
         response.statusCode,
       );
     }
     _accessToken = data['accessToken'] as String?;
     _refreshToken = data['refreshToken'] as String?;
     if (_accessToken == null || _refreshToken == null) {
-      throw TalkyException(LocaleController.instance.l10n.refreshFailed, 500);
+      throw TalkyException(resolveL10n().refreshFailed, 500);
     }
     await _persistTokensAfterRefresh();
     reauthSocketIfConnected();
@@ -533,7 +565,7 @@ class TalkyApiClient {
         ? '${response.body.substring(0, 120)}…'
         : response.body;
     return TalkyException(
-      snippet.isEmpty ? LocaleController.instance.l10n.uploadFailed : snippet,
+      snippet.isEmpty ? resolveL10n().uploadFailed : snippet,
       code,
     );
   }
@@ -577,11 +609,34 @@ class TalkyApiClient {
 }
 
 class TalkyException implements Exception {
+  /// Texte renvoyé par le serveur, ou message de repli.
+  ///
+  /// **Ne pas afficher.** C'est de la prose libre, écrite en français côté
+  /// backend et jamais traduite — un utilisateur en chinois y lirait du
+  /// français, et parfois un identifiant de table. Passer par
+  /// `presenterErreur` (lib/core/errors/error_presenter.dart), qui choisit un
+  /// texte à partir de [code]. Ce champ reste pour les journaux.
   final String message;
+
   final int statusCode;
 
-  TalkyException(this.message, this.statusCode);
+  /// Code machine stable du backend (`TRUST_LIST_EMPTY`, `SESSION_BUSY`…).
+  ///
+  /// Nul tant que la route n'a pas été migrée côté serveur : la présentation
+  /// retombe alors sur le statut HTTP. C'est ce qui permet de livrer l'app sans
+  /// attendre le backend.
+  final String? code;
+
+  /// Exception d'origine, quand la requête n'a jamais abouti.
+  ///
+  /// Sans elle, `statusCode == 0` confond une coupure réseau, un délai dépassé
+  /// et un refus TLS — trois pannes dont on ne dit pas la même chose à
+  /// l'utilisateur.
+  final Object? cause;
+
+  TalkyException(this.message, this.statusCode, {this.code, this.cause});
 
   @override
-  String toString() => 'TalkyException: $message (Status: $statusCode)';
+  String toString() => 'TalkyException: $message (Status: $statusCode'
+      '${code != null ? ', Code: $code' : ''})';
 }

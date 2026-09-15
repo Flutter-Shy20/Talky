@@ -106,8 +106,7 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
       // On distingue les cas par le code renvoyé par le serveur, jamais par le
       // texte du message — celui-ci peut changer sans prévenir.
       final message = switch (e.statusCode) {
-        409 when e.message.contains('TRUST_LIST_EMPTY') =>
-          l10n.tripsCircleEmptyTitle,
+        409 when e.code == 'TRUST_LIST_EMPTY' => l10n.tripsCircleEmptyTitle,
         409 => l10n.tripsAlreadyActive,
         501 => l10n.tripsSosUnavailable,
         _ => l10n.tripsStartFailed,
