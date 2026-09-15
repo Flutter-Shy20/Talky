@@ -901,11 +901,18 @@ extension CallSignaling on CallService {
       final code = data['code']?.toString() ?? 'INTERNAL';
       debugPrint('[CallService] ✖ ajout refusé: $code');
       _lastConfFailure = _addRejectionReason(code);
-      _transferStatus = CallTransferStatus.cancelled;
-      _isTransferInitiator = false;
-      _transferTargetId = null;
-      _transferLeaveInMs = null;
-      _transferArmedAt = null;
+      // Deux appuis simultanés : le perdant peut recevoir le call_add_pending
+      // du gagnant avant son propre refus. Effacer le tour ici retirerait la
+      // cible du transfert gagnant, et ce téléphone n'émettrait jamais le
+      // call_conf_ready qui le déclenche.
+      if (addRejectedResetsRound(hasPendingInvitee: _confPendingInvitee != null)) {
+        _transferStatus = CallTransferStatus.cancelled;
+        _isTransferInitiator = false;
+        _transferTargetId = null;
+        _transferLeaveInMs = null;
+        _transferArmedAt = null;
+        _confMode = 'join';
+      }
       notify();
     });
 

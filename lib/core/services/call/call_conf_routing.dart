@@ -127,6 +127,15 @@ OriginLinkRole originLinkRole({
 String? meshSignalRoomId(String? groupRoomId, String? confSessionId) =>
     groupRoomId ?? confSessionId;
 
+/// Un refus d'ajout remet-il à zéro l'état du tour d'invitation ?
+///
+/// Seulement si aucune invitation n'est en vol. Quand les deux appuient en même
+/// temps, le perdant peut recevoir le `call_add_pending` du gagnant avant son
+/// propre `call_add_rejected` : le tour qu'il voit est alors celui du gagnant,
+/// et y effacer la cible d'un transfert ferait expirer ce transfert.
+bool addRejectedResetsRound({required bool hasPendingInvitee}) =>
+    !hasPendingInvitee;
+
 /// Décide si un ready peut être mis en file / émis côté client restant.
 ///
 /// [transferTargetId] = C (cible du transfert). Sans match exact, aucun ready :

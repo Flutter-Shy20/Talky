@@ -305,4 +305,13 @@ void main() {
       expect(meshSignalRoomId('grp_9', null), 'grp_9');
     });
   });
+
+  group('addRejectedResetsRound', () {
+    test('refus sans invitation en vol : le tour local est remis à zéro', () {
+      expect(addRejectedResetsRound(hasPendingInvitee: false), isTrue);
+    });
+    test("refus reçu après l'invitation du gagnant : le tour du gagnant tient", () {
+      expect(addRejectedResetsRound(hasPendingInvitee: true), isFalse);
+    });
+  });
 }
