@@ -136,6 +136,40 @@ String? meshSignalRoomId(String? groupRoomId, String? confSessionId) =>
 bool addRejectedResetsRound({required bool hasPendingInvitee}) =>
     !hasPendingInvitee;
 
+/// Le bouton « Ajouter à l'appel » — et « Transférer » — est-il proposé ?
+///
+/// Le droit est rendu dès qu'on retombe à deux (docs/transfert_appel.md
+/// § 4.5), y compris dans une session où quelqu'un est déjà passé : c'est ce
+/// qui rend le transfert en cascade possible. Il manque tant qu'une invitation
+/// est en vol ou que la grille à trois est affichée. Le serveur tranche en
+/// dernier ressort.
+bool canAddToCall({
+  required String callStatusName,
+  required bool hasConfSession,
+  required bool showsGroupRoom,
+  required bool hasPendingInvitee,
+  required bool hasRemoteUser,
+  required bool meetingActive,
+}) {
+  // `hasConfSession` n'y entre pas, et c'est tout le changement : la session
+  // survit au retour à deux et ne retire plus le droit.
+  return callStatusName == 'connected' &&
+      !showsGroupRoom &&
+      !hasPendingInvitee &&
+      hasRemoteUser &&
+      !meetingActive;
+}
+
+/// Après l'échec d'une invitation, la session continue-t-elle ?
+///
+/// Le serveur la garde dès que quelqu'un y est entré : elle porte l'appel, et
+/// raccrocher doit continuer d'y passer. Un serveur plus ancien n'envoie pas ce
+/// drapeau : comportement d'avant, la session est oubliée.
+bool confFailedKeepsSession(Map data) {
+  final v = data['keepSession'];
+  return v == true || v?.toString() == 'true';
+}
+
 /// Décide si un ready peut être mis en file / émis côté client restant.
 ///
 /// [transferTargetId] = C (cible du transfert). Sans match exact, aucun ready :

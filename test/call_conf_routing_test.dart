@@ -314,4 +314,55 @@ void main() {
       expect(addRejectedResetsRound(hasPendingInvitee: true), isFalse);
     });
   });
+
+  group('canAddToCall — droit rendu au retour à deux', () {
+    bool droit({
+      String status = 'connected',
+      bool session = false,
+      bool grille = false,
+      bool invitation = false,
+      bool correspondant = true,
+      bool reunion = false,
+    }) =>
+        canAddToCall(
+          callStatusName: status,
+          hasConfSession: session,
+          showsGroupRoom: grille,
+          hasPendingInvitee: invitation,
+          hasRemoteUser: correspondant,
+          meetingActive: reunion,
+        );
+
+    test('appel à deux ordinaire : proposé', () {
+      expect(droit(), isTrue);
+    });
+    test('retombé à deux dans une session : proposé à nouveau', () {
+      expect(droit(session: true), isTrue);
+    });
+    test('grille à trois affichée : absent', () {
+      expect(droit(session: true, grille: true), isFalse);
+    });
+    test('invitation en vol : absent', () {
+      expect(droit(session: true, invitation: true), isFalse);
+    });
+    test('pas encore connecté : absent', () {
+      expect(droit(status: 'connecting'), isFalse);
+    });
+    test('en réunion : absent', () {
+      expect(droit(reunion: true), isFalse);
+    });
+  });
+
+  group('confFailedKeepsSession', () {
+    test('le serveur garde la session', () {
+      expect(confFailedKeepsSession({'keepSession': true}), isTrue);
+      expect(confFailedKeepsSession({'keepSession': 'true'}), isTrue);
+    });
+    test('première invitation soldée : la session disparaît', () {
+      expect(confFailedKeepsSession({'keepSession': false}), isFalse);
+    });
+    test('serveur plus ancien, sans drapeau : comportement d\'avant', () {
+      expect(confFailedKeepsSession({}), isFalse);
+    });
+  });
 }

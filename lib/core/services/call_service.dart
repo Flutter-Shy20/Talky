@@ -205,9 +205,9 @@ class CallService extends ChangeNotifier {
   //  « Ajouter à l'appel » — session à trois (join / transfer)
   //
   // Un appel 1-à-1 ordinaire n'a pas de session. Elle naît au premier ajout et
-  // porte à elle seule le droit d'ajout : tant que _confSessionId est posé, le
-  // bouton reste caché — y compris après un départ, le droit étant consommé
-  // définitivement. Un échec d'invitation l'efface, ce qui rend le droit.
+  // porte l'appel jusqu'au bout, même retombé à deux : le droit d'ajout est
+  // alors rendu (canAddToCall) et l'invitation suivante s'y greffe. Un échec
+  // d'invitation ne l'efface que si personne n'y est encore entré.
   String? _confSessionId;
 
   // Invité qui sonne encore : affiché en tuile « Sonnerie… » avant sa réponse.
@@ -468,14 +468,16 @@ class CallService extends ChangeNotifier {
   /// Vrai quand le bouton « Ajouter à l'appel » doit être affiché.
   ///
   /// Absent plutôt que grisé dans tous les autres cas : un bouton grisé invite à
-  /// demander pourquoi, et « quelqu'un a déjà utilisé l'ajout » n'a aucune action
-  /// de rattrapage à proposer.
-  bool get canAddParticipant =>
-      _status == CallStatus.connected &&
-      _confSessionId == null &&      // droit ni verrouillé ni consommé
-      _groupRoomId == null &&        // pas un appel de groupe
-      _remoteUserId != null &&       // bien à deux
-      !_isMeetingActive();
+  /// demander pourquoi, et « l'appel est déjà à trois » n'a aucune action de
+  /// rattrapage à proposer. La règle vit dans [canAddToCall].
+  bool get canAddParticipant => canAddToCall(
+        callStatusName: _status.name,
+        hasConfSession: _confSessionId != null,
+        showsGroupRoom: _groupRoomId != null,
+        hasPendingInvitee: _confPendingInvitee != null,
+        hasRemoteUser: _remoteUserId != null,
+        meetingActive: _isMeetingActive(),
+      );
 
   // Locuteur actif : Set des userId (groupe) ou {SpeakingDetector.localKey}
   // pour moi-même. Voir `speaking_detector.dart`.
