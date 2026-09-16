@@ -404,6 +404,31 @@ bool shouldPostRejectToServer(String? callId) {
   return RegExp(r'^\d+$').hasMatch(id);
 }
 
+/// La réponse en cours porte-t-elle toujours sur l'appel qu'on a commencé à
+/// décrocher ?
+///
+/// `answerCall` enchaîne quatre attentes — capture du micro, socket prêt,
+/// PeerConnection, accusé de réception — sans jamais revérifier entre deux que
+/// l'appel existe encore. Quand un aperçu CallKit le faisait refuser en plein
+/// milieu, la méthode continuait sur un état remis à zéro : elle envoyait sa
+/// réponse à un appel que le serveur ne connaissait plus — d'où son
+/// `CALL_NOT_RINGING` —, se déclarait connectée, et ouvrait une session CallKit
+/// sous un identifiant fabriqué. C'est l'écran « Appel » au chronomètre, avec
+/// personne en face.
+///
+/// Trois conditions : le décrochage est encore en cours (`connecting`), aucune
+/// fin d'appel n'a été engagée, et l'appel visé est toujours celui du départ.
+bool answerStillValid({
+  required String callStatusName,
+  required String? callIdAtStart,
+  String? currentCallId,
+  bool endingCall = false,
+}) {
+  if (endingCall) return false;
+  if (callStatusName != 'connecting') return false;
+  return (callIdAtStart?.trim() ?? '') == (currentCallId?.trim() ?? '');
+}
+
 /// Cet aperçu CallKit désigne-t-il l'appel que l'on est déjà en train de mener ?
 ///
 /// Le plugin réaffiche l'entrant dans des cas parfaitement ordinaires — c'est ce

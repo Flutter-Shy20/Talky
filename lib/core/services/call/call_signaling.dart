@@ -395,6 +395,21 @@ extension CallSignaling on CallService {
       final code = (data is Map ? data['code'] : null)?.toString();
       final callId = (data is Map ? data['callId'] : null)?.toString();
       debugPrint('[CallService] call_error code=$code callId=$callId');
+      // Le serveur ne connaît plus cet appel : notre réponse est arrivée après
+      // sa fin. Ce code était ignoré, et l'accusé de réception du serveur dit
+      // « ok » même dans ce cas : le décrochage se croyait abouti et affichait
+      // un appel en cours avec personne en face.
+      if (code == 'CALL_NOT_RINGING') {
+        if (_status == CallStatus.connecting ||
+            _status == CallStatus.incoming) {
+          debugPrint(
+            '[CallService] ** call_error CALL_NOT_RINGING → abandon du décrochage',
+          );
+          _markTerminalCallId(callId ?? _currentCallId);
+          await _terminateCall();
+        }
+        return;
+      }
       if (code == 'CALL_ANSWERED_ELSEWHERE' ||
           code == 'CALL_ALREADY_JOINED_ON_OTHER_DEVICE') {
         _markTerminalCallId(callId ?? _currentCallId);
