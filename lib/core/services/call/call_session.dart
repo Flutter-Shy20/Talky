@@ -43,6 +43,9 @@ extension CallSession on CallService {
           type: _isVideo ? CallType.video : CallType.audio,
         );
       },
+      // « Raccrocher » depuis la notification doit solder l'appel comme le
+      // bouton de l'écran : prévenir le pair, puis démonter.
+      onHangUp: () => endCall(),
     );
     if (!pris) {
       // Une autre session tient déjà le garde. On ne lie pas les rendus et on

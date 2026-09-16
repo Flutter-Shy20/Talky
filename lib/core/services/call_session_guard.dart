@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../theme/locale_controller.dart';
 import 'audio_helper.dart';
 import 'call/background_media_rules.dart';
 import 'call/call_audio_routes.dart';
+import 'call/call_notification_content.dart';
 import 'call/session_video_renderers.dart';
 import 'callkit_service.dart';
 
@@ -97,6 +99,21 @@ class CallSessionGuard with WidgetsBindingObserver {
   CallAudioRoute _route = CallAudioRoute.earpiece;
   bool _videoPausedByLifecycle = false;
   bool _audioTrackEnded = false;
+
+  /// Qui est au bout, tel qu'affiché dans la notification de l'appel.
+  ///
+  /// Retenu parce que [markConnected] réécrit cette notification pour y lancer
+  /// le chronomètre, et ne reçoit pas de quoi la reconstruire.
+  String _displayName = '';
+
+  /// Ce que doit faire le bouton « Raccrocher » de la notification.
+  ///
+  /// Il appartient à qui tient la session — `endCall` pour un appel,
+  /// `leaveMeeting` pour une réunion — et le garde ne doit pas le deviner :
+  /// terminer un appel pendant une réunion ne fermerait rien et laisserait la
+  /// réunion sans service au premier plan.
+  Future<void> Function()? _onHangUp;
+  bool _hangUpBound = false;
   bool _mediaFgsStarted = false;
 
   /// Le Picture-in-Picture système est ouvert (renseigné par le pont natif).
@@ -153,6 +170,7 @@ class CallSessionGuard with WidgetsBindingObserver {
     bool Function()? isVideoOn,
     bool Function()? isMuted,
     Future<void> Function()? onReplaceAudioNeeded,
+    Future<void> Function()? onHangUp,
   }) async {
     // Le web n'a ni service au premier plan ni CallKit : rien à tenir, et donc
     // aucun échec à signaler.
@@ -187,14 +205,20 @@ class CallSessionGuard with WidgetsBindingObserver {
     _isVideoOn = isVideoOn;
     _isMuted = isMuted;
     _onReplaceAudioNeeded = onReplaceAudioNeeded;
+    _onHangUp = onHangUp;
+    _displayName = displayName;
     _videoPausedByLifecycle = false;
     _audioTrackEnded = false;
 
     WidgetsBinding.instance.addObserver(this);
+    _bindHangUp();
 
     await AudioHelper.configureCallAudio(isVideo: mode == SessionMode.video);
 
-    await _startMediaForegroundService(isVideo: isVideo);
+    await _startMediaForegroundService(
+      isVideo: isVideo,
+      displayName: displayName,
+    );
 
     if (startCallKit) {
       await CallKitService.instance.startOutgoingCall(
@@ -216,6 +240,29 @@ class CallSessionGuard with WidgetsBindingObserver {
   Future<void> markConnected() async {
     if (kIsWeb || _callId == null) return;
     await CallKitService.instance.setConnected(_callId!);
+    // La notification est posée à l'acquisition, quand l'appel sonne encore.
+    // On la réécrit ici pour y lancer le chronomètre : relancer le service ne
+    // le duplique pas, il redessine sa notification sous le même identifiant.
+    await _startMediaForegroundService(
+      isVideo: _mode == SessionMode.video,
+      displayName: _displayName,
+      startedAt: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  /// Ouvre l'oreille du pont natif, une fois pour toutes.
+  ///
+  /// Le canal ne descendait que dans un sens ; le bouton « Raccrocher » de la
+  /// notification a besoin qu'il remonte.
+  void _bindHangUp() {
+    if (_hangUpBound || !_isAndroid) return;
+    _hangUpBound = true;
+    _callMediaChannel.setMethodCallHandler((call) async {
+      if (call.method != 'onHangUpRequested') return null;
+      debugPrint('[CallSessionGuard] raccrochage demandé depuis la notification');
+      await _onHangUp?.call();
+      return null;
+    });
   }
 
   /// La session média est-elle tenue par [callId] ?
@@ -278,6 +325,8 @@ class CallSessionGuard with WidgetsBindingObserver {
     _isVideoOn = null;
     _isMuted = null;
     _onReplaceAudioNeeded = null;
+    _onHangUp = null;
+    _displayName = '';
     _videoPausedByLifecycle = false;
     _audioTrackEnded = false;
     _systemPipActive = false;
@@ -503,13 +552,39 @@ class CallSessionGuard with WidgetsBindingObserver {
   bool get _isAndroid =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
-  Future<void> _startMediaForegroundService({required bool isVideo}) async {
+  /// Pose la notification de l'appel, ou la réécrit.
+  ///
+  /// Elle est devenue la SEULE notification de l'appel — celle du plugin est
+  /// masquée dans `CallKitService.startOutgoingCall`. Elle doit donc dire qui
+  /// est au bout, depuis quand, et permettre de raccrocher : tout ce que
+  /// l'autre portait et qu'elle ne portait pas.
+  ///
+  /// [startedAt] à zéro tant que l'appel sonne : voir `EXTRA_STARTED_AT`.
+  Future<void> _startMediaForegroundService({
+    required bool isVideo,
+    required String displayName,
+    int startedAt = 0,
+  }) async {
     if (!_isAndroid) return;
+    final l10n = resolveL10n();
+    final chrono = callNotificationUsesChronometer(startedAt);
     try {
-      await _callMediaChannel.invokeMethod('start', {'isVideo': isVideo});
+      await _callMediaChannel.invokeMethod('start', {
+        'isVideo': isVideo,
+        'title': callNotificationTitle(
+          displayName: displayName,
+          fallback: l10n.callInProgress,
+        ),
+        'body': isVideo ? l10n.videoCall : l10n.audioCall,
+        'hangUpLabel': l10n.hangUp,
+        'channelName': l10n.ongoingCallsChannel,
+        'startedAt': startedAt,
+        'usesChronometer': chrono,
+      });
       _mediaFgsStarted = true;
       debugPrint(
-        '[CallSessionGuard] CallMedia FGS start isVideo=$isVideo',
+        '[CallSessionGuard] CallMedia FGS start isVideo=$isVideo '
+        'chrono=$chrono',
       );
     } catch (e) {
       debugPrint('[CallSessionGuard] ** CallMedia FGS start: $e');

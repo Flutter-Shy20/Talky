@@ -367,9 +367,9 @@ class CallKitService {
       // Android : ne PAS démarrer le foreground service au tap « Accepter » —
       // le service ne peut pas honorer startForeground() si l'engine Flutter
       // n'est pas encore attaché (crash ForegroundServiceDidNotStartInTime).
-      // Le FGS légitime est démarré par [startOutgoingCall] une fois l'appel
-      // répondu, engine prêt. Même contrat que le chemin natif
-      // (CallIncomingHelper.buildIncomingBundle).
+      // Le FGS légitime est `CallMediaForegroundService`, démarré par
+      // `CallSessionGuard.acquire` une fois l'appel répondu, engine prêt. Même
+      // contrat que le chemin natif (CallIncomingHelper.buildIncomingBundle).
       callingNotification: const NotificationParams(showNotification: false),
       extra: {
         'callId': callId,
@@ -460,6 +460,20 @@ class CallKitService {
       handle: handle,
       type: isVideo ? 1 : 0,
       duration: 0,
+      // Deux notifications s'affichaient pendant chaque appel, des deux côtés.
+      // Android en impose une par service au premier plan, et il en démarrait
+      // deux : le nôtre (`CallMediaForegroundService`, lancé juste avant par
+      // `CallSessionGuard.acquire`) et celui du plugin, que cet appel-ci
+      // déclenchait — le drapeau absent vaut `true` par défaut.
+      //
+      // On garde le nôtre : il porte le type `phoneCall`, dont dépend le micro
+      // quand l'écran s'éteint, et il s'arrête au balayage depuis les récents,
+      // ce que celui du plugin ne fait pas (`stopWithTask="false"`).
+      //
+      // Ceci n'ôte que la notification : `registerTelecomOutgoingCall` s'exécute
+      // avant elle et sans condition, donc l'appel reste déclaré à Telecom — ce
+      // dont dépend le routage du haut-parleur (voir `TelecomAudioRouter`).
+      callingNotification: const NotificationParams(showNotification: false),
       extra: {
         'callId': callId,
         'callerId': handle,
