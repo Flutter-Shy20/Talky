@@ -91,6 +91,11 @@ extension CallSession on CallService {
   Future<void> _markCallSessionConnected() async {
     if (kIsWeb) return;
     await CallSessionGuard.instance.markConnected();
+    // La connexion Telecom n'existe qu'à partir d'ici : elle naît de
+    // `startCall`, bien après que `_initAudioRoute` a choisi la sortie
+    // d'ouverture. Cette première demande est donc partie dans le vide — on la
+    // repose maintenant qu'il y a quelqu'un pour l'entendre.
+    await setAudioRoute(_audioRoute);
   }
 
   Future<void> _releaseCallSession() async {

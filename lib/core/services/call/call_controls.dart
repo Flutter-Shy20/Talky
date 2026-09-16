@@ -77,17 +77,49 @@ extension CallControls on CallService {
   }
 
   /// Sélectionne une sortie précise.
+  ///
+  /// La sortie retenue est celle que le natif **rapporte**, pas celle demandée.
+  /// Depuis que chaque appel est déclaré à Telecom, c'est lui qui arbitre le
+  /// routage : afficher la demande revenait à annoncer un haut-parleur qui ne
+  /// s'était pas allumé.
   Future<void> setAudioRoute(CallAudioRoute route) async {
-    _audioRoute = route;
-    _isSpeakerOn = speakerphoneForRoute(route);
-    await audio.AudioHelper.applyAudioRoute(route);
+    final rapportee = await audio.AudioHelper.applyAudioRoute(
+      route,
+      // Telecom ne connaît l'appel que sous l'identifiant qui a ouvert la
+      // session CallKit, jamais sous celui du serveur.
+      telecomCallId: _callKitCallId,
+    );
+    final effective = _adopterRouteRapportee(rapportee, route);
     // La sortie audio dit où est le téléphone : sur l'écouteur interne, il est
     // contre l'oreille et l'écran doit s'éteindre à l'approche. Ce point de
     // passage est unique — choix d'ouverture, bouton, casque branché en cours
     // d'appel y aboutissent tous —, donc c'est le seul endroit à prévenir.
-    await CallSessionGuard.instance.updateAudioRoute(route);
-    debugPrint('[CallService] 🔊 Sortie audio: ${route.name}');
+    await CallSessionGuard.instance.updateAudioRoute(effective);
+    debugPrint('[CallService] 🔊 Sortie audio: ${effective.name}');
     notify();
+  }
+
+  /// Adopte ce que le natif rapporte, et rend la sortie finalement retenue.
+  ///
+  /// Le masque de Telecom dit les sorties réellement atteignables : meilleure
+  /// source que l'énumération des périphériques, qui n'annonce pas toujours
+  /// l'écouteur interne. Quand il ne dit rien, on garde ce qu'on savait.
+  CallAudioRoute _adopterRouteRapportee(
+    audio.AppliedAudioRoute rapportee,
+    CallAudioRoute demandee,
+  ) {
+    final masque = rapportee.supportedMask;
+    if (masque != null) {
+      final offertes = routesFromSupportedMask(masque);
+      if (offertes.isNotEmpty) _audioRoutes = offertes;
+    }
+    final effective = resolveAppliedRoute(
+      requested: demandee,
+      reportedName: rapportee.routeName,
+    );
+    _audioRoute = effective;
+    _isSpeakerOn = speakerphoneForRoute(effective);
+    return effective;
   }
 
   /// Choisit la sortie d'ouverture d'un appel et se met à l'écoute des
@@ -119,6 +151,10 @@ extension CallControls on CallService {
       if (resolved != _audioRoute) {
         await setAudioRoute(resolved);
       } else {
+        // Un casque qui se connecte peut faire rebasculer Telecom tout seul :
+        // relire plutôt que supposer que rien n'a bougé.
+        final lue = await audio.AudioHelper.readAppliedRoute(_callKitCallId);
+        if (lue != null) _adopterRouteRapportee(lue, _audioRoute);
         notify();
       }
     });

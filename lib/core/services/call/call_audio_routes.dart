@@ -96,6 +96,77 @@ CallAudioRoute resolveAudioRouteAfterChange({
   return defaultAudioRoute(kinds: kinds, isVideo: isVideo);
 }
 
+/// Identifiant de sortie attendu par flutter_webrtc sous Android.
+///
+/// Quatre sorties n'étaient demandées que par deux appels booléens : « mets le
+/// haut-parleur » et « enlève-le ». Or côté Android, enlever le haut-parleur
+/// signifie « prends le premier appareil disponible parmi Bluetooth, filaire,
+/// écouteur » : avec un casque appairé, demander l'écouteur renvoyait le son au
+/// casque, et l'écouteur devenait inatteignable.
+///
+/// Ces quatre chaînes sont celles qu'attend `AudioDeviceKind.fromTypeName` ;
+/// toute autre valeur y est ignorée en silence.
+String webrtcDeviceId(CallAudioRoute route) {
+  switch (route) {
+    case CallAudioRoute.earpiece:
+      return 'earpiece';
+    case CallAudioRoute.speaker:
+      return 'speaker';
+    case CallAudioRoute.wired:
+      return 'wired-headset';
+    case CallAudioRoute.bluetooth:
+      return 'bluetooth';
+  }
+}
+
+/// Nom transmis au pont natif pour demander une sortie à Telecom.
+String telecomRouteName(CallAudioRoute route) => route.name;
+
+/// Sortie désignée par le natif, ou `null` si le nom ne dit rien.
+CallAudioRoute? routeFromTelecomName(String? name) {
+  switch (name?.trim()) {
+    case 'earpiece':
+      return CallAudioRoute.earpiece;
+    case 'speaker':
+      return CallAudioRoute.speaker;
+    case 'wired':
+      return CallAudioRoute.wired;
+    case 'bluetooth':
+      return CallAudioRoute.bluetooth;
+    default:
+      return null;
+  }
+}
+
+/// Sorties réellement disponibles, d'après le masque que tient Telecom.
+///
+/// `CallAudioState.getSupportedRouteMask` : 1 écouteur, 2 Bluetooth, 4 filaire,
+/// 8 haut-parleur. Source plus sûre que l'énumération des périphériques audio,
+/// qui n'annonce pas toujours l'écouteur — c'est d'ailleurs pourquoi
+/// [availableAudioRoutes] offre l'écouteur et le haut-parleur d'office.
+///
+/// L'ordre rendu est celui d'affichage, pour que le bouton tourne toujours dans
+/// le même sens.
+List<CallAudioRoute> routesFromSupportedMask(int mask) {
+  return [
+    if (mask & 1 != 0) CallAudioRoute.earpiece,
+    if (mask & 8 != 0) CallAudioRoute.speaker,
+    if (mask & 4 != 0) CallAudioRoute.wired,
+    if (mask & 2 != 0) CallAudioRoute.bluetooth,
+  ];
+}
+
+/// Sortie à afficher : celle que le natif rapporte, à défaut celle demandée.
+///
+/// L'interface montrait la sortie qu'elle croyait avoir posée. Depuis que
+/// Telecom arbitre le routage, la demande et le résultat peuvent différer — et
+/// c'est exactement ce qu'il faut voir.
+CallAudioRoute resolveAppliedRoute({
+  required CallAudioRoute requested,
+  String? reportedName,
+}) =>
+    routeFromTelecomName(reportedName) ?? requested;
+
 /// True si le son sort par le haut-parleur du téléphone.
 ///
 /// C'est le seul réglage que la couche WebRTC expose directement ; le Bluetooth
