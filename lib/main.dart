@@ -442,14 +442,18 @@ class _TalkyAppState extends State<TalkyApp> {
           },
           builder: (context, child) {
             final media = MediaQuery.of(context);
-            return ActiveSessionChrome(
-              child: MediaQuery(
-                data: media.copyWith(
-                  textScaler: TextScaler.linear(
-                    AppSettingsSyncService.fontScale,
-                  ),
-                  disableAnimations: AppSettingsSyncService.reduceMotion,
+            // Les réglages d'accessibilité s'appliquent AU-DESSUS du chrome :
+            // imbriqués en dessous, ils repartaient des paddings d'origine et
+            // écrasaient l'inset haut que le bandeau injecte pour se réserver
+            // sa place — l'app bar restait collée en haut, sous le bandeau.
+            return MediaQuery(
+              data: media.copyWith(
+                textScaler: TextScaler.linear(
+                  AppSettingsSyncService.fontScale,
                 ),
+                disableAnimations: AppSettingsSyncService.reduceMotion,
+              ),
+              child: ActiveSessionChrome(
                 child: child ?? const SizedBox.shrink(),
               ),
             );
