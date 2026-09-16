@@ -1826,6 +1826,8 @@
   "errCodeDeviceRevoked": "此设备已被登出。请重新登录。",
   "errCodeAccountDeletionPending": "此账户正在删除中。",
   "errCodeRegisterRateLimited": "注册尝试次数过多。请稍后再试。",
+  "errCodeInvalidCredentials": "账号或密码不正确。",
+  "errCodePasswordIncorrect": "密码不正确。",
   "errCodeQrSessionExpired": "此二维码已过期。请重新生成。",
   "errCodeDeviceNotOwner": "此设备无权执行该操作。",
   "errCodeAddAlreadyUsed": "此代码已被使用。",

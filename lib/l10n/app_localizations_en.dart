@@ -6134,6 +6134,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Too many sign-up attempts. Try again later.';
 
   @override
+  String get errCodeInvalidCredentials => 'Incorrect sign-in details.';
+
+  @override
+  String get errCodePasswordIncorrect => 'Incorrect password.';
+
+  @override
   String get errCodeQrSessionExpired =>
       'This QR code has expired. Display a new one.';
 

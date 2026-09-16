@@ -6203,6 +6203,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Trop de créations de compte. Réessayez plus tard.';
 
   @override
+  String get errCodeInvalidCredentials =>
+      'Identifiant ou mot de passe incorrect.';
+
+  @override
+  String get errCodePasswordIncorrect => 'Mot de passe incorrect.';
+
+  @override
   String get errCodeQrSessionExpired =>
       'Ce code QR a expiré. Affichez-en un nouveau.';
 

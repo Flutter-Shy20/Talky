@@ -10750,6 +10750,18 @@ abstract class AppLocalizations {
   /// **'Trop de créations de compte. Réessayez plus tard.'**
   String get errCodeRegisterRateLimited;
 
+  /// No description provided for @errCodeInvalidCredentials.
+  ///
+  /// In fr, this message translates to:
+  /// **'Identifiant ou mot de passe incorrect.'**
+  String get errCodeInvalidCredentials;
+
+  /// No description provided for @errCodePasswordIncorrect.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe incorrect.'**
+  String get errCodePasswordIncorrect;
+
   /// No description provided for @errCodeQrSessionExpired.
   ///
   /// In fr, this message translates to:

@@ -81,6 +81,10 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.errCodeAccountDeletionPending;
     case 'REGISTER_RATE_LIMITED':
       return l10n.errCodeRegisterRateLimited;
+    case 'INVALID_CREDENTIALS':
+      return l10n.errCodeInvalidCredentials;
+    case 'PASSWORD_INCORRECT':
+      return l10n.errCodePasswordIncorrect;
 
     // QR et appairage
     case 'QR_SESSION_EXPIRED':

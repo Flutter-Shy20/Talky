@@ -5906,6 +5906,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errCodeRegisterRateLimited => '注册尝试次数过多。请稍后再试。';
 
   @override
+  String get errCodeInvalidCredentials => '账号或密码不正确。';
+
+  @override
+  String get errCodePasswordIncorrect => '密码不正确。';
+
+  @override
   String get errCodeQrSessionExpired => '此二维码已过期。请重新生成。';
 
   @override
