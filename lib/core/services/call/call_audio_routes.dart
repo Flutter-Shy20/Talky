@@ -158,14 +158,34 @@ List<CallAudioRoute> routesFromSupportedMask(int mask) {
 
 /// Sortie à afficher : celle que le natif rapporte, à défaut celle demandée.
 ///
-/// L'interface montrait la sortie qu'elle croyait avoir posée. Depuis que
-/// Telecom arbitre le routage, la demande et le résultat peuvent différer — et
-/// c'est exactement ce qu'il faut voir.
+/// Pour une lecture **non sollicitée** — un casque qu'on branche, Telecom qui
+/// rebascule seul. Après une demande, c'est [routeApresDemande] qui décide.
 CallAudioRoute resolveAppliedRoute({
   required CallAudioRoute requested,
   String? reportedName,
 }) =>
     routeFromTelecomName(reportedName) ?? requested;
+
+/// Sortie à retenir après avoir demandé [demandee].
+///
+/// Une relecture qui annonce encore la sortie [precedente] est périmée, pas
+/// contradictoire : Telecom applique la route de façon asynchrone, et l'aller-
+/// retour vers un casque Bluetooth demande plus d'une seconde — bien plus que
+/// le délai avant relecture. L'adopter figeait le bouton : la sortie courante
+/// ne bougeait pas, l'appui suivant recalculait donc la même cible, et il en
+/// fallait deux pour changer de sortie.
+///
+/// Une relecture qui annonce une TROISIÈME sortie, elle, est un vrai arbitrage
+/// — un casque filaire qui impose sa loi — et doit être suivie.
+CallAudioRoute routeApresDemande({
+  required CallAudioRoute precedente,
+  required CallAudioRoute demandee,
+  String? rapportee,
+}) {
+  final lue = routeFromTelecomName(rapportee);
+  if (lue == null || lue == precedente) return demandee;
+  return lue;
+}
 
 /// True si le son sort par le haut-parleur du téléphone.
 ///

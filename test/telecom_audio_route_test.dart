@@ -109,4 +109,105 @@ void main() {
       }
     });
   });
+
+  // Il fallait deux appuis sur le bouton pour changer de sortie. Telecom relit
+  // la route avant d'avoir fini de l'appliquer — plus d'une seconde vers un
+  // casque Bluetooth —, l'application adoptait cette lecture périmée, et
+  // l'appui suivant recalculait donc la même cible.
+  group('après une demande', () {
+    test('une relecture qui annonce la sortie précédente est périmée', () {
+      expect(
+        routeApresDemande(
+          precedente: CallAudioRoute.bluetooth,
+          demandee: CallAudioRoute.earpiece,
+          rapportee: 'bluetooth',
+        ),
+        CallAudioRoute.earpiece,
+        reason: 'Telecom n\'a pas fini d\'appliquer : sa relecture est en '
+            'retard, pas en désaccord',
+      );
+    });
+
+    test('une troisième sortie est un vrai arbitrage, et elle gagne', () {
+      expect(
+        routeApresDemande(
+          precedente: CallAudioRoute.speaker,
+          demandee: CallAudioRoute.earpiece,
+          rapportee: 'wired',
+        ),
+        CallAudioRoute.wired,
+        reason: 'ni la précédente ni la demandée : un casque filaire a imposé '
+            'sa loi, et l\'interface doit le montrer',
+      );
+    });
+
+    test('la demande confirmée reste la demande', () {
+      expect(
+        routeApresDemande(
+          precedente: CallAudioRoute.earpiece,
+          demandee: CallAudioRoute.speaker,
+          rapportee: 'speaker',
+        ),
+        CallAudioRoute.speaker,
+      );
+    });
+
+    test('sans relecture, la demande fait foi', () {
+      for (final absent in [null, '', 'inconnu']) {
+        expect(
+          routeApresDemande(
+            precedente: CallAudioRoute.earpiece,
+            demandee: CallAudioRoute.speaker,
+            rapportee: absent,
+          ),
+          CallAudioRoute.speaker,
+          reason: '${absent ?? "null"}',
+        );
+      }
+    });
+  });
+
+  // Le test qui tient la régression : il compose les deux fonctions exactement
+  // comme le fait `setAudioRoute`, face à un natif systématiquement en retard.
+  group('le bouton face à un natif en retard', () {
+    const disponibles = [
+      CallAudioRoute.earpiece,
+      CallAudioRoute.speaker,
+      CallAudioRoute.bluetooth,
+    ];
+
+    /// Trois appuis, avec un natif qui relit toujours la sortie précédente.
+    List<CallAudioRoute> troisAppuis() {
+      var courante = CallAudioRoute.earpiece;
+      final visitees = <CallAudioRoute>[];
+      for (var i = 0; i < 3; i++) {
+        final cible = nextAudioRoute(current: courante, available: disponibles);
+        courante = routeApresDemande(
+          precedente: courante,
+          demandee: cible,
+          rapportee: telecomRouteName(courante),
+        );
+        visitees.add(courante);
+      }
+      return visitees;
+    }
+
+    test('chaque appui avance d\'un cran', () {
+      expect(
+        troisAppuis(),
+        const [
+          CallAudioRoute.speaker,
+          CallAudioRoute.bluetooth,
+          CallAudioRoute.earpiece,
+        ],
+        reason: 'le tour complet en trois appuis ; en adoptant la relecture, '
+            'le bouton restait sur place et il en fallait six',
+      );
+    });
+
+    test('aucun appui ne retombe sur la sortie qu\'il quittait', () {
+      final visitees = troisAppuis();
+      expect(visitees.toSet().length, visitees.length);
+    });
+  });
 }
