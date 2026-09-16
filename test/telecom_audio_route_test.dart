@@ -161,7 +161,7 @@ void main() {
             rapportee: absent,
           ),
           CallAudioRoute.speaker,
-          reason: '${absent ?? "null"}',
+          reason: absent ?? 'null',
         );
       }
     });
