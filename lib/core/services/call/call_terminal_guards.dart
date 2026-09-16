@@ -404,6 +404,44 @@ bool shouldPostRejectToServer(String? callId) {
   return RegExp(r'^\d+$').hasMatch(id);
 }
 
+/// Cet aperçu CallKit désigne-t-il l'appel que l'on est déjà en train de mener ?
+///
+/// Le plugin réaffiche l'entrant dans des cas parfaitement ordinaires — c'est ce
+/// que faisait la bascule vers CallKit au retour au premier plan. L'aperçu
+/// revenait alors à `handleIncomingCallKitPreview`, qui le prenait pour un appel
+/// étranger : « occupé », donc on ferme. Or fermer marque l'appel terminé, fait
+/// émettre un refus par le plugin, et le décrochage en cours est perdu.
+///
+/// Un aperçu qui porte l'identifiant de l'appel courant n'apprend rien : il
+/// s'ignore, sans rien fermer ni marquer. Les quatre identifiants comptent — un
+/// appel à deux en porte deux, celui du serveur et celui sous lequel CallKit a
+/// été ouvert ; un groupe a son salon ; une session à trois la sienne.
+///
+/// Hors appel (`idle`, `ended`), il n'y a rien à protéger : le nettoyage
+/// habituel reprend la main.
+bool previewTargetsCurrentCall({
+  required String? previewCallId,
+  required String callStatusName,
+  String? currentCallId,
+  String? callKitCallId,
+  String? groupRoomId,
+  String? confSessionId,
+}) {
+  final id = previewCallId?.trim() ?? '';
+  if (id.isEmpty) return false;
+  if (callStatusName == 'idle' || callStatusName == 'ended') return false;
+  for (final connu in [
+    currentCallId,
+    callKitCallId,
+    groupRoomId,
+    confSessionId,
+  ]) {
+    final candidat = connu?.trim() ?? '';
+    if (candidat.isNotEmpty && candidat == id) return true;
+  }
+  return false;
+}
+
 /// Ce changement d'état du cycle de vie est-il un vrai départ en arrière-plan ?
 ///
 /// Flutter ne saute jamais d'un état à l'autre : il rejoue tous les états

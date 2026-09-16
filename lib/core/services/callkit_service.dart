@@ -316,6 +316,24 @@ class CallKitService {
       debugPrint('[CallKit] showIncoming ignoré (déjà affiché): $id');
       return;
     }
+    // Le natif présente peut-être déjà cet appel sans que Dart l'ait demandé —
+    // c'est le cas ordinaire sur Android, où la notification vient du push.
+    // Le réafficher relance la sonnerie du plugin et, pire, remet l'entrée
+    // CallKit à « non décrochée » : tout ce qui suit la prend alors pour un
+    // refus. `_lastShownCallId` ne retient que ce que Dart a demandé, d'où
+    // cette seconde garde.
+    if (id.isNotEmpty && id == _nativeIncomingCallId) {
+      debugPrint('[CallKit] showIncoming ignoré (déjà présenté par le natif): $id');
+      return;
+    }
+    if (id.isNotEmpty) {
+      final actif = await getActiveCall();
+      final actifId = (actif?['callId'] as String?)?.trim() ?? '';
+      if (actifId == id && actif?['isAccepted'] == true) {
+        debugPrint('[CallKit] showIncoming ignoré (déjà décroché): $id');
+        return;
+      }
+    }
     if (id.isNotEmpty &&
         _lastShownCallId != null &&
         _lastShownCallId!.isNotEmpty &&
