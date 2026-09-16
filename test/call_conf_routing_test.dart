@@ -388,4 +388,47 @@ void main() {
       expect(endedCallId({}), isNull);
     });
   });
+
+  // Un membre d'un appel à trois était retiré par le serveur — grâce de
+  // déconnexion expirée alors qu'il était déjà revenu — et n'en était prévenu
+  // par rien : son écran d'appel restait ouvert sur une conférence qu'il avait
+  // quittée sans le savoir.
+  group('confLeftMeVise', () {
+    test('le départ annoncé porte mon identifiant', () {
+      expect(confLeftMeVise(leftUserId: '34', myRosterId: '34'), isTrue);
+    });
+
+    test('le départ d\'un autre ne me concerne pas', () {
+      expect(
+        confLeftMeVise(leftUserId: '34', myRosterId: '77'),
+        isFalse,
+        reason: 'c\'est le cas nominal : un pair s\'en va, je reste',
+      );
+    });
+
+    test('sans identité de roster, rien ne me vise', () {
+      for (final moi in [null, '', '   ']) {
+        expect(
+          confLeftMeVise(leftUserId: '34', myRosterId: moi),
+          isFalse,
+          reason: 'comparer deux inconnues et conclure « oui » raccrocherait '
+              'l\'appel de tout le monde (moi=${moi ?? "null"})',
+        );
+      }
+    });
+
+    test('un départ sans identifiant ne vise personne', () {
+      for (final parti in [null, '', '   ']) {
+        expect(
+          confLeftMeVise(leftUserId: parti, myRosterId: '34'),
+          isFalse,
+          reason: 'parti=${parti ?? "null"}',
+        );
+      }
+    });
+
+    test('les espaces autour des identifiants ne trompent pas', () {
+      expect(confLeftMeVise(leftUserId: ' 34 ', myRosterId: '34'), isTrue);
+    });
+  });
 }

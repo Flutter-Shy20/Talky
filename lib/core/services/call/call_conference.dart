@@ -387,6 +387,20 @@ extension CallConference on CallService {
     final reason = data['reason']?.toString();
     debugPrint('[CallService] 👋 $userId a quitté la session reason=$reason');
 
+    // Ce départ est le mien : le serveur m'a retiré de la session. Il ne le
+    // disait à personne d'autre que les restants, et l'écran d'appel restait
+    // ouvert sur une conférence que j'avais quittée sans le savoir.
+    //
+    // Sortie immédiate, avant tout le reste : ce qui suit démonte un PAIR qui
+    // s'en va, et rien de cela n'a de sens quand c'est moi.
+    if (confLeftMeVise(leftUserId: userId, myRosterId: _myRosterId)) {
+      debugPrint(
+        '[CallService] 🚪 retiré de la session par le serveur reason=$reason',
+      );
+      unawaited(_terminateCall(force: true));
+      return;
+    }
+
     if (reason == 'media_not_ready') {
       _lastConfFailure = 'media_not_ready';
     } else {

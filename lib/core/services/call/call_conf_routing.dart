@@ -254,3 +254,24 @@ ConfQueueFlushResult confReadyFlushDecision({
   if (!socketReady) return ConfQueueFlushResult.keep;
   return ConfQueueFlushResult.emit;
 }
+
+/// Ce départ annoncé par le serveur est-il le mien ?
+///
+/// `call_conf_left` n'était émis que vers les restants : celui que le serveur
+/// retirait — grâce de déconnexion expirée alors qu'il était revenu, reprise
+/// refusée — n'apprenait rien. Son écran d'appel restait ouvert sur une
+/// conférence dont il ne faisait plus partie. Il reçoit désormais le sien, et
+/// c'est à cela qu'il le reconnaît.
+///
+/// Le `call_ended` qui l'accompagne ne suffit pas : pendant une conférence
+/// encore peuplée, l'app l'ignore délibérément — garde contre les `call_ended`
+/// parasites —, et le partant a justement encore ses liens ouverts.
+///
+/// Sans identité de roster, rien ne me vise : conclure « oui » en comparant
+/// deux inconnues raccrocherait l'appel de tout le monde.
+bool confLeftMeVise({required String? leftUserId, required String? myRosterId}) {
+  final parti = leftUserId?.trim() ?? '';
+  final moi = myRosterId?.trim() ?? '';
+  if (parti.isEmpty || moi.isEmpty) return false;
+  return parti == moi;
+}
