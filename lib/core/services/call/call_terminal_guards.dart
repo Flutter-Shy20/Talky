@@ -404,6 +404,40 @@ bool shouldPostRejectToServer(String? callId) {
   return RegExp(r'^\d+$').hasMatch(id);
 }
 
+/// Ce changement d'état du cycle de vie est-il un vrai départ en arrière-plan ?
+///
+/// Flutter ne saute jamais d'un état à l'autre : il rejoue tous les états
+/// intermédiaires. Revenir au premier plan depuis `paused` fait donc passer par
+/// `hidden`, puis `inactive`, puis `resumed`. L'accueil prenait ce `hidden` pour
+/// un départ et rebasculait l'appel entrant vers CallKit à l'instant précis où
+/// l'utilisateur venait de décrocher : le plugin réaffichait l'entrant, l'app
+/// prenait alors son propre appel pour un autre, le refusait au serveur, et le
+/// décrochage était perdu — écran fermé d'un côté, appel coupé de l'autre.
+///
+/// `paused` et `detached` sont des départs sans ambiguïté. `inactive` n'en est
+/// jamais un : volet de notifications, changeur d'applications ou boîte de
+/// dialogue système laissent l'application à l'écran.
+///
+/// `hidden`, lui, se lit à sa provenance : il ne remonte que lorsqu'il vient de
+/// `paused`, et c'est exactement le cas qui coûtait l'appel. Un `hidden` dont on
+/// ignore d'où il vient — premier événement reçu après l'installation de
+/// l'observateur — reste un départ : le comportement d'avant est conservé là où
+/// il était juste.
+bool isBackgroundDeparture({
+  required String stateName,
+  String? previousStateName,
+}) {
+  switch (stateName) {
+    case 'paused':
+    case 'detached':
+      return true;
+    case 'hidden':
+      return previousStateName != 'paused';
+    default:
+      return false;
+  }
+}
+
 /// Cette offre de reprise peut-elle être appliquée dans l'état local courant ?
 ///
 /// Le sort du destinataire après une mort de processus tenait à cette garde.

@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../theme/locale_controller.dart';
+import 'call/call_terminal_guards.dart';
 import '../../talky_models.dart';
 import 'trip_repository.dart';
 import 'trip_socket_service.dart';
@@ -37,6 +38,9 @@ class TripSessionGuard with WidgetsBindingObserver {
   static final TripSessionGuard instance = TripSessionGuard._();
 
   static const _canal = MethodChannel('com.alanya237.alanya/trip_location');
+
+  /// Dernier état de cycle de vie reçu — voir `isBackgroundDeparture`.
+  AppLifecycleState? _dernierEtatCycleDeVie;
 
   bool get _androidNatif =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -281,10 +285,23 @@ class TripSessionGuard with WidgetsBindingObserver {
     final id = _tripId;
     if (id == null) return;
 
+    final precedent = _dernierEtatCycleDeVie;
+    _dernierEtatCycleDeVie = state;
+
     switch (state) {
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
+        // `hidden` est traversé aussi bien en partant qu'en revenant :
+        // l'annoncer comme un départ envoyait « background_killed » au serveur
+        // à chaque retour au premier plan, aussitôt suivi de son contraire.
+        // Voir `isBackgroundDeparture`.
+        if (!isBackgroundDeparture(
+          stateName: state.name,
+          previousStateName: precedent?.name,
+        )) {
+          return;
+        }
         // Avec le service en avant-plan, le flux continue : il n'y a rien à
         // signaler, et prétendre le contraire ferait basculer le cercle en
         // « position indisponible » alors que tout va bien.
