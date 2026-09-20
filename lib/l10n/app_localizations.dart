@@ -5833,7 +5833,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountBadgeVerified.
   ///
   /// In fr, this message translates to:
-  /// **'Compte vérifié'**
+  /// **'Abonné Alanya Plus'**
   String get accountBadgeVerified;
 
   /// No description provided for @accountBadgeBusinessDeclared.
@@ -11209,7 +11209,7 @@ abstract class AppLocalizations {
   /// No description provided for @plusCardBadgeActive.
   ///
   /// In fr, this message translates to:
-  /// **'Votre coche est affichée à côté de votre nom.'**
+  /// **'Abonné Alanya Plus'**
   String get plusCardBadgeActive;
 
   /// No description provided for @plusCardStartsOn.
@@ -11911,7 +11911,7 @@ abstract class AppLocalizations {
   /// No description provided for @plusCardBadgeMissing.
   ///
   /// In fr, this message translates to:
-  /// **'Il ne manque que la vérification d\'identité pour la coche'**
+  /// **'La coche s\'affiche avec un abonnement actif.'**
   String get plusCardBadgeMissing;
 
   /// No description provided for @errCodeVerificationUnavailable.
