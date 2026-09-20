@@ -6,11 +6,8 @@ library;
 import 'entitlements.dart';
 
 enum PlusStatus {
-  /// Droits inconnus (serveur ancien) ou compte exempté : rien à montrer.
+  /// Droits inconnus, compte exempté, ou interrupteur éteint : rien à montrer.
   hidden,
-
-  /// Interrupteur éteint : tout est gratuit pendant le lancement.
-  launchFree,
 
   /// Payant annoncé, pas encore d'abonnement.
   grace,
@@ -30,13 +27,16 @@ enum PlusStatus {
 
 PlusStatus plusStatusOf(Entitlements e) {
   if (!e.known || e.exempt) return PlusStatus.hidden;
+  // Interrupteur éteint : aucune trace de l'offre, même pour qui a déjà une
+  // période (offerte avant l'activation, par ex.).
+  if (e.phase == PlusPhase.free) return PlusStatus.hidden;
   if (e.period != null) return PlusStatus.active;
   if (e.upcoming != null) return PlusStatus.scheduled;
   return switch (e.phase) {
-    PlusPhase.free => PlusStatus.launchFree,
     PlusPhase.grace => PlusStatus.grace,
     PlusPhase.paid =>
       e.lapsedAt != null ? PlusStatus.lapsed : PlusStatus.upgrade,
+    PlusPhase.free => PlusStatus.hidden,
   };
 }
 

@@ -402,13 +402,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// « Mon abonnement » n'a de sens qu'une fois l'offre payante annoncée, ou
-  /// pour qui a déjà un abonnement (offert pendant le lancement, par ex.).
+  /// « Mon abonnement » n'apparaît qu'une fois l'offre payante annoncée.
   bool _showsSubscription(BuildContext context) =>
-      switch (plusStatusOf(context.watch<EntitlementService>().current)) {
-        PlusStatus.hidden || PlusStatus.launchFree => false,
-        _ => true,
-      };
+      plusStatusOf(context.watch<EntitlementService>().current) !=
+      PlusStatus.hidden;
 
   Widget _buildMenuItem(
       IconData icon, String title, VoidCallback onTap) {

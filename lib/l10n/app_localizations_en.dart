@@ -3273,7 +3273,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'This account sends announcements. You cannot reply.';
 
   @override
-  String get accountBadgeVerified => 'Verified account';
+  String get accountBadgeVerified => 'Alanya Plus subscriber';
 
   @override
   String get accountBadgeBusinessDeclared => 'Declared business';
@@ -6359,16 +6359,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your subscription request didn\'t go through.';
 
   @override
-  String get plusCardLaunchKicker => 'Free during launch';
-
-  @override
-  String get plusCardLaunchTitle => 'Alanya Plus is on us';
-
-  @override
-  String get plusCardLaunchBody =>
-      'Translation, backup, trips and list ringtones are free during launch. We\'ll let you know before the offer becomes paid.';
-
-  @override
   String plusCardGraceTitle(String date) {
     return 'Paid from $date';
   }
@@ -6425,7 +6415,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plusCardAutoRenewOff => 'Remember to renew before it ends.';
 
   @override
-  String get plusCardBadgeActive => 'Your badge shows next to your name.';
+  String get plusCardBadgeActive => 'Alanya Plus subscriber';
 
   @override
   String plusCardStartsOn(String date) {
@@ -6450,10 +6440,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get plusOfferUnlocks => 'What Plus unlocks';
-
-  @override
-  String get plusOfferFreeNote =>
-      'Alanya Plus is free during launch: nothing to pay for now. We\'ll let you know before the offer becomes paid.';
 
   @override
   String get plusOfferUnavailable =>
@@ -6865,26 +6851,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'It comes back as soon as your subscription resumes.';
 
   @override
-  String get verificationNameWarning =>
-      'Changing your name removes the badge until a new review.';
-
-  @override
   String get verificationUnavailableBody =>
       'Identity verification opens soon. Check back in a few days.';
 
   @override
-  String get plusCardVerifyTitle => 'Get the badge next to your name';
-
-  @override
-  String get plusCardVerifyBody =>
-      'Get your identity verified: your contacts will know it\'s really you.';
-
-  @override
-  String get plusCardVerifyAction => 'Verify my account';
-
-  @override
   String get plusCardBadgeMissing =>
-      'Only identity verification is missing for the badge';
+      'The badge shows with an active subscription.';
 
   @override
   String get errCodeVerificationUnavailable =>

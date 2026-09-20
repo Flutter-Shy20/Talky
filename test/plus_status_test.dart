@@ -34,10 +34,10 @@ void main() {
       expect(plusStatusOf(_e(exempt: true)), PlusStatus.hidden);
     });
 
-    test('lancement gratuit, sauf abonnement offert', () {
-      expect(plusStatusOf(_e(phase: 'free')), PlusStatus.launchFree);
+    test('interrupteur éteint : rien, même avec une période offerte', () {
+      expect(plusStatusOf(_e(phase: 'free')), PlusStatus.hidden);
       expect(plusStatusOf(_e(phase: 'free', period: _period(-3, 27))),
-          PlusStatus.active);
+          PlusStatus.hidden);
     });
 
     test('grâce, puis abonnement payé pendant la grâce', () {

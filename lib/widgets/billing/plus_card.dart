@@ -11,7 +11,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../screens/billing/plus_offer_screen.dart';
 import '../../screens/billing/subscription_screen.dart';
-import '../../screens/profile/verification_screen.dart';
 import '../common/account_badge.dart' show VerifiedSeal;
 import 'plus_visuals.dart';
 
@@ -51,11 +50,6 @@ class _PlusCardState extends State<PlusCard> {
         MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
       );
 
-  void _openVerification() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const VerificationScreen()),
-      );
-
   @override
   Widget build(BuildContext context) {
     final service = context.watch<EntitlementService>();
@@ -74,7 +68,6 @@ class _PlusCardState extends State<PlusCard> {
         0,
       ),
       child: switch (status) {
-        PlusStatus.launchFree => _launchFree(context, e, verified),
         PlusStatus.grace => _grace(context, e, service.offer),
         PlusStatus.upgrade => _upgrade(context, service.offer),
         PlusStatus.active => _active(context, e, service.offer, verified),
@@ -85,38 +78,7 @@ class _PlusCardState extends State<PlusCard> {
     );
   }
 
-  // ── Les six messages ────────────────────────────────────────────────
-
-  Widget _launchFree(BuildContext context, Entitlements e, bool verified) {
-    final l10n = context.l10n;
-    if (!verified) {
-      // Rien à vendre pendant le lancement : la carte invite à la coche, qui
-      // s'obtient alors sur vérification seule.
-      return _Frame(
-        tone: _Tone.promo,
-        kicker: l10n.plusCardLaunchKicker,
-        title: e.verificationStatus == 1
-            ? l10n.verificationPendingTitle
-            : l10n.plusCardVerifyTitle,
-        body: l10n.plusCardVerifyBody,
-        action: e.verificationStatus == 1
-            ? l10n.verificationStatusTitle
-            : l10n.plusCardVerifyAction,
-        onAction: _openVerification,
-      );
-    }
-    return _Frame(
-      tone: _Tone.soft,
-      onTap: _openOffer,
-      kicker: l10n.plusCardLaunchKicker,
-      chevron: true,
-      title: l10n.plusCardLaunchTitle,
-      body: l10n.plusCardLaunchBody,
-      extra: [
-        _BadgeRow(verified: true, pending: false, onTap: _openVerification),
-      ],
-    );
-  }
+  // ── Les messages ────────────────────────────────────────────────────
 
   Widget _grace(BuildContext context, Entitlements e, PlusOffer? offer) {
     final l10n = context.l10n;
@@ -260,12 +222,8 @@ class _PlusCardState extends State<PlusCard> {
               ? l10n.plusCardAutoRenewOn
               : l10n.plusCardAutoRenewOff),
       extra: [
-        // Abonné : on cesse de vendre, on mène à la coche.
-        _BadgeRow(
-          verified: verified,
-          pending: e.verificationStatus == 1,
-          onTap: _openVerification,
-        ),
+        // Abonné : on cesse de vendre ; la coche suit l'abonnement.
+        _BadgeRow(verified: verified),
       ],
       action: soon ? l10n.plusRenew : null,
       onAction: soon ? _openOffer : null,
@@ -304,76 +262,47 @@ class _PlusCardState extends State<PlusCard> {
   }
 }
 
-/// La ligne de la coche dans la carte : active, en cours d'examen, ou ce qui
-/// manque pour l'avoir.
+/// La ligne de la coche dans la carte : affichée ou absente — plus de
+/// dossier à instruire pour les comptes personnels.
 class _BadgeRow extends StatelessWidget {
-  const _BadgeRow({
-    required this.verified,
-    required this.pending,
-    required this.onTap,
-  });
+  const _BadgeRow({required this.verified});
 
   final bool verified;
-  final bool pending;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Material(
-      color: context.semantic.brandContainer,
-      borderRadius: AppRadius.brSm,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              verified
-                  ? const VerifiedSeal(size: 20)
-                  : Icon(
-                      pending
-                          ? Icons.hourglass_top_rounded
-                          : Icons.verified_outlined,
-                      size: 20,
-                      color: context.colors.primary,
-                    ),
-              AppSpacing.hGapSm,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      verified
-                          ? l10n.plusCardBadgeActive
-                          : pending
-                              ? l10n.verificationPendingTitle
-                              : l10n.plusCardBadgeMissing,
-                      style: context.text.bodySmall?.copyWith(
-                        color: context.semantic.onBrandContainer,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (verified)
-                      Text(
-                        l10n.verificationNameWarning,
-                        style: context.text.labelSmall?.copyWith(
-                          color: context.semantic.onBrandContainer
-                              .withValues(alpha: 0.8),
-                        ),
-                      ),
-                  ],
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: context.semantic.brandContainer,
+        borderRadius: AppRadius.brSm,
+      ),
+      child: Row(
+        children: [
+          verified
+              ? const VerifiedSeal(size: 20)
+              : Icon(
+                  Icons.verified_outlined,
+                  size: 20,
+                  color: context.colors.primary,
                 ),
+          AppSpacing.hGapSm,
+          Expanded(
+            child: Text(
+              verified
+                  ? l10n.plusCardBadgeActive
+                  : l10n.plusCardBadgeMissing,
+              style: context.text.bodySmall?.copyWith(
+                color: context.semantic.onBrandContainer,
+                fontWeight: FontWeight.w600,
               ),
-              Icon(Icons.chevron_right_rounded,
-                  size: 18, color: context.semantic.onBrandContainer),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -43,7 +43,6 @@ part 'api/welcome_api.dart';
 part 'api/reports_api.dart';
 part 'api/backup_api.dart';
 part 'api/billing_api.dart';
-part 'api/verification_api.dart';
 
 class TalkyApiClient {
   // ** Remplace par ton IP/domaine de production

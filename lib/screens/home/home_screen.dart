@@ -34,7 +34,6 @@ import '../../core/services/trip_repository.dart';
 import '../trips/trip_live_screen.dart';
 import '../../core/services/billing/entitlement_service.dart';
 import '../billing/subscription_screen.dart';
-import '../profile/verification_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.initialTab = 0});
@@ -301,12 +300,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else if (type.startsWith('trip_')) {
       unawaited(_handleTripNotification(action));
     } else if (type == 'verification_update') {
-      // Décision sur le dossier : la coche change, les droits la portent.
+      // La coche a changé (abonnement ou révocation admin) : relire les droits.
+      // Plus d'écran de dossier — un appui mène à « Mon abonnement ».
       final droits = EntitlementService.maybeInstance;
       if (droits != null) unawaited(droits.refresh());
       if (action.fromTap) {
         unawaited(Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const VerificationScreen()),
+          MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
         ));
       }
     } else if (type.startsWith('billing_') || type.startsWith('payment_')) {

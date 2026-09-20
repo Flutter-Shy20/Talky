@@ -3306,7 +3306,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ce compte diffuse des annonces. Vous ne pouvez pas y répondre.';
 
   @override
-  String get accountBadgeVerified => 'Compte vérifié';
+  String get accountBadgeVerified => 'Abonné Alanya Plus';
 
   @override
   String get accountBadgeBusinessDeclared => 'Commerce déclaré';
@@ -6438,16 +6438,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'L\'opération sur votre abonnement n\'a pas abouti.';
 
   @override
-  String get plusCardLaunchKicker => 'Gratuit pendant le lancement';
-
-  @override
-  String get plusCardLaunchTitle => 'Alanya Plus vous est offert';
-
-  @override
-  String get plusCardLaunchBody =>
-      'Traduction, sauvegarde, trajets et sonneries par liste sont gratuits pendant le lancement. Nous vous préviendrons avant que l\'offre devienne payante.';
-
-  @override
   String plusCardGraceTitle(String date) {
     return 'Payant à partir du $date';
   }
@@ -6504,8 +6494,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get plusCardAutoRenewOff => 'Pensez à renouveler avant l\'échéance.';
 
   @override
-  String get plusCardBadgeActive =>
-      'Votre coche est affichée à côté de votre nom.';
+  String get plusCardBadgeActive => 'Abonné Alanya Plus';
 
   @override
   String plusCardStartsOn(String date) {
@@ -6530,10 +6519,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get plusOfferUnlocks => 'Ce que Plus débloque';
-
-  @override
-  String get plusOfferFreeNote =>
-      'Alanya Plus est gratuit pendant le lancement : rien à payer pour l\'instant. Nous vous préviendrons avant que l\'offre devienne payante.';
 
   @override
   String get plusOfferUnavailable =>
@@ -6950,26 +6935,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'Elle revient dès que votre abonnement reprend.';
 
   @override
-  String get verificationNameWarning =>
-      'Changer de nom retire la coche jusqu\'à un nouvel examen.';
-
-  @override
   String get verificationUnavailableBody =>
       'La vérification d\'identité ouvre bientôt. Revenez dans quelques jours.';
 
   @override
-  String get plusCardVerifyTitle => 'Obtenez la coche à côté de votre nom';
-
-  @override
-  String get plusCardVerifyBody =>
-      'Faites vérifier votre identité : vos contacts sauront que c\'est bien vous.';
-
-  @override
-  String get plusCardVerifyAction => 'Faire vérifier mon compte';
-
-  @override
   String get plusCardBadgeMissing =>
-      'Il ne manque que la vérification d\'identité pour la coche';
+      'La coche s\'affiche avec un abonnement actif.';
 
   @override
   String get errCodeVerificationUnavailable =>

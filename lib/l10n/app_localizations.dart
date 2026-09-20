@@ -11146,24 +11146,6 @@ abstract class AppLocalizations {
   /// **'L\'opération sur votre abonnement n\'a pas abouti.'**
   String get errDomaineAbonnement;
 
-  /// No description provided for @plusCardLaunchKicker.
-  ///
-  /// In fr, this message translates to:
-  /// **'Gratuit pendant le lancement'**
-  String get plusCardLaunchKicker;
-
-  /// No description provided for @plusCardLaunchTitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Alanya Plus vous est offert'**
-  String get plusCardLaunchTitle;
-
-  /// No description provided for @plusCardLaunchBody.
-  ///
-  /// In fr, this message translates to:
-  /// **'Traduction, sauvegarde, trajets et sonneries par liste sont gratuits pendant le lancement. Nous vous préviendrons avant que l\'offre devienne payante.'**
-  String get plusCardLaunchBody;
-
   /// No description provided for @plusCardGraceTitle.
   ///
   /// In fr, this message translates to:
@@ -11265,12 +11247,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce que Plus débloque'**
   String get plusOfferUnlocks;
-
-  /// No description provided for @plusOfferFreeNote.
-  ///
-  /// In fr, this message translates to:
-  /// **'Alanya Plus est gratuit pendant le lancement : rien à payer pour l\'instant. Nous vous préviendrons avant que l\'offre devienne payante.'**
-  String get plusOfferFreeNote;
 
   /// No description provided for @plusOfferUnavailable.
   ///
@@ -11926,35 +11902,11 @@ abstract class AppLocalizations {
   /// **'Elle revient dès que votre abonnement reprend.'**
   String get verificationPausedBody;
 
-  /// No description provided for @verificationNameWarning.
-  ///
-  /// In fr, this message translates to:
-  /// **'Changer de nom retire la coche jusqu\'à un nouvel examen.'**
-  String get verificationNameWarning;
-
   /// No description provided for @verificationUnavailableBody.
   ///
   /// In fr, this message translates to:
   /// **'La vérification d\'identité ouvre bientôt. Revenez dans quelques jours.'**
   String get verificationUnavailableBody;
-
-  /// No description provided for @plusCardVerifyTitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Obtenez la coche à côté de votre nom'**
-  String get plusCardVerifyTitle;
-
-  /// No description provided for @plusCardVerifyBody.
-  ///
-  /// In fr, this message translates to:
-  /// **'Faites vérifier votre identité : vos contacts sauront que c\'est bien vous.'**
-  String get plusCardVerifyBody;
-
-  /// No description provided for @plusCardVerifyAction.
-  ///
-  /// In fr, this message translates to:
-  /// **'Faire vérifier mon compte'**
-  String get plusCardVerifyAction;
 
   /// No description provided for @plusCardBadgeMissing.
   ///

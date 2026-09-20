@@ -7,8 +7,6 @@ import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 import '../../core/services/billing/billing_models.dart';
 import '../../core/services/billing/entitlement_service.dart';
-import '../../core/services/billing/entitlements.dart';
-import '../../core/services/billing/plus_status.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/billing/plus_visuals.dart';
@@ -97,28 +95,27 @@ class _PlusOfferScreenState extends State<PlusOfferScreen> {
                   PlusSectionLabel(l10n.plusOfferUnlocks),
                   _FeatureList(offer: offer),
                   AppSpacing.vGapXl,
-                  if (offer.phase == PlusPhase.free)
-                    _Note(
-                      icon: Icons.card_giftcard_rounded,
-                      text: l10n.plusOfferFreeNote,
-                    )
-                  else if (!offer.purchasable || plan == null)
+                  if (!offer.purchasable || plan == null)
                     _Note(
                       icon: Icons.schedule_rounded,
                       text: l10n.plusOfferUnavailable,
                     )
                   else ...[
-                    PlusSectionLabel(l10n.plusOfferDuration),
-                    for (final p in offer.plans) ...[
-                      _PlanOption(
-                        plan: p,
-                        reference: offer.reference,
-                        selected: p.code == plan.code,
-                        onTap: () => setState(() => _selected = p.code),
-                      ),
+                    // Un seul plan actif (annuel) : le prix et le bouton
+                    // suffisent, sans sélecteur de durée.
+                    if (offer.plans.length > 1) ...[
+                      PlusSectionLabel(l10n.plusOfferDuration),
+                      for (final p in offer.plans) ...[
+                        _PlanOption(
+                          plan: p,
+                          reference: offer.reference,
+                          selected: p.code == plan.code,
+                          onTap: () => setState(() => _selected = p.code),
+                        ),
+                        AppSpacing.vGapSm,
+                      ],
                       AppSpacing.vGapSm,
                     ],
-                    AppSpacing.vGapSm,
                     _FinePrint(offer: offer, plan: plan),
                   ],
                 ],

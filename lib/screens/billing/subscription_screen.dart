@@ -14,8 +14,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/billing/plus_card.dart' show lapsedBody;
-import '../../widgets/common/account_badge.dart' show VerifiedSeal;
-import '../profile/verification_screen.dart';
 import '../../widgets/billing/plus_visuals.dart';
 import 'plus_offer_screen.dart';
 
@@ -31,7 +29,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   PlusHistory? _history;
   Object? _historyError;
   bool _savingAutoRenew = false;
-  String? _renewPlan;
 
   @override
   void initState() {
@@ -85,20 +82,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
   }
 
-  Future<void> _setRenewPlan(String code) async {
-    final previous = _renewPlan;
-    setState(() => _renewPlan = code);
-    try {
-      await context
-          .read<TalkyApiClient>()
-          .updatePlusPreferences(renewPlanCode: code);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _renewPlan = previous);
-      afficherErreur(context, e, domaine: ErrorDomain.abonnement);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -123,33 +106,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           children: [
             _StatusCard(entitlements: e, offer: offer),
             ..._actions(context, status, period, offer),
-            if (!e.exempt) ...[
-              AppSpacing.vGapMd,
-              Material(
-                color: context.colors.surface,
-                borderRadius: AppRadius.brMd,
-                clipBehavior: Clip.antiAlias,
-                child: ListTile(
-                  leading: e.isVerified
-                      ? const VerifiedSeal(size: 28)
-                      : Icon(Icons.verified_outlined,
-                          color: context.colors.primary),
-                  title: Text(l10n.verificationStatusTitle,
-                      style: context.text.bodyLarge
-                          ?.copyWith(fontWeight: FontWeight.w600)),
-                  subtitle: Text(e.isVerified
-                      ? l10n.plusCardBadgeActive
-                      : e.verificationStatus == 1
-                          ? l10n.verificationPendingTitle
-                          : l10n.plusCardBadgeMissing),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const VerificationScreen()),
-                  ),
-                ),
-              ),
-            ],
             if (status == PlusStatus.active && period != null) ...[
               AppSpacing.vGapXl,
               Material(
@@ -165,34 +121,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   subtitle: Text(l10n.subscriptionAutoRenewHint),
                 ),
               ),
-              if (offer != null && offer.plans.length >= 2) ...[
-                AppSpacing.vGapXl,
-                PlusSectionLabel(l10n.subscriptionNextDuration),
-                SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<String>(
-                    showSelectedIcon: false,
-                    segments: [
-                      for (final p in offer.plans)
-                        ButtonSegment(
-                          value: p.code,
-                          label: Text(
-                            '${plusPlanName(context, p.code, offer: offer)} · '
-                            '${formatPlusAmount(context, p.price)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                    selected: {
-                      _renewPlan ??
-                          offer.planByCode(period.plan)?.code ??
-                          offer.defaultPlan!.code,
-                    },
-                    onSelectionChanged: (s) => _setRenewPlan(s.first),
-                  ),
-                ),
-              ],
             ],
             AppSpacing.vGapXl,
             PlusSectionLabel(l10n.subscriptionPayments),
@@ -415,13 +343,11 @@ class _StatusCard extends StatelessWidget {
       case PlusStatus.upgrade:
         title = l10n.subscriptionNoneTitle;
         body = l10n.subscriptionNoneBody;
-      case PlusStatus.launchFree:
-        kicker = l10n.plusCardLaunchKicker;
-        title = l10n.plusCardLaunchTitle;
-        body = l10n.plusCardLaunchBody;
       case PlusStatus.hidden:
-        title = e.exempt ? l10n.subscriptionExemptTitle : l10n.plusCardLaunchTitle;
-        body = e.exempt ? null : l10n.plusCardLaunchBody;
+        title = e.exempt
+            ? l10n.subscriptionExemptTitle
+            : l10n.plusOfferUnavailable;
+        body = null;
     }
 
     final content = Padding(

@@ -3188,7 +3188,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get officialAccountReadonlyBanner => '此账号用于发布公告，无法回复。';
 
   @override
-  String get accountBadgeVerified => '已认证账号';
+  String get accountBadgeVerified => 'Alanya Plus 订阅用户';
 
   @override
   String get accountBadgeBusinessDeclared => '已申报企业';
@@ -6112,15 +6112,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errDomaineAbonnement => '您的订阅操作未能完成。';
 
   @override
-  String get plusCardLaunchKicker => '推广期间免费';
-
-  @override
-  String get plusCardLaunchTitle => 'Alanya Plus 免费为您开放';
-
-  @override
-  String get plusCardLaunchBody => '推广期间，翻译、备份、行程和列表铃声均免费。方案开始收费前，我们会提前通知您。';
-
-  @override
   String plusCardGraceTitle(String date) {
     return '自 $date 起收费';
   }
@@ -6175,7 +6166,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get plusCardAutoRenewOff => '请记得在到期前续订。';
 
   @override
-  String get plusCardBadgeActive => '您的认证标记显示在您的名字旁。';
+  String get plusCardBadgeActive => 'Alanya Plus 订阅用户';
 
   @override
   String plusCardStartsOn(String date) {
@@ -6198,10 +6189,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get plusOfferUnlocks => 'Plus 解锁的功能';
-
-  @override
-  String get plusOfferFreeNote =>
-      '推广期间 Alanya Plus 免费：目前无需付款。方案开始收费前，我们会提前通知您。';
 
   @override
   String get plusOfferUnavailable => '暂时无法付款。请稍后再试。';
@@ -6582,22 +6569,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verificationPausedBody => '订阅恢复后标记即会恢复。';
 
   @override
-  String get verificationNameWarning => '更改姓名将撤销认证标记，直至重新审核。';
-
-  @override
   String get verificationUnavailableBody => '身份认证即将开放。请几天后再来。';
 
   @override
-  String get plusCardVerifyTitle => '在您的名字旁获得认证标记';
-
-  @override
-  String get plusCardVerifyBody => '认证您的身份：让联系人知道真的是您。';
-
-  @override
-  String get plusCardVerifyAction => '认证我的账户';
-
-  @override
-  String get plusCardBadgeMissing => '只差身份认证即可获得认证标记';
+  String get plusCardBadgeMissing => '订阅后即可显示认证标记。';
 
   @override
   String get errCodeVerificationUnavailable => '身份认证尚未开放。';
