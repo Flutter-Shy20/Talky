@@ -23,6 +23,7 @@ class AuthProvider extends ChangeNotifier {
   User? _currentUser;
   bool _isLoading = false;
   String? _error;
+  String? _lastErrorCode;
   bool _isInitialized = false;
   bool _pendingOnboardingAfterRegister = false;
 
@@ -33,6 +34,14 @@ class AuthProvider extends ChangeNotifier {
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  /// Code machine de la dernière erreur d'authentification, quand le serveur en
+  /// a fourni un. [error] ne porte qu'une phrase traduite : un écran qui doit
+  /// *agir* sur le motif du refus — `DEVICE_NOT_TRUSTED` mène au QR — ne peut
+  /// pas le déduire d'un texte. Toujours renseigné en même temps que [error],
+  /// et remis à zéro avec lui.
+  String? get lastErrorCode => _lastErrorCode;
+
   bool get isLoggedIn => _currentUser != null;
   bool get isInitialized => _isInitialized;
   bool get pendingOnboardingAfterRegister => _pendingOnboardingAfterRegister;
@@ -267,10 +276,7 @@ class AuthProvider extends ChangeNotifier {
       currentSessionEndReason = SessionEndReason.none;
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } catch (e) {
-      // Le message du serveur ne va plus à l'écran : c'est de la prose
-      // française non traduite, parfois technique. Le presenter choisit un
-      // texte prévu à partir du code, et journalise le détail.
-      _error = presenterErreurGlobale(e, domaine: ErrorDomain.auth);
+      _capturerErreur(e);
     } finally {
       _setLoading(false);
     }
@@ -300,10 +306,7 @@ class AuthProvider extends ChangeNotifier {
       currentSessionEndReason = SessionEndReason.none;
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } catch (e) {
-      // Le message du serveur ne va plus à l'écran : c'est de la prose
-      // française non traduite, parfois technique. Le presenter choisit un
-      // texte prévu à partir du code, et journalise le détail.
-      _error = presenterErreurGlobale(e, domaine: ErrorDomain.auth);
+      _capturerErreur(e);
     } finally {
       _setLoading(false);
     }
@@ -360,10 +363,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } catch (e) {
-      // Le message du serveur ne va plus à l'écran : c'est de la prose
-      // française non traduite, parfois technique. Le presenter choisit un
-      // texte prévu à partir du code, et journalise le détail.
-      _error = presenterErreurGlobale(e, domaine: ErrorDomain.auth);
+      _capturerErreur(e);
     } finally {
       _setLoading(false);
     }
@@ -535,5 +535,15 @@ class AuthProvider extends ChangeNotifier {
 
   void _clearError() {
     _error = null;
+    _lastErrorCode = null;
+  }
+
+  /// Le message du serveur ne va plus à l'écran : c'est de la prose française
+  /// non traduite, parfois technique. Le presenter choisit un texte prévu à
+  /// partir du code, et journalise le détail. Le code machine, lui, est
+  /// conservé tel quel pour [lastErrorCode].
+  void _capturerErreur(Object e) {
+    _lastErrorCode = AppError.from(e).code;
+    _error = presenterErreurGlobale(e, domaine: ErrorDomain.auth);
   }
 }

@@ -3656,6 +3656,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get qrLoginExplanation => '在已登录的手机上打开 Alanya，进入「账号与安全」，然后扫描此码。';
 
   @override
+  String get qrLoginDeviceNotTrustedNotice =>
+      '此账户尚未识别这部手机。请用已登录的设备扫描此码。如果无法再使用该设备，请在登录页重置密码。';
+
+  @override
   String qrLoginExpiresIn(String time) {
     return '$time 后失效';
   }
@@ -5916,6 +5920,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errCodeDeviceNotOwner => '此设备无权执行该操作。';
+
+  @override
+  String get errCodeDeviceNotTrusted => '此账户尚未识别这部手机。请在已登录的设备上使用二维码登录。';
 
   @override
   String get errCodeAddAlreadyUsed => '此代码已被使用。';

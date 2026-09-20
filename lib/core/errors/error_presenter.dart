@@ -91,6 +91,8 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.errCodeQrSessionExpired;
     case 'DEVICE_NOT_OWNER':
       return l10n.errCodeDeviceNotOwner;
+    case 'DEVICE_NOT_TRUSTED':
+      return l10n.errCodeDeviceNotTrusted;
     case 'ADD_ALREADY_USED':
       return l10n.errCodeAddAlreadyUsed;
     case 'ADD_ME_POLICY_DENIED':

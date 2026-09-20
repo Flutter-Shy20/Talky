@@ -421,9 +421,9 @@ class TalkyApiClient {
   /// chaque mise à jour système. device_info_plus n'expose plus ANDROID_ID
   /// depuis sa v9, d'où le canal natif.
   ///
-  /// iOS : `identifierForVendor`, qui ne survit pas à une désinstallation de la
-  /// dernière app du vendeur — le téléphone réapparaît alors comme un nouvel
-  /// appareil. Limite assumée et signalée à l'utilisateur.
+  /// iOS : `identifierForVendor` recopié dans le Keychain (voir
+  /// [_iosHardwareId]), parce que l'IDFV seul ne survit pas à la
+  /// désinstallation de la dernière app du vendeur.
   ///
   /// Ailleurs (desktop, web) : repli sur l'UUID applicatif, pour que la
   /// connexion par QR reste possible plutôt que de rejeter la session.
@@ -437,10 +437,7 @@ class TalkyApiClient {
           if (id != null && id.isNotEmpty) return id;
           return StorageService().getOrCreateDeviceId();
         case 'ios':
-          final i = await DeviceInfoPlugin().iosInfo;
-          final id = i.identifierForVendor?.trim() ?? '';
-          if (id.isNotEmpty) return id;
-          return StorageService().getOrCreateDeviceId();
+          return _iosHardwareId();
         default:
           return StorageService().getOrCreateDeviceId();
       }
@@ -453,6 +450,38 @@ class TalkyApiClient {
         return 'INDEFINI';
       }
     }
+  }
+
+  /// IDFV mémorisé dans le Keychain, qui lui survit à la désinstallation.
+  ///
+  /// L'IDFV change dès que la dernière app du vendeur est retirée : sans cette
+  /// copie, une réinstallation ferait réapparaître le téléphone comme un
+  /// appareil inconnu, et l'utilisateur devrait repasser par le QR pour se
+  /// reconnecter sur un appareil qu'il n'a jamais quitté.
+  ///
+  /// La valeur mémorisée prime toujours : c'est elle que la table `appareils`
+  /// connaît, y compris après une réinstallation qui a changé l'IDFV.
+  static Future<String> _iosHardwareId() async {
+    final storage = StorageService();
+    final memorise = (await storage.getHardwareId())?.trim();
+    if (memorise != null && memorise.isNotEmpty) return memorise;
+
+    final idfv = (await DeviceInfoPlugin().iosInfo).identifierForVendor?.trim();
+    final id = (idfv != null && idfv.isNotEmpty)
+        ? idfv
+        : await storage.getOrCreateDeviceId();
+    try {
+      await storage.saveHardwareId(id);
+    } catch (e) {
+      // Même arbitrage que `getOrCreateDeviceId` : un identifiant non persisté
+      // reste exact pour cette session — il vaut mieux se connecter avec un
+      // identifiant dégradé que d'échouer sur une écriture Keychain.
+      debugPrint(
+        '[TalkyApiClient] identifiant matériel iOS non mémorisé ($e) — '
+        'conservé pour cette session',
+      );
+    }
+    return id;
   }
 
   // ── UPLOAD HELPER ─────────────────────────────────────────────────
