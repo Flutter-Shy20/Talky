@@ -77,17 +77,54 @@ extension CallControls on CallService {
   }
 
   /// Sélectionne une sortie précise.
+  ///
+  /// La sortie demandée fait foi, sauf si le natif en rapporte une TROISIÈME —
+  /// voir [routeApresDemande]. Adopter sans réserve ce que Telecom relit figeait
+  /// le bouton : sa relecture arrive avant qu'il n'ait fini d'appliquer, donc
+  /// elle annonce encore l'ancienne sortie, et l'appui suivant recalculait la
+  /// même cible. Il en fallait deux pour changer de sortie.
   Future<void> setAudioRoute(CallAudioRoute route) async {
-    _audioRoute = route;
-    _isSpeakerOn = speakerphoneForRoute(route);
-    await audio.AudioHelper.applyAudioRoute(route);
+    // Lu avant l'aller-retour : c'est lui qui permet de reconnaître une
+    // relecture périmée, et il aura changé après.
+    final precedente = _audioRoute;
+    final rapportee = await audio.AudioHelper.applyAudioRoute(
+      route,
+      // Telecom ne connaît l'appel que sous l'identifiant qui a ouvert la
+      // session CallKit, jamais sous celui du serveur.
+      telecomCallId: _callKitCallId,
+    );
+    _adopterSortiesOffertes(rapportee.supportedMask);
+    final effective = routeApresDemande(
+      precedente: precedente,
+      demandee: route,
+      rapportee: rapportee.routeName,
+    );
+    _retenirRoute(effective);
     // La sortie audio dit où est le téléphone : sur l'écouteur interne, il est
     // contre l'oreille et l'écran doit s'éteindre à l'approche. Ce point de
     // passage est unique — choix d'ouverture, bouton, casque branché en cours
     // d'appel y aboutissent tous —, donc c'est le seul endroit à prévenir.
-    await CallSessionGuard.instance.updateAudioRoute(route);
-    debugPrint('[CallService] 🔊 Sortie audio: ${route.name}');
+    await CallSessionGuard.instance.updateAudioRoute(effective);
+    debugPrint('[CallService] 🔊 Sortie audio: ${effective.name}');
     notify();
+  }
+
+  /// Retient les sorties que le natif déclare atteignables.
+  ///
+  /// Le masque de Telecom est une meilleure source que l'énumération des
+  /// périphériques, qui n'annonce pas toujours l'écouteur interne. Il ne
+  /// souffre pas du décalage qui affecte la route : il ne change qu'au
+  /// branchement d'un appareil.
+  void _adopterSortiesOffertes(int? masque) {
+    if (masque == null) return;
+    final offertes = routesFromSupportedMask(masque);
+    if (offertes.isNotEmpty) _audioRoutes = offertes;
+  }
+
+  /// Fixe la sortie courante, et l'état du bouton qui en découle.
+  void _retenirRoute(CallAudioRoute route) {
+    _audioRoute = route;
+    _isSpeakerOn = speakerphoneForRoute(route);
   }
 
   /// Choisit la sortie d'ouverture d'un appel et se met à l'écoute des
@@ -119,6 +156,18 @@ extension CallControls on CallService {
       if (resolved != _audioRoute) {
         await setAudioRoute(resolved);
       } else {
+        // Un casque qui se connecte peut faire rebasculer Telecom tout seul :
+        // relire plutôt que supposer que rien n'a bougé. Ici la lecture fait
+        // foi sans réserve — rien n'a été demandé, donc elle ne peut pas être
+        // en retard sur une demande.
+        final lue = await audio.AudioHelper.readAppliedRoute(_callKitCallId);
+        if (lue != null) {
+          _adopterSortiesOffertes(lue.supportedMask);
+          _retenirRoute(resolveAppliedRoute(
+            requested: _audioRoute,
+            reportedName: lue.routeName,
+          ));
+        }
         notify();
       }
     });

@@ -8530,6 +8530,12 @@ abstract class AppLocalizations {
   /// **'Sauvegarde terminée'**
   String get backupSucceeded;
 
+  /// No description provided for @backupAlreadyRunning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une sauvegarde est déjà en cours.'**
+  String get backupAlreadyRunning;
+
   /// No description provided for @backupFailed.
   ///
   /// In fr, this message translates to:
@@ -10743,6 +10749,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Trop de créations de compte. Réessayez plus tard.'**
   String get errCodeRegisterRateLimited;
+
+  /// No description provided for @errCodeInvalidCredentials.
+  ///
+  /// In fr, this message translates to:
+  /// **'Identifiant ou mot de passe incorrect.'**
+  String get errCodeInvalidCredentials;
+
+  /// No description provided for @errCodePasswordIncorrect.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe incorrect.'**
+  String get errCodePasswordIncorrect;
 
   /// No description provided for @errCodeQrSessionExpired.
   ///

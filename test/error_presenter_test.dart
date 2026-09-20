@@ -81,6 +81,13 @@ void main() {
       expect(presenter(fr, e, ErrorDomain.chat), fr.errCodeTrustListEmpty);
     });
 
+    test('1b — identifiants invalides ≠ session expirée', () {
+      final e = TalkyException('Identifiants invalides', 401,
+          code: 'INVALID_CREDENTIALS');
+      expect(presenter(fr, e, ErrorDomain.auth), fr.errCodeInvalidCredentials);
+      expect(presenter(fr, e, ErrorDomain.auth), isNot(fr.errSessionExpiree));
+    });
+
     test('2 — domaine × nature quand le code manque', () {
       final horsLigne = TalkyException('', 0,
           cause: const SocketException('offline'));

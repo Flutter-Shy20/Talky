@@ -4641,6 +4641,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupSucceeded => '备份完成';
 
   @override
+  String get backupAlreadyRunning => '备份正在进行中。';
+
+  @override
   String get backupFailed => '备份失败';
 
   @override
@@ -5901,6 +5904,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errCodeRegisterRateLimited => '注册尝试次数过多。请稍后再试。';
+
+  @override
+  String get errCodeInvalidCredentials => '账号或密码不正确。';
+
+  @override
+  String get errCodePasswordIncorrect => '密码不正确。';
 
   @override
   String get errCodeQrSessionExpired => '此二维码已过期。请重新生成。';

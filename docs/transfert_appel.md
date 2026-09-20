@@ -580,8 +580,10 @@ entre dans l'appel.*
 - [ ] `answer_call` d'un invité en attente → réacheminé vers le chemin join
 - [ ] `call_leave {}`
 - [ ] Relais `group:mute_state` / `group:video_state` par userId pour les sessions (défaut n° 6)
-- [ ] `callSessions` : droit rendu, greffe sur session existante (§ 4.5)
-- [ ] Tests unitaires à mettre à jour : `callSessions.test.js`, `callSessionLeave.test.js`
+- [x] `callSessions` : droit rendu, greffe sur session existante (§ 4.5) — 15/09/2026,
+      avec un identifiant par invitation (`inviteId`)
+- [x] Tests unitaires à mettre à jour : `callSessions.test.js`, `callSessionLeave.test.js`
+      (+ `callSessionRegraft.test.js` sur les vrais handlers)
 
 **Natif**
 - [ ] `joinKind` dans `TalkyFirebaseMessagingService.kt` + `CallIncomingHelper.kt`
@@ -594,7 +596,7 @@ entre dans l'appel.*
 - [ ] `_armSessionJoinTimeout` (20 s)
 - [ ] Grâce de 8 s sur `Disconnected` (défaut n° 4)
 - [ ] Entonnoir `_terminateCall` + suppression de la trace de pile de `bf4c4b4`
-- [ ] `canAddParticipant` recalculé (droit rendu)
+- [x] `canAddParticipant` recalculé (droit rendu) — 15/09/2026, règle dans `canAddToCall`
 - [ ] `call_leave` au lieu de `end_call` en session
 
 ### 10.3 À faire — Lot 2 : le transfert

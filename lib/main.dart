@@ -450,14 +450,18 @@ class _TalkyAppState extends State<TalkyApp> {
           },
           builder: (context, child) {
             final media = MediaQuery.of(context);
-            return ActiveSessionChrome(
-              child: MediaQuery(
-                data: media.copyWith(
-                  textScaler: TextScaler.linear(
-                    AppSettingsSyncService.fontScale,
-                  ),
-                  disableAnimations: AppSettingsSyncService.reduceMotion,
+            // Les réglages d'accessibilité s'appliquent AU-DESSUS du chrome :
+            // imbriqués en dessous, ils repartaient des paddings d'origine et
+            // écrasaient l'inset haut que le bandeau injecte pour se réserver
+            // sa place — l'app bar restait collée en haut, sous le bandeau.
+            return MediaQuery(
+              data: media.copyWith(
+                textScaler: TextScaler.linear(
+                  AppSettingsSyncService.fontScale,
                 ),
+                disableAnimations: AppSettingsSyncService.reduceMotion,
+              ),
+              child: ActiveSessionChrome(
                 child: child ?? const SizedBox.shrink(),
               ),
             );
@@ -634,6 +638,13 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         }
         return RestoreScreen(
           db: chat.repository.dao.db,
+          // Depuis `AuthProvider` et non `chat.repository.myId` : à cet
+          // instant la messagerie n'est pas encore liée — c'est justement ce
+          // que la restauration attend — et son identifiant vaut zéro.
+          alanyaID: Provider.of<AuthProvider>(context, listen: false)
+                  .currentUser
+                  ?.alanyaID ??
+              0,
           target: target,
           keys: ServerBackupKeyProvider((path) async {
             final kid = path.startsWith('/backup/key/')

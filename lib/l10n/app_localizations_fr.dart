@@ -4839,6 +4839,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get backupSucceeded => 'Sauvegarde terminée';
 
   @override
+  String get backupAlreadyRunning => 'Une sauvegarde est déjà en cours.';
+
+  @override
   String get backupFailed => 'La sauvegarde a échoué';
 
   @override
@@ -6198,6 +6201,13 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errCodeRegisterRateLimited =>
       'Trop de créations de compte. Réessayez plus tard.';
+
+  @override
+  String get errCodeInvalidCredentials =>
+      'Identifiant ou mot de passe incorrect.';
+
+  @override
+  String get errCodePasswordIncorrect => 'Mot de passe incorrect.';
 
   @override
   String get errCodeQrSessionExpired =>

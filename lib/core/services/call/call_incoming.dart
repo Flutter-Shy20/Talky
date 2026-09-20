@@ -345,6 +345,27 @@ extension CallIncoming on CallService {
     String? sessionKind,
     String? mode,
   }) async {
+    // L'aperçu de l'appel qu'on est en train de mener n'est pas un autre appel.
+    //
+    // Le plugin le réaffiche dans des cas ordinaires, et la suite de cette
+    // méthode le traitait alors comme un intrus : « occupé », donc on ferme.
+    // Fermer marque l'appel terminé, fait émettre un refus par le plugin, et le
+    // décrochage en cours est perdu des deux côtés. Voir
+    // `previewTargetsCurrentCall`.
+    if (previewTargetsCurrentCall(
+      previewCallId: callId,
+      callStatusName: _status.name,
+      currentCallId: _currentCallId,
+      callKitCallId: _callKitCallId,
+      groupRoomId: _groupRoomId,
+      confSessionId: _confSessionId,
+    )) {
+      debugPrint(
+        '[CallService] 🛡 aperçu CallKit de l\'appel courant ignoré: $callId',
+      );
+      return;
+    }
+
     if (callId.isNotEmpty &&
         (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId))) {
       debugPrint(

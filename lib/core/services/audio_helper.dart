@@ -1,10 +1,24 @@
 import 'dart:async';
 
 import 'package:audio_session/audio_session.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb, debugPrint;
+import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import 'call/call_audio_routes.dart';
+
+/// Ce que le natif rapporte après une demande de sortie audio.
+///
+/// [routeName] est la sortie **réellement** appliquée par Telecom, quand il la
+/// connaît ; [supportedMask] la liste des sorties qu'il déclare atteignables.
+/// Les deux sont nuls quand aucune connexion Telecom ne tient l'appel.
+class AppliedAudioRoute {
+  const AppliedAudioRoute({this.routeName, this.supportedMask});
+
+  final String? routeName;
+  final int? supportedMask;
+}
 
 /// Routage audio WebRTC et session audio « appel » (voiceChat / videoChat).
 class AudioHelper {
@@ -130,15 +144,44 @@ class AudioHelper {
     }
   }
 
-  /// Applique une sortie.
+  static const _callAudioChannel =
+      MethodChannel('com.alanya237.alanya/call_audio');
+
+  static bool get _isAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  /// Applique une sortie, et rend ce que le natif en dit.
   ///
-  /// WebRTC n'expose directement que le haut-parleur ; le Bluetooth a son
-  /// propre appel, et le filaire est choisi par le système dès que le
-  /// haut-parleur est coupé.
-  static Future<void> applyAudioRoute(CallAudioRoute route) async {
-    if (kIsWeb) return;
+  /// Depuis que chaque appel est déclaré à Telecom, c'est le système qui
+  /// possède la route : les demandes adressées à `AudioManager` — ce que fait
+  /// la couche WebRTC — sont ignorées, et le bouton ne changeait plus rien. On
+  /// s'adresse donc à la connexion Telecom quand il y en a une.
+  ///
+  /// Le repli WebRTC reste nécessaire : réunion ou appel sans connexion
+  /// Telecom, Android antérieur à 8, iOS, tests. Là aussi, chaque sortie se
+  /// demande par son nom sur Android — l'ancien couple « haut-parleur oui/non »
+  /// renvoyait « écouteur » vers le casque Bluetooth dès qu'il y en avait un.
+  /// Sur iOS, seule la bascule haut-parleur existe, et `selectAudioOutput` n'y
+  /// comprend rien d'autre : on garde le chemin d'avant.
+  static Future<AppliedAudioRoute> applyAudioRoute(
+    CallAudioRoute route, {
+    String? telecomCallId,
+  }) async {
+    if (kIsWeb) return const AppliedAudioRoute();
+
+    final parTelecom = await _applyViaTelecom(route, telecomCallId);
+    if (parTelecom != null) {
+      debugPrint(
+        '[AudioHelper] 🔊 Sortie audio (Telecom): '
+        '${parTelecom.routeName ?? route.name}',
+      );
+      return parTelecom;
+    }
+
     try {
-      if (route == CallAudioRoute.bluetooth) {
+      if (_isAndroid) {
+        await Helper.selectAudioOutput(webrtcDeviceId(route));
+      } else if (route == CallAudioRoute.bluetooth) {
         await Helper.setSpeakerphoneOnButPreferBluetooth();
       } else {
         await Helper.setSpeakerphoneOn(speakerphoneForRoute(route));
@@ -146,6 +189,60 @@ class AudioHelper {
       debugPrint('[AudioHelper] 🔊 Sortie audio: ${route.name}');
     } catch (e) {
       debugPrint('[AudioHelper] ** applyAudioRoute(${route.name}): $e');
+    }
+    return const AppliedAudioRoute();
+  }
+
+  /// Demande la sortie à la connexion Telecom de [callId].
+  ///
+  /// Rend `null` dès qu'il n'y a pas de connexion — c'est le signal de repli.
+  static Future<AppliedAudioRoute?> _applyViaTelecom(
+    CallAudioRoute route,
+    String? callId,
+  ) async {
+    final id = callId?.trim() ?? '';
+    if (id.isEmpty || !_isAndroid) return null;
+    try {
+      final reponse = await _callAudioChannel.invokeMapMethod<String, dynamic>(
+        'setRoute',
+        {'callId': id, 'route': telecomRouteName(route)},
+      );
+      if (reponse == null) return null;
+      return AppliedAudioRoute(
+        routeName: reponse['route'] as String?,
+        supportedMask: (reponse['available'] as num?)?.toInt(),
+      );
+    } on MissingPluginException {
+      // Build sans le pont natif (tests, ancienne version) : le repli suffit.
+      return null;
+    } catch (e) {
+      debugPrint('[AudioHelper] ** route Telecom (${route.name}): $e');
+      return null;
+    }
+  }
+
+  /// Relit la sortie réellement appliquée, sans rien demander.
+  ///
+  /// Sert quand la liste des périphériques change en cours d'appel : Telecom a
+  /// pu rebasculer tout seul, et l'interface doit suivre.
+  static Future<AppliedAudioRoute?> readAppliedRoute(String? callId) async {
+    final id = callId?.trim() ?? '';
+    if (id.isEmpty || !_isAndroid) return null;
+    try {
+      final reponse = await _callAudioChannel.invokeMapMethod<String, dynamic>(
+        'readRoute',
+        {'callId': id},
+      );
+      if (reponse == null) return null;
+      return AppliedAudioRoute(
+        routeName: reponse['route'] as String?,
+        supportedMask: (reponse['available'] as num?)?.toInt(),
+      );
+    } on MissingPluginException {
+      return null;
+    } catch (e) {
+      debugPrint('[AudioHelper] ** lecture de la route Telecom: $e');
+      return null;
     }
   }
 

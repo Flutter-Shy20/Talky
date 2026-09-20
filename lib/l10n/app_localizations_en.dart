@@ -4788,6 +4788,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupSucceeded => 'Backup complete';
 
   @override
+  String get backupAlreadyRunning => 'A backup is already running.';
+
+  @override
   String get backupFailed => 'The backup failed';
 
   @override
@@ -6129,6 +6132,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errCodeRegisterRateLimited =>
       'Too many sign-up attempts. Try again later.';
+
+  @override
+  String get errCodeInvalidCredentials => 'Incorrect sign-in details.';
+
+  @override
+  String get errCodePasswordIncorrect => 'Incorrect password.';
 
   @override
   String get errCodeQrSessionExpired =>

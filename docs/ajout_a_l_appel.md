@@ -11,7 +11,7 @@ en laissant les deux autres continuer.
 | Règle | Détail |
 |---|---|
 | Taille | 3 participants maximum. Ce n'est **pas** un appel de groupe. |
-| Un seul ajout | Un appel donne droit à **un** ajout. Le premier des deux participants qui s'en sert le consomme définitivement. |
+| Un ajout à la fois | Une seule invitation en vol. Dès qu'on retombe à deux, le droit revient aux deux restants — l'ancien invité compris : on peut ajouter ou transférer à nouveau, autant de fois que voulu. |
 | Aucune coupure | La connexion entre les deux participants d'origine n'est ni fermée ni renégociée. |
 | Pas de validation | L'autre participant est notifié, son accord n'est pas demandé. |
 | Raccrocher = partir | Le bouton rouge ne retire que celui qui appuie. L'appel se termine quand il ne reste qu'une personne. |
@@ -21,15 +21,22 @@ en laissant les deux autres continuer.
 ## Le droit d'ajout
 
 ```
-DISPONIBLE ──1er appui──> VERROUILLÉ ──invité entre──> CONSOMMÉ (définitif)
-     ^                         │
-     └──── échec / annulation ──┘
+DISPONIBLE ──appui──> VERROUILLÉ ──invité entre──> ÉPUISÉ (trois présents)
+   ^  ^                   │                              │
+   │  └─ échec/annulation ┘                              │
+   └──────────────── quelqu'un part, on retombe à deux ──┘
 ```
 
-- `CONSOMMÉ` est définitif : le bouton ne réapparaît pas après un départ, ni quand il ne reste
-  que deux personnes.
+- Le droit est rendu dès qu'on retombe à deux, pour les deux restants, ancien invité compris
+  (`docs/transfert_appel.md` § 4.5). L'invitation suivante se greffe sur la même session :
+  le relais média, la propriété d'appareil et l'historique y sont déjà rangés.
 - Tout échec (refus, occupé, sans réponse, annulation) rend le droit à `DISPONIBLE`, **pour les
-  deux participants**. Sans cela un simple refus condamnerait l'appel.
+  deux participants**. Sans cela un simple refus condamnerait l'appel. Tant que personne n'est
+  encore entré, l'échec détruit la session ; ensuite, il n'en retire que l'invité.
+- Chaque invitation porte son identifiant (`inviteId`) : le `sessionId` à la première,
+  `<sessionId>_r<n>` ensuite. C'est lui que le téléphone de l'invité présente à CallKit et
+  marque terminé — réinvité dans une session qu'il a quittée, il ne tombe pas sur la marque
+  de son départ.
 
 > **Le verrou est posé de façon synchrone, dès l'entrée du handler `call_add_participant`,
 > avant tout `await`.** C'est ce qui arbitre deux appuis simultanés : la boucle Node étant
@@ -70,10 +77,10 @@ au démarrage à froid — un invité réveillé par notification n'a rien à m�
 | Événement | Destinataire | Charge | Rôle |
 |---|---|---|---|
 | `call_add_pending` | les 2 présents | `{ sessionId, callId, invitee, byUserId }` | Affiche la tuile en sonnerie, éteint le bouton. |
-| `call_conf_invite` | invité | `{ sessionId, callId, from, peers, isVideo }` | Fait sonner. Doublé d'un FCM. |
+| `call_conf_invite` | invité | `{ sessionId, inviteId, callId, from, peers, isVideo }` | Fait sonner. Doublé d'un FCM dont le `callId` est l'`inviteId`. |
 | `call_conf_joined` | présents | `{ sessionId, user }` | Déclenche l'offre de chaque présent vers l'invité. |
 | `call_conf_peers` | invité | `{ sessionId, isVideo, peers }` | Liste qui va lui offrir. |
-| `call_conf_failed` | présents | `{ sessionId, userId, reason }` | Retire la tuile, rend le droit. `reason` : `declined` \| `busy` \| `offline` \| `no_answer` \| `cancelled`. |
+| `call_conf_failed` | présents | `{ sessionId, userId, reason, keepSession }` | Retire la tuile, rend le droit. `reason` : `declined` \| `busy` \| `offline` \| `no_answer` \| `cancelled`. `keepSession` : la session continue sans l'invité. |
 | `call_conf_left` | restants | `{ sessionId, userId, remaining }` | Un participant s'est retiré. `remaining` permet de repasser à l'affichage à deux. |
 | `call_add_rejected` | demandeur | `{ code }` | `ADD_ALREADY_USED` \| `TARGET_BUSY` \| `TARGET_BLOCKED` \| `NOT_IN_CALL` \| `TARGET_SELF` \| `TARGET_ALREADY_IN_CALL` \| `INVALID` \| `INTERNAL`. |
 
@@ -144,8 +151,8 @@ L'autre participant reçoit une version neutre des échecs : il n'a pas lancé l
 
 **Côté invité** : écran d'appel entrant standard, sous-titre « vous ajoute à un appel avec Awa ».
 Même charge FCM qu'un appel ordinaire, augmentée de l'identifiant de session et des présents —
-la couche native Android n'a rien à apprendre, seul le libellé change. L'invité n'a aucun droit
-particulier : il ne peut pas ajouter, il peut partir.
+la couche native Android n'a rien à apprendre, seul le libellé change. Une fois entré, l'invité
+est un participant comme les autres : retombé à deux, il peut ajouter ou transférer à son tour.
 
 ## Cas limites
 
@@ -156,13 +163,14 @@ particulier : il ne peut pas ajouter, il peut partir.
 | Invité app fermée | FCM + CallKit, comme un appel entrant ordinaire. |
 | Invité ne répond pas | Expiration 45 s, tuile retirée, droit rendu. |
 | Invité refuse / invitant annule | Tuile retirée, droit rendu. |
-| L'autre raccroche pendant la sonnerie | L'invitation tient. Si l'invité accepte → appel à 2 avec l'invitant. Droit reste consommé. |
-| L'invitant raccroche pendant la sonnerie | Invitation annulée, appel terminé. |
+| Un présent raccroche pendant la sonnerie | Invitation annulée, appel terminé : il ne resterait qu'une personne. |
 | Perte réseau à 3 | Délai de grâce habituel. Les deux autres continuent. |
 | Blocage invité ↔ un présent | Refus avant toute sonnerie, quel que soit le sens et la paire. |
 | Un 4ᵉ appelle l'un des 3 | Occupé — à condition d'avoir corrigé le marquage d'état (point 3). |
 | Il ne reste qu'une personne | L'appel se termine automatiquement. |
 | Appel vidéo à 3 | Autorisé (limite vidéo de l'app : 4). |
+| Retombé à deux | Le bouton revient chez les deux restants ; l'invitation suivante se greffe sur la session. |
+| Réinviter quelqu'un déjà passé dans l'appel | Possible, y compris aussitôt : nouvelle invitation, nouvel identifiant, même session. |
 
 ## Ordre d'implémentation
 
@@ -187,11 +195,16 @@ Les cinq lots sont implémentés (03/08/2026).
 - **Non vérifié** : aucun essai de bout en bout avec trois appareils réels. La migration
   `036` n'a pas été appliquée. Le maillage à trois, la sonnerie de l'invité et le
   démarrage à froid par notification restent à éprouver sur le terrain.
+- **15/09/2026** — le droit d'ajout n'est plus consommé définitivement : il est rendu au
+  retour à deux, et l'invitation suivante se greffe sur la même session (transfert en
+  cascade, `docs/transfert_appel.md` § 4.5). Vérifié par tests serveur et app ; pas encore
+  éprouvé sur trois appareils.
 
 ### Fichiers ajoutés
 
 - `backend/src/socket/state/callSessions.js` — sessions et droit d'ajout (+ tests)
 - `backend/src/socket/handlers/callSessionLeave.test.js` — départs et solde d'invitation
+- `backend/src/socket/handlers/callSessionRegraft.test.js` — greffe au retour à deux, sur les vrais handlers
 - `backend/migrations/036_call_session.sql`
 - `frontend/lib/core/services/call/call_conference.dart` — bascule 1-à-1 → maillage
 - `frontend/lib/widgets/calls/add_to_call_sheet.dart` — feuille de sélection

@@ -194,6 +194,35 @@ extension CallOneToOne on CallService {
     final offer = _pendingOffer!;
     _pendingOffer = null;
 
+    // L'appel qu'on décroche peut disparaître pendant qu'on le décroche : un
+    // aperçu CallKit mal interprété, un `call_ended` en retard, un refus venu
+    // d'un autre appareil. Rien ici ne le revérifiait, et la suite continuait
+    // sur un état remis à zéro — voir `answerStillValid`.
+    final callIdAuDepart = _currentCallId;
+    Future<bool> appelToujoursLa() async {
+      if (answerStillValid(
+        callStatusName: _status.name,
+        callIdAtStart: callIdAuDepart,
+        currentCallId: _currentCallId,
+        endingCall: _isEndingCall || _callEndedByUs,
+      )) {
+        return true;
+      }
+      debugPrint(
+        '[CallService] 🛡 décrochage abandonné : l\'appel $callIdAuDepart a '
+        'disparu en route (statut=$_status courant=$_currentCallId)',
+      );
+      // Rien à annoncer au serveur ni au pair : celui qui a démonté l'appel
+      // s'en est déjà chargé. On ne touche pas non plus à la pile média si un
+      // autre appel l'a reprise — sinon la capture qu'on vient d'ouvrir est la
+      // nôtre, et le micro resterait chaud.
+      if (_currentCallId == null &&
+          (_status == CallStatus.idle || _status == CallStatus.ended)) {
+        await _webrtc.dispose();
+      }
+      return false;
+    }
+
     try {
       final type = _isVideo ? CallType.video : CallType.audio;
       _webrtc.onLocalStream  = (_) { notify(); };
@@ -218,6 +247,7 @@ extension CallOneToOne on CallService {
           _apiClient.ensureSocketReady().catchError((_) => false);
 
       await mediaFuture;
+      if (!await appelToujoursLa()) return;
       notify();
 
       await _initAudioRoute(isVideo: _isVideo);
@@ -233,6 +263,7 @@ extension CallOneToOne on CallService {
         return;
       }
       debugPrint('[CallService] !! Socket connecté, envoi answer');
+      if (!await appelToujoursLa()) return;
 
       await _webrtc.buildPeerConnection(type, iceServers: await iceFuture);
 
@@ -276,6 +307,9 @@ extension CallOneToOne on CallService {
       );
 
       final answer = await _webrtc.createAnswer();
+      // Dernier contrôle avant d'écrire chez les autres : au-delà, la réponse
+      // part sur le socket et engage le serveur.
+      if (!await appelToujoursLa()) return;
 
       // La réponse WebRTC est le seul message que l'appelant attend, et elle
       // partait sans accusé ni file — contrairement au raccrochage, qui a reçu
@@ -327,6 +361,11 @@ extension CallOneToOne on CallService {
           return;
         }
       }
+
+      // L'accusé a pu se faire attendre : sans ce contrôle, un appel démonté
+      // entre-temps repassait « connecté » sous un identifiant fabriqué par
+      // `_ensureCallId`, et la fin d'appel du serveur ne le reconnaissait plus.
+      if (!await appelToujoursLa()) return;
 
       _status = CallStatus.connected;
       _startDurationTimer();

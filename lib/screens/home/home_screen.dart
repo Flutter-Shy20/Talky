@@ -13,6 +13,7 @@ import '../../core/services/local_cache_repository.dart';
 import '../../core/services/realtime_sync_service.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/call/call_history_rules.dart';
+import '../../core/services/call/call_terminal_guards.dart';
 import '../../core/services/call/ended_call_registry.dart';
 import '../../core/services/callkit_service.dart';
 import '../../core/services/local_notification_helper.dart';
@@ -41,6 +42,22 @@ class HomeScreen extends StatefulWidget {
   /// Onglet initial (0=discussions, 1=appels, 2=statuts…).
   final int initialTab;
 
+  /// Demande à l'accueil **déjà affiché** de changer d'onglet.
+  ///
+  /// ── Pourquoi ce détour plutôt qu'un `HomeScreen(initialTab: …)` empilé ──
+  ///
+  /// L'accueil est rendu par l'`AuthWrapper`, à la racine de la pile. En
+  /// empiler un second exemplaire par-dessus laisse le premier **monté** :
+  /// deux abonnements aux actions de notification, deux écouteurs de
+  /// `CallService`, et chaque action traitée deux fois. Le défaut est
+  /// silencieux et pénible à diagnostiquer.
+  ///
+  /// On dépile donc jusqu'à la racine, et on demande à l'exemplaire vivant de
+  /// se déplacer.
+  static final ValueNotifier<int?> tabRequest = ValueNotifier<int?>(null);
+
+  static void requestTab(int index) => tabRequest.value = index;
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -58,6 +75,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   StreamSubscription<NotificationAction>? _notifActionSub;
   Timer? _resumeSyncDebounce;
+
+  /// Dernier état de cycle de vie reçu.
+  ///
+  /// Flutter rejoue les états intermédiaires : `hidden` est traversé aussi bien
+  /// en partant qu'en revenant. Sans savoir d'où l'on vient, on ne peut pas les
+  /// distinguer — voir `isBackgroundDeparture`.
+  AppLifecycleState? _dernierEtatCycleDeVie;
 
   static const _kCallsVisitKey = 'nav_calls_last_visit_ms';
   DateTime? _callsLastVisit;
@@ -82,6 +106,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final tab = widget.initialTab.clamp(0, _screens.length - 1);
     _selectedIndex = tab;
     _pageController = PageController(initialPage: tab);
+    HomeScreen.tabRequest.addListener(_onTabRequested);
     unawaited(_loadCallsWatermark());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -112,6 +137,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _pageController.dispose();
     _callService.removeListener(_onCallStatusChanged);
     _notifActionSub?.cancel();
+    HomeScreen.tabRequest.removeListener(_onTabRequested);
     super.dispose();
   }
 
@@ -161,25 +187,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final precedent = _dernierEtatCycleDeVie;
+    _dernierEtatCycleDeVie = state;
+
     if (state == AppLifecycleState.resumed) {
       _onForegroundResumed();
-    } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden ||
-        state == AppLifecycleState.detached) {
-      // Ne pas traiter `inactive` (ombre de notifs, transition iOS) comme
-      // background : sinon la suppression push est levée alors que le chat
-      // est encore ouvert → notif pour la conversation active.
-      Provider.of<ChatProvider>(context, listen: false)
-          .repository
-          .syncPushSuppressionForLifecycle(false);
-      _syncPushDeviceState(foreground: false);
-      // Entrant qui sonne au premier plan : basculer sur CallKit pour rester
-      // décrochable en arrière-plan et ne pas laisser la sonnerie Dart tourner.
-      unawaited(
-        Provider.of<CallService>(context, listen: false)
-            .handleForegroundIncomingBackgrounded(),
-      );
+      return;
     }
+    // Ne pas traiter `inactive` (ombre de notifs, transition iOS) comme
+    // background : sinon la suppression push est levée alors que le chat est
+    // encore ouvert → notif pour la conversation active.
+    //
+    // Et surtout ne pas traiter le `hidden` du RETOUR comme un départ : c'est
+    // lui qui rebasculait l'appel entrant vers CallKit à l'instant du
+    // décrochage, faisant perdre l'appel des deux côtés. Voir
+    // `isBackgroundDeparture`.
+    if (!isBackgroundDeparture(
+      stateName: state.name,
+      previousStateName: precedent?.name,
+    )) {
+      return;
+    }
+
+    Provider.of<ChatProvider>(context, listen: false)
+        .repository
+        .syncPushSuppressionForLifecycle(false);
+    _syncPushDeviceState(foreground: false);
+    // Entrant qui sonne au premier plan : basculer sur CallKit pour rester
+    // décrochable en arrière-plan et ne pas laisser la sonnerie Dart tourner.
+    unawaited(
+      Provider.of<CallService>(context, listen: false)
+          .handleForegroundIncomingBackgrounded(),
+    );
   }
 
   void _syncPushDeviceState({required bool foreground}) {
@@ -486,6 +525,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else if (notif.type == 'meeting_invite') {
       _showInviteSnackBar(notif);
     }
+  }
+
+  /// Honore une demande venue d'ailleurs, puis la consomme.
+  ///
+  /// La remise à `null` déclenche une seconde notification : la garde évite
+  /// d'y répondre, et laisse la demande suivante repartir d'un état propre.
+  void _onTabRequested() {
+    final index = HomeScreen.tabRequest.value;
+    if (index == null || !mounted) return;
+    _switchToTab(index.clamp(0, _screens.length - 1));
+    HomeScreen.tabRequest.value = null;
   }
 
   void _switchToTab(int index) {
