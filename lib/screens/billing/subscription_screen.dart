@@ -149,7 +149,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ? l10n.subscriptionRenewAmount(formatPlusAmount(
                   context, offer!.planByCode(period?.plan)!.price))
               : l10n.plusRenew,
-          _renewPlan ?? period?.plan,
+          period?.plan,
         ),
       PlusStatus.lapsed => (l10n.plusResubscribe, null),
       PlusStatus.upgrade || PlusStatus.grace => (l10n.plusCardDiscover, null),
