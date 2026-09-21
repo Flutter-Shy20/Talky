@@ -2001,6 +2001,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get missed => 'Missed';
 
   @override
+  String voicemailPeerUnavailable(String name) {
+    return '$name is unavailable';
+  }
+
+  @override
+  String get voicemailLeaveMessage =>
+      'Leave a voice message — it will land in your conversation.';
+
+  @override
+  String get voicemailRecord => 'Record';
+
+  @override
+  String get voicemailSend => 'Send';
+
+  @override
+  String get voicemailDiscard => 'Discard';
+
+  @override
+  String get voicemailNotNow => 'Not now';
+
+  @override
+  String get voicemailSent => 'Message sent';
+
+  @override
   String get voicemailCallStatus => 'Voicemail';
 
   @override

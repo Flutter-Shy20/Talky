@@ -3724,6 +3724,48 @@ abstract class AppLocalizations {
   /// **'Manqué'**
   String get missed;
 
+  /// Titre de la feuille de répondeur, côté appelant. L'annonce est générique et composée par le client : le serveur n'envoie aucun texte.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est indisponible'**
+  String voicemailPeerUnavailable(String name);
+
+  /// No description provided for @voicemailLeaveMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Laissez un message vocal, il le recevra dans votre conversation.'**
+  String get voicemailLeaveMessage;
+
+  /// No description provided for @voicemailRecord.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get voicemailRecord;
+
+  /// No description provided for @voicemailSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer'**
+  String get voicemailSend;
+
+  /// No description provided for @voicemailDiscard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get voicemailDiscard;
+
+  /// No description provided for @voicemailNotNow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas maintenant'**
+  String get voicemailNotNow;
+
+  /// No description provided for @voicemailSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Message envoyé'**
+  String get voicemailSent;
+
   /// Journal d'appels, statut 4 : l'appel a été renvoyé au répondeur et le téléphone n'a jamais sonné. Distinct de « Manqué ».
   ///
   /// In fr, this message translates to:

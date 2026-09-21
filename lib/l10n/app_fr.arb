@@ -1013,6 +1013,17 @@
   "number": "Numéro",
   "back": "Retour",
   "missed": "Manqué",
+  "voicemailPeerUnavailable": "{name} est indisponible",
+  "@voicemailPeerUnavailable": {
+    "description": "Titre de la feuille de répondeur, côté appelant. L'annonce est générique et composée par le client : le serveur n'envoie aucun texte.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "voicemailLeaveMessage": "Laissez un message vocal, il le recevra dans votre conversation.",
+  "voicemailRecord": "Enregistrer",
+  "voicemailSend": "Envoyer",
+  "voicemailDiscard": "Annuler",
+  "voicemailNotNow": "Pas maintenant",
+  "voicemailSent": "Message envoyé",
   "voicemailCallStatus": "Répondeur",
   "@voicemailCallStatus": {
     "description": "Journal d'appels, statut 4 : l'appel a été renvoyé au répondeur et le téléphone n'a jamais sonné. Distinct de « Manqué »."

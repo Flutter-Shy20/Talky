@@ -72,6 +72,31 @@ extension CallUi on CallService {
     }
   }
 
+  /// Ouvre la feuille « laisser un message », après un `call_voicemail`.
+  ///
+  /// À n'appeler qu'une fois `_terminateCall()` **terminé**. L'appel sortant a
+  /// acquis le micro et basculé la session audio en catégorie `call` avant même
+  /// d'émettre `call_user` ; démarrer l'enregistreur avant que
+  /// `_releaseCallSession` n'ait rendu cette session donne un fichier en bande
+  /// téléphonique sur Android, et un échec sec sur iOS.
+  ///
+  /// Le contexte du navigateur racine suffit : `MultiProvider` est monté
+  /// au-dessus de `MaterialApp`, donc `ChatProvider` y est visible.
+  Future<void> showVoicemailSheet({
+    required int peerUserId,
+    required String peerName,
+    int? conversationID,
+  }) async {
+    final navigator = appNavigator;
+    if (navigator == null) return;
+    await showVoicemailRecorder(
+      context: navigator.context,
+      peerName: peerName,
+      peerUserId: peerUserId,
+      conversationID: conversationID,
+    );
+  }
+
   /// Ouvre l'écran plein (depuis n'importe quel contexte, y compris la bannière).
   Future<void> navigateToCallUi([BuildContext? context]) async {
     if (context != null && !context.mounted) return;

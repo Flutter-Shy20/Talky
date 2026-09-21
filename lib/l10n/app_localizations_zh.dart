@@ -1938,6 +1938,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get missed => '未接';
 
   @override
+  String voicemailPeerUnavailable(String name) {
+    return '$name 暂时无法接听';
+  }
+
+  @override
+  String get voicemailLeaveMessage => '留下语音留言，对方会在你们的对话中收到。';
+
+  @override
+  String get voicemailRecord => '录音';
+
+  @override
+  String get voicemailSend => '发送';
+
+  @override
+  String get voicemailDiscard => '取消';
+
+  @override
+  String get voicemailNotNow => '暂不留言';
+
+  @override
+  String get voicemailSent => '留言已发送';
+
+  @override
   String get voicemailCallStatus => '语音信箱';
 
   @override
