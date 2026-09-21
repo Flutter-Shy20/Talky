@@ -383,6 +383,38 @@ extension AuthApi on TalkyApiClient {
     return DndSchedule.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
+  /// Planification du répondeur. Distincte du « Ne pas déranger » ci-dessus :
+  /// celui-ci ne coupe que les notifications, celle-là empêche le téléphone de
+  /// sonner.
+  Future<VoicemailSchedule> getVoicemailSchedule() async {
+    final data = await _handleRequest(
+      () => _client.get(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/voicemail-schedule'),
+        headers: _headers,
+      ),
+    );
+    return VoicemailSchedule.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  /// Mise à jour partielle. `null` explicite et clé absente ne disent pas la
+  /// même chose : `{'untilAt': null}` éteint l'activation ponctuelle, une clé
+  /// omise la laisse telle quelle.
+  ///
+  /// Les dates partent en UTC : l'échéance est calculée sur l'appareil, en
+  /// heure murale locale, et le serveur ne la re-dérive jamais.
+  Future<VoicemailSchedule> patchVoicemailSchedule(
+    Map<String, dynamic> patch,
+  ) async {
+    final data = await _handleRequest(
+      () => _client.patch(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/voicemail-schedule'),
+        headers: _headers,
+        body: jsonEncode(patch),
+      ),
+    );
+    return VoicemailSchedule.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
   Future<AccountDeletionSchedule> deleteAccount(String password) async {
     final data = await _handleRequest(
       () => _client.delete(

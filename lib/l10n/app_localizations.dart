@@ -3724,6 +3724,12 @@ abstract class AppLocalizations {
   /// **'Manqué'**
   String get missed;
 
+  /// Journal d'appels, statut 4 : l'appel a été renvoyé au répondeur et le téléphone n'a jamais sonné. Distinct de « Manqué ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur'**
+  String get voicemailCallStatus;
+
   /// No description provided for @rejected.
   ///
   /// In fr, this message translates to:

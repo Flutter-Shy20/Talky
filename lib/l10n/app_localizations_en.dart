@@ -2001,6 +2001,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get missed => 'Missed';
 
   @override
+  String get voicemailCallStatus => 'Voicemail';
+
+  @override
   String get rejected => 'Rejected';
 
   @override

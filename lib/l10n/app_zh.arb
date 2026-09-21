@@ -620,6 +620,7 @@
   "number": "号码",
   "back": "返回",
   "missed": "未接",
+  "voicemailCallStatus": "语音信箱",
   "rejected": "已拒接",
   "links": "链接",
   "linkNoun": "链接",

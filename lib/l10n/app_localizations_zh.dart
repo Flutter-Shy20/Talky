@@ -1938,6 +1938,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get missed => '未接';
 
   @override
+  String get voicemailCallStatus => '语音信箱';
+
+  @override
   String get rejected => '已拒接';
 
   @override

@@ -1013,6 +1013,10 @@
   "number": "Numéro",
   "back": "Retour",
   "missed": "Manqué",
+  "voicemailCallStatus": "Répondeur",
+  "@voicemailCallStatus": {
+    "description": "Journal d'appels, statut 4 : l'appel a été renvoyé au répondeur et le téléphone n'a jamais sonné. Distinct de « Manqué »."
+  },
   "rejected": "Rejeté",
   "links": "Liens",
   "linkNoun": "Lien",

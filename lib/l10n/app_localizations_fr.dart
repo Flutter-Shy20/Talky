@@ -2020,6 +2020,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get missed => 'Manqué';
 
   @override
+  String get voicemailCallStatus => 'Répondeur';
+
+  @override
   String get rejected => 'Rejeté';
 
   @override
