@@ -30,6 +30,16 @@ bool callWasAnswered(int status) => status == 1;
 /// l'écran, pas dans le journal.
 bool callWasNotAnswered(int status) => !callWasAnswered(status);
 
+/// True si l'appel a été renvoyé au répondeur du destinataire (statut 4).
+///
+/// Sous-ensemble de [callWasNotAnswered], volontairement : l'appel n'a bien
+/// pas abouti, il compte donc dans le badge d'appels manqués de l'accueil.
+/// Mais la LIGNE du journal doit le dire autrement — « Manqué » sous-entend
+/// qu'on aurait pu décrocher, alors qu'ici le téléphone n'a jamais sonné. Sans
+/// cette distinction à l'affichage, la fonctionnalité serait invisible à
+/// l'endroit précis où elle devrait le plus se voir.
+bool callWentToVoicemail(int status) => status == 4;
+
 /// True si le curseur `before` doit accompagner la requête.
 ///
 /// Le garde d'origine était `before > 0`, ce qui confond un `idCall` valant 0

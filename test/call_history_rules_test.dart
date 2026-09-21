@@ -109,6 +109,35 @@ void main() {
             'autorise l\'affichage d\'une durée',
       );
     });
+
+    test('le renvoi au répondeur n\'est pas un décrochage', () {
+      expect(callWasAnswered(4), isFalse);
+      expect(
+        callWasNotAnswered(4),
+        isTrue,
+        reason: 'l\'appel n\'a pas abouti : il compte dans le badge d\'appels '
+            'manqués comme les autres',
+      );
+    });
+  });
+
+  group('renvoi au répondeur (statut 4)', () {
+    test('seul le statut 4 désigne un renvoi', () {
+      expect(callWentToVoicemail(4), isTrue);
+      expect(callWentToVoicemail(0), isFalse);
+      expect(callWentToVoicemail(1), isFalse);
+      expect(callWentToVoicemail(2), isFalse);
+      expect(callWentToVoicemail(3), isFalse);
+    });
+
+    test('il se distingue de « manqué » à l\'affichage', () {
+      // Les deux prédicats sont vrais en même temps, et c'est voulu : l'appel
+      // n'a pas abouti (badge), mais la ligne ne doit pas dire « Manqué »,
+      // qui sous-entend qu'on aurait pu décrocher. Le téléphone n'a jamais
+      // sonné.
+      expect(callWasNotAnswered(4) && callWentToVoicemail(4), isTrue);
+      expect(callWasNotAnswered(3) && callWentToVoicemail(3), isFalse);
+    });
   });
 
   group('sens de l\'appel (A4)', () {
