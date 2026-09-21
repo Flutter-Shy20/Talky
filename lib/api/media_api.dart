@@ -48,7 +48,30 @@ extension MediaApi on TalkyApiClient {
   }) async {
     final ticket = await _requestUploadTicket(file, kind: kind);
     if (ticket != null) {
-      return _putDirect(file, ticket, timeout: timeout, onProgress: onProgress);
+      try {
+        return await _putDirect(
+          file,
+          ticket,
+          timeout: timeout,
+          onProgress: onProgress,
+        );
+      } on TalkyException catch (e) {
+        // Lien signé périmé (TTL 15 min) ou refusé par le stockage : un nouveau
+        // ticket, une seule fois. Un 413 / 400 de validation ne passe pas ici —
+        // ils sont levés avant le PUT, à la demande de ticket.
+        if (e.statusCode == 400 || e.statusCode == 403) {
+          final retry = await _requestUploadTicket(file, kind: kind);
+          if (retry != null) {
+            return _putDirect(
+              file,
+              retry,
+              timeout: timeout,
+              onProgress: onProgress,
+            );
+          }
+        }
+        rethrow;
+      }
     }
     return _postMultipart(
       file,

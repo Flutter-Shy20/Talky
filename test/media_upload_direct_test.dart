@@ -117,7 +117,29 @@ void main() {
     expect(requests, hasLength(1));
   });
 
-  test('refus du stockage (403) : erreur remontée avec son statut', () async {
+  test('lien d’envoi expiré (403) : un nouveau ticket, puis le PUT aboutit', () async {
+    var puts = 0;
+    var tickets = 0;
+    final api = apiWith((req) async {
+      if (req.url.path.endsWith('/upload/ticket')) {
+        tickets += 1;
+        return http.Response(jsonEncode(_ticketDirect()), 200);
+      }
+      puts += 1;
+      if (puts == 1) {
+        return http.Response('<Error><Code>AccessDenied</Code></Error>', 403);
+      }
+      return http.Response('', 200);
+    });
+
+    final res = await api.uploadMedia(video);
+
+    expect(tickets, 2);
+    expect(puts, 2);
+    expect(res['url'], _ticketDirect()['url']);
+  });
+
+  test('refus du stockage (403) persistant : erreur remontée après un seul retry', () async {
     final api = apiWith((req) async {
       if (req.url.path.endsWith('/upload/ticket')) {
         return http.Response(jsonEncode(_ticketDirect()), 200);
@@ -129,6 +151,8 @@ void main() {
       api.uploadMedia(video),
       throwsA(isA<TalkyException>().having((e) => e.statusCode, 'statusCode', 403)),
     );
+    expect(requests.where((r) => r.url.path.endsWith('/upload/ticket')), hasLength(2));
+    expect(requests.where((r) => r.method == 'PUT'), hasLength(2));
   });
 
   test('avatar : ticket de type avatar, repli sur /upload/avatar', () async {
