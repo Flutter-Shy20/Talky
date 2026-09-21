@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../core/services/billing/entitlement_service.dart';
 import '../core/services/storage_service.dart';
 import '../core/services/session_end_reason.dart';
 import '../core/services/call/pending_call_reject_store.dart';
@@ -118,8 +119,7 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final userData = await _apiClient.getMe();
-      _currentUser = User.fromJson(userData);
-      await _storage.saveUser(_currentUser!);
+      await _applyMe(userData);
       currentSessionEndReason = SessionEndReason.none;
     } on TalkyException catch (e) {
       if (e.statusCode == 401 || e.statusCode == 403) {
@@ -163,8 +163,7 @@ class AuthProvider extends ChangeNotifier {
         if (!refreshed) return false;
       }
       final userData = await _apiClient.getMe();
-      _currentUser = User.fromJson(userData);
-      await _storage.saveUser(_currentUser!);
+      await _applyMe(userData);
       currentSessionEndReason = SessionEndReason.none;
       if (_apiClient.accessToken != null) {
         await PendingCallRejectStore.syncNativeCredentials(
@@ -181,6 +180,15 @@ class AuthProvider extends ChangeNotifier {
       AppLog.w('AuthProvider', 'recoverSession error', e, st);
       return _currentUser != null;
     }
+  }
+
+  /// Le profil `/auth/me` : l'utilisateur, et ses droits Alanya Plus qui
+  /// voyagent avec lui. Seul chemin d'écriture du profil courant — un site qui
+  /// l'écrirait à part laisserait des droits périmés à côté d'un profil frais.
+  Future<void> _applyMe(Map<String, dynamic> me) async {
+    _currentUser = User.fromJson(me);
+    await _storage.saveUser(_currentUser!);
+    await EntitlementService.maybeInstance?.applyFromProfile(me);
   }
 
   Future<void> _invalidateSession({required SessionEndReason reason}) async {
@@ -211,8 +219,7 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final userData = await _apiClient.getMe();
-      _currentUser = User.fromJson(userData);
-      await _storage.saveUser(_currentUser!);
+      await _applyMe(userData);
       currentSessionEndReason = SessionEndReason.none;
       notifyListeners();
     } on TalkyException catch (e) {
@@ -256,8 +263,7 @@ class AuthProvider extends ChangeNotifier {
       );
 
       final userData = await _apiClient.getMe();
-      _currentUser = User.fromJson(userData);
-      await _storage.saveUser(_currentUser!);
+      await _applyMe(userData);
       currentSessionEndReason = SessionEndReason.none;
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } catch (e) {
@@ -290,8 +296,7 @@ class AuthProvider extends ChangeNotifier {
       );
 
       final userData = await _apiClient.getMe();
-      _currentUser = User.fromJson(userData);
-      await _storage.saveUser(_currentUser!);
+      await _applyMe(userData);
       currentSessionEndReason = SessionEndReason.none;
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } catch (e) {
@@ -346,8 +351,7 @@ class AuthProvider extends ChangeNotifier {
         userData = Map<String, dynamic>.from(raw);
       }
 
-      _currentUser = User.fromJson(userData);
-      await _storage.saveUser(_currentUser!);
+      await _applyMe(userData);
       _pendingOnboardingAfterRegister = true;
       // Drapeau persistant : survit à une fermeture de l'app en plein onboarding,
       // contrairement à `_pendingOnboardingAfterRegister` qui vit en mémoire.
@@ -468,8 +472,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> refreshProfile() async {
     try {
       final data = await _apiClient.getMe();
-      _currentUser = User.fromJson(data);
-      await _storage.saveUser(_currentUser!);
+      await _applyMe(data);
       notifyListeners();
     } on TalkyException catch (e) {
       if (e.statusCode == 401 || e.statusCode == 403) rethrow;
@@ -485,6 +488,8 @@ class AuthProvider extends ChangeNotifier {
     await _detachPushDevice();
     _apiClient.logout();
     await _storage.clearAll();
+    // Les droits d'un compte ne passent pas au suivant.
+    await EntitlementService.maybeInstance?.clear();
     _currentUser = null;
     _pendingOnboardingAfterRegister = false;
     notifyListeners();
@@ -503,6 +508,8 @@ class AuthProvider extends ChangeNotifier {
     await _detachPushDevice();
     _apiClient.logout();
     await _storage.clearAll();
+    // Les droits d'un compte ne passent pas au suivant.
+    await EntitlementService.maybeInstance?.clear();
     _currentUser = null;
     _pendingOnboardingAfterRegister = false;
     notifyListeners();

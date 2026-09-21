@@ -16,6 +16,8 @@ import 'providers/chat_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
+import 'core/services/billing/entitlement_service.dart';
+import 'core/services/billing/entitlements.dart';
 import 'core/db/app_database.dart';
 import 'dart:convert';
 import 'core/services/backup/restore_state.dart';
@@ -261,6 +263,11 @@ class _TalkyAppState extends State<TalkyApp> {
   // écran de réglages ne l'ait lu.
   late final TranslationSettings _translationSettings = TranslationSettings()
     ..load();
+  // Droits Alanya Plus : instanciés ici et non paresseusement, pour que les
+  // services sans contexte (traduction, sonneries) lisent le cache dès le
+  // premier message reçu.
+  late final EntitlementService _entitlements =
+      EntitlementService(api: _apiClient)..loadFromCache();
   late final MessageTranslationService _translation =
       MessageTranslationService(
     dao: ChatDao(_database),
@@ -309,6 +316,7 @@ class _TalkyAppState extends State<TalkyApp> {
         ChangeNotifierProvider(
             create: (_) => MediaDownloadPreferences()..load()),
         Provider<TalkyApiClient>.value(value: _apiClient),
+        ChangeNotifierProvider<EntitlementService>.value(value: _entitlements),
         Provider<AppDatabase>.value(value: _database),
         Provider<LocalCacheRepository>.value(value: _localCache),
         Provider<TripRepository>.value(value: _trips),
@@ -442,14 +450,18 @@ class _TalkyAppState extends State<TalkyApp> {
           },
           builder: (context, child) {
             final media = MediaQuery.of(context);
-            return ActiveSessionChrome(
-              child: MediaQuery(
-                data: media.copyWith(
-                  textScaler: TextScaler.linear(
-                    AppSettingsSyncService.fontScale,
-                  ),
-                  disableAnimations: AppSettingsSyncService.reduceMotion,
+            // Les réglages d'accessibilité s'appliquent AU-DESSUS du chrome :
+            // imbriqués en dessous, ils repartaient des paddings d'origine et
+            // écrasaient l'inset haut que le bandeau injecte pour se réserver
+            // sa place — l'app bar restait collée en haut, sous le bandeau.
+            return MediaQuery(
+              data: media.copyWith(
+                textScaler: TextScaler.linear(
+                  AppSettingsSyncService.fontScale,
                 ),
+                disableAnimations: AppSettingsSyncService.reduceMotion,
+              ),
+              child: ActiveSessionChrome(
                 child: child ?? const SizedBox.shrink(),
               ),
             );
@@ -541,6 +553,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       await auth.refreshSessionOnResume();
       if (!mounted || !auth.isLoggedIn) return;
       await _ensureSocketReadyOnResume();
+      // Droits Alanya Plus : relus seulement s'ils ont passé leur date de
+      // validité. Un changement plus tôt arrive par `entitlements:updated`.
+      final droits = EntitlementService.maybeInstance;
+      if (droits != null) unawaited(droits.refreshIfStale());
       // Sauvegarde automatique : la politique est temporelle, donc il suffit
       // de lui demander son avis au retour au premier plan. Elle ne fait rien
       // si ce n'est pas dû, si le réseau est mesuré, ou si l'inscrit a choisi
@@ -707,6 +723,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
           Provider.of<ConnectivityProvider>(context, listen: false).service;
       final myId = chat.repository.myId;
       if (myId == 0) return;
+      // Sauvegarder est réservé à Alanya Plus ; restaurer ne l'est jamais. Le
+      // serveur refuserait la clé : inutile de rater une tentative à chaque
+      // retour au premier plan.
+      if (!EntitlementService.allows(PlusFeature.backup)) return;
 
       await BackupRunner(
         db: chat.repository.dao.db,

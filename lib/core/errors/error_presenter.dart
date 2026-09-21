@@ -81,6 +81,10 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.errCodeAccountDeletionPending;
     case 'REGISTER_RATE_LIMITED':
       return l10n.errCodeRegisterRateLimited;
+    case 'INVALID_CREDENTIALS':
+      return l10n.errCodeInvalidCredentials;
+    case 'PASSWORD_INCORRECT':
+      return l10n.errCodePasswordIncorrect;
 
     // QR et appairage
     case 'QR_SESSION_EXPIRED':
@@ -149,6 +153,37 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.errCodeMediaExpired;
     case 'INVALID_EXTENSION':
       return l10n.errCodeInvalidExtension;
+
+    // Alanya Plus. `SUBSCRIPTION_REQUIRED` n'arrive ici qu'en repli :
+    // `afficherErreur` en fait le panneau de l'offre, pas une SnackBar.
+    case 'SUBSCRIPTION_REQUIRED':
+      return l10n.errCodeSubscriptionRequired;
+    case 'BILLING_NOT_ACTIVE':
+      return l10n.errCodeBillingNotActive;
+    case 'PAYMENT_PENDING':
+      return l10n.errCodePaymentPending;
+    case 'INVALID_MSISDN':
+      return l10n.errCodeInvalidMsisdn;
+    case 'INVALID_CHANNEL':
+      return l10n.errCodeInvalidChannel;
+    case 'PLAN_NOT_FOUND':
+      return l10n.errCodePlanNotFound;
+    case 'PAYMENT_PROVIDER_ERROR':
+      return l10n.errCodePaymentProviderError;
+
+    // Vérification d'identité
+    case 'VERIFICATION_UNAVAILABLE':
+      return l10n.errCodeVerificationUnavailable;
+    case 'DOCUMENTS_REQUIRED':
+      return l10n.errCodeDocumentsRequired;
+    case 'NAME_REQUIRED':
+      return l10n.errCodeNameRequired;
+    case 'VERIFICATION_ALREADY_OPEN':
+      return l10n.errCodeVerificationAlreadyOpen;
+    case 'VERIFICATION_ALREADY_APPROVED':
+      return l10n.errCodeVerificationAlreadyApproved;
+    case 'REQUEST_NOT_PENDING':
+      return l10n.errCodeRequestNotPending;
 
     // Droits
     case 'INSUFFICIENT_ROLE':
@@ -249,6 +284,8 @@ String _messagePourDomaine(AppLocalizations l10n, ErrorDomain domaine) {
       return l10n.errDomaineProfil;
     case ErrorDomain.admin:
       return l10n.errDomaineAdmin;
+    case ErrorDomain.abonnement:
+      return l10n.errDomaineAbonnement;
     case ErrorDomain.generique:
       return l10n.errGenerique;
   }

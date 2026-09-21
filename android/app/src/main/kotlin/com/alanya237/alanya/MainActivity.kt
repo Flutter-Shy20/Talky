@@ -192,6 +192,7 @@ class MainActivity : FlutterFragmentActivity() {
 
         CallNativeBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         CallMediaBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
+        CallAudioBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         ProximityBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         PipBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         TripLocationBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)

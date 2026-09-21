@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/billing/entitlement_service.dart';
+import '../../core/services/billing/entitlements.dart';
 import '../../core/services/translation/message_translation_service.dart';
+import '../../widgets/billing/paywall_sheet.dart';
 import '../../core/services/translation/translation_languages.dart';
 import '../../core/services/translation/translation_settings.dart';
 import '../../core/theme/app_dimens.dart';
@@ -130,8 +133,11 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
         title:
             Text(l10n.translationSection, style: context.text.headlineSmall),
       ),
-      body: Consumer<TranslationSettings>(
-        builder: (_, settings, __) {
+      body: Consumer2<TranslationSettings, EntitlementService>(
+        builder: (_, settings, plus, __) {
+          // Le réglage de l'utilisateur est conservé ; seul l'effet s'arrête
+          // tant que l'abonnement manque.
+          final allowed = plus.has(PlusFeature.translation);
           return ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg,
@@ -140,12 +146,24 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
               AppSpacing.xxl,
             ),
             children: [
+              if (!allowed) ...[
+                PlusLockedBanner(
+                  feature: PlusFeature.translation,
+                  text: l10n.plusLockedTranslation,
+                ),
+                AppSpacing.vGapLg,
+              ],
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(l10n.autoTranslate),
                 subtitle: Text(l10n.autoTranslateDescription),
-                value: settings.auto,
-                onChanged: (v) => _toggleAuto(settings, v),
+                value: allowed && settings.auto,
+                onChanged: (v) {
+                  if (v && !guardPlus(context, PlusFeature.translation)) {
+                    return;
+                  }
+                  _toggleAuto(settings, v);
+                },
               ),
               const SizedBox(height: AppSpacing.md),
 

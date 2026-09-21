@@ -42,6 +42,7 @@ part 'api/qr_auth_api.dart';
 part 'api/welcome_api.dart';
 part 'api/reports_api.dart';
 part 'api/backup_api.dart';
+part 'api/billing_api.dart';
 
 class TalkyApiClient {
   // ** Remplace par ton IP/domaine de production
@@ -192,6 +193,7 @@ class TalkyApiClient {
           msg.toString(),
           response.statusCode,
           code: body is Map ? body['code']?.toString() : null,
+          details: body is Map ? Map<String, dynamic>.from(body) : null,
         );
       }
       return body;
@@ -556,7 +558,15 @@ class TalkyApiClient {
     try {
       final body = jsonDecode(response.body);
       if (body is Map && body['error'] != null) {
-        return TalkyException(body['error'].toString(), code);
+        // Le code et le corps suivent, comme pour `_parseResponse` : sans eux,
+        // un refus d'envoi (pièce trop lourde, dossier déjà ouvert) retombait
+        // sur le repli du statut HTTP au lieu de sa phrase.
+        return TalkyException(
+          body['error'].toString(),
+          code,
+          code: body['code']?.toString(),
+          details: Map<String, dynamic>.from(body),
+        );
       }
     } catch (_) {
       // body non JSON (ex. page nginx HTML)
@@ -634,7 +644,20 @@ class TalkyException implements Exception {
   /// l'utilisateur.
   final Object? cause;
 
-  TalkyException(this.message, this.statusCode, {this.code, this.cause});
+  /// Corps JSON de la réponse d'erreur, quand il y en a un.
+  ///
+  /// Porte les précisions qui accompagnent certains codes : la fonctionnalité
+  /// d'un `SUBSCRIPTION_REQUIRED`, le paiement d'un `PAYMENT_PENDING`. Jamais
+  /// affiché tel quel, pour la même raison que [message].
+  final Map<String, dynamic>? details;
+
+  TalkyException(
+    this.message,
+    this.statusCode, {
+    this.code,
+    this.cause,
+    this.details,
+  });
 
   @override
   String toString() => 'TalkyException: $message (Status: $statusCode'

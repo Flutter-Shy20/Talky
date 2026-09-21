@@ -1,0 +1,464 @@
+% Fragment partage : inclus par abonnement.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{L'offre}
+
+\section{Une offre, deux durées}
+
+Il n'y a qu'une offre, \textbf{Alanya Plus}, vendue sous
+deux durées~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.2cm}p{3.4cm}X@{}}
+\toprule
+\thd{Durée} & \thd{Prix} & \thd{Relance avant l'échéance} \\
+\midrule
+Mensuelle & 250~FCFA & 7~jours avant \\
+Annuelle  & 2\,000~FCFA & 30~jours avant --- soit 167~F par mois, quatre mois offerts \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Les deux durées donnent exactement la même chose. L'annuelle est mise en avant dans l'écran
+d'offre~: elle est moins chère au mois et elle réduit le nombre de renouvellements --- donc
+d'occasions de perdre un abonné pour un simple oubli.
+
+\section{Ce qui se paie}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Fonctionnalité} & \thd{Ce qu'elle apporte} \\
+\midrule
+Traduction des messages & Traduire un message, ou toute une conversation automatiquement,
+sur le téléphone. \\
+Sauvegarde des données & Sauvegardes chiffrées régulières, sur le téléphone ou sur Google
+Drive. \\
+Trajets de confiance & Partager sa route à sa liste \emph{Confiance} et être attendu à
+l'arrivée. \\
+Sonneries par liste & Une sonnerie propre à la famille, une autre au bureau. \\
+Personnalisation du style & \emph{Plus tard.} Couleurs et fonds au-delà du clair et du
+sombre. \\
+La coche \badgePastilleCoche[1] & Le \emph{droit} à la coche --- qui demande en plus une
+vérification d'identité (chapitre~\ref{chap:abo-coche}). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Ce qui reste gratuit, toujours}
+
+Écrire, appeler, publier un statut, créer un groupe ou une réunion, envoyer des médias~: tout
+ce qui fait d'Alanya une messagerie reste gratuit. On ne fait pas payer la conversation.
+
+Trois cas méritent d'être dits explicitement, parce qu'on pourrait les croire payants~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.8cm}X@{}}
+\toprule
+\thd{Reste gratuit} & \thd{Pourquoi} \\
+\midrule
+\emph{Suivre} le trajet d'un proche & Seul celui qui \emph{partage} sa route est abonné. Ses
+cinq proches ne doivent rien payer pour veiller sur lui. \\
+Restaurer une sauvegarde & Faire une \emph{nouvelle} sauvegarde est payant~; récupérer ses
+propres données ne l'est jamais. \\
+Le thème clair ou sombre & Il existe déjà, et il relève de l'accessibilité autant que du
+goût. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Le SOS fait partie de l'offre]
+Le bouton SOS est réservé aux abonnés, comme les trajets de confiance dont il fait partie.
+Une exception~: un trajet lancé pendant l'abonnement va à son terme avec son SOS, même si
+l'échéance tombe en route. On ne coupe pas une protection en cours de chemin.
+\end{note}
+
+\section{Des plans qui se règlent sans développeur}
+
+Prix, durée, délai de relance, fonctionnalités incluses, mise en avant, disponibilité~: tout
+se modifie depuis l'administration. Deux règles encadrent ces modifications~:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Un changement de prix ne touche jamais une période déjà payée.} Il s'applique
+        au prochain renouvellement, et l'abonné en est informé dans sa relance.
+  \item \textbf{Un plan ne se supprime pas, il se retire.} Il disparaît de l'offre, mais
+        l'historique de ceux qui l'ont payé reste lisible.
+\end{itemize}
+
+\begin{note}[Ce que l'administration ne peut pas faire seule]
+Elle peut rendre une fonctionnalité existante payante ou gratuite, et choisir ce que chaque
+plan inclut. Elle ne peut pas \emph{inventer} une fonctionnalité~: le verrou doit exister
+dans le code. C'est pourquoi la personnalisation du style figure déjà au catalogue, marquée
+\guillemotleft~à venir~\guillemotright{} --- elle s'activera le jour où l'application saura
+l'appliquer.
+\end{note}
+
+% =====================================================================
+\chapter{La coche indigo}
+\label{chap:abo-coche}
+
+\section{Deux conditions, pas une}
+
+La coche \badgePastilleCoche[1] s'affiche quand \textbf{les deux} conditions sont réunies~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm}p{4.6cm}X@{}}
+\toprule
+\thd{Identité} & \thd{Abonnement} & \thd{Ce qui s'affiche} \\
+\midrule
+non vérifiée    & actif ou non   & aucune coche --- l'abonné a ses fonctionnalités \\
+en cours d'examen & actif        & aucune coche --- \guillemotleft~en cours~\guillemotright{}
+dans son profil \\
+\textbf{vérifiée} & \textbf{actif} & \badgePastilleCoche[1]~\textbf{la coche} \\
+vérifiée        & échu           & aucune coche --- elle revient dès le réabonnement \\
+révoquée        & actif ou non   & aucune coche, jusqu'à nouvel examen \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+L'abonnement seul ne suffit pas~: sans contrôle, n'importe qui pourrait acheter pour 250~F une
+coche au nom d'un autre. L'identité seule ne suffit plus~: hors phase gratuite, la coche fait
+partie de l'offre.
+
+\section{Ce qu'elle atteste}
+
+\guillemotleft~Alanya a vérifié que la personne derrière ce compte est bien celle dont il porte
+le nom.~\guillemotright{} Rien de plus. Ce n'est ni une recommandation, ni une marque de
+notoriété.
+
+\begin{alerte}[Le sens de la coche change par rapport au volet 5]
+Le volet~5 réservait la coche personnelle aux \emph{personnalités publiques}, sur preuve de
+notoriété. Elle devient accessible à \emph{tout abonné} dont l'identité est vérifiée. La pièce
+de notoriété disparaît donc des pièces demandées~; restent la pièce d'identité et un selfie.
+\end{alerte}
+
+\section{Quand elle tombe}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{À l'échéance}, si l'abonnement n'est pas renouvelé. L'identité, elle, reste
+        vérifiée~: se réabonner fait revenir la coche immédiatement, sans nouveau dossier.
+  \item \textbf{Sur révocation} par un administrateur, avec un motif --- usurpation, fraude.
+        C'est la seule chute qui n'a rien à voir avec l'argent.
+  \item \textbf{Quand le compte change de nom.} La vérification portait sur un nom~; le
+        changer retire la coche jusqu'à ce qu'un administrateur ait revu le dossier. Sans
+        cette règle, on achète une coche sous son vrai nom, puis on se renomme
+        \guillemotleft~Orange Cameroun~\guillemotright.
+\end{itemize}
+
+% =====================================================================
+\chapter{Le parcours de l'utilisateur}
+
+\section{Le profil met l'offre en avant}
+
+Une carte se place \textbf{juste sous l'en-tête du profil}, avant les contacts préférés. C'est
+l'emplacement le plus vu de l'écran~; son contenu change avec la situation de l'utilisateur.
+
+\begin{center}
+  \imageOuCadre{maquettes/abonnement-profil.png}{\linewidth}%
+    {La carte Plus du profil dans ses cinq états\\
+     \texttt{maquettes/abonnement-profil.png}}
+\end{center}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Situation} & \thd{Ce que dit la carte} \\
+\midrule
+Phase gratuite & \guillemotleft~Obtenez la coche --- gratuite pendant le lancement.~\guillemotright
+Il n'y a rien à vendre~; on invite à la vérification. \\
+Période de grâce & \guillemotleft~Les fonctionnalités Plus deviennent payantes le 12
+octobre.~\guillemotright{} Avec le prix, et un bouton pour s'abonner dès maintenant sans
+perdre les jours gratuits restants. \\
+Non abonné & \guillemotleft~Passer à Alanya Plus~\guillemotright{}~: les cinq icônes des
+fonctionnalités, \guillemotleft~dès 167~F par mois~\guillemotright, un bouton. \\
+Abonné & L'échéance, le renouvellement automatique, et --- si l'identité n'est pas encore
+vérifiée --- l'invitation à obtenir la coche. \\
+Échéance proche ou dépassée & Le compte à rebours, et ce qui sera supprimé si rien n'est
+fait. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Une entrée \guillemotleft~Mon abonnement~\guillemotright{} rejoint aussi le menu du profil~: la
+carte attire, l'entrée permet de retrouver ses paiements et de régler le renouvellement.
+
+\begin{note}[Maquette interactive, mobile]
+\href{https://claude.ai/code/artifact/6ac3fb3e-7f18-4e2d-b07c-c08127ef61e4}%
+{\texttt{claude.ai/code/artifact/6ac3fb3e}}\\
+Source versionnée~: \code{docs/architecture/maquettes/abonnement.html}~; captures produites
+par \code{maquettes/\_capture\_abonnement.py}.
+\end{note}
+
+\section{S'abonner}
+
+\begin{center}
+  \imageOuCadre{maquettes/abonnement-parcours.png}{\linewidth}%
+    {Offre, paiement mobile money, confirmation\\
+     \texttt{maquettes/abonnement-parcours.png}}
+\end{center}
+
+Trois écrans~: l'\textbf{offre} (les deux durées, l'annuelle présélectionnée, ce qui est
+inclus), le \textbf{paiement} (Orange Money ou MTN MoMo, le numéro à débiter), puis
+l'\textbf{attente de confirmation} --- l'utilisateur valide sur son téléphone avec son code
+secret, l'écran se met à jour de lui-même.
+
+\begin{note}[Pourquoi l'écran attend au lieu de conclure]
+Un paiement mobile money n'est jamais confirmé au moment où on le demande~: il l'est quand
+l'opérateur prévient Alanya, quelques secondes ou minutes plus tard. L'écran le montre tel
+quel plutôt que d'afficher un succès qui pourrait se révéler faux. Le paiement simulé imite
+ce délai, pour que l'écran soit éprouvé avant l'arrivée du vrai agrégateur.
+\end{note}
+
+\section{Rencontrer une fonctionnalité verrouillée}
+
+Toucher une fonctionnalité payante sans abonnement n'affiche pas d'erreur~: un panneau monte
+du bas de l'écran, dit ce que la fonctionnalité apporte, et propose l'offre. Refermer le
+panneau ramène exactement où l'on était.
+
+\section{L'échéance}
+
+\begin{center}
+  \imageOuCadre{maquettes/abonnement-echeance.png}{\linewidth}%
+    {Relance, panneau de fonctionnalité verrouillée, abonnement expiré\\
+     \texttt{maquettes/abonnement-echeance.png}}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  j/.style={font=\sffamily\scriptsize, text=AlanyaGray, align=center},
+  e/.style={font=\sffamily\small\bfseries, text=AlanyaIndigoDark, align=center}
+]
+  \fill[AlanyaSuccess!14] (0,0) rectangle (6.2,0.5);
+  \fill[warning!18]       (6.2,0) rectangle (9.4,0.5);
+  \fill[danger!10]        (9.4,0) rectangle (15.4,0.5);
+  \draw[AlanyaLine] (0,0) rectangle (15.4,0.5);
+  \foreach \x/\t in {6.2/Relance, 9.4/Échéance, 15.4/Suppression}{
+    \draw[AlanyaGray, semithick] (\x,-0.12) -- (\x,0.62);
+    \node[e] at (\x,1.05) {\t};
+  }
+  \draw[AlanyaGray, semithick, dashed] (13.0,-0.12) -- (13.0,0.62);
+  \node[j] at (3.1,0.25)  {abonné};
+  \node[j] at (7.8,0.25)  {J-7 ou J-30};
+  \node[j] at (11.2,0.25) {données conservées};
+  \node[j] at (6.2,-0.45) {\code{reminder\_days}};
+  \node[j] at (9.4,-0.45) {coche et fonctions coupées};
+  \node[j] at (13.0,-0.45) {dernier avis, J-7};
+  \node[j, anchor=east] at (15.4,-0.45) {N jours après};
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{La relance} arrive 7~jours avant la fin d'un abonnement mensuel, 30~jours
+        avant celle d'un annuel --- par notification et par la carte du profil.
+  \item \textbf{À l'échéance}, les fonctionnalités payantes s'arrêtent et la coche tombe.
+        Rien n'est encore effacé.
+  \item \textbf{Pendant N~jours} (réglables, 30 par défaut), les données restent en place~:
+        se réabonner rend tout, exactement comme avant.
+  \item \textbf{Une semaine avant la suppression}, un dernier avertissement.
+  \item \textbf{Au bout de N~jours}, les données propres aux fonctionnalités payantes sont
+        supprimées --- le détail, fonctionnalité par fonctionnalité, est en partie~II.
+\end{itemize}
+
+\section{Le renouvellement automatique}
+
+L'utilisateur peut l'activer à tout moment dans \guillemotleft~Mon abonnement~\guillemotright.
+Ce qu'il fait réellement dépend du moyen de paiement~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.8cm}X@{}}
+\toprule
+\thd{Moyen} & \thd{Ce qui se passe à l'échéance} \\
+\midrule
+Paiement simulé & Le renouvellement réussit tout seul --- c'est ce qui permet de tester le
+parcours complet dès maintenant. \\
+Mobile money & L'opérateur envoie une demande de paiement la veille~; l'utilisateur la valide
+avec son code. Un vrai prélèvement sans action n'existe pas sur mobile money. \\
+Porte-monnaie Alanya & \emph{Plus tard.} Débit direct du solde, sans action --- le seul vrai
+renouvellement automatique hors stores. \\
+App Store, Play Store & Le store renouvelle lui-même, selon ses règles. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Obtenir la coche}
+
+\begin{center}
+  \imageOuCadre{maquettes/abonnement-coche.png}{\linewidth}%
+    {Pièce d'identité, selfie, suivi du dossier\\
+     \texttt{maquettes/abonnement-coche.png}}
+\end{center}
+
+Le parcours est celui du volet~5~: photographier sa pièce d'identité, prendre un selfie en la
+tenant, envoyer. L'écran annonce \emph{avant} l'envoi que les pièces sont chiffrées,
+consultées seulement par l'administration, et supprimées 90~jours après la décision. Réponse
+annoncée \guillemotleft~sous 5~jours ouvrés~\guillemotright.
+
+% =====================================================================
+\chapter{Du gratuit au payant}
+
+\section{Trois phases}
+
+L'administration décide quand l'offre devient payante. Jusque-là, tout est gratuit~; ensuite,
+chacun dispose d'une période de grâce avant que les fonctionnalités ne soient réservées aux
+abonnés.
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  p/.style={minimum height=0.9cm, font=\sffamily\small, text=AlanyaInk, align=center,
+            inner sep=0pt},
+  m/.style={font=\sffamily\scriptsize, text=AlanyaGray, align=center}
+]
+  \node[p, fill=AlanyaSuccess!14, minimum width=5.6cm] at (2.8,0)
+    {\textbf{Gratuit}\\[-1pt]{\scriptsize tout pour tous}};
+  \node[p, fill=warning!18, minimum width=4.4cm] at (7.8,0)
+    {\textbf{Grâce}\\[-1pt]{\scriptsize 30 jours par défaut}};
+  \node[p, fill=AlanyaContainer, minimum width=5.4cm] at (12.7,0)
+    {\textbf{Payant}\\[-1pt]{\scriptsize réservé aux abonnés}};
+  \draw[AlanyaIndigo, very thick] (5.6,-0.62) -- (5.6,0.62);
+  \draw[AlanyaIndigo, very thick] (10.0,-0.62) -- (10.0,0.62);
+  \node[m] at (5.6,-1.0)  {l'admin active};
+  \node[m] at (10.0,-1.0) {fin de la grâce};
+\end{tikzpicture}
+\end{center}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{2.2cm}XX@{}}
+\toprule
+ & \thd{Fonctionnalités} & \thd{Coche} \\
+\midrule
+Gratuit & Pour tous. L'offre n'est pas proposée à l'achat. & Sur vérification d'identité
+seule. \\
+Grâce & Pour tous. On peut s'abonner~; la première période commence \emph{à la fin} de la
+grâce, les jours gratuits ne sont pas perdus. & Conservée par ceux qui l'ont. Elle tombe à la
+fin de la grâce s'ils ne s'abonnent pas. \\
+Payant & Pour les abonnés, et pendant l'éventuel essai gratuit des nouveaux inscrits. &
+Identité vérifiée \emph{et} abonnement actif. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Un seul bouton, pas trois]
+L'administrateur ne choisit pas une phase~: il n'a qu'une action, \guillemotleft~Activer le
+payant~\guillemotright. Elle déclenche la grâce, qui débouche d'elle-même sur la phase payante
+à sa date de fin. Il n'existe pas de bouton qui rende l'offre payante sur-le-champ~: la grâce
+dure au moins 7~jours, pour que personne ne perde un accès sans avoir été prévenu. Le bandeau
+des trois phases, en tête de la page d'administration, est un repère, pas un sélecteur.
+\end{note}
+
+\section{Ce que voit l'utilisateur au passage}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{À l'activation}~: un message du compte officiel à tous les comptes, qui
+        annonce la date et le prix. La carte du profil passe en mode
+        \guillemotleft~grâce~\guillemotright.
+  \item \textbf{Sept jours avant la fin de la grâce}~: un second message, aux seuls non-abonnés.
+  \item \textbf{À la fin de la grâce}~: les fonctionnalités se ferment pour les non-abonnés,
+        avec le même délai de N~jours avant suppression qu'une échéance ordinaire.
+\end{itemize}
+
+\section{Les réglages de l'interrupteur}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}p{2.2cm}X@{}}
+\toprule
+\thd{Réglage} & \thd{Défaut} & \thd{Effet} \\
+\midrule
+Payant activé & non & L'interrupteur lui-même. \\
+Durée de la grâce & 30~jours & 7~jours au minimum. Posée à l'activation~; la date de fin
+reste modifiable ensuite, pour prolonger. \\
+Essai gratuit des nouveaux inscrits & 0~jour & Après la grâce, un inscrit reçoit cette durée
+d'accès complet. \\
+Conservation après échéance & 30~jours & Le \guillemotleft~N~\guillemotright{} avant
+suppression des données payantes. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Pas d'activation tant que le paiement est simulé]
+En production, l'interrupteur refuse de s'activer tant que le fournisseur de paiement est le
+simulateur. Sinon, n'importe qui obtiendrait un abonnement réel avec un paiement fictif.
+\end{alerte}
+
+% =====================================================================
+\chapter{Le parcours de l'administrateur}
+
+\section{L'interrupteur et ses réglages}
+
+\begin{center}
+  \imageOuCadre{maquettes/abonnement-admin-reglages.png}{\linewidth}%
+    {Phase courante, interrupteur, grâce, essai, conservation\\
+     \texttt{maquettes/abonnement-admin-reglages.png}}
+\end{center}
+
+La page dit d'abord dans quelle phase on est, et ce que l'activation déclencherait~: combien
+de comptes recevront l'annonce, combien de coches entreront en grâce. Activer demande une
+confirmation qui rappelle la date de fin de grâce.
+
+\begin{note}[Maquette interactive, administration]
+\href{https://claude.ai/code/artifact/ffa8c829-4047-4f86-b089-3330fe810687}%
+{\texttt{claude.ai/code/artifact/ffa8c829}}\\
+Source versionnée~: \code{docs/architecture/maquettes/abonnement-admin.html}.
+\end{note}
+
+\section{Les plans}
+
+\begin{center}
+  \imageOuCadre{maquettes/abonnement-admin-plans.png}{\linewidth}%
+    {Liste des plans et éditeur\\
+     \texttt{maquettes/abonnement-admin-plans.png}}
+\end{center}
+
+Pour chaque plan~: son nom dans les trois langues, sa durée, son prix, son délai de relance,
+les fonctionnalités incluses (cases à cocher), s'il est mis en avant, s'il est proposé. Un
+aperçu montre la carte telle qu'elle apparaîtra dans l'application.
+
+\section{Un utilisateur}
+
+\begin{center}
+  \imageOuCadre{maquettes/abonnement-admin-fiche.png}{\linewidth}%
+    {Abonnement, coche et paiements sur la fiche utilisateur\\
+     \texttt{maquettes/abonnement-admin-fiche.png}}
+\end{center}
+
+La fiche utilisateur gagne une carte \guillemotleft~Abonnement et coche~\guillemotright~:
+la période en cours, l'historique des périodes et des paiements, l'état du dossier
+d'identité. Deux actions~: \textbf{offrir} un abonnement (durée et motif obligatoires --- un
+geste commercial, un partenaire, un testeur) et \textbf{révoquer} la coche (motif
+obligatoire). Le sélecteur \guillemotleft~État de vérification~\guillemotright{} de la carte
+\guillemotleft~Socle~\guillemotright{} disparaît~: l'état se déduit des décisions, il ne se
+saisit plus.
+
+\section{Les dossiers d'identité}
+
+L'écran d'instruction est celui du volet~5~: ce que le compte déclare à gauche, les pièces à
+droite, trois issues --- approuver, refuser avec motif, demander une pièce. Une file dédiée
+les rassemble, avec un compteur dans le menu.
+
+% =====================================================================
+\chapter{Le paiement~: simulé aujourd'hui, réel demain}
+
+\section{Un faux agrégateur, un vrai parcours}
+
+Tant qu'aucun agrégateur n'est choisi, le serveur en \emph{imite} un~: il reçoit la demande,
+fait patienter quelques secondes, puis répond --- le plus souvent par un succès. Certains
+numéros de test provoquent volontairement un échec, un refus ou une absence de réponse, pour
+que chaque cas soit vu à l'écran avant d'arriver en vrai.
+
+Le jour où l'agrégateur est choisi, on écrit le module qui lui parle et on le met à la place
+du simulateur. L'application, l'administration, les abonnements et la coche ne changent pas.
+
+\section{Les stores}
+
+\begin{alerte}[Apple et Google imposent leurs règles]
+L'application sera publiée sur l'App Store et le Play Store. Pour débloquer des
+fonctionnalités numériques, Apple impose son propre système de paiement, et Google le sien
+dans la plupart des pays --- avec une commission de 15 à 30\,\%. Mobile money et, plus tard,
+porte-monnaie ne seront donc pas forcément proposables partout dans l'application.
+
+La conception l'absorbe~: un store est un fournisseur de paiement de plus, au même endroit que
+le simulateur. Mais la règle exacte pour le Cameroun, et le prix affiché sur chaque store,
+restent \textbf{à décider avant de brancher un paiement réel}.
+\end{alerte}

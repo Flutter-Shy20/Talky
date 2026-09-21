@@ -3306,7 +3306,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ce compte diffuse des annonces. Vous ne pouvez pas y répondre.';
 
   @override
-  String get accountBadgeVerified => 'Compte vérifié';
+  String get accountBadgeVerified => 'Abonné Alanya Plus';
 
   @override
   String get accountBadgeBusinessDeclared => 'Commerce déclaré';
@@ -6203,6 +6203,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Trop de créations de compte. Réessayez plus tard.';
 
   @override
+  String get errCodeInvalidCredentials =>
+      'Identifiant ou mot de passe incorrect.';
+
+  @override
+  String get errCodePasswordIncorrect => 'Mot de passe incorrect.';
+
+  @override
   String get errCodeQrSessionExpired =>
       'Ce code QR a expiré. Affichez-en un nouveau.';
 
@@ -6317,4 +6324,655 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errAucuneAppPourFichier =>
       'Aucune application ne peut ouvrir ce fichier.';
+
+  @override
+  String get plusBrand => 'Alanya Plus';
+
+  @override
+  String get plusFeatureTranslation => 'Traduction';
+
+  @override
+  String get plusFeatureBackup => 'Sauvegarde';
+
+  @override
+  String get plusFeatureTrips => 'Trajets';
+
+  @override
+  String get plusFeatureRingtones => 'Sonneries';
+
+  @override
+  String get plusFeatureStyle => 'Style';
+
+  @override
+  String get plusFeatureBadge => 'Coche';
+
+  @override
+  String plusAmount(String amount) {
+    return '$amount F';
+  }
+
+  @override
+  String get plusPerMonth => '/ mois';
+
+  @override
+  String get plusPerYear => '/ an';
+
+  @override
+  String plusPerNMonths(int count) {
+    return '/ $count mois';
+  }
+
+  @override
+  String get plusPlanMonthly => 'Mensuel';
+
+  @override
+  String get plusPlanYearly => 'Annuel';
+
+  @override
+  String get plusRenew => 'Renouveler';
+
+  @override
+  String get plusResubscribe => 'Me réabonner';
+
+  @override
+  String get paywallFromLabel => 'À partir de';
+
+  @override
+  String get paywallSeeOffer => 'Voir l\'offre';
+
+  @override
+  String get paywallTranslationTitle => 'Traduire vos messages';
+
+  @override
+  String get paywallTranslationBody =>
+      'La traduction fait partie d\'Alanya Plus. Elle fonctionne sur votre téléphone, même sans connexion, et vos messages ne quittent jamais l\'appareil.';
+
+  @override
+  String get paywallBackupTitle => 'Sauvegarder vos discussions';
+
+  @override
+  String get paywallBackupBody =>
+      'La sauvegarde fait partie d\'Alanya Plus : chiffrée, sur votre téléphone ou votre Drive. Vos sauvegardes existantes restent toujours restaurables.';
+
+  @override
+  String get paywallTripsTitle => 'Partir en trajet de confiance';
+
+  @override
+  String get paywallTripsBody =>
+      'Les trajets de confiance et le SOS font partie d\'Alanya Plus : vos proches suivent votre trajet et sont prévenus si vous n\'arrivez pas. Un trajet déjà commencé garde son SOS jusqu\'à la fin.';
+
+  @override
+  String get paywallRingtonesTitle => 'Une sonnerie par liste';
+
+  @override
+  String get paywallRingtonesBody =>
+      'Les sonneries par liste font partie d\'Alanya Plus : reconnaissez la famille, le bureau ou les amis avant même de regarder l\'écran.';
+
+  @override
+  String get paywallGenericTitle => 'Fonctionnalité Alanya Plus';
+
+  @override
+  String get paywallGenericBody =>
+      'Cette fonctionnalité fait partie d\'Alanya Plus.';
+
+  @override
+  String get errCodeSubscriptionRequired =>
+      'Cette fonctionnalité fait partie d\'Alanya Plus.';
+
+  @override
+  String get errCodeBillingNotActive =>
+      'Alanya Plus est gratuit pour le moment : rien à payer.';
+
+  @override
+  String get errCodePaymentPending =>
+      'Un paiement attend déjà votre confirmation.';
+
+  @override
+  String get errCodeInvalidMsisdn =>
+      'Ce numéro mobile money n\'est pas valide.';
+
+  @override
+  String get errCodeInvalidChannel =>
+      'Ce moyen de paiement n\'est pas proposé.';
+
+  @override
+  String get errCodePlanNotFound =>
+      'Cette formule n\'est plus proposée. Rechargez l\'offre.';
+
+  @override
+  String get errCodePaymentProviderError =>
+      'Le service de paiement ne répond pas. Réessayez dans un instant.';
+
+  @override
+  String get errDomaineAbonnement =>
+      'L\'opération sur votre abonnement n\'a pas abouti.';
+
+  @override
+  String plusCardGraceTitle(String date) {
+    return 'Payant à partir du $date';
+  }
+
+  @override
+  String plusCardGraceBody(String date) {
+    return 'Traduction, sauvegarde, trajets et sonneries par liste restent gratuits jusque-là. Abonnez-vous maintenant : votre première période commencera le $date.';
+  }
+
+  @override
+  String plusCardGraceDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'encore $count jours gratuits',
+      one: 'encore 1 jour gratuit',
+      zero: 'dernier jour gratuit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardUpgradeTitle => 'Passez à Alanya Plus';
+
+  @override
+  String get plusCardDiscover => 'Découvrir l\'offre';
+
+  @override
+  String plusCardActiveUntil(String date) {
+    return 'Actif jusqu\'au $date';
+  }
+
+  @override
+  String plusCardEndsOn(String date) {
+    return 'Prend fin le $date';
+  }
+
+  @override
+  String plusCardEndsSoonBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Encore $count jours. Renouvelez pour garder vos fonctionnalités.',
+      one: 'Encore 1 jour. Renouvelez pour garder vos fonctionnalités.',
+      zero: 'Dernier jour. Renouvelez pour garder vos fonctionnalités.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardAutoRenewOn => 'Renouvellement automatique activé.';
+
+  @override
+  String get plusCardAutoRenewOff => 'Pensez à renouveler avant l\'échéance.';
+
+  @override
+  String get plusCardBadgeActive => 'Abonné Alanya Plus';
+
+  @override
+  String plusCardStartsOn(String date) {
+    return 'Votre abonnement commence le $date';
+  }
+
+  @override
+  String get plusCardScheduledBody =>
+      'D\'ici là, tout reste gratuit pour vous.';
+
+  @override
+  String plusCardLapsedKicker(String date) {
+    return 'Terminé le $date';
+  }
+
+  @override
+  String get plusCardLapsedTitle => 'Vos fonctionnalités Plus sont en pause';
+
+  @override
+  String get plusCardLapsedBody =>
+      'Vos réglages sont conservés. Réabonnez-vous pour tout retrouver, coche comprise.';
+
+  @override
+  String get plusOfferUnlocks => 'Ce que Plus débloque';
+
+  @override
+  String get plusOfferUnavailable =>
+      'Le paiement n\'est pas disponible pour le moment. Réessayez plus tard.';
+
+  @override
+  String get plusOfferDuration => 'Durée';
+
+  @override
+  String plusOfferContinue(String amount) {
+    return 'Continuer — $amount';
+  }
+
+  @override
+  String get plusOfferNoCommitment => 'sans engagement';
+
+  @override
+  String plusOfferEquivalent(String amount) {
+    return 'soit $amount par mois';
+  }
+
+  @override
+  String plusOfferMonthsFree(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count mois offerts',
+      one: '1 mois offert',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String plusOfferFirstPeriod(String start, String end) {
+    return 'Première période : du $start au $end.';
+  }
+
+  @override
+  String plusOfferNextPeriod(String start, String end) {
+    return 'Nouvelle période : du $start au $end, à la suite de l\'actuelle.';
+  }
+
+  @override
+  String get plusOfferNoRefund =>
+      'Chaque période se paie d\'avance et n\'est pas remboursable.';
+
+  @override
+  String get checkoutTitle => 'Paiement';
+
+  @override
+  String get checkoutPayWith => 'Payer avec';
+
+  @override
+  String get checkoutNumber => 'Numéro à débiter';
+
+  @override
+  String get checkoutNumberHint => '6XX XX XX XX';
+
+  @override
+  String get checkoutNumberInvalid =>
+      'Entrez un numéro mobile camerounais : 9 chiffres commençant par 6.';
+
+  @override
+  String get checkoutAutoRenew => 'Renouvellement automatique';
+
+  @override
+  String checkoutAutoRenewHint(String operator) {
+    return '$operator vous demandera de confirmer la veille de l\'échéance.';
+  }
+
+  @override
+  String get checkoutSimulated =>
+      'Paiement simulé : aucun argent n\'est débité. Numéro finissant par 01 : solde insuffisant · 02 : refus · 03 : sans réponse.';
+
+  @override
+  String checkoutPay(String amount) {
+    return 'Payer $amount';
+  }
+
+  @override
+  String get checkoutWaitingTitle => 'Confirmez sur votre téléphone';
+
+  @override
+  String checkoutWaitingBody(String operator, String amount) {
+    return 'Composez votre code $operator pour valider $amount. Cet écran se met à jour tout seul.';
+  }
+
+  @override
+  String checkoutExpiresIn(String time) {
+    return 'la demande expire dans $time';
+  }
+
+  @override
+  String get checkoutStepSent => 'Demande envoyée';
+
+  @override
+  String checkoutStepSentTo(String number) {
+    return 'à $number';
+  }
+
+  @override
+  String get checkoutStepConfirm => 'Confirmation par votre code';
+
+  @override
+  String get checkoutStepPending => 'en attente';
+
+  @override
+  String get checkoutStepActivated => 'Abonnement activé';
+
+  @override
+  String checkoutStepActivatedHint(String operator) {
+    return 'dès la réponse de $operator';
+  }
+
+  @override
+  String get checkoutLeave => 'Quitter cet écran';
+
+  @override
+  String get checkoutLeaveHint =>
+      'L\'abonnement s\'activera dès la confirmation, même si vous quittez cet écran.';
+
+  @override
+  String get checkoutSuccessTitle => 'Alanya Plus est actif';
+
+  @override
+  String checkoutSuccessBody(String plan, String start, String end) {
+    return '$plan, du $start au $end.';
+  }
+
+  @override
+  String get checkoutSuccessScheduled =>
+      'D\'ici là, tout reste gratuit pour vous.';
+
+  @override
+  String get checkoutSuccessFeatures =>
+      'Traduction, sauvegarde, trajets et sonneries par liste sont actifs.';
+
+  @override
+  String get checkoutSuccessFeaturesScheduled =>
+      'Traduction, sauvegarde, trajets et sonneries par liste restent actifs sans interruption.';
+
+  @override
+  String get checkoutDone => 'Terminé';
+
+  @override
+  String get checkoutFailedTitle => 'Le paiement n\'a pas abouti';
+
+  @override
+  String get checkoutFailedInsufficient =>
+      'Solde insuffisant sur ce compte mobile money.';
+
+  @override
+  String get checkoutFailedDeclined =>
+      'Le paiement a été refusé sur le téléphone.';
+
+  @override
+  String get checkoutFailedTimeout =>
+      'Aucune confirmation n\'est arrivée à temps. Vous pouvez réessayer.';
+
+  @override
+  String get checkoutFailedGeneric =>
+      'Le paiement a échoué. Vous pouvez réessayer.';
+
+  @override
+  String get subscriptionTitle => 'Mon abonnement';
+
+  @override
+  String get subscriptionAutoRenew => 'Renouvellement automatique';
+
+  @override
+  String get subscriptionAutoRenewHint =>
+      'La veille de l\'échéance, votre opérateur vous demandera de confirmer le paiement.';
+
+  @override
+  String get subscriptionNextDuration => 'Durée au prochain renouvellement';
+
+  @override
+  String get subscriptionPayments => 'Paiements';
+
+  @override
+  String get subscriptionPeriods => 'Périodes';
+
+  @override
+  String subscriptionRenewAmount(String amount) {
+    return 'Renouveler — $amount';
+  }
+
+  @override
+  String get subscriptionNoPayments => 'Aucun paiement pour l\'instant.';
+
+  @override
+  String get subscriptionSourcePaid => 'Payé';
+
+  @override
+  String get subscriptionSourceTrial => 'Essai';
+
+  @override
+  String get subscriptionSourceGift => 'Offert';
+
+  @override
+  String get subscriptionSourceCompensation => 'Compensation';
+
+  @override
+  String subscriptionEndsIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'dans $count jours',
+      one: 'dans 1 jour',
+      zero: 'aujourd\'hui',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get subscriptionNoneTitle => 'Aucun abonnement en cours';
+
+  @override
+  String get subscriptionNoneBody =>
+      'Alanya Plus débloque la traduction, la sauvegarde, les trajets de confiance et les sonneries par liste.';
+
+  @override
+  String get subscriptionExemptTitle =>
+      'Alanya Plus est inclus avec votre compte';
+
+  @override
+  String get paymentStatusSucceeded => 'Réussi';
+
+  @override
+  String get paymentStatusFailed => 'Échoué';
+
+  @override
+  String get paymentStatusExpired => 'Expiré';
+
+  @override
+  String get paymentStatusRefunded => 'Remboursé';
+
+  @override
+  String get paymentStatusPending => 'En attente';
+
+  @override
+  String get plusLockedTranslation =>
+      'La traduction est réservée à Alanya Plus.';
+
+  @override
+  String get plusLockedBackup =>
+      'Les nouvelles sauvegardes sont réservées à Alanya Plus. Vos sauvegardes existantes restent restaurables.';
+
+  @override
+  String get plusLockedRingtones =>
+      'Les sonneries par liste sont réservées à Alanya Plus. Vos réglages sont conservés et reprendront dès l\'abonnement.';
+
+  @override
+  String get plusLockedTrips =>
+      'Les nouveaux trajets et le SOS hors trajet sont réservés à Alanya Plus. Un trajet déjà commencé garde son SOS jusqu\'à la fin.';
+
+  @override
+  String plusCardLapsedBodyUntil(String date) {
+    return 'Vos réglages et votre historique sont conservés jusqu\'au $date. Réabonnez-vous d\'ici là pour tout retrouver, coche comprise.';
+  }
+
+  @override
+  String get plusCardPurgedBody =>
+      'Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.';
+
+  @override
+  String get verificationTitle => 'Obtenir la coche';
+
+  @override
+  String get verificationStatusTitle => 'Ma vérification';
+
+  @override
+  String get verificationIntro =>
+      'La coche dit à vos contacts que vous êtes bien la personne dont ce compte porte le nom.';
+
+  @override
+  String get verificationNameLabel => 'Nom à vérifier';
+
+  @override
+  String get verificationNameHint =>
+      'C\'est le nom de votre profil. Il doit correspondre à votre pièce.';
+
+  @override
+  String get verificationToProvide => 'À fournir';
+
+  @override
+  String get verificationIdFront => 'Pièce d\'identité — recto';
+
+  @override
+  String get verificationIdFrontHint => 'CNI, passeport ou permis de conduire';
+
+  @override
+  String get verificationIdBack => 'Pièce d\'identité — verso';
+
+  @override
+  String get verificationIdBackHint => 'si votre pièce en a un';
+
+  @override
+  String get verificationSelfie => 'Selfie avec la pièce';
+
+  @override
+  String get verificationSelfieHint => 'visage et pièce lisibles';
+
+  @override
+  String get verificationTakePhoto => 'Prendre une photo';
+
+  @override
+  String get verificationChooseGallery => 'Choisir dans la galerie';
+
+  @override
+  String get verificationRemove => 'Retirer';
+
+  @override
+  String get verificationPrivacy =>
+      'Vos pièces sont chiffrées, vues seulement par l\'administration, et supprimées 90 jours après la décision. Chaque consultation est journalisée.';
+
+  @override
+  String get verificationSubmit => 'Envoyer ma demande';
+
+  @override
+  String get verificationSendPieces => 'Envoyer les pièces';
+
+  @override
+  String get verificationPendingTitle => 'Vérification en cours';
+
+  @override
+  String verificationPendingBody(String date) {
+    return 'Déposée le $date · réponse sous 5 jours ouvrés';
+  }
+
+  @override
+  String get verificationStepSent => 'Demande envoyée';
+
+  @override
+  String get verificationStepPieces => 'Pièces reçues';
+
+  @override
+  String verificationPiecesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pièces',
+      one: '1 pièce',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get verificationStepReview => 'Examen par Alanya';
+
+  @override
+  String get verificationStepInProgress => 'en cours';
+
+  @override
+  String get verificationStepDecision => 'Décision';
+
+  @override
+  String get verificationStepDecisionHint => 'une notification vous préviendra';
+
+  @override
+  String get verificationPlusNotWaiting =>
+      'Votre abonnement est actif : vos fonctionnalités Plus n\'attendent pas la décision.';
+
+  @override
+  String get verificationCancel => 'Annuler ma demande';
+
+  @override
+  String get verificationCancelConfirm =>
+      'Annuler la demande ? Vos pièces seront supprimées.';
+
+  @override
+  String get verificationDocRequestedTitle =>
+      'Une pièce manque à votre dossier';
+
+  @override
+  String get verificationRefusedTitle => 'Demande refusée';
+
+  @override
+  String get verificationRevokedTitle => 'Coche retirée';
+
+  @override
+  String verificationReason(String reason) {
+    return 'Motif : $reason';
+  }
+
+  @override
+  String get verificationResubmitHint =>
+      'Vous pouvez déposer une nouvelle demande.';
+
+  @override
+  String get verificationRenamedTitle => 'Votre nom a changé';
+
+  @override
+  String get verificationRenamedBody =>
+      'La coche attend un nouvel examen : déposez des pièces au nom affiché, ou reprenez le nom vérifié.';
+
+  @override
+  String get verificationApprovedTitle => 'Identité vérifiée, coche active';
+
+  @override
+  String verificationApprovedUntil(String date) {
+    return 'Elle suit votre abonnement : jusqu\'au $date.';
+  }
+
+  @override
+  String get verificationApprovedFree =>
+      'La coche s\'affiche à côté de votre nom.';
+
+  @override
+  String get verificationPausedTitle => 'Identité vérifiée, coche en pause';
+
+  @override
+  String get verificationPausedBody =>
+      'Elle revient dès que votre abonnement reprend.';
+
+  @override
+  String get verificationUnavailableBody =>
+      'La vérification d\'identité ouvre bientôt. Revenez dans quelques jours.';
+
+  @override
+  String get plusCardBadgeMissing =>
+      'La coche s\'affiche avec un abonnement actif.';
+
+  @override
+  String get errCodeVerificationUnavailable =>
+      'La vérification d\'identité n\'est pas encore ouverte.';
+
+  @override
+  String get errCodeDocumentsRequired =>
+      'Ajoutez votre pièce d\'identité et un selfie avec la pièce.';
+
+  @override
+  String get errCodeNameRequired =>
+      'Renseignez votre nom dans votre profil avant de le faire vérifier.';
+
+  @override
+  String get errCodeVerificationAlreadyOpen =>
+      'Une demande est déjà en cours d\'examen.';
+
+  @override
+  String get errCodeVerificationAlreadyApproved =>
+      'Votre identité est déjà vérifiée sous ce nom.';
+
+  @override
+  String get errCodeRequestNotPending =>
+      'Ce dossier a changé entre-temps. Rechargez l\'écran.';
 }

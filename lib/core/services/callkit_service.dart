@@ -316,6 +316,24 @@ class CallKitService {
       debugPrint('[CallKit] showIncoming ignoré (déjà affiché): $id');
       return;
     }
+    // Le natif présente peut-être déjà cet appel sans que Dart l'ait demandé —
+    // c'est le cas ordinaire sur Android, où la notification vient du push.
+    // Le réafficher relance la sonnerie du plugin et, pire, remet l'entrée
+    // CallKit à « non décrochée » : tout ce qui suit la prend alors pour un
+    // refus. `_lastShownCallId` ne retient que ce que Dart a demandé, d'où
+    // cette seconde garde.
+    if (id.isNotEmpty && id == _nativeIncomingCallId) {
+      debugPrint('[CallKit] showIncoming ignoré (déjà présenté par le natif): $id');
+      return;
+    }
+    if (id.isNotEmpty) {
+      final actif = await getActiveCall();
+      final actifId = (actif?['callId'] as String?)?.trim() ?? '';
+      if (actifId == id && actif?['isAccepted'] == true) {
+        debugPrint('[CallKit] showIncoming ignoré (déjà décroché): $id');
+        return;
+      }
+    }
     if (id.isNotEmpty &&
         _lastShownCallId != null &&
         _lastShownCallId!.isNotEmpty &&
@@ -349,9 +367,9 @@ class CallKitService {
       // Android : ne PAS démarrer le foreground service au tap « Accepter » —
       // le service ne peut pas honorer startForeground() si l'engine Flutter
       // n'est pas encore attaché (crash ForegroundServiceDidNotStartInTime).
-      // Le FGS légitime est démarré par [startOutgoingCall] une fois l'appel
-      // répondu, engine prêt. Même contrat que le chemin natif
-      // (CallIncomingHelper.buildIncomingBundle).
+      // Le FGS légitime est `CallMediaForegroundService`, démarré par
+      // `CallSessionGuard.acquire` une fois l'appel répondu, engine prêt. Même
+      // contrat que le chemin natif (CallIncomingHelper.buildIncomingBundle).
       callingNotification: const NotificationParams(showNotification: false),
       extra: {
         'callId': callId,
@@ -442,6 +460,20 @@ class CallKitService {
       handle: handle,
       type: isVideo ? 1 : 0,
       duration: 0,
+      // Deux notifications s'affichaient pendant chaque appel, des deux côtés.
+      // Android en impose une par service au premier plan, et il en démarrait
+      // deux : le nôtre (`CallMediaForegroundService`, lancé juste avant par
+      // `CallSessionGuard.acquire`) et celui du plugin, que cet appel-ci
+      // déclenchait — le drapeau absent vaut `true` par défaut.
+      //
+      // On garde le nôtre : il porte le type `phoneCall`, dont dépend le micro
+      // quand l'écran s'éteint, et il s'arrête au balayage depuis les récents,
+      // ce que celui du plugin ne fait pas (`stopWithTask="false"`).
+      //
+      // Ceci n'ôte que la notification : `registerTelecomOutgoingCall` s'exécute
+      // avant elle et sans condition, donc l'appel reste déclaré à Telecom — ce
+      // dont dépend le routage du haut-parleur (voir `TelecomAudioRouter`).
+      callingNotification: const NotificationParams(showNotification: false),
       extra: {
         'callId': callId,
         'callerId': handle,

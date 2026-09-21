@@ -1,0 +1,1007 @@
+% Fragment partage : inclus par abonnement.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Ce qui existe}
+
+\begin{constat}[Rien de commercial dans les trois dépôts]
+Aucune table, route, dépendance ni chaîne de traduction ne parle de plan, d'abonnement, de
+paiement ou de droit d'accès --- ni dans le code, ni dans l'historique git, toutes branches
+comprises. La base de production ne contient aucune table de ce genre. Les tables
+\code{subscription} et \code{payment\_transaction} du volet~5 n'ont jamais été créées.
+\end{constat}
+
+\begin{constat}[Aucun réglage global partagé]
+L'application ne lit aucune configuration distante au démarrage. Côté serveur, les réglages
+de l'administration (\code{src/controllers/admin/settings.js}) sont écrits dans un
+\emph{fichier} local, \code{data/app-settings.json}~; \code{src/constants/tripPolicy.js} le
+dit en commentaire~: \guillemotleft~il n'existe pas de table de réglages globale~\guillemotright.
+Un fichier local diverge dès qu'il y a deux instances --- et le passage à plusieurs instances
+est préparé (adaptateur Redis). L'interrupteur du payant doit donc vivre en base.
+\end{constat}
+
+\section{Les fonctionnalités à verrouiller}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.2cm}>{\raggedright\arraybackslash}p{2.4cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\thd{Fonctionnalité} & \thd{Où elle vit} & \thd{État dans le code} \\
+\midrule
+Traduction & téléphone & ML Kit sur l'appareil (\code{message\_translation\_service.dart}).
+Le serveur n'intervient pas. \\
+Sauvegarde & téléphone + clé serveur & Serveur en place (\code{/api/backup}, migrations
+078--079). Le code mobile n'existe que sur \code{origin/partition} (commit \code{c1ebc73}),
+pas encore fusionné. Les archives vont sur l'appareil ou Google Drive, jamais chez Alanya. \\
+Trajets de confiance & serveur + téléphone & Complet (\code{/api/trips}, socket, jobs,
+migration 051). \\
+Sonneries par liste & téléphone, \emph{y compris natif} & Assignation synchronisée
+(migration 055)~; résolution en Dart \emph{et} en Kotlin quand l'application est fermée
+(\code{CallIncomingHelper.kt}, \code{MessageNotificationHelper.kt}). \\
+Style & téléphone & Seul le thème clair/sombre/système existe. Rien à verrouiller
+aujourd'hui. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% =====================================================================
+\chapter{Modèle de données}
+
+\section{Les principes}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Principe} & \thd{Conséquence} \\
+\midrule
+Une ligne par période payée & \code{subscription\_period} n'est jamais modifiée, seulement
+ajoutée. Être abonné = une période couvre l'instant présent. Renouveler en avance, changer de
+durée, offrir un mois~: ce sont toutes des lignes de plus, sans machine à états à tenir. \\
+Le catalogue est en base & Plans, prix, contenus et libellés se modifient depuis
+l'administration. Les \emph{codes} de fonctionnalité, eux, sont connus du code~: c'est lui qui
+pose les verrous. \\
+Un seul réglage global & \code{billing\_settings} n'a qu'une ligne, garantie par une
+contrainte \code{CHECK}. \\
+Le paiement ne crée rien tant qu'il n'est pas confirmé & Une période naît de la
+\emph{confirmation} d'un paiement, jamais de sa demande. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Migration \code{080\_abonnement.sql}}
+
+\begin{lstlisting}[language=SQL, caption={Catalogue et réglage global}]
+-- 080_abonnement.sql -- offre, periodes, paiements, reglage global
+-- Requiert 038 (socle) et 039 (job_queue). Application manuelle.
+
+CREATE TABLE IF NOT EXISTS feature (
+  code             VARCHAR(40) NOT NULL COMMENT 'Code connu du code applicatif',
+  name_i18n        JSON        NOT NULL COMMENT '{"fr":..,"en":..,"zh":..}',
+  description_i18n JSON        NULL,
+  is_paid          TINYINT     NOT NULL DEFAULT 1
+                     COMMENT '0 = gratuite pour tous, meme en phase payante',
+  is_available     TINYINT     NOT NULL DEFAULT 1
+                     COMMENT '0 = annoncee, pas encore livree',
+  sort_order       SMALLINT    NOT NULL DEFAULT 0,
+  updated_at       DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                 ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS plan (
+  id                    INT          NOT NULL AUTO_INCREMENT,
+  code                  VARCHAR(40)  NOT NULL,
+  name_i18n             JSON         NOT NULL,
+  duration_months       TINYINT      NOT NULL COMMENT '1 = mensuel, 12 = annuel',
+  price_amount          INT          NOT NULL
+                          COMMENT 'Unites entieres : le XAF n a pas de sous-unite',
+  currency              CHAR(3)      NOT NULL DEFAULT 'XAF',
+  reminder_days         SMALLINT     NOT NULL COMMENT 'Relance avant echeance',
+  is_active             TINYINT      NOT NULL DEFAULT 1,
+  is_featured           TINYINT      NOT NULL DEFAULT 0,
+  sort_order            SMALLINT     NOT NULL DEFAULT 0,
+  store_product_ios     VARCHAR(100) NULL,
+  store_product_android VARCHAR(100) NULL,
+  updated_by            INT          NULL,
+  created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                       ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_plan_code (code),
+  CONSTRAINT fk_plan_updater FOREIGN KEY (updated_by)
+    REFERENCES users(alanyaID) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS plan_feature (
+  plan_id      INT         NOT NULL,
+  feature_code VARCHAR(40) NOT NULL,
+  PRIMARY KEY (plan_id, feature_code),
+  CONSTRAINT fk_pf_plan    FOREIGN KEY (plan_id) REFERENCES plan(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_pf_feature FOREIGN KEY (feature_code) REFERENCES feature(code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS billing_settings (
+  id                 TINYINT  NOT NULL DEFAULT 1,
+  paid_enabled       TINYINT  NOT NULL DEFAULT 0,
+  activated_at       DATETIME NULL,
+  grace_until        DATETIME NULL,
+  deactivated_at     DATETIME NULL,
+  default_grace_days SMALLINT NOT NULL DEFAULT 30,
+  trial_days         SMALLINT NOT NULL DEFAULT 0,
+  retention_days     SMALLINT NOT NULL DEFAULT 30
+                       COMMENT 'Conservation des donnees payantes apres echeance',
+  updated_by         INT      NULL,
+  updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT ck_billing_singleton CHECK (id = 1),
+  -- Pas de passage au payant sans preavis : 7 jours de grace au minimum.
+  CONSTRAINT ck_billing_grace CHECK (default_grace_days >= 7),
+  CONSTRAINT fk_billing_updater FOREIGN KEY (updated_by)
+    REFERENCES users(alanyaID) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO billing_settings (id) VALUES (1);
+\end{lstlisting}
+
+\begin{lstlisting}[language=SQL, caption={Paiements, périodes, abonné}]
+CREATE TABLE IF NOT EXISTS payment (
+  id              BIGINT       NOT NULL AUTO_INCREMENT,
+  alanyaID        INT          NOT NULL,
+  plan_id         INT          NOT NULL,
+  provider        VARCHAR(32)  NOT NULL
+                    COMMENT 'simulated, <agregateur>, apple, google, wallet',
+  channel         VARCHAR(32)  NOT NULL
+                    COMMENT 'orange_money, mtn_momo, store, wallet',
+  msisdn          VARCHAR(20)  NULL,
+  amount          INT          NOT NULL COMMENT 'Prix du plan AU MOMENT du paiement',
+  currency        CHAR(3)      NOT NULL,
+  purpose         TINYINT      NOT NULL DEFAULT 0
+                    COMMENT '0=souscription 1=renouvellement 2=renouvellement auto',
+  status          TINYINT      NOT NULL DEFAULT 0
+                    COMMENT '0=cree 1=en attente 2=reussi 3=echoue 4=expire 5=rembourse',
+  idempotency_key VARCHAR(80)  NOT NULL,
+  provider_ref    VARCHAR(120) NULL,
+  failure_code    VARCHAR(40)  NULL,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                 ON UPDATE CURRENT_TIMESTAMP,
+  confirmed_at    DATETIME     NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_payment_idem (idempotency_key),
+  -- Plusieurs NULL sont admis : un paiement n'a pas de reference
+  -- tant que le fournisseur ne l'a pas acceptee.
+  UNIQUE KEY uq_payment_ref (provider, provider_ref),
+  KEY idx_payment_user (alanyaID, created_at),
+  KEY idx_payment_pending (status, created_at),
+  CONSTRAINT fk_payment_user FOREIGN KEY (alanyaID)
+    REFERENCES users(alanyaID) ON DELETE CASCADE,
+  CONSTRAINT fk_payment_plan FOREIGN KEY (plan_id) REFERENCES plan(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Journal brut de tout ce que les fournisseurs envoient, signature
+-- valide ou non. C'est lui qu'on relit quand un paiement est conteste.
+CREATE TABLE IF NOT EXISTS payment_event (
+  id           BIGINT      NOT NULL AUTO_INCREMENT,
+  payment_id   BIGINT      NULL COMMENT 'NULL si la reference est inconnue',
+  provider     VARCHAR(32) NOT NULL,
+  event_type   VARCHAR(40) NOT NULL,
+  signature_ok TINYINT     NOT NULL,
+  payload      JSON        NOT NULL,
+  received_at  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_pe_payment (payment_id, received_at),
+  CONSTRAINT fk_pe_payment FOREIGN KEY (payment_id)
+    REFERENCES payment(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS subscription_period (
+  id         BIGINT       NOT NULL AUTO_INCREMENT,
+  alanyaID   INT          NOT NULL,
+  plan_id    INT          NOT NULL,
+  starts_at  DATETIME     NOT NULL,
+  ends_at    DATETIME     NOT NULL,
+  source     TINYINT      NOT NULL COMMENT '0=paiement 1=essai 2=offert 3=compensation',
+  payment_id BIGINT       NULL,
+  granted_by INT          NULL COMMENT 'Administrateur, pour une periode offerte',
+  reason     VARCHAR(255) NULL COMMENT 'Obligatoire si source = 2',
+  created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  -- Un paiement confirme deux fois ne cree pas deux periodes.
+  UNIQUE KEY uq_period_payment (payment_id),
+  KEY idx_period_user (alanyaID, ends_at),
+  CONSTRAINT fk_period_user FOREIGN KEY (alanyaID)
+    REFERENCES users(alanyaID) ON DELETE CASCADE,
+  CONSTRAINT fk_period_plan FOREIGN KEY (plan_id) REFERENCES plan(id),
+  CONSTRAINT fk_period_payment FOREIGN KEY (payment_id)
+    REFERENCES payment(id) ON DELETE SET NULL,
+  CONSTRAINT fk_period_granter FOREIGN KEY (granted_by)
+    REFERENCES users(alanyaID) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Une ligne par utilisateur ayant eu au moins une periode. Ce qui est
+-- deduit des periodes y est denormalise pour les balayages.
+CREATE TABLE IF NOT EXISTS subscriber (
+  alanyaID      INT         NOT NULL,
+  current_end   DATETIME    NULL COMMENT 'Fin de la derniere periode',
+  auto_renew    TINYINT     NOT NULL DEFAULT 0,
+  renew_plan_id INT         NULL COMMENT 'Duree choisie pour le prochain renouvellement',
+  renew_channel VARCHAR(32) NULL,
+  renew_msisdn  VARCHAR(20) NULL,
+  purge_after   DATETIME    NULL COMMENT 'Pose a l echeance : + retention_days',
+  purged_at     DATETIME    NULL,
+  updated_at    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                              ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (alanyaID),
+  KEY idx_subscriber_end (current_end),
+  KEY idx_subscriber_purge (purge_after, purged_at),
+  CONSTRAINT fk_subscriber_user FOREIGN KEY (alanyaID)
+    REFERENCES users(alanyaID) ON DELETE CASCADE,
+  CONSTRAINT fk_subscriber_plan FOREIGN KEY (renew_plan_id)
+    REFERENCES plan(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+\end{lstlisting}
+
+\begin{lstlisting}[language=SQL, caption={Contenu initial}]
+INSERT IGNORE INTO plan (code, name_i18n, duration_months, price_amount,
+                         currency, reminder_days, is_featured, sort_order) VALUES
+  ('plus_mensuel', JSON_OBJECT('fr','Mensuel','en','Monthly'),  1,  250, 'XAF',  7, 0, 10),
+  ('plus_annuel',  JSON_OBJECT('fr','Annuel', 'en','Yearly'),  12, 2000, 'XAF', 30, 1, 20);
+
+-- Les deux plans incluent toutes les fonctionnalites payantes.
+INSERT IGNORE INTO plan_feature (plan_id, feature_code)
+  SELECT p.id, f.code FROM plan p CROSS JOIN feature f WHERE f.is_paid = 1;
+
+INSERT IGNORE INTO scheduler_leases (name) VALUES ('billing_sweep');
+\end{lstlisting}
+
+Le catalogue des fonctionnalités est semé dans le même fichier. Les libellés complets, avec
+leurs accents et leur traduction chinoise, y figurent~; ce tableau en donne les codes~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.2cm}p{1.4cm}p{1.9cm}X@{}}
+\toprule
+\thd{Code} & \thd{Payante} & \thd{Disponible} & \thd{Libellé français} \\
+\midrule
+\code{translation}    & oui & oui & Traduction des messages \\
+\code{backup}         & oui & oui & Sauvegarde des données \\
+\code{trusted\_trips} & oui & oui & Trajets de confiance \\
+\code{list\_ringtones}& oui & oui & Sonneries par liste \\
+\code{style}          & oui & \textbf{non} & Personnalisation du style \\
+\code{verified\_badge}& oui & oui & Coche indigo \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[La coche est une fonctionnalité du catalogue]
+Mettre \code{verified\_badge} au catalogue rend son inclusion réglable comme le reste~: un
+futur plan business pourrait l'inclure, un plan d'entrée de gamme non. La règle d'affichage
+reste celle du chapitre~\ref{chap:abo-tech-coche}~: identité vérifiée \emph{et} droit à la
+fonctionnalité.
+\end{note}
+
+\begin{alerte}[Deux pièges MySQL déjà rencontrés sur ce schéma]
+\code{users.alanyaID} est un \code{INT} signé~: toutes les clés étrangères ci-dessus le sont
+aussi, sans quoi l'erreur 3780 bloque la migration. Et le \code{XAF} n'a pas de sous-unité~:
+250~F s'écrit \code{250}, pas \code{25000}. Certains agrégateurs attendent des centimes
+d'office~; la conversion appartient à leur module, jamais au modèle.
+\end{alerte}
+
+\section{Migration \code{081\_verification.sql}}
+
+Elle reprend le DDL du volet~5 (\code{verification\_request}, \code{verification\_document},
+\code{verification\_document\_access}, prévu sous le numéro 027 jamais utilisé), avec trois
+écarts~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.2cm}X@{}}
+\toprule
+\thd{Écart} & \thd{Pourquoi} \\
+\midrule
+Statut \code{5 = révoqué} sur la demande & La révocation porte sur une décision déjà prise~;
+elle garde son auteur et son motif sur la même ligne. \\
+Colonne \code{name\_at\_approval} & Le nom vérifié. S'il ne correspond plus au nom affiché,
+la coche tombe jusqu'à nouvel examen. \\
+Plus de \code{subscription} ni de \code{payment\_transaction} & Remplacées par la
+migration~080. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% =====================================================================
+\chapter{Droits d'accès}
+
+\section{Une seule fonction décide}
+
+Tout ce qui se demande \guillemotleft~cet utilisateur a-t-il droit à cette
+fonctionnalité~?~\guillemotright{} passe par \code{entitlementsFor}. Aucun écran, aucune route
+ne recalcule la règle de son côté.
+
+\begin{lstlisting}[language=JavaScript, caption={\code{src/services/billing/entitlements.js}}]
+async function entitlementsFor(alanyaID, now = new Date()) {
+  const s = await getBillingSettings();      // une ligne, cache 30 s
+  const phase = !s.paid_enabled ? 'free'
+              : now < s.grace_until ? 'grace' : 'paid';
+
+  const catalog = await getFeatures();        // catalogue, cache 30 s
+  const period  = await currentPeriod(alanyaID, now);  // null si aucune
+  const included = period ? await featuresOfPlan(period.plan_id) : [];
+  const exempt  = await isStaffOrOfficial(alanyaID);   // admins, compte officiel
+
+  const features = {};
+  for (const f of catalog) {
+    features[f.code] = f.is_available === 1 && (
+      f.is_paid === 0 || phase !== 'paid' || exempt || included.includes(f.code));
+  }
+  return {
+    phase,
+    graceUntil: s.grace_until,
+    period,                                   // plan, debut, fin, source
+    features,
+    // Jusqu'a quand le telephone peut se fier a ce resultat sans reseau.
+    validUntil: earliest(period && period.ends_at,
+                         phase === 'grace' ? s.grace_until : null,
+                         addDays(now, 7)),
+  };
+}
+\end{lstlisting}
+
+L'essai gratuit n'a pas de règle à part~: c'est une période de \code{source = 1}, créée à
+l'inscription quand \code{trial\_days > 0} et que la phase est payante. Un abonnement offert
+est une période de \code{source = 2}.
+
+\section{Ce que reçoit le téléphone}
+
+\begin{lstlisting}[language=JavaScript, numbers=none, caption={Charge utile \code{entitlements}}]
+{
+  "phase": "grace",
+  "graceUntil": "2026-10-12T00:00:00Z",
+  "period": { "plan": "plus_annuel", "endsAt": "2027-10-12T00:00:00Z",
+              "autoRenew": true },
+  "features": { "translation": true, "backup": true, "trusted_trips": true,
+                "list_ringtones": true, "style": false, "verified_badge": true },
+  "validUntil": "2026-09-17T08:00:00Z"
+}
+\end{lstlisting}
+
+Elle arrive par trois chemins~: dans \code{GET /api/auth/me}, par \code{GET /api/billing/me},
+et poussée par l'événement socket \code{entitlements:updated} à chaque paiement, échéance ou
+changement de réglage. Le téléphone la garde en cache avec son \code{validUntil}~: la
+traduction, qui fonctionne sans réseau, doit continuer à fonctionner sans réseau.
+
+\section{Deux verrous, selon l'endroit où vit la fonctionnalité}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.4cm}X@{}}
+\toprule
+\thd{Côté serveur} & Middleware \code{requireFeature('trusted\_trips')} sur les routes
+concernées. Refus en \code{403} avec le code \code{SUBSCRIPTION\_REQUIRED} et le code de la
+fonctionnalité. \\
+\thd{Côté téléphone} & \code{EntitlementService.has(Feature.translation)} lu dans le cache.
+Pour ce que le serveur ne voit pas --- traduction, sonneries, style --- c'est le seul verrou. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Le refus n'est pas une erreur]
+\code{SUBSCRIPTION\_REQUIRED} rejoint \code{docs/error-codes.md}, mais l'entonnoir d'erreurs
+de l'application (\code{lib/core/errors/error\_presenter.dart}) ne l'affiche pas comme un
+message~: il ouvre le panneau de l'offre sur la fonctionnalité demandée. Un seul endroit
+traduit donc tous les refus en proposition, quel que soit l'écran qui les a reçus.
+\end{note}
+
+\begin{alerte}[Un verrou côté téléphone se contourne]
+Une application modifiée peut ignorer le cache et traduire sans abonnement. Pour une
+fonctionnalité à 250~F qui tourne entièrement sur l'appareil, c'est un risque accepté~: le
+fermer demanderait de faire passer la traduction par le serveur, ce qui coûterait plus que
+ce qu'on protège.
+\end{alerte}
+
+% =====================================================================
+\chapter{La coche}
+\label{chap:abo-tech-coche}
+
+\section{Une seule écriture}
+
+\code{users.verification\_status} et \code{users.verified\_until} ne sont plus jamais saisis.
+Une seule fonction les écrit, appelée à chaque événement qui peut les changer~: décision sur
+un dossier, paiement confirmé, échéance, fin de grâce, changement de nom, changement de
+réglage.
+
+\begin{lstlisting}[language=JavaScript, caption={\code{src/services/billing/verification.js}}]
+async function recomputeVerification(alanyaID, conn) {
+  const req = await latestRequest(alanyaID, conn);   // hors dossiers annules
+  const ent = await entitlementsFor(alanyaID);
+  let status = V.NON_DEMANDE;
+  let until = null;
+
+  if (req && req.status === R.REVOQUE)        status = V.REVOQUE;
+  else if (req && req.status === R.REFUSE)    status = V.REFUSE;
+  else if (req && req.status !== R.APPROUVE)  status = V.EN_COURS;
+  else if (req && nameChanged(req, alanyaID)) status = V.EN_COURS;  // nouvel examen
+  else if (req && ent.features.verified_badge) {
+    status = V.VERIFIE;
+    until = ent.phase === 'free' ? null
+          : latest(ent.period && ent.period.ends_at,
+                   ent.phase === 'grace' ? ent.graceUntil : null);
+  } else if (req)                             status = V.EXPIRE;
+
+  await conn.execute(
+    'UPDATE users SET verification_status = ?, verified_until = ? WHERE alanyaID = ?',
+    [status, until, alanyaID]);
+}
+\end{lstlisting}
+
+\begin{alerte}[Corriger les constantes avant tout]
+Le backend déclare aujourd'hui \code{EXPIRE = 4} et \code{REVOQUE = 5}
+(\code{src/constants/accountTypes.js}, lignes 12--13), l'inverse de l'administration et du
+volet~1. Aucune donnée n'est touchée --- en production, tous les comptes sont à 0 --- mais la
+correction doit précéder la première écriture de ces valeurs.
+\end{alerte}
+
+\section{Ce que la coche doit encore corriger dans l'existant}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{5.6cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\thd{Constat} & \thd{Correction} \\
+\midrule
+Un compte personnel vérifié n'affiche aucun badge (\code{account\_badge.dart}, et son miroir
+\code{components/account-badge.tsx}) & Variante \code{cocheVerifiee}, indigo, prévue au
+volet~1 et jamais écrite. \\
+Le socle manque dans la recherche, les contacts, les messages temps réel et le détail d'une
+conversation (qui le lit en base puis l'oublie) & Ajouter les deux champs aux quatre
+charges utiles. \\
+Le sélecteur d'état de la carte \guillemotleft~Socle~\guillemotright{} écrit n'importe quelle
+valeur, sans validation & Retiré~: la route \code{PUT /admin/users/:id/socle} ne touche plus
+que \code{account\_type}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% =====================================================================
+\chapter{Le paiement}
+
+\section{La couture}
+
+Tout fournisseur --- le simulateur aujourd'hui, l'agrégateur demain, les stores, le
+porte-monnaie --- est un module de trois fonctions. C'est le \textbf{seul} fichier à écrire
+pour en brancher un nouveau.
+
+\begin{lstlisting}[language=JavaScript, caption={\code{src/services/payments/providers/<nom>.js}}]
+module.exports = {
+  name: 'simulated',
+  channels: ['orange_money', 'mtn_momo'],
+
+  // Demande le paiement au fournisseur. Ne confirme jamais rien :
+  // la confirmation n'arrive que par parseWebhook() ou fetchStatus().
+  async initiate({ payment, msisdn }) {
+    return { providerRef, status: 'pending', nextAction: { type: 'ussd_push' } };
+  },
+
+  // Verifie la signature et traduit l'evenement du fournisseur
+  // en { providerRef, outcome: 'succeeded' ou 'failed', failureCode }.
+  async parseWebhook({ headers, rawBody }) { /* ... */ },
+
+  // Reconciliation, quand un webhook s'est perdu.
+  async fetchStatus(providerRef) { /* ... */ },
+};
+\end{lstlisting}
+
+\section{Le cycle d'un paiement}
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  e/.style={draw=AlanyaLine, fill=AlanyaSurface, rounded corners=3pt,
+            font=\sffamily\small, inner sep=6pt, minimum height=0.85cm, text=AlanyaInk},
+  ok/.style={e, draw=AlanyaSuccess, line width=0.9pt, fill=AlanyaSuccess!8},
+  ko/.style={e, draw=danger, fill=danger!6},
+  a/.style={-{Stealth[length=2.2mm]}, draw=AlanyaGray, semithick},
+  l/.style={font=\sffamily\scriptsize, text=AlanyaGray, fill=white, inner sep=2pt}
+]
+  \node[e]  (cre) at (0,0)      {Créé};
+  \node[e]  (att) at (3.6,0)    {En attente};
+  \node[ok] (ok)  at (8.2,0)    {Réussi};
+  \node[ko] (ech) at (8.2,-1.8) {Échoué};
+  \node[ko] (exp) at (3.6,-1.8) {Expiré};
+  \node[e]  (per) at (12.6,0)   {Période créée};
+
+  \draw[a] (cre) -- node[l, above] {\code{initiate}} (att);
+  \draw[a] (att) -- node[l, above] {webhook : succès} (ok);
+  \draw[a] (att.south east) -- node[l, pos=0.55, below left] {refus, solde} (ech.north west);
+  \draw[a] (att) -- node[l, left] {sans réponse} (exp);
+  \draw[a] (ok) -- node[l, above] {même transaction} (per);
+\end{tikzpicture}
+\end{center}
+
+\begin{lstlisting}[language=JavaScript, caption={\code{settlePayment} --- le seul chemin vers une période}]
+async function settlePayment(paymentId, outcome) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [[p]] = await conn.execute(
+      'SELECT * FROM payment WHERE id = ? FOR UPDATE', [paymentId]);
+    if (p.status === P.REUSSI || p.status === P.ECHOUE) {   // rejeu : rien
+      await conn.commit();
+      return p;
+    }
+    if (outcome.outcome !== 'succeeded') {
+      await markFailed(conn, p, outcome.failureCode);
+    } else {
+      const plan  = await getPlan(conn, p.plan_id);
+      // max(maintenant, fin de la periode en cours, fin de la grace) :
+      // payer en avance prolonge, payer pendant la grace ne la consomme pas.
+      const start = await nextStart(conn, p.alanyaID);
+      const end   = addMonths(start, plan.duration_months);
+      await markSucceeded(conn, p);
+      await insertPeriod(conn, p, plan, start, end);        // uq_period_payment
+      await upsertSubscriber(conn, p, end);
+      await recomputeVerification(p.alanyaID, conn);
+    }
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+  await afterSettle(paymentId);  // push, socket, planification des relances
+}
+\end{lstlisting}
+
+\begin{note}[Trois protections contre le double crédit]
+Le verrou \code{FOR UPDATE} sérialise deux webhooks simultanés~; le contrôle de statut rend
+le second inopérant~; et \code{uq\_period\_payment} refuse physiquement une seconde période
+pour le même paiement, si les deux premières protections venaient à être contournées.
+\end{note}
+
+\section{Le simulateur}
+
+\code{providers/simulated.js} répond comme un agrégateur~: \code{initiate} renvoie
+\guillemotleft~en attente~\guillemotright, puis un job \code{payment\_sim\_callback} rappelle,
+quatre secondes plus tard, \emph{la même fonction} que la route de webhook. Le parcours
+éprouvé aujourd'hui est donc celui qui servira demain, signature et idempotence comprises.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm}X@{}}
+\toprule
+\thd{Numéro se terminant par} & \thd{Réponse simulée} \\
+\midrule
+\code{00} (et tout autre) & Succès après 4~secondes. \\
+\code{01} & Échec~: solde insuffisant. \\
+\code{02} & Refus de l'utilisateur sur son téléphone. \\
+\code{03} & Aucune réponse~: le paiement expire, la réconciliation le constate. \\
+\code{04} & Succès envoyé deux fois --- pour vérifier que la seconde est sans effet. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Le simulateur ne doit jamais encaisser en production]
+Le fournisseur actif est choisi par la variable d'environnement \code{PAYMENT\_PROVIDER},
+avec les secrets qui l'accompagnent. En production, l'activation du payant est refusée
+(\code{409 BILLING\_PROVIDER\_SIMULATED}) tant que ce fournisseur est \code{simulated}~; le
+refus est testé.
+\end{alerte}
+
+\section{Réconciliation}
+
+Un webhook peut se perdre. Toutes les cinq minutes, sous le bail \code{billing\_sweep}, les
+paiements \guillemotleft~en attente~\guillemotright{} depuis plus de deux minutes sont
+interrogés par \code{fetchStatus}~; au-delà de trente minutes sans réponse, ils passent en
+\guillemotleft~expiré~\guillemotright.
+
+\section{Les stores et le porte-monnaie}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{2.6cm}X@{}}
+\toprule
+\thd{Fournisseur} & \thd{Ce que fait son module} \\
+\midrule
+\code{apple} & StoreKit~2 dans l'application~; le serveur vérifie la transaction signée
+auprès de l'App Store Server API et reçoit les \emph{App Store Server Notifications}~v2 sur
+la route de webhook. \\
+\code{google} & Play Billing dans l'application~; le serveur vérifie le jeton d'achat par
+l'API Google Play Developer et reçoit les notifications en temps réel via Pub/Sub. \\
+\code{wallet} & Débit du solde dans la même transaction~: \code{initiate} répond directement
+\guillemotleft~réussi~\guillemotright. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Les produits des stores sont reliés aux plans par \code{store\_product\_ios} et
+\code{store\_product\_android}. Sur un store, le prix affiché vient du store, pas de
+\code{plan.price\_amount}~: c'est ce qui laisse ouverte la question du prix par canal.
+
+% =====================================================================
+\chapter{Échéances et interrupteur}
+
+\section{Des jobs posés à la bonne heure}
+
+La file de jobs (\code{src/services/jobQueue.js}) sait déjà exécuter un travail à une date
+précise (\code{runAfter}), dédoublonné par clé --- les trajets s'en servent. Chaque période
+créée pose ses jobs~; chaque job relit l'état au moment de s'exécuter, si bien qu'un
+renouvellement survenu entre-temps les rend inopérants sans avoir à les annuler.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.9cm}p{3.6cm}X@{}}
+\toprule
+\thd{Job} & \thd{Quand} & \thd{Effet} \\
+\midrule
+\code{billing\_reminder} & fin -- \code{reminder\_days} & Notification de relance. \\
+\code{billing\_autorenew} & fin -- 1~jour & Si \code{auto\_renew}~: \code{initiate} sur le
+dernier canal utilisé. \\
+\code{billing\_expire} & fin & \code{recomputeVerification}, \code{purge\_after = fin +
+retention\_days}, notification. \\
+\code{billing\_purge\_warning} & \code{purge\_after} -- 7~jours & Dernier avertissement. \\
+\code{billing\_purge} & \code{purge\_after} & Suppression fonctionnalité par fonctionnalité. \\
+\code{billing\_grace\_end} & \code{grace\_until} & Recalcul des coches par lots de 500. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Un balayage quotidien, sous le bail \code{billing\_sweep}, rattrape tout job perdu~: il
+cherche les \code{subscriber} dont \code{current\_end} est passée sans expiration
+enregistrée, et les \code{purge\_after} échues sans \code{purged\_at}. C'est le patron du
+\code{verificationScheduler}, qu'il remplace.
+
+\section{Les notifications}
+
+Cinq types rejoignent \code{NOTIFICATION\_TYPES}
+(\code{src/notifications/notificationContract.js})~: \code{billing\_reminder},
+\code{billing\_expired}, \code{billing\_purge\_warning}, \code{payment\_succeeded},
+\code{payment\_failed}. Aucun ne passe outre \guillemotleft~Ne pas déranger~\guillemotright~:
+ce privilège reste réservé aux alertes de sûreté des trajets. Les annonces collectives ---
+activation, fin de grâce --- passent par une diffusion du compte officiel
+(\code{publishBroadcast}), avec un \code{clientId} qui la rend idempotente.
+
+\section{Les transitions de l'interrupteur}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm}X@{}}
+\toprule
+\thd{Action} & \thd{Ce que fait le serveur} \\
+\midrule
+Activer & Refus si fournisseur simulé en production. Sinon \code{paid\_enabled = 1},
+\code{activated\_at = maintenant}, \code{grace\_until = maintenant + default\_grace\_days}~;
+diffusion d'annonce~; job \code{billing\_grace\_end}~; diffusion de rappel à
+\code{grace\_until} -- 7~jours, critère \guillemotleft~sans période en cours~\guillemotright. \\
+Prolonger la grâce & Nouvelle \code{grace\_until}~; le job est replanifié par sa clé de
+dédoublonnage. \\
+Désactiver & \code{paid\_enabled = 0}, \code{deactivated\_at = maintenant}. Tout redevient
+gratuit~; les renouvellements automatiques sont suspendus. \\
+Réactiver & Nouvelle grâce. Les abonnés dont une période couvrait \code{deactivated\_at}
+reçoivent une période de compensation (\code{source = 3}) égale à la durée de la phase
+gratuite. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Chaque transition est une route dédiée (\code{POST /admin/billing/activate}…) plutôt qu'un
+\code{PUT} générique~: le journal d'audit (\code{src/middleware/adminAudit.js}) enregistre
+ainsi un verbe explicite, avec le motif saisi.
+
+% =====================================================================
+\chapter{Verrouillage, fonctionnalité par fonctionnalité}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{2.3cm}*{3}{>{\raggedright\arraybackslash}X}@{}}
+\toprule
+\thd{} & \thd{Verrou} & \thd{À l'échéance} & \thd{Après N jours} \\
+\midrule
+Traduction &
+Téléphone~: \code{\_isEnabledFor} du service de traduction, le menu
+\guillemotleft~Traduire~\guillemotright, l'écran de réglages. &
+La traduction automatique s'arrête~; les bulles affichent l'original. &
+Suppression locale des modèles ML Kit et des traductions en cache. \\
+\addlinespace
+Sauvegarde &
+Serveur~: \code{GET /api/backup/key} (clé courante, pour une \emph{nouvelle} sauvegarde) et
+\code{PUT /meta}. Téléphone~: la planification s'arrête. &
+Plus de nouvelle sauvegarde. La restauration (\code{GET /key/:kid}) reste ouverte. &
+Voir l'alerte ci-dessous~: rien à supprimer chez Alanya. \\
+\addlinespace
+Trajets &
+Serveur~: \code{POST /api/trips} et \code{POST /api/trips/sos}. Suivre, confirmer,
+prolonger, annuler et le SOS d'un trajet déjà lancé restent libres. &
+Un trajet en cours va à son terme, SOS compris. Plus de nouveau trajet ni de SOS isolé. &
+Suppression des trajets du compte (\code{trip}, \code{trip\_point}, \code{trip\_event}). \\
+\addlinespace
+Sonneries par liste &
+Téléphone~: \code{resolveCall} et \code{resolveMessage} renvoient \code{null}~; les helpers
+Kotlin lisent un drapeau miroir. Serveur~: écriture des champs de son dans
+\code{PUT /api/contact-lists}. &
+Retour à la sonnerie globale~; le réglage est conservé. &
+Effacement des colonnes \code{*\_sound\_*} de \code{contact\_list} et des préférences
+locales. \\
+\addlinespace
+Coche &
+Serveur~: \code{recomputeVerification}. &
+Tombe. &
+Rien~: l'identité reste vérifiée, les pièces suivent leur propre purge à 90~jours. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Les sonneries se décident aussi hors de Dart]
+Quand l'application est fermée, c'est le code natif Android qui choisit la sonnerie
+(\code{CallIncomingHelper.kt}, lignes 160--195~; \code{MessageNotificationHelper.kt}, lignes
+388--410), en relisant directement les préférences \code{flutter.list\_ringtone\_*}. Couper
+le verrou en Dart seulement laisserait les sonneries par liste actives pour tout appel reçu
+application fermée. Le service de droits écrit donc un drapeau
+\code{flutter.plus\_list\_ringtones} que les deux helpers consultent.
+\end{alerte}
+
+\begin{alerte}[La sauvegarde n'appartient pas à Alanya]
+Les archives sont sur le téléphone ou le Google Drive de l'utilisateur~; le serveur ne
+détient que le secret qui dérive les clés. \guillemotleft~Supprimer après N
+jours~\guillemotright{} n'a donc qu'un seul levier~: refuser définitivement la clé de
+restauration --- ce qui rendrait les archives de l'utilisateur illisibles pour toujours. La
+conception s'y refuse~: faire une nouvelle sauvegarde est payant, relire la sienne ne l'est
+jamais. Écart validé~: pour la sauvegarde, la purge à N~jours ne s'applique pas.
+\end{alerte}
+
+\begin{note}[Le SOS est dans l'offre, pas le SOS d'un trajet en cours]
+\code{POST /api/trips/sos} (\code{src/routes/trips.js}, ligne 156) déclenche une alerte sans
+trajet~: il reçoit \code{requireFeature('trusted\_trips')}. \code{POST /api/trips/:id/sos}
+(ligne 280) n'est \emph{pas} verrouillé~: un trajet lancé pendant l'abonnement garde son SOS
+jusqu'à sa fin, même si l'échéance tombe entre-temps. Les proches qui \emph{suivent} un
+trajet n'ont besoin d'aucun abonnement.
+\end{note}
+
+% =====================================================================
+\chapter{API}
+
+\section{Application}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{1.1cm}p{5.8cm}X@{}}
+\toprule
+\thd{} & \thd{Route} & \thd{Objet} \\
+\midrule
+\mGET  & \code{/api/billing/offer}           & Phase, plans et fonctionnalités, dans la langue
+de l'utilisateur, canaux disponibles sur sa plateforme \\
+\mGET  & \code{/api/billing/me}              & La charge utile \code{entitlements} \\
+\mPOST & \code{/api/billing/checkout}        & \code{\{planCode, channel, msisdn\}} ---
+renvoie le paiement et l'action attendue \\
+\mGET  & \code{/api/billing/payments/:id}    & Statut, en complément de l'événement socket
+\code{payment:updated} \\
+\mGET  & \code{/api/billing/history}         & Périodes et paiements \\
+\mPUT  & \code{/api/billing/preferences}     & \code{\{autoRenew, renewPlanCode\}} \\
+\mPOST & \code{/api/billing/store/:store}    & Jeton d'achat Apple ou Google, à vérifier
+(plus tard) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Les routes du dossier d'identité sont celles du volet~5 (\code{/api/verification}).
+
+\section{Fournisseurs}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{1.1cm}p{5.8cm}X@{}}
+\toprule
+\mPOST & \code{/api/payments/webhook/:provider} & Sans authentification de session~: la
+signature du fournisseur fait foi. Tout est journalisé dans \code{payment\_event}, y compris
+les appels à signature invalide. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Administration}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{1.1cm}p{6.2cm}X@{}}
+\toprule
+\thd{} & \thd{Route} & \thd{Permission} \\
+\midrule
+\mGET  & \code{/admin/billing/settings}               & \code{billing.read} \\
+\mPOST & \code{/admin/billing/activate}, \code{/deactivate}, \code{/extend-grace}
+                                                       & \code{billing.settings} \\
+\mPUT  & \code{/admin/billing/settings}               & \code{billing.settings} (essai,
+conservation) \\
+\mGET  & \code{/admin/billing/plans}, \code{/features}& \code{billing.read} \\
+\mPOST & \code{/admin/billing/plans}                  & \code{billing.plans} \\
+\mPUT  & \code{/admin/billing/plans/:id}, \code{/features/:code} & \code{billing.plans} \\
+\mGET  & \code{/admin/billing/payments}, \code{/subscribers} & \code{billing.read} \\
+\mGET  & \code{/admin/users/:id/billing}              & \code{billing.read} \\
+\mPOST & \code{/admin/users/:id/billing/gift}         & \code{billing.gift} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\code{billing.read} rejoint les permissions de tout administrateur~; \code{billing.settings},
+\code{billing.plans} et \code{billing.gift} sont réservées au super-administrateur
+(\code{src/constants/adminRoles.js}). Les décisions sur les dossiers d'identité suivent le
+volet~5~: tout administrateur, auteur tracé.
+
+% =====================================================================
+\chapter{Impact fichier par fichier}
+
+\section{Backend}
+
+\begin{longtable}{@{}p{8.3cm}p{1.5cm}>{\raggedright\arraybackslash}p{5.4cm}@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\endhead
+\code{migrations/080\_abonnement.sql} & nouveau & Catalogue, périodes, paiements, réglage \\
+\code{migrations/081\_verification.sql} & nouveau & Dossiers et pièces (volet~5 révisé) \\
+\code{src/constants/accountTypes.js} & modifié & Statuts 4 et 5 dans le bon ordre \\
+\code{src/constants/billing.js} & nouveau & Statuts de paiement, sources de période \\
+\code{src/services/billing/settings.js} & nouveau & Lecture en cache, transitions \\
+\code{src/services/billing/catalog.js} & nouveau & Plans et fonctionnalités \\
+\code{src/services/billing/entitlements.js} & nouveau & \code{entitlementsFor} \\
+\code{src/services/billing/verification.js} & nouveau & \code{recomputeVerification} \\
+\code{src/services/billing/billingJobs.js} & nouveau & Relance, échéance, purge, grâce \\
+\code{src/services/billing/featurePurge.js} & nouveau & Purge par fonctionnalité \\
+\code{src/services/payments/paymentService.js} & nouveau & \code{checkout},
+\code{settlePayment}, réconciliation \\
+\code{src/services/payments/providers/simulated.js} & nouveau & Le faux agrégateur \\
+\code{src/middleware/requireFeature.js} & nouveau & Verrou serveur \\
+\code{src/controllers/billingController.js} & nouveau & Routes de l'application \\
+\code{src/controllers/paymentWebhookController.js} & nouveau & Webhooks \\
+\code{src/controllers/admin/billing.js} & nouveau & Routes d'administration \\
+\code{src/routes/billing.js}, \code{src/routes/admin.js} & nouveau, modifié & Montage \\
+\code{src/routes/trips.js}, \code{backup.js}, \code{contactLists.js} & modifié &
+\code{requireFeature} \\
+\code{src/controllers/admin/users.js} & modifié & \code{/socle} ne pose plus la
+vérification \\
+\code{src/controllers/authCustomController.js} & modifié & \code{entitlements} dans
+\code{/me} \\
+\code{src/constants/adminRoles.js}, \code{src/middleware/adminAudit.js} & modifié &
+Permissions et verbes d'audit \\
+\code{src/notifications/notificationContract.js} & modifié & Cinq types \\
+\code{src/services/verificationScheduler.js} & supprimé & Remplacé par
+\code{billingJobs.js} \\
+\code{server.js} & modifié & Routes, jobs, bail \\
+\code{docs/error-codes.md} & modifié & \code{SUBSCRIPTION\_REQUIRED},
+\code{BILLING\_*}, \code{PAYMENT\_*} \\
+\bottomrule
+\end{longtable}
+
+\section{Administration}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{8.8cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\thd{Fichier} & \thd{Objet} \\
+\midrule
+\code{app/(dashboard)/billing/page.tsx} & Phase, interrupteur, réglages \\
+\code{app/(dashboard)/billing/plans/page.tsx}, \code{plans/[id]/page.tsx} & Plans et
+éditeur \\
+\code{app/(dashboard)/billing/payments/page.tsx} & Paiements \\
+\code{app/(dashboard)/billing/subscribers/page.tsx} & Abonnés et échéances \\
+\code{app/(dashboard)/verifications/page.tsx}, \code{[id]/page.tsx} & File et instruction
+(volet~5) \\
+\code{app/(dashboard)/users/[id]/page.tsx} & Carte \guillemotleft~Abonnement et
+coche~\guillemotright{}~; sélecteur d'état retiré \\
+\code{app/(dashboard)/layout.tsx} & Entrées de menu, compteur de dossiers \\
+\code{components/billing/*}, \code{lib/api/billing.ts}, \code{hooks/useBilling.ts},
+\code{types/index.ts} & Composants, appels, types \\
+\code{components/account-badge.tsx} & Coche personnelle \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Application}
+
+\begin{longtable}{@{}p{9.6cm}>{\raggedright\arraybackslash}p{6.0cm}@{}}
+\toprule
+\thd{Fichier} & \thd{Objet} \\
+\midrule
+\endhead
+\code{lib/api/billing\_api.dart} & Appels \\
+\code{lib/core/services/billing/entitlement\_service.dart} & Cache des droits,
+\code{validUntil}, drapeaux natifs \\
+\code{lib/screens/billing/plus\_offer\_screen.dart} & Offre \\
+\code{lib/screens/billing/checkout\_screen.dart} & Paiement et attente \\
+\code{lib/screens/billing/subscription\_screen.dart} & Mon abonnement \\
+\code{lib/screens/profile/verification\_screen.dart} & Obtenir la coche (volet~5) \\
+\code{lib/widgets/billing/plus\_card.dart} & Carte du profil, cinq états \\
+\code{lib/widgets/billing/paywall\_sheet.dart} & Panneau de fonctionnalité verrouillée \\
+\code{lib/screens/profile/profile\_screen.dart} & Carte sous \code{\_ProfileHeader}, entrée
+de menu \\
+\code{lib/core/errors/error\_presenter.dart} & \code{SUBSCRIPTION\_REQUIRED} ouvre le
+panneau \\
+\code{lib/core/services/translation/}\allowbreak\code{message\_translation\_service.dart} & Verrou
+traduction \\
+\code{lib/core/services/list\_ringtone\_preferences.dart} & Verrou sonneries \\
+\code{android/.../CallIncomingHelper.kt}, \code{MessageNotificationHelper.kt} & Drapeau
+miroir \\
+\code{lib/screens/trips/} & Panneau au lieu de l'écran de départ \\
+\code{lib/widgets/common/account\_badge.dart} & Variante \code{cocheVerifiee} \\
+\code{lib/l10n/app\_fr.arb}, \code{app\_en.arb}, \code{app\_zh.arb} & Chaînes \\
+\bottomrule
+\end{longtable}
+
+% =====================================================================
+\chapter{Ordre de livraison}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{0.8cm}p{4.4cm}X@{}}
+\toprule
+\thd{Lot} & \thd{Contenu} & \thd{Ce qu'il rend possible} \\
+\midrule
+A & Corrections du socle & Statuts dans le bon ordre, coche personnelle visible, socle
+présent dans toutes les charges utiles. \\
+B & Catalogue et interrupteur & Migration~080, droits d'accès, écrans d'administration des
+plans et des réglages. Tout reste gratuit~: rien ne change pour l'utilisateur. \\
+C & Offre et paiement simulé & Carte du profil, offre, paiement, panneau, verrous des quatre
+fonctionnalités. Testable de bout en bout. \\
+D & Échéances & Relances, renouvellement automatique, expiration, purge. \\
+E & Coche & Migration~081, coffre à documents, dossier, instruction. \\
+F & Paiement réel & Agrégateur, stores, puis porte-monnaie --- après les décisions sur les
+stores. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+B peut partir en production avant C~: avec l'interrupteur éteint, le catalogue est inerte.
+E ne dépend que de A~; il peut avancer en parallèle de C et D.
+
+% =====================================================================
+\chapter{Points de vigilance et questions ouvertes}
+
+\section{Décisions prises}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\thd{Sujet} & \thd{Décision} \\
+\midrule
+Nom de l'offre & \guillemotleft~Alanya Plus~\guillemotright, définitif. \\
+Sauvegarde & Toujours restaurable~; la purge à N~jours ne s'y applique pas. \\
+SOS & Dans l'offre. Le SOS d'un trajet déjà lancé reste disponible jusqu'à sa fin. \\
+Retour au gratuit & Les abonnés sont compensés de la durée de la phase gratuite (période
+\code{source = 3}). \\
+Vérification d'identité & Valable sans limite de durée. Seul un changement de nom provoque
+un nouvel examen. \\
+Remboursements & Aucun. Les conditions générales doivent le dire avant le premier
+paiement. \\
+Durée de grâce & 7~jours au minimum (contrainte \code{ck\_billing\_grace}). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[« Aucun remboursement » ne vaut que pour Alanya]
+Apple et Google remboursent parfois un achat de leur propre chef, sans demander l'avis de
+l'éditeur. Leur notification de remboursement arrive par la route de webhook~: le paiement
+passe en statut \code{5}, et la période qu'il avait créée est close à la date du
+remboursement. Sans ce traitement, un utilisateur remboursé par son store garderait son
+abonnement.
+\end{alerte}
+
+\section{Questions ouvertes}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Prix sur les stores}~: même prix, prix majoré, ou autre~? Reporté par
+        décision~; le modèle le permet sans changement.
+  \item \textbf{Règles des stores pour le Cameroun}~: le Play Store autorise-t-il un
+        paiement tiers pour des fonctionnalités numériques~? L'application iOS peut-elle
+        seulement mentionner le mobile money~? À vérifier \emph{avant} le lot~F.
+  \item \textbf{Fiscalité}~: le prix affiché est-il toutes taxes comprises~? La TVA
+        camerounaise sur les services numériques est à établir avec un comptable
+        \emph{avant} l'activation du payant. Elle ne change pas le modèle~: un prix toutes
+        taxes comprises reste un entier dans \code{plan.price\_amount}~; seule la facture, si
+        elle est exigée, devra détailler la part de taxe.
+  \item \textbf{Comptes business}~: auront-ils leurs propres plans~? Le catalogue le permet
+        (un plan peut inclure d'autres fonctionnalités), rien n'est prévu à ce stade.
+\end{enumerate}
+
+\section{Ce qui ne doit pas être oublié}
+
+\begin{alerte}[Le verrou natif des sonneries]
+Sans le drapeau miroir, les sonneries par liste restent actives application fermée --- le
+cas le plus fréquent pour un appel entrant.
+\end{alerte}
+
+\begin{alerte}[Le changement de nom]
+Il doit appeler \code{recomputeVerification}. C'est ce qui empêche d'acheter une coche sous
+son nom puis de se renommer.
+\end{alerte}
+
+\begin{alerte}[Le simulateur en production]
+L'activation refuse le fournisseur simulé en production~; ce refus doit avoir son test, dans
+les scripts lancés par la CI.
+\end{alerte}

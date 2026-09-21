@@ -867,6 +867,9 @@ class MeetingService extends ChangeNotifier {
         getLocalStream: () => _localStream,
         isVideoOn: () => !_isVideoOff,
         isMuted: () => _isMuted,
+        // Dans une réunion, « Raccrocher » veut dire la quitter — surtout pas
+        // terminer un appel, qui n'existe pas ici.
+        onHangUp: () => leaveMeeting(),
       );
       if (pris) {
         await CallSessionGuard.instance.markConnected();

@@ -68,13 +68,21 @@ extension CallConference on CallService {
         photo: myPhoto,
       );
 
+      // Invitation de second tour : ce téléphone a pu quitter cette session
+      // plus tôt et l'avoir marquée terminée. Il la rejoint : la marque
+      // tomberait sinon sur la file du join et sur la reprise d'appel.
+      if (_currentCallId != null && _currentCallId != sessionId) {
+        _forgetTerminalCallId(sessionId);
+      }
       _emitOrQueueConfJoin(sessionId);
 
       _status = CallStatus.connected;
       _startDurationTimer();
       _startSpeakingDetection(groupMode: true);
       if (!kIsWeb) {
-        _adoptServerCallId(sessionId);
+        // L'identifiant de l'invitation, sous lequel CallKit la présente déjà ;
+        // à défaut, celui de la session.
+        _adoptServerCallId(_currentCallId ?? sessionId);
         await _acquireCallSession(
           isVideo: _isVideo,
           displayName: LocaleController.instance.l10n.groupCall,
@@ -135,9 +143,12 @@ extension CallConference on CallService {
     if (_confSessionId == null) return;
     _pendingConfJoinSessionId = null;
     _apiClient.sendSocketEvent(SocketEvents.callConfReject, {});
-    _markTerminalCallId(_confSessionId);
+    // L'invitation, pas la session : c'est sous son identifiant que CallKit la
+    // présente, et la session pourra réinviter ce téléphone plus tard.
+    final inviteId = _currentCallId ?? _confSessionId;
+    _markTerminalCallId(inviteId);
     await _ringtone.stop();
-    await _callKit.endAll(callId: _confSessionId);
+    await _callKit.endAll(callId: inviteId);
     await _terminateConference();
   }
 
@@ -169,10 +180,16 @@ extension CallConference on CallService {
     final myPhoto = _localUserPhoto;
 
     final pc = _webrtc.peerConnection;
-    if (pc != null) _groupPeerConnections[peerId] = pc;
-    final remote = _webrtc.remoteStream;
-    if (remote != null) _groupRemoteStreams[peerId] = remote;
-    _groupRemoteDescSet.add(peerId);
+    final role = originLinkRole(
+      meshLinkExists: _groupPeerConnections.containsKey(peerId),
+      meshLinkIsOrigin: pc != null && identical(_groupPeerConnections[peerId], pc),
+    );
+    if (role == OriginLinkRole.verser) {
+      if (pc != null) _groupPeerConnections[peerId] = pc;
+      final remote = _webrtc.remoteStream;
+      if (remote != null) _groupRemoteStreams[peerId] = remote;
+      _groupRemoteDescSet.add(peerId);
+    }
 
     _groupRoster[peerId] = GroupParticipantInfo(
       id: peerId,
@@ -191,7 +208,7 @@ extension CallConference on CallService {
     _myRosterId = myId.toString();
 
     _groupRoomId = _confSessionId;
-    _guardOriginLinkFailure(peerId);
+    if (role != OriginLinkRole.ignorer) _guardOriginLinkFailure(peerId);
     _startSpeakingDetection(groupMode: true);
     debugPrint('[CallService] 🔗 connexion 1-à-1 versée dans le maillage (pair=$peerId)');
   }
@@ -236,6 +253,9 @@ extension CallConference on CallService {
     final sessionId = data['sessionId']?.toString();
     if (sessionId == null) return;
 
+    // Nouveau tour : ce qui restait du précédent ne vaut plus, et je suis
+    // désormais un présent — même si j'étais entré comme invité.
+    _resetConfRound();
     _confSessionId = sessionId;
     _confInviteIsMine = data['byUserId']?.toString() == _localUserId?.toString();
     final mode = data['mode']?.toString();
@@ -321,6 +341,26 @@ extension CallConference on CallService {
     notify();
   }
 
+  /// Remet à zéro l'état d'un tour d'invitation, sans toucher à la session.
+  ///
+  /// Appelé à chaque nouvelle invitation, à chaque retour à deux et à chaque
+  /// échec. Sans lui, l'ancien invité restait marqué comme tel
+  /// (`_confInvitedBy`) et n'émettait jamais le `call_conf_ready` qui déclenche
+  /// un second transfert ; une cible de transfert périmée survivait à un ajout
+  /// simple ; une clé `ready` déjà émise bloquait le même pair au tour suivant.
+  void _resetConfRound() {
+    _confPendingInvitee = null;
+    _confInviteIsMine = false;
+    _confInvitedBy = null;
+    _confMode = 'join';
+    _isTransferInitiator = false;
+    _transferTargetId = null;
+    _transferStatus = CallTransferStatus.none;
+    _clearTransferCountdown();
+    _confReadySent.clear();
+    _pendingConfReady.clear();
+  }
+
   void _onConfFailed(Map data) {
     final invitee = _confPendingInvitee;
     final reason = data['reason']?.toString() ?? 'declined';
@@ -329,17 +369,12 @@ extension CallConference on CallService {
     final inviteeId = data['userId']?.toString();
     if (inviteeId != null) _removeGroupPeer(inviteeId);
 
-    _confSessionId = null;
-    _confPendingInvitee = null;
-    _confInviteIsMine = false;
-    _isTransferInitiator = false;
-    _transferTargetId = null;
-    _clearTransferCountdown();
+    // Le serveur garde la session quand quelqu'un y est déjà entré : elle
+    // porte l'appel, et raccrocher doit continuer d'y passer.
+    if (!confFailedKeepsSession(data)) _confSessionId = null;
+    _resetConfRound();
     _transferStatus = CallTransferStatus.cancelled;
-    _confMode = 'join';
     _lastConfFailure = reason == 'media_not_ready' ? 'media_not_ready' : reason;
-    _confReadySent.clear();
-    _pendingConfReady.clear();
     _pendingConfJoinSessionId = null;
 
     _demoteMeshToOneToOne();
@@ -352,6 +387,20 @@ extension CallConference on CallService {
     final reason = data['reason']?.toString();
     debugPrint('[CallService] 👋 $userId a quitté la session reason=$reason');
 
+    // Ce départ est le mien : le serveur m'a retiré de la session. Il ne le
+    // disait à personne d'autre que les restants, et l'écran d'appel restait
+    // ouvert sur une conférence que j'avais quittée sans le savoir.
+    //
+    // Sortie immédiate, avant tout le reste : ce qui suit démonte un PAIR qui
+    // s'en va, et rien de cela n'a de sens quand c'est moi.
+    if (confLeftMeVise(leftUserId: userId, myRosterId: _myRosterId)) {
+      debugPrint(
+        '[CallService] 🚪 retiré de la session par le serveur reason=$reason',
+      );
+      unawaited(_terminateCall(force: true));
+      return;
+    }
+
     if (reason == 'media_not_ready') {
       _lastConfFailure = 'media_not_ready';
     } else {
@@ -363,6 +412,11 @@ extension CallConference on CallService {
     final isOriginPeer = userId == _remoteUserId?.toString() ||
         identical(_groupPeerConnections[userId], _webrtc.peerConnection);
     _removeGroupPeer(userId, disarmOriginFailure: isOriginPeer);
+    // Le partant quitte aussi le roster : sans quoi le repli de
+    // `_demoteMeshToOneToOne` pouvait le prendre pour le restant — et
+    // raccrocher aurait visé un absent —, et sa tuile reparaissait au tour
+    // suivant.
+    if (userId != _myRosterId) _groupRoster.remove(userId);
 
     final remaining = (data['remaining'] as List?)
             ?.map((e) => e.toString())
@@ -381,6 +435,8 @@ extension CallConference on CallService {
     if (isOriginPeer) {
       _webrtc.onConnectionFailure = null;
     }
+    // Retombé à deux : le tour est clos, et le droit d'ajout revient.
+    if (_groupRoomId == null) _resetConfRound();
 
     // Plus aucun pair média : solde local (évite un appel fantôme si
     // call_ended serveur arrive avant/après et est filtré par l'entonnoir).

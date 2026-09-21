@@ -5,12 +5,15 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/default_contact_lists.dart';
 import '../../core/db/app_database.dart';
+import '../../core/services/billing/entitlement_service.dart';
+import '../../core/services/billing/entitlements.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/trip_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/contact_list_colors.dart';
 import '../../talky_models.dart';
+import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/trips/trip_visuals.dart';
 import '../profile/contact_list_detail_screen.dart';
@@ -73,6 +76,7 @@ class _TripsHubScreenState extends State<TripsHubScreen> {
   }
 
   Future<void> _compose(String kind) async {
+    if (!guardPlus(context, PlusFeature.trustedTrips)) return;
     final demarre = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => TripComposeScreen(kind: kind)),
@@ -87,6 +91,8 @@ class _TripsHubScreenState extends State<TripsHubScreen> {
     final l10n = context.l10n;
     final trips = context.read<TripRepository>();
     final cache = context.read<LocalCacheRepository>();
+    final plusOk =
+        context.watch<EntitlementService>().has(PlusFeature.trustedTrips);
 
     return Scaffold(
       appBar: AppBar(
@@ -135,6 +141,16 @@ class _TripsHubScreenState extends State<TripsHubScreen> {
                   if (enCours != null)
                     _carteTrajet(l10n, enCours)
                   else ...[
+                    if (!plusOk) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      Padding(
+                        padding: AppSpacing.screenH,
+                        child: PlusLockedBanner(
+                          feature: PlusFeature.trustedTrips,
+                          text: l10n.plusLockedTrips,
+                        ),
+                      ),
+                    ],
                     _entete(l10n.tripsNew, l10n.tripsNone),
                     _carteType(
                       Icons.local_taxi_rounded,
@@ -153,7 +169,8 @@ class _TripsHubScreenState extends State<TripsHubScreen> {
                   // Le SOS est atteignable SANS trajet en cours : le danger
                   // n'attend pas un trajet planifié, et l'exiger rendrait le
                   // bouton inutile dans le seul cas où il compte.
-                  if (membres > 0) _boutonSos(l10n),
+                  if (membres > 0)
+                    _boutonSos(l10n, trajetOuvert: enCours != null),
                 ],
               );
             },
@@ -388,16 +405,24 @@ class _TripsHubScreenState extends State<TripsHubScreen> {
     );
   }
 
-  Widget _boutonSos(dynamic l10n) => Padding(
+  Widget _boutonSos(dynamic l10n, {required bool trajetOuvert}) => Padding(
         padding: const EdgeInsets.fromLTRB(
             AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, AppSpacing.sm),
         child: Column(
           children: [
             OutlinedButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TripSosScreen()),
-              ),
+              onPressed: () {
+                // Le SOS d'un trajet déjà ouvert l'escalade : il reste libre
+                // jusqu'à la fin du trajet. Seul le SOS isolé demande Plus.
+                if (!trajetOuvert &&
+                    !guardPlus(context, PlusFeature.trustedTrips)) {
+                  return;
+                }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TripSosScreen()),
+                );
+              },
               icon: Icon(Icons.warning_amber_rounded,
                   color: context.colors.error),
               label: Text(

@@ -389,6 +389,9 @@ object MessageNotificationHelper {
         if (senderId.isBlank()) return null
         return try {
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            // Sonneries par liste réservées à Alanya Plus (EntitlementService,
+            // côté Dart). Absent = permis.
+            if (!prefs.getBoolean("flutter.plus_list_ringtones", true)) return null
             val settings = JSONObject(prefs.getString("flutter.list_ringtone_settings_v1", "{}") ?: "{}")
             val members = JSONObject(prefs.getString("flutter.list_ringtone_members_v1", "{}") ?: "{}")
             val priority = FlutterSharedPreferencesCompat

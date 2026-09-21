@@ -404,6 +404,103 @@ bool shouldPostRejectToServer(String? callId) {
   return RegExp(r'^\d+$').hasMatch(id);
 }
 
+/// La réponse en cours porte-t-elle toujours sur l'appel qu'on a commencé à
+/// décrocher ?
+///
+/// `answerCall` enchaîne quatre attentes — capture du micro, socket prêt,
+/// PeerConnection, accusé de réception — sans jamais revérifier entre deux que
+/// l'appel existe encore. Quand un aperçu CallKit le faisait refuser en plein
+/// milieu, la méthode continuait sur un état remis à zéro : elle envoyait sa
+/// réponse à un appel que le serveur ne connaissait plus — d'où son
+/// `CALL_NOT_RINGING` —, se déclarait connectée, et ouvrait une session CallKit
+/// sous un identifiant fabriqué. C'est l'écran « Appel » au chronomètre, avec
+/// personne en face.
+///
+/// Trois conditions : le décrochage est encore en cours (`connecting`), aucune
+/// fin d'appel n'a été engagée, et l'appel visé est toujours celui du départ.
+bool answerStillValid({
+  required String callStatusName,
+  required String? callIdAtStart,
+  String? currentCallId,
+  bool endingCall = false,
+}) {
+  if (endingCall) return false;
+  if (callStatusName != 'connecting') return false;
+  return (callIdAtStart?.trim() ?? '') == (currentCallId?.trim() ?? '');
+}
+
+/// Cet aperçu CallKit désigne-t-il l'appel que l'on est déjà en train de mener ?
+///
+/// Le plugin réaffiche l'entrant dans des cas parfaitement ordinaires — c'est ce
+/// que faisait la bascule vers CallKit au retour au premier plan. L'aperçu
+/// revenait alors à `handleIncomingCallKitPreview`, qui le prenait pour un appel
+/// étranger : « occupé », donc on ferme. Or fermer marque l'appel terminé, fait
+/// émettre un refus par le plugin, et le décrochage en cours est perdu.
+///
+/// Un aperçu qui porte l'identifiant de l'appel courant n'apprend rien : il
+/// s'ignore, sans rien fermer ni marquer. Les quatre identifiants comptent — un
+/// appel à deux en porte deux, celui du serveur et celui sous lequel CallKit a
+/// été ouvert ; un groupe a son salon ; une session à trois la sienne.
+///
+/// Hors appel (`idle`, `ended`), il n'y a rien à protéger : le nettoyage
+/// habituel reprend la main.
+bool previewTargetsCurrentCall({
+  required String? previewCallId,
+  required String callStatusName,
+  String? currentCallId,
+  String? callKitCallId,
+  String? groupRoomId,
+  String? confSessionId,
+}) {
+  final id = previewCallId?.trim() ?? '';
+  if (id.isEmpty) return false;
+  if (callStatusName == 'idle' || callStatusName == 'ended') return false;
+  for (final connu in [
+    currentCallId,
+    callKitCallId,
+    groupRoomId,
+    confSessionId,
+  ]) {
+    final candidat = connu?.trim() ?? '';
+    if (candidat.isNotEmpty && candidat == id) return true;
+  }
+  return false;
+}
+
+/// Ce changement d'état du cycle de vie est-il un vrai départ en arrière-plan ?
+///
+/// Flutter ne saute jamais d'un état à l'autre : il rejoue tous les états
+/// intermédiaires. Revenir au premier plan depuis `paused` fait donc passer par
+/// `hidden`, puis `inactive`, puis `resumed`. L'accueil prenait ce `hidden` pour
+/// un départ et rebasculait l'appel entrant vers CallKit à l'instant précis où
+/// l'utilisateur venait de décrocher : le plugin réaffichait l'entrant, l'app
+/// prenait alors son propre appel pour un autre, le refusait au serveur, et le
+/// décrochage était perdu — écran fermé d'un côté, appel coupé de l'autre.
+///
+/// `paused` et `detached` sont des départs sans ambiguïté. `inactive` n'en est
+/// jamais un : volet de notifications, changeur d'applications ou boîte de
+/// dialogue système laissent l'application à l'écran.
+///
+/// `hidden`, lui, se lit à sa provenance : il ne remonte que lorsqu'il vient de
+/// `paused`, et c'est exactement le cas qui coûtait l'appel. Un `hidden` dont on
+/// ignore d'où il vient — premier événement reçu après l'installation de
+/// l'observateur — reste un départ : le comportement d'avant est conservé là où
+/// il était juste.
+bool isBackgroundDeparture({
+  required String stateName,
+  String? previousStateName,
+}) {
+  switch (stateName) {
+    case 'paused':
+    case 'detached':
+      return true;
+    case 'hidden':
+      return previousStateName != 'paused';
+    default:
+      return false;
+  }
+}
+
 /// Cette offre de reprise peut-elle être appliquée dans l'état local courant ?
 ///
 /// Le sort du destinataire après une mort de processus tenait à cette garde.

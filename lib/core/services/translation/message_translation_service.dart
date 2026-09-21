@@ -7,6 +7,8 @@ import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
+import '../billing/entitlement_service.dart';
+import '../billing/entitlements.dart';
 import 'translatable_content.dart';
 import 'translation_languages.dart';
 import 'translation_settings.dart';
@@ -114,6 +116,26 @@ class MessageTranslationService {
     _pendingScans.clear();
     if (identical(_instance, this)) _instance = null;
     await _closeNativeResources();
+  }
+
+  /// Données Alanya Plus purgées côté serveur, abonnement échu depuis
+  /// plusieurs semaines : les modèles téléchargés et les traductions gardées
+  /// en base s'effacent aussi ici. Le réglage de l'utilisateur, lui, reste —
+  /// un réabonnement retrouve ses préférences, il n'a qu'à reprendre un modèle.
+  Future<void> purgePaidData() async {
+    _queue.clear();
+    _queuedIds.clear();
+    _pendingScans.clear();
+    _convEnabledMemo.clear();
+    await _closeNativeResources();
+    for (final code in await _models.downloadedTargets()) {
+      try {
+        await _models.delete(code);
+      } catch (_) {
+        // Best-effort : un modèle introuvable n'empêche pas d'effacer les autres.
+      }
+    }
+    await _dao.clearAllTranslations();
   }
 
   Future<void> _closeNativeResources() async {
@@ -346,6 +368,9 @@ class MessageTranslationService {
   /// L'override de conversation prime sur le réglage global : `1` force la
   /// traduction même si le global est à off, `0` l'interdit même s'il est à on.
   Future<bool> _isEnabledFor(int conversationID) async {
+    // Hors du mémo : l'abonnement peut prendre fin (ou reprendre) pendant que
+    // la conversation est ouverte, le réglage de l'utilisateur, lui, reste.
+    if (!EntitlementService.allows(PlusFeature.translation)) return false;
     final memo = _convEnabledMemo[conversationID];
     if (memo != null) return memo;
 

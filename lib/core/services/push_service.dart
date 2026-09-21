@@ -606,6 +606,18 @@ class PushService {
       return;
     }
 
+    // Abonnement (relance, échéance, paiement) : la notification s'affiche
+    // comme les autres, et les droits se relisent — ce qu'elle annonce change
+    // ce que l'application ouvre.
+    if (type != null &&
+        (type.startsWith('billing_') ||
+            type.startsWith('payment_') ||
+            type == 'verification_update')) {
+      _dispatchNotificationAction(
+        NotificationAction.fromMap(data, fromTap: false),
+      );
+    }
+
     if (!kIsWeb) {
       final title =
           (data['title'] ?? message.notification?.title ?? '').toString();

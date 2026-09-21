@@ -483,6 +483,7 @@ extension _ChatActions on _ChatDetailScreenState {
                 title: Text(context.l10n.translate),
                 onTap: () async {
                   Navigator.pop(context);
+                  if (!guardPlus(context, PlusFeature.translation)) return;
                   final service = MessageTranslationService.maybeInstance;
                   if (service == null) return;
                   var outcome = await service.translateNow(msg);

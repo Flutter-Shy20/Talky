@@ -165,6 +165,9 @@ object CallIncomingHelper {
             val prefs = context.getSharedPreferences(
                 "FlutterSharedPreferences", Context.MODE_PRIVATE,
             )
+            // Sonneries par liste réservées à Alanya Plus : verdict écrit par
+            // EntitlementService (Dart). Absent = permis, comme côté Dart.
+            if (!prefs.getBoolean("flutter.plus_list_ringtones", true)) return null
             val settings = JSONObject(
                 prefs.getString("flutter.list_ringtone_settings_v1", "{}") ?: "{}",
             )

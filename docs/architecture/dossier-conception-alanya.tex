@@ -149,6 +149,8 @@ dépendent. \\
 second appareil. Indépendante des cinq autres. \\
 7 & Trajets de confiance & Position en temps réel et SOS, adressés à la liste
 \emph{Confiance} du volet~2. Le seul volet dont la promesse est une \emph{échéance}. \\
+8 & Abonnement & L'offre payante, son interrupteur et le paiement simulé. Révise le
+volet~5~: hors phase gratuite, la coche demande un abonnement. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -208,6 +210,10 @@ l'architecture, mais elles doivent être arbitrées avant l'implémentation du v
   {Partager sa route à son cercle, et être attendu à l'arrivée}
 \input{contenu/trajets-naive}
 
+\volet{8}{Abonnement}%
+  {Ce qui se paie, ce qui reste gratuit, et quand}
+\input{contenu/abonnement-naive}
+
 % =====================================================================
 \part{Approche technique}
 % =====================================================================
@@ -239,6 +245,10 @@ l'architecture, mais elles doivent être arbitrées avant l'implémentation du v
 \volet{7}{Trajets de confiance}%
   {Échéance gardée par la file de jobs, flux de positions décimé, audience figée}
 \input{contenu/trajets-technique}
+
+\volet{8}{Abonnement}%
+  {Périodes en ajout seul, droits d'accès, couture de paiement, interrupteur}
+\input{contenu/abonnement-technique}
 
 % =====================================================================
 %  SYNTHÈSE FINALE

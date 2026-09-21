@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import 'billing/entitlement_service.dart';
+import 'billing/entitlements.dart';
 import 'ringtone_preferences.dart';
 
 /// Sonneries propres aux listes de contacts.
@@ -125,6 +127,31 @@ class ListRingtonePreferences extends ChangeNotifier {
     _pendingOrder = prefs.getBool(_pendingOrderKey) ?? false;
     _legacyOrder = prefs.getBool(_legacyOrderKey) ?? false;
     _loaded = true;
+  }
+
+  /// Données Alanya Plus purgées côté serveur : les sons des listes et leur
+  /// ordre s'effacent ici aussi, ainsi que tout choix encore en attente d'envoi
+  /// (le repousser ferait renaître ce que la purge vient d'effacer). Les
+  /// appartenances restent : elles décrivent les listes, pas l'abonnement.
+  static Future<void> purgeLocal() async {
+    _settings = {};
+    _priority = [];
+    _pending = {};
+    _legacyPending = {};
+    _pendingOrder = false;
+    _legacyOrder = false;
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in [
+      _settingsKey,
+      _priorityKey,
+      _pendingKey,
+      _legacyKey,
+      _pendingOrderKey,
+      _legacyOrderKey,
+    ]) {
+      await prefs.remove(key);
+    }
+    _bound?.notifyListeners();
   }
 
   /// Remet l'état statique à zéro (tests uniquement).
@@ -482,6 +509,12 @@ class ListRingtonePreferences extends ChangeNotifier {
         'callSoundName': setting.callSound?.name,
       });
       return true;
+    } on TalkyException catch (e) {
+      // Refus « réservé à Alanya Plus » : réessayer à chaque synchro ne
+      // changerait rien. Le choix reste local, sans être poussé.
+      if (e.code == 'SUBSCRIPTION_REQUIRED') return true;
+      debugPrint('[ListRingtone] sonneries de la liste $listId non poussées: $e');
+      return false;
     } catch (e) {
       debugPrint('[ListRingtone] sonneries de la liste $listId non poussées: $e');
       return false;
@@ -519,6 +552,10 @@ class ListRingtonePreferences extends ChangeNotifier {
   /// quand la liste attend un son personnalisé absent de cet appareil :
   /// remplacement provisoire, préférence conservée.
   static RingtoneOption? _resolve(int contactId, {required bool message}) {
+    // Sans Alanya Plus, le son habituel. Les réglages restent en place et
+    // reprennent au réabonnement. Le code natif lit le même verdict
+    // (EntitlementService.listRingtonesFlagKey) quand l'app est tuée.
+    if (!EntitlementService.allows(PlusFeature.listRingtones)) return null;
     final ordered = <int>[
       ..._priority,
       ..._settings.keys.where((id) => !_priority.contains(id)),

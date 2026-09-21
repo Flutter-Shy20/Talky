@@ -28,6 +28,8 @@ import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_playback_service.dart';
 import '../../core/services/translation/message_translation_service.dart';
+import '../../core/services/billing/entitlements.dart' show PlusFeature;
+import '../../widgets/billing/paywall_sheet.dart' show guardPlus;
 import '../../core/services/translation/translatable_content.dart';
 import '../../core/services/translation/translation_languages.dart';
 import '../../core/services/translation/translation_state.dart';

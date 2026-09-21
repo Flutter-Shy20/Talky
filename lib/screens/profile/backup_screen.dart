@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/backup/backup_schedule.dart';
+import '../../core/services/billing/entitlement_service.dart';
+import '../../core/services/billing/entitlements.dart';
+import '../../widgets/billing/paywall_sheet.dart';
 import '../../core/services/backup/backup_runner.dart';
 import '../../core/services/backup/backup_service.dart';
 import '../../core/services/backup/backup_settings_store.dart';
@@ -131,11 +134,18 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Future<void> _setFrequency(BackupFrequency value) async {
+    // Couper l'automatique reste toujours possible ; le programmer demande
+    // Alanya Plus.
+    if (value != BackupFrequency.never &&
+        !guardPlus(context, PlusFeature.backup)) {
+      return;
+    }
     setState(() => _frequency = value);
     await _store.setFrequency(value);
   }
 
   Future<void> _runNow() async {
+    if (!guardPlus(context, PlusFeature.backup)) return;
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
     final chat = context.read<ChatProvider>();
@@ -279,6 +289,21 @@ class _BackupScreenState extends State<BackupScreen> {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               children: [
                 if (_running) const LinearProgressIndicator(minHeight: 2),
+                // Restaurer reste libre : seul le bandeau le rappelle, la
+                // carte de restauration plus bas ne change pas.
+                if (!context.watch<EntitlementService>().has(PlusFeature.backup))
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      0,
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                    ),
+                    child: PlusLockedBanner(
+                      feature: PlusFeature.backup,
+                      text: l10n.plusLockedBackup,
+                    ),
+                  ),
                 _statusCard(l10n),
                 _destinationCard(l10n),
                 _restoreCard(l10n),

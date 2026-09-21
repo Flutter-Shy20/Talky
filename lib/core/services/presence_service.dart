@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import 'call/call_terminal_guards.dart';
+
 /// Émet la présence vers le serveur (`presence:online` / `presence:offline`).
 typedef PresenceSink = void Function({required bool online});
 
@@ -37,6 +39,9 @@ class PresenceService with WidgetsBindingObserver {
   final PresenceResolverSink _registerResolver;
   final bool Function() _isSessionActive;
   final Duration _offlineDebounce;
+
+  /// Dernier état de cycle de vie reçu — voir `isBackgroundDeparture`.
+  AppLifecycleState? _dernierEtatCycleDeVie;
 
   final List<Listenable> _sessionSources = [];
 
@@ -99,18 +104,22 @@ class PresenceService with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    switch (state) {
-      case AppLifecycleState.resumed:
-        _setForeground(true);
-      case AppLifecycleState.paused:
-      case AppLifecycleState.hidden:
-      case AppLifecycleState.detached:
-        _setForeground(false);
-      case AppLifecycleState.inactive:
-        // Transition iOS, volet de notifications, changeur d'apps : l'app est
-        // toujours à l'écran. Même choix que la suppression des push dans
-        // HomeScreen.
-        break;
+    final precedent = _dernierEtatCycleDeVie;
+    _dernierEtatCycleDeVie = state;
+
+    if (state == AppLifecycleState.resumed) {
+      _setForeground(true);
+      return;
+    }
+    // `inactive` : transition iOS, volet de notifications, changeur d'apps —
+    // l'app est toujours à l'écran. Et `hidden` est traversé aussi bien en
+    // partant qu'en revenant : le compter comme un départ faisait clignoter la
+    // présence à chaque retour au premier plan. Voir `isBackgroundDeparture`.
+    if (isBackgroundDeparture(
+      stateName: state.name,
+      previousStateName: precedent?.name,
+    )) {
+      _setForeground(false);
     }
   }
 

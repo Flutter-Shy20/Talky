@@ -1,0 +1,945 @@
+<title>Alanya Plus mobile</title>
+
+<style>
+  :root {
+    --brand: #3F51B5; --brand-dark: #1A237E; --brand-container: #E8EAF6;
+    --online: #1FA363; --warn: #B7791F; --err: #C0392B;
+    --online-soft: rgba(31,163,99,.11); --warn-soft: rgba(183,121,31,.12); --err-soft: rgba(192,57,43,.09);
+
+    --bg: #F6F7FB; --surface: #FFFFFF; --surface-muted: #F1F2F7;
+    --outline: #E2E5EC; --outline-strong: #CBD0E0;
+    --ink: #1A1D23; --ink-2: #5B6273; --ink-3: #9AA0AE;
+    --scrim: rgba(18,20,28,.46);
+
+    /* La carte Plus : l'indigo profond de la marque, jamais un dégradé. */
+    --plus-bg: #1A237E; --plus-ink: #FFFFFF; --plus-ink-2: #C5CAE9;
+    --plus-chip: rgba(255,255,255,.12); --plus-btn: #FFFFFF; --plus-btn-ink: #1A237E;
+
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px;
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+      --outline: #2E333D; --outline-strong: #3A404C;
+      --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+      --brand: #7986CB; --brand-container: #283593;
+      --online-soft: rgba(31,163,99,.18); --warn-soft: rgba(183,121,31,.2); --err-soft: rgba(192,57,43,.2);
+      --scrim: rgba(0,0,0,.6);
+      --plus-bg: #283593; --plus-ink-2: #C5CAE9; --plus-btn-ink: #1A237E;
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+    --outline: #2E333D; --outline-strong: #3A404C;
+    --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+    --brand: #7986CB; --brand-container: #283593;
+    --online-soft: rgba(31,163,99,.18); --warn-soft: rgba(183,121,31,.2); --err-soft: rgba(192,57,43,.2);
+    --scrim: rgba(0,0,0,.6);
+    --plus-bg: #283593; --plus-ink-2: #C5CAE9; --plus-btn-ink: #1A237E;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page-bg); }
+
+  .page {
+    background: var(--page-bg); color: var(--page-ink); font-family: var(--sans);
+    font-size: 15px; line-height: 1.55; min-height: 100vh;
+    padding: clamp(20px,5vw,52px) clamp(16px,4vw,40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1720px; margin: 0 auto; display: flex; flex-direction: column; gap: 38px; }
+
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 70ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--brand); margin: 0;
+  }
+  .masthead h1 {
+    font-size: clamp(26px,3.6vw,37px); line-height: 1.12; letter-spacing: -.02em;
+    font-weight: 700; margin: 0; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--page-ink-2); }
+
+  .panel {
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-lg); padding: clamp(18px,3vw,30px);
+    display: flex; flex-direction: column; gap: var(--s-xl);
+  }
+  .panel > header { display: flex; flex-direction: column; gap: 6px; }
+  .panel h2 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+  .panel header p { margin: 0; color: var(--page-ink-2); font-size: 14px; max-width: 76ch; }
+
+  .stage {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(262px,1fr));
+    gap: clamp(16px,2vw,26px); align-items: start;
+  }
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--page-ink-2); text-align: center; max-width: 32ch; margin: 0;
+  }
+  .device-caption b { display: block; color: var(--page-ink); font-weight: 600; }
+  .device {
+    width: 100%; max-width: 312px; background: var(--bg);
+    border: 1px solid var(--outline); border-radius: 30px; padding: 8px;
+    box-shadow: 0 18px 44px rgba(26,35,126,.13), 0 2px 6px rgba(0,0,0,.05);
+  }
+  :root[data-theme="dark"] .device { box-shadow: 0 18px 44px rgba(0,0,0,.5); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .device { box-shadow: 0 18px 44px rgba(0,0,0,.5); }
+  }
+  .screen {
+    background: var(--bg); border-radius: 23px; overflow: hidden; position: relative;
+    display: flex; flex-direction: column; height: 612px; color: var(--ink);
+  }
+  .appbar {
+    background: var(--surface); border-bottom: 1px solid var(--outline);
+    padding: 13px var(--s-lg) 11px; display: flex; align-items: center; gap: var(--s-md); flex: none;
+  }
+  .appbar svg { width: 21px; height: 21px; color: var(--ink-2); flex: none; }
+  .appbar h3 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; flex: 1; }
+  .body { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: var(--s-md); padding: var(--s-md) var(--s-lg) var(--s-lg); }
+  .body.flush { padding: 0 0 var(--s-lg); gap: 0; }
+
+  svg.i { width: 18px; height: 18px; flex: none; }
+  svg.badge { width: 18px; height: 18px; color: var(--brand); flex: none; vertical-align: -3px; }
+
+  /* --- Profil --- */
+  .hero { background: var(--surface); padding: 18px var(--s-lg) 14px; text-align: center; border-bottom: 1px solid var(--outline); }
+  .av {
+    width: 62px; height: 62px; border-radius: 50%; margin: 0 auto;
+    background: linear-gradient(135deg,#5C6BC0,#3949AB); color: #fff;
+    display: grid; place-items: center; font-size: 25px; font-weight: 650;
+  }
+  .nom { font-size: 17.5px; font-weight: 660; margin-top: 9px; display: inline-flex; gap: 5px; align-items: center; }
+  .sous { font-size: 12.5px; color: var(--ink-2); }
+
+  .plus {
+    margin: var(--s-md) var(--s-md) 0; border-radius: var(--r-md); padding: 14px;
+    background: var(--plus-bg); color: var(--plus-ink);
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .plus .k {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--plus-ink-2); display: flex; align-items: center; gap: 6px;
+  }
+  .plus h4 { margin: 0; font-size: 16px; font-weight: 680; letter-spacing: -.01em; line-height: 1.25; text-wrap: balance; }
+  .plus p { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--plus-ink-2); }
+  .plus p b { color: var(--plus-ink); font-weight: 620; }
+  .plus .btn {
+    height: 38px; border-radius: 10px; border: none; font-family: inherit;
+    background: var(--plus-btn); color: var(--plus-btn-ink); font-size: 13.5px; font-weight: 660;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .plus .row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .plus .prix { font-size: 20px; font-weight: 720; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .plus .prix small { font-size: 12px; font-weight: 500; color: var(--plus-ink-2); }
+  .feats { display: grid; grid-template-columns: repeat(5,1fr); gap: 0; margin: 0 -8px; }
+  .feat { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 9px; letter-spacing: -.01em; color: var(--plus-ink-2); text-align: center; line-height: 1.15; }
+  .feat span.o { width: 32px; height: 32px; border-radius: 50%; background: var(--plus-chip); display: grid; place-items: center; color: var(--plus-ink); }
+  .feat svg { width: 16px; height: 16px; }
+  .compte { font-family: var(--mono); font-size: 10.5px; padding: 3px 8px; border-radius: 999px; background: var(--plus-chip); color: var(--plus-ink); align-self: flex-start; }
+
+  .plus.soft { background: var(--surface); color: var(--ink); border: 1px solid var(--outline); }
+  .plus.soft .k { color: var(--brand); }
+  .plus.soft p { color: var(--ink-2); }
+  .plus.soft p b { color: var(--ink); }
+  .plus.alerte { background: var(--surface); color: var(--ink); border: 1px solid var(--outline); box-shadow: inset 3px 0 0 var(--err); }
+  .plus.alerte .k { color: var(--err); }
+  .plus.alerte p { color: var(--ink-2); }
+  .plus.alerte p b { color: var(--ink); }
+  .plus.alerte .btn, .plus.soft .btn { background: var(--brand); color: #fff; }
+  .suite {
+    display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 10px;
+    background: var(--brand-container); color: var(--ink); font-size: 12.5px; font-weight: 560;
+  }
+  .suite svg.badge { width: 20px; height: 20px; }
+  .suite .sp { flex: 1; }
+
+  .tiles { margin: var(--s-md) var(--s-md) 0; background: var(--surface); border-radius: var(--r-md); border: 1px solid var(--outline); overflow: hidden; }
+  .tile { display: flex; align-items: center; gap: var(--s-md); padding: 11px var(--s-md); border-bottom: 1px solid var(--outline); font-size: 14px; font-weight: 520; }
+  .tile:last-child { border-bottom: none; }
+  .tile .ic { width: 32px; height: 32px; border-radius: 50%; background: var(--brand-container); color: var(--brand); display: grid; place-items: center; flex: none; }
+  .tile .ic svg { width: 17px; height: 17px; }
+  .tile .t { flex: 1; min-width: 0; }
+  .tile .t small { display: block; font-size: 11.5px; color: var(--ink-3); font-weight: 450; }
+  .tile .chev { width: 16px; height: 16px; color: var(--ink-3); }
+  .tile.nouveau .t { white-space: nowrap; }
+  .tile.nouveau .t::after {
+    content: "nouveau"; font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+    margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--brand-container); color: var(--brand);
+    vertical-align: 1px;
+  }
+
+  /* --- Offre et paiement --- */
+  .lab { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+  .liste { display: flex; flex-direction: column; gap: 9px; }
+  .li { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.35; }
+  .li .o { width: 30px; height: 30px; border-radius: 9px; background: var(--brand-container); color: var(--brand); display: grid; place-items: center; flex: none; }
+  .li .o svg { width: 16px; height: 16px; }
+  .li b { display: block; font-weight: 620; font-size: 13.5px; }
+  .li span.d { color: var(--ink-2); font-size: 12px; }
+
+  .opt {
+    border: 1.5px solid var(--outline); border-radius: var(--r-sm); padding: 11px 12px;
+    display: flex; align-items: center; gap: 10px; background: var(--surface);
+  }
+  .opt.on { border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent); }
+  .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--outline-strong); flex: none; position: relative; }
+  .on .radio { border-color: var(--brand); }
+  .on .radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--brand); }
+  .opt .t { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+  .opt .t b { font-size: 14px; font-weight: 640; }
+  .opt .t span { font-size: 11.5px; color: var(--ink-2); }
+  .opt .m { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .opt .m small { font-size: 11px; color: var(--ink-3); font-weight: 500; }
+  .ruban {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+    background: var(--online-soft); color: var(--online); padding: 2px 7px; border-radius: 999px; align-self: flex-start;
+  }
+
+  .cta {
+    width: 100%; height: 44px; border-radius: var(--r-sm); border: none; font-family: inherit; flex: none;
+    font-size: 14.5px; font-weight: 650; background: var(--brand); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .cta.fantome { background: var(--surface-muted); color: var(--ink); }
+  .cta.lien { background: transparent; color: var(--brand); height: 32px; }
+  .spacer { flex: 1; }
+  .fine { font-size: 11.5px; color: var(--ink-3); text-align: center; margin: 0; line-height: 1.4; }
+
+  .info {
+    display: flex; gap: 9px; padding: 10px 11px; border-radius: var(--r-sm);
+    font-size: 12px; line-height: 1.45; color: var(--ink-2); background: var(--brand-container);
+  }
+  .info svg { width: 16px; height: 16px; flex: none; margin-top: 1px; color: var(--brand); }
+  .info b { color: var(--ink); }
+  .info.warn { background: var(--warn-soft); }
+  .info.warn svg { color: var(--warn); }
+  .test {
+    font-family: var(--mono); font-size: 10.5px; line-height: 1.45; color: var(--warn);
+    border: 1px dashed currentColor; border-radius: 9px; padding: 7px 9px;
+  }
+
+  .recap { background: var(--surface); border: 1px solid var(--outline); border-radius: var(--r-sm); padding: 11px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .recap b { font-size: 14px; }
+  .recap span { font-size: 11.5px; color: var(--ink-2); display: block; }
+  .recap .m { font-size: 17px; font-weight: 720; font-variant-numeric: tabular-nums; }
+
+  .pm { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--outline); border-radius: var(--r-sm); background: var(--surface); font-size: 14px; font-weight: 580; }
+  .pm.on { border-color: var(--brand); }
+  .pm .logo { width: 34px; height: 24px; border-radius: 6px; display: grid; place-items: center; font-size: 9.5px; font-weight: 800; letter-spacing: .02em; flex: none; }
+  .logo.om { background: #FF7900; color: #000; }
+  .logo.mtn { background: #FFCB05; color: #1A1A1A; }
+  .pm .t { flex: 1; }
+  .champ { display: flex; flex-direction: column; gap: 5px; }
+  .champ .inp { border: 1.5px solid var(--brand); border-radius: var(--r-sm); padding: 10px 12px; font-size: 15px; font-variant-numeric: tabular-nums; background: var(--surface); letter-spacing: .02em; }
+
+  .switch-row { display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 560; }
+  .switch-row .t { flex: 1; }
+  .switch-row small { display: block; font-size: 11.5px; color: var(--ink-2); font-weight: 450; line-height: 1.35; margin-top: 2px; }
+  .sw { width: 40px; height: 24px; border-radius: 999px; background: var(--outline-strong); position: relative; flex: none; }
+  .sw::after { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .sw.on { background: var(--brand); }
+  .sw.on::after { left: auto; right: 3px; }
+
+  /* --- Attente --- */
+  .attente { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 18px 6px 4px; }
+  .anneau { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: var(--brand-container); color: var(--brand); position: relative; }
+  .anneau::before { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 3px solid transparent; border-top-color: var(--brand); border-right-color: var(--brand); }
+  .anneau svg { width: 32px; height: 32px; }
+  .attente b { font-size: 17px; font-weight: 680; }
+  .attente span { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; max-width: 30ch; }
+  .minuteur { font-family: var(--mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .ok-rond { width: 72px; height: 72px; border-radius: 50%; background: var(--online); color: #fff; display: grid; place-items: center; }
+  .ok-rond svg { width: 34px; height: 34px; color: #fff; }
+
+  .frise { display: flex; flex-direction: column; }
+  .fr-e { display: flex; gap: var(--s-md); }
+  .fr-e .col { display: flex; flex-direction: column; align-items: center; flex: none; width: 18px; }
+  .fr-e .pt { width: 10px; height: 10px; border-radius: 50%; background: var(--outline-strong); margin-top: 4px; }
+  .fr-e.fait .pt { background: var(--online); }
+  .fr-e.cours .pt { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-soft); }
+  .fr-e .tr { width: 2px; flex: 1 0 auto; background: var(--outline-strong); min-height: 18px; }
+  .fr-e:last-child .tr { display: none; }
+  .fr-e .txt { padding-bottom: 10px; }
+  .fr-e .txt b { display: block; font-size: 13px; font-weight: 620; }
+  .fr-e .txt span { font-size: 11.5px; color: var(--ink-3); }
+  .fr-e:not(.fait):not(.cours) .txt b { color: var(--ink-3); font-weight: 540; }
+
+  /* --- Mon abonnement --- */
+  .etat { border-radius: var(--r-md); padding: 13px; display: flex; flex-direction: column; gap: 4px; background: var(--surface); border: 1px solid var(--outline); }
+  .etat .k { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--brand); }
+  .etat b { font-size: 16px; font-weight: 680; }
+  .etat span { font-size: 12.5px; color: var(--ink-2); }
+  .etat.warn { box-shadow: inset 3px 0 0 var(--warn); }
+  .etat.warn .k, .etat.warn .q { color: var(--warn); }
+  .etat.fin { box-shadow: inset 3px 0 0 var(--err); }
+  .etat.fin .k { color: var(--err); }
+  .seg { display: flex; gap: 3px; padding: 3px; background: var(--surface-muted); border-radius: 10px; }
+  .seg span { flex: 1; text-align: center; font-size: 12px; padding: 6px 4px; border-radius: 8px; color: var(--ink-2); }
+  .seg span.on { background: var(--surface); color: var(--brand); font-weight: 640; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .hist { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--outline); border-radius: var(--r-sm); }
+  .hist div { display: flex; justify-content: space-between; gap: 8px; padding: 8px 11px; font-size: 12px; border-bottom: 1px solid var(--outline); font-variant-numeric: tabular-nums; }
+  .hist div:last-child { border-bottom: none; }
+  .hist .ok { color: var(--online); font-weight: 600; }
+  .pause { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--outline); border-radius: var(--r-sm); }
+  .pause div { display: flex; gap: 10px; align-items: flex-start; padding: 9px 11px; border-bottom: 1px solid var(--outline); font-size: 12.5px; line-height: 1.35; }
+  .pause div:last-child { border-bottom: none; }
+  .pause svg { width: 16px; height: 16px; color: var(--ink-3); margin-top: 1px; flex: none; }
+  .pause b { display: block; font-weight: 620; font-size: 13px; }
+  .pause span { color: var(--ink-2); font-size: 11.5px; }
+  .pause .rouge { color: var(--err); }
+  .pause .vert { color: var(--online); }
+
+  /* Notification système posée sur l'écran */
+  .push {
+    margin: 8px 8px 0; background: var(--surface); border: 1px solid var(--outline); border-radius: 16px;
+    padding: 10px 11px; display: flex; gap: 10px; box-shadow: 0 8px 22px rgba(20,24,40,.14); flex: none;
+  }
+  .push .app { width: 30px; height: 30px; border-radius: 8px; background: var(--brand-dark); color: #fff; display: grid; place-items: center; font-weight: 750; font-size: 14px; flex: none; }
+  .push .t { font-size: 12px; line-height: 1.35; color: var(--ink-2); }
+  .push .t b { color: var(--ink); font-size: 12.5px; display: block; }
+  .push .t i { font-style: normal; color: var(--ink-3); font-size: 10.5px; margin-left: 4px; }
+
+  /* --- Panneau de fonctionnalité verrouillée --- */
+  .chat { flex: 1; background: var(--bg); padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .bulle { max-width: 78%; padding: 8px 11px; border-radius: 14px; font-size: 13.5px; line-height: 1.35; background: var(--surface); border: 1px solid var(--outline); align-self: flex-start; }
+  .bulle.moi { align-self: flex-end; background: var(--brand-container); border-color: transparent; }
+  .bulle small { display: block; font-size: 10px; color: var(--ink-3); margin-top: 2px; text-align: right; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .feuille {
+    position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface);
+    border-radius: 22px 22px 0 0; padding: 10px var(--s-lg) var(--s-lg);
+    display: flex; flex-direction: column; gap: 11px;
+  }
+  .poignee { width: 36px; height: 4px; border-radius: 999px; background: var(--outline-strong); align-self: center; }
+  .feuille .tete { display: flex; gap: 11px; align-items: center; }
+  .feuille .tete .o { width: 42px; height: 42px; border-radius: 12px; background: var(--brand-container); color: var(--brand); display: grid; place-items: center; flex: none; }
+  .feuille .tete .o svg { width: 22px; height: 22px; }
+  .feuille .tete b { font-size: 16.5px; font-weight: 680; display: block; }
+  .feuille .tete .tag { display: block; font-size: 11px; color: var(--brand); font-family: var(--mono); letter-spacing: .06em; }
+  .feuille p { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+  .feuille .prix-l { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--ink-2); border-top: 1px solid var(--outline); padding-top: 10px; }
+  .feuille .prix-l b { font-size: 16px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* --- Coche --- */
+  .piece { display: flex; align-items: center; gap: var(--s-md); padding: 10px var(--s-md); border: 1px solid var(--outline); border-radius: var(--r-sm); background: var(--surface); }
+  .piece .ico { width: 34px; height: 34px; border-radius: 9px; flex: none; display: grid; place-items: center; background: var(--surface-muted); color: var(--ink-2); }
+  .piece .ico svg { width: 17px; height: 17px; }
+  .piece .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .piece .t b { font-size: 13.5px; font-weight: 620; }
+  .piece .t span { font-size: 11.5px; color: var(--ink-3); }
+  .piece .st { width: 20px; height: 20px; flex: none; }
+  .piece .st.ok { color: var(--online); }
+  .piece .st.att { color: var(--brand); }
+  .verif-nom { display: flex; justify-content: space-between; align-items: center; background: var(--surface-muted); border-radius: var(--r-sm); padding: 9px 12px; font-size: 12.5px; color: var(--ink-2); }
+  .verif-nom b { color: var(--ink); font-size: 14px; }
+  .etat-carte { border-radius: var(--r-md); padding: 16px 12px; display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; background: var(--warn-soft); }
+  .etat-carte .rond { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; background: var(--warn); color: #fff; }
+  .etat-carte .rond svg { width: 25px; height: 25px; }
+  .etat-carte b { font-size: 15.5px; font-weight: 680; }
+  .etat-carte span { font-size: 12.5px; color: var(--ink-2); }
+
+  .notes { display: flex; flex-direction: column; gap: var(--s-md); }
+  .note { border-left: 3px solid var(--brand); padding-left: var(--s-md); font-size: 14px; color: var(--page-ink-2); max-width: 88ch; margin: 0; }
+  .note.attention { border-left-color: var(--err); }
+  .note b { color: var(--page-ink); font-weight: 650; }
+  .note code { font-family: var(--mono); font-size: 13px; }
+
+  footer.colophon {
+    display: flex; flex-wrap: wrap; gap: var(--s-sm) var(--s-xl); padding-top: var(--s-lg);
+    border-top: 1px solid var(--page-line); font-family: var(--mono); font-size: 11.5px; color: var(--page-ink-2);
+  }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-sceau" viewBox="0 0 24 24"><path id="sceau-d" fill="currentColor"/></symbol>
+    <!-- Coche indigo : le sceau festonné du volet 1, glyphe réduit au creux du feston. -->
+    <symbol id="b-coche" viewBox="0 0 24 24">
+      <use href="#i-sceau"/>
+      <path d="M6.6 12.4 10.1 15.9 17.6 8.2" transform="translate(12 12) scale(.86) translate(-12 -12)"
+            fill="none" stroke="#fff" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-trad" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5h9M8 3.5v2M5.5 5.5c.6 3 2.6 5.4 5 6.4M10.5 5.5c-.7 3.3-2.9 6-6.3 7.4"/><path d="M12.5 20.5l4-9 4 9M13.9 17.5h5.2"/></g></symbol>
+    <symbol id="i-sauv" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-.4 8.5"/><path d="M12 12.5v7M9.5 15 12 12.5 14.5 15"/></g></symbol>
+    <symbol id="i-trajet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6-5.2 6-10.5a6 6 0 1 0-12 0C6 15.8 12 21 12 21Z"/><circle cx="12" cy="10.5" r="2.2"/></g></symbol>
+    <symbol id="i-sonnerie" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15Z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></g></symbol>
+    <symbol id="i-style" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.6-.8 1.6-1.6 0-1-.8-1.4-.8-2.3 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4C21 6.9 17 3 12 3Z"/><circle cx="7.5" cy="11" r=".6" fill="currentColor"/><circle cx="10" cy="7.3" r=".6" fill="currentColor"/><circle cx="14.5" cy="7.3" r=".6" fill="currentColor"/></g></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-retour" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cadenas" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></g></symbol>
+    <symbol id="i-horloge" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.4l3.4 2"/></g></symbol>
+    <symbol id="i-tel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/></g></symbol>
+    <symbol id="i-alerte" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18.4A2 2 0 0 0 3.5 21.4h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-carte" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.4"/><path d="M14 10h4M14 14h3"/></g></symbol>
+    <symbol id="i-selfie" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13.3" r="3.2"/></g></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></g></symbol>
+    <symbol id="i-abo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.2"/><path d="M3 10h18M7 14.5h4"/></g></symbol>
+    <symbol id="i-listes" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="17.5" r="1" fill="currentColor"/></g></symbol>
+    <symbol id="i-reglages" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></g></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Alanya · Abonnement · Étape 8 · Mobile</p>
+    <h1>Ce qui se paie, ce qui reste gratuit, et quand</h1>
+    <p>
+      Le payant est activé le 10 septembre 2026, la grâce court jusqu'au 10 octobre. Marie
+      s'abonne à l'annuel pendant la grâce : sa première période commence le 10 octobre, pas le
+      jour où elle paie. L'échéance suit un autre cas, un abonné mensuel du 17 octobre.
+    </p>
+  </header>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>La carte Plus du profil</h2>
+      <p>Juste sous l'en-tête, avant les contacts préférés. Son message suit la situation de
+         l'utilisateur ; l'écran autour ne change pas.</p>
+    </header>
+
+    <div class="stage">
+
+      <!-- 1. Phase gratuite -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><h3>Profil</h3></div>
+          <div class="body flush">
+            <div class="hero">
+              <div class="av">M</div>
+              <div class="nom">Marie Kouassi</div>
+              <div class="sous">@marie_k · 0042 8817</div>
+            </div>
+            <div class="plus">
+              <span class="k">Gratuit pendant le lancement</span>
+              <h4>Obtenez la coche à côté de votre nom</h4>
+              <p>Faites vérifier votre identité : vos contacts sauront que c'est bien vous.</p>
+              <button class="btn" type="button"><svg class="i"><use href="#b-coche" style="color:var(--brand)"/></svg>Faire vérifier mon compte</button>
+            </div>
+            <div class="tiles">
+              <div class="tile"><span class="ic"><svg><use href="#i-user"/></svg></span><span class="t">Mon compte</span><svg class="chev"><use href="#i-chev"/></svg></div>
+              <div class="tile"><span class="ic"><svg><use href="#i-listes"/></svg></span><span class="t">Listes de contacts</span><svg class="chev"><use href="#i-chev"/></svg></div>
+              <div class="tile"><span class="ic"><svg><use href="#i-trajet"/></svg></span><span class="t">Trajets</span><svg class="chev"><use href="#i-chev"/></svg></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Phase gratuite</b>rien à vendre : on invite à la vérification</p>
+      </div>
+
+      <!-- 2. Grâce -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><h3>Profil</h3></div>
+          <div class="body flush">
+            <div class="hero">
+              <div class="av">M</div>
+              <div class="nom">Marie Kouassi</div>
+              <div class="sous">@marie_k · 0042 8817</div>
+            </div>
+            <div class="plus">
+              <span class="k">Alanya Plus</span>
+              <h4>Payant à partir du 10 octobre</h4>
+              <p>Traduction, sauvegarde, trajets et sonneries par liste restent gratuits jusque-là.
+                 Abonnez-vous maintenant : <b>votre première période commence le 10 octobre.</b></p>
+              <span class="compte">encore 18 jours gratuits</span>
+              <button class="btn" type="button">Voir l'offre</button>
+            </div>
+            <div class="tiles">
+              <div class="tile"><span class="ic"><svg><use href="#i-user"/></svg></span><span class="t">Mon compte</span><svg class="chev"><use href="#i-chev"/></svg></div>
+              <div class="tile nouveau"><span class="ic"><svg><use href="#i-abo"/></svg></span><span class="t">Mon abonnement</span><svg class="chev"><use href="#i-chev"/></svg></div>
+              <div class="tile"><span class="ic"><svg><use href="#i-reglages"/></svg></span><span class="t">Paramètres</span><svg class="chev"><use href="#i-chev"/></svg></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Période de grâce</b>la date, le prix, et les jours gratuits préservés</p>
+      </div>
+
+      <!-- 3. Non abonné -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><h3>Profil</h3></div>
+          <div class="body flush">
+            <div class="hero">
+              <div class="av">M</div>
+              <div class="nom">Marie Kouassi</div>
+              <div class="sous">@marie_k · 0042 8817</div>
+            </div>
+            <div class="plus">
+              <span class="k">Alanya Plus</span>
+              <h4>Passez à Alanya Plus</h4>
+              <div class="feats">
+                <span class="feat"><span class="o"><svg><use href="#i-trad"/></svg></span>Traduction</span>
+                <span class="feat"><span class="o"><svg><use href="#i-sauv"/></svg></span>Sauvegarde</span>
+                <span class="feat"><span class="o"><svg><use href="#i-trajet"/></svg></span>Trajets</span>
+                <span class="feat"><span class="o"><svg><use href="#i-sonnerie"/></svg></span>Sonneries</span>
+                <span class="feat"><span class="o"><svg><use href="#i-sceau"/></svg></span>Coche</span>
+              </div>
+              <div class="row">
+                <span class="prix">167 F <small>/ mois</small></span>
+                <p>2 000 F par an</p>
+              </div>
+              <button class="btn" type="button">Découvrir l'offre</button>
+            </div>
+            <div class="tiles">
+              <div class="tile"><span class="ic"><svg><use href="#i-user"/></svg></span><span class="t">Mon compte</span><svg class="chev"><use href="#i-chev"/></svg></div>
+              <div class="tile"><span class="ic"><svg><use href="#i-abo"/></svg></span><span class="t">Mon abonnement</span><svg class="chev"><use href="#i-chev"/></svg></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Non abonné</b>ce qu'on obtient, et le prix au mois de l'annuel</p>
+      </div>
+
+      <!-- 4. Abonné, identité pas encore vérifiée -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><h3>Profil</h3></div>
+          <div class="body flush">
+            <div class="hero">
+              <div class="av">M</div>
+              <div class="nom">Marie Kouassi</div>
+              <div class="sous">@marie_k · 0042 8817</div>
+            </div>
+            <div class="plus soft">
+              <span class="k">Alanya Plus · Annuel</span>
+              <h4>Actif jusqu'au 10 octobre 2027</h4>
+              <p>Renouvellement automatique activé.</p>
+              <div class="suite">
+                <svg class="badge"><use href="#b-coche"/></svg>
+                <span>Il ne manque que la vérification d'identité pour la coche</span>
+                <span class="sp"></span><svg class="i" style="width:15px;height:15px;color:var(--ink-3)"><use href="#i-chev"/></svg>
+              </div>
+            </div>
+            <div class="tiles">
+              <div class="tile"><span class="ic"><svg><use href="#i-user"/></svg></span><span class="t">Mon compte</span><svg class="chev"><use href="#i-chev"/></svg></div>
+              <div class="tile"><span class="ic"><svg><use href="#i-abo"/></svg></span><span class="t">Mon abonnement<small>Annuel · 2 000 F</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+              <div class="tile"><span class="ic"><svg><use href="#i-reglages"/></svg></span><span class="t">Paramètres</span><svg class="chev"><use href="#i-chev"/></svg></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Abonné</b>on cesse de vendre ; on mène à la coche</p>
+      </div>
+
+      <!-- 5. Échéance dépassée -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><h3>Profil</h3></div>
+          <div class="body flush">
+            <div class="hero">
+              <div class="av">M</div>
+              <div class="nom">Marie Kouassi</div>
+              <div class="sous">@marie_k · 0042 8817</div>
+            </div>
+            <div class="plus alerte">
+              <span class="k"><svg class="i" style="width:14px;height:14px"><use href="#i-alerte"/></svg>Terminé le 17 novembre</span>
+              <h4>Vos fonctionnalités Plus sont en pause</h4>
+              <p>Vos réglages et votre historique sont conservés <b>jusqu'au 17 décembre</b>.
+                 Réabonnez-vous d'ici là pour tout retrouver, coche comprise.</p>
+              <button class="btn" type="button">Me réabonner</button>
+            </div>
+            <div class="tiles">
+              <div class="tile"><span class="ic"><svg><use href="#i-user"/></svg></span><span class="t">Mon compte</span><svg class="chev"><use href="#i-chev"/></svg></div>
+              <div class="tile"><span class="ic"><svg><use href="#i-abo"/></svg></span><span class="t">Mon abonnement<small>Terminé</small></span><svg class="chev"><use href="#i-chev"/></svg></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Échéance dépassée</b>ce qui sera perdu, et la date</p>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <p class="note"><b>Une seule carte, cinq messages.</b> Son contenu se déduit de la charge utile
+        <code>entitlements</code> (phase, période, droits) déjà reçue par <code>/auth/me</code> —
+        aucun appel supplémentaire pour afficher le profil.</p>
+      <p class="note"><b>L'abonné ne voit plus de publicité pour ce qu'il a déjà.</b> La carte passe
+        du fond indigo à une surface neutre, et sert à mener à la coche plutôt qu'à l'offre.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>S'abonner</h2>
+      <p>L'offre, le paiement mobile money, l'attente de confirmation, puis le résultat. Le
+         paiement est simulé côté serveur ; l'écran est déjà celui qui servira avec l'agrégateur.</p>
+    </header>
+
+    <div class="stage">
+
+      <!-- Offre -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><svg><use href="#i-retour"/></svg><h3>Alanya Plus</h3></div>
+          <div class="body">
+            <span class="lab">Ce que Plus débloque</span>
+            <div class="liste">
+              <div class="li"><span class="o"><svg><use href="#i-trad"/></svg></span><span><b>Traduction</b><span class="d">des messages, même sans connexion</span></span></div>
+              <div class="li"><span class="o"><svg><use href="#i-sauv"/></svg></span><span><b>Sauvegarde</b><span class="d">chiffrée, sur le téléphone ou Drive</span></span></div>
+              <div class="li"><span class="o"><svg><use href="#i-trajet"/></svg></span><span><b>Trajets de confiance</b><span class="d">vos proches vous attendent à l'arrivée</span></span></div>
+              <div class="li"><span class="o"><svg><use href="#i-sonnerie"/></svg></span><span><b>Sonneries par liste</b><span class="d">famille, bureau, amis</span></span></div>
+              <div class="li"><span class="o"><svg><use href="#i-sceau"/></svg></span><span><b>La coche</b><span class="d">après vérification de votre identité</span></span></div>
+            </div>
+            <div class="opt on">
+              <span class="radio"></span>
+              <span class="t"><b>Annuel</b><span>soit 167 F par mois</span><span class="ruban">4 mois offerts</span></span>
+              <span class="m">2 000 F <small>/ an</small></span>
+            </div>
+            <div class="opt">
+              <span class="radio"></span>
+              <span class="t"><b>Mensuel</b><span>sans engagement</span></span>
+              <span class="m">250 F <small>/ mois</small></span>
+            </div>
+            <div class="spacer"></div>
+            <p class="fine">Première période : du 10 octobre 2026 au 10 octobre 2027.</p>
+            <button class="cta" type="button">Continuer — 2 000 F</button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>L'offre</b>l'annuel présélectionné, la date de départ dite</p>
+      </div>
+
+      <!-- Paiement -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><svg><use href="#i-retour"/></svg><h3>Paiement</h3></div>
+          <div class="body">
+            <div class="recap"><span><b>Alanya Plus · Annuel</b><span>10 oct. 2026 → 10 oct. 2027</span></span><span class="m">2 000 F</span></div>
+            <span class="lab">Payer avec</span>
+            <div class="pm on"><span class="logo om">OM</span><span class="t">Orange Money</span><span class="radio" style="border-color:var(--brand)"></span></div>
+            <div class="pm"><span class="logo mtn">MTN</span><span class="t">MTN Mobile Money</span><span class="radio"></span></div>
+            <div class="champ">
+              <span class="lab">Numéro à débiter</span>
+              <span class="inp">+237 6 99 12 34 00</span>
+            </div>
+            <div class="switch-row">
+              <span class="t">Renouveler automatiquement<small>Orange Money vous demandera de confirmer la veille de l'échéance.</small></span>
+              <span class="sw"></span>
+            </div>
+            <div class="test">PAIEMENT SIMULÉ · aucun argent n'est débité. Numéro finissant par 01 : échec · 02 : refus · 03 : sans réponse.</div>
+            <div class="spacer"></div>
+            <button class="cta" type="button">Payer 2 000 F</button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Le paiement</b>moyen, numéro, renouvellement — mode test signalé</p>
+      </div>
+
+      <!-- Attente -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><h3>Paiement</h3></div>
+          <div class="body">
+            <div class="attente">
+              <span class="anneau"><svg><use href="#i-tel"/></svg></span>
+              <b>Confirmez sur votre téléphone</b>
+              <span>Composez votre code Orange Money pour valider 2 000 F. Cet écran se met à jour tout seul.</span>
+              <span class="minuteur">la demande expire dans 9:42</span>
+            </div>
+            <div class="frise" style="margin-top:6px">
+              <div class="fr-e fait"><span class="col"><span class="pt"></span><span class="tr"></span></span>
+                <span class="txt"><b>Demande envoyée</b><span>à +237 6 99 12 34 00</span></span></div>
+              <div class="fr-e cours"><span class="col"><span class="pt"></span><span class="tr"></span></span>
+                <span class="txt"><b>Confirmation par votre code</b><span>en attente</span></span></div>
+              <div class="fr-e"><span class="col"><span class="pt"></span><span class="tr"></span></span>
+                <span class="txt"><b>Abonnement activé</b><span>dès la réponse d'Orange Money</span></span></div>
+            </div>
+            <div class="spacer"></div>
+            <button class="cta fantome" type="button">Annuler la demande</button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>L'attente</b>on ne conclut pas avant l'opérateur</p>
+      </div>
+
+      <!-- Confirmé -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><h3>Alanya Plus</h3></div>
+          <div class="body">
+            <div class="attente">
+              <span class="ok-rond"><svg><use href="#i-check"/></svg></span>
+              <b>Vous êtes abonnée</b>
+              <span>Annuel, du 10 octobre 2026 au 10 octobre 2027. D'ici là, tout reste gratuit pour vous.</span>
+            </div>
+            <div class="pause">
+              <div><svg style="color:var(--online)"><use href="#i-check"/></svg><span><b>Traduction, sauvegarde, trajets, sonneries</b><span>actifs sans interruption</span></span></div>
+              <div><svg style="color:var(--brand)"><use href="#b-coche"/></svg><span><b>La coche</b><span>une dernière étape : vérifier votre identité</span></span></div>
+            </div>
+            <div class="spacer"></div>
+            <button class="cta" type="button">Obtenir la coche</button>
+            <button class="cta lien" type="button">Plus tard</button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Confirmé</b>la suite logique : la coche</p>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <p class="note"><b>L'écran d'attente est le vrai sujet.</b> Un paiement mobile money est
+        confirmé quand l'opérateur prévient Alanya, pas quand on le demande. Le simulateur répond
+        au bout de quatre secondes, par le même chemin que le futur webhook
+        (<code>payment:updated</code> sur le socket).</p>
+      <p class="note attention"><b>Le bandeau « paiement simulé » n'existe qu'en mode test.</b>
+        Il disparaît dès que le fournisseur n'est plus <code>simulated</code> — et l'administration
+        refuse d'activer le payant en production tant qu'il l'est.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>L'échéance</h2>
+      <p>La relance avant la fin, le panneau qui remplace l'erreur devant une fonctionnalité
+         verrouillée, et ce que devient le compte après l'échéance.</p>
+    </header>
+
+    <div class="stage">
+
+      <!-- Relance J-7 -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="push">
+            <span class="app">A</span>
+            <span class="t"><b>Alanya Plus prend fin dans 7 jours<i>maintenant</i></b>Renouvelez pour garder vos fonctionnalités et votre coche.</span>
+          </div>
+          <div class="appbar" style="margin-top:8px"><svg><use href="#i-retour"/></svg><h3>Mon abonnement</h3></div>
+          <div class="body">
+            <div class="etat warn">
+              <span class="k">Mensuel · 250 F</span>
+              <b>Prend fin le 17 novembre</b>
+              <span class="q">dans 7 jours</span>
+            </div>
+            <button class="cta" type="button">Renouveler — 250 F</button>
+            <div class="switch-row">
+              <span class="t">Renouvellement automatique<small>Orange Money vous demandera de confirmer le 16 novembre.</small></span>
+              <span class="sw"></span>
+            </div>
+            <span class="lab">Durée au prochain renouvellement</span>
+            <div class="seg"><span class="on">Mensuel · 250 F</span><span>Annuel · 2 000 F</span></div>
+            <span class="lab">Paiements</span>
+            <div class="hist">
+              <div><span>17 oct. 2026 · 250 F · Orange Money</span><span class="ok">Réussi</span></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Relance à J-7</b>notification et bandeau, le même jour</p>
+      </div>
+
+      <!-- Panneau -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><svg><use href="#i-retour"/></svg><h3>Wei Chen</h3></div>
+          <div class="chat">
+            <div class="bulle">Are you still coming to the fitting tomorrow?<small>18:04</small></div>
+            <div class="bulle">I can move it to 10am if that's easier.<small>18:05</small></div>
+            <div class="bulle moi">Oui, merci !<small>18:07</small></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="feuille">
+            <span class="poignee"></span>
+            <div class="tete">
+              <span class="o"><svg><use href="#i-trad"/></svg></span>
+              <span><b>Traduire vos messages</b><span class="tag">ALANYA PLUS</span></span>
+            </div>
+            <p>La traduction fait partie d'Alanya Plus. Elle fonctionne sur votre téléphone, même
+               sans connexion, et vos messages ne quittent jamais l'appareil.</p>
+            <div class="prix-l"><span>À partir de</span><b>167 F / mois</b></div>
+            <button class="cta" type="button">Voir l'offre</button>
+            <button class="cta lien" type="button">Plus tard</button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Fonctionnalité verrouillée</b>un panneau, pas une erreur</p>
+      </div>
+
+      <!-- Expiré -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><svg><use href="#i-retour"/></svg><h3>Mon abonnement</h3></div>
+          <div class="body">
+            <div class="etat fin">
+              <span class="k">Terminé le 17 novembre</span>
+              <b>Vos fonctionnalités Plus sont en pause</b>
+              <span>Réabonnez-vous avant le 17 décembre pour tout retrouver.</span>
+            </div>
+            <span class="lab">Ce qui se passe le 17 décembre</span>
+            <div class="pause">
+              <div><svg><use href="#i-trad"/></svg><span><b>Traduction</b><span class="rouge">modèles de langue et traductions effacés</span></span></div>
+              <div><svg><use href="#i-sonnerie"/></svg><span><b>Sonneries par liste</b><span class="rouge">réglages effacés</span></span></div>
+              <div><svg><use href="#i-trajet"/></svg><span><b>Trajets</b><span class="rouge">historique supprimé</span></span></div>
+              <div><svg><use href="#i-sauv"/></svg><span><b>Sauvegarde</b><span class="vert">vos sauvegardes restent restaurables</span></span></div>
+              <div><svg style="color:var(--brand)"><use href="#b-coche"/></svg><span><b>Coche</b><span>revient dès le réabonnement</span></span></div>
+            </div>
+            <div class="spacer"></div>
+            <button class="cta" type="button">Me réabonner</button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Après l'échéance</b>30 jours de conservation, détaillés</p>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <p class="note"><b>Le refus devient une proposition en un seul endroit.</b> Toute route qui
+        répond <code>SUBSCRIPTION_REQUIRED</code> est traduite par l'entonnoir d'erreurs en ce
+        panneau, sur la fonctionnalité demandée — aucun écran n'a à le prévoir.</p>
+      <p class="note"><b>Les sauvegardes restent restaurables.</b> Elles vivent sur le téléphone
+        ou Drive, pas chez Alanya : faire une nouvelle sauvegarde est payant, relire la sienne ne
+        l'est jamais.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>Obtenir la coche</h2>
+      <p>La pièce et le selfie, l'examen, puis la coche — qui suit désormais l'abonnement.</p>
+    </header>
+
+    <div class="stage">
+
+      <!-- Dépôt -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><svg><use href="#i-retour"/></svg><h3>Obtenir la coche</h3></div>
+          <div class="body">
+            <p style="margin:0;font-size:13px;color:var(--ink-2);line-height:1.45">La coche dit à vos
+              contacts que vous êtes bien la personne dont ce compte porte le nom.</p>
+            <div class="verif-nom"><span>Nom à vérifier</span><b>Marie Kouassi</b></div>
+            <span class="lab">À fournir</span>
+            <div class="piece">
+              <span class="ico"><svg><use href="#i-carte"/></svg></span>
+              <span class="t"><b>Pièce d'identité</b><span>CNI, passeport · recto et verso</span></span>
+              <svg class="st ok"><use href="#i-check"/></svg>
+            </div>
+            <div class="piece">
+              <span class="ico"><svg><use href="#i-selfie"/></svg></span>
+              <span class="t"><b>Selfie avec la pièce</b><span>visage et pièce lisibles</span></span>
+              <svg class="st att"><use href="#i-plus"/></svg>
+            </div>
+            <div class="info">
+              <svg><use href="#i-cadenas"/></svg>
+              <span>Vos pièces sont chiffrées, vues seulement par l'administration, et <b>supprimées
+                90 jours après la décision</b>. Chaque consultation est journalisée.</span>
+            </div>
+            <div class="spacer"></div>
+            <button class="cta" type="button">Envoyer ma demande</button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Le dépôt</b>la rétention dite avant l'envoi</p>
+      </div>
+
+      <!-- En cours -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><svg><use href="#i-retour"/></svg><h3>Ma vérification</h3></div>
+          <div class="body">
+            <div class="etat-carte">
+              <span class="rond"><svg><use href="#i-horloge"/></svg></span>
+              <b>Vérification en cours</b>
+              <span>Déposée le 22 septembre · réponse sous 5 jours ouvrés</span>
+            </div>
+            <div class="frise">
+              <div class="fr-e fait"><span class="col"><span class="pt"></span><span class="tr"></span></span>
+                <span class="txt"><b>Demande envoyée</b><span>22 sept. · 19:40</span></span></div>
+              <div class="fr-e fait"><span class="col"><span class="pt"></span><span class="tr"></span></span>
+                <span class="txt"><b>Pièces reçues</b><span>2 documents</span></span></div>
+              <div class="fr-e cours"><span class="col"><span class="pt"></span><span class="tr"></span></span>
+                <span class="txt"><b>Examen par Alanya</b><span>en cours</span></span></div>
+              <div class="fr-e"><span class="col"><span class="pt"></span><span class="tr"></span></span>
+                <span class="txt"><b>Décision</b><span>vous serez prévenue</span></span></div>
+            </div>
+            <div class="info">
+              <svg><use href="#i-check"/></svg>
+              <span>Votre abonnement est actif : <b>vos fonctionnalités Plus n'attendent pas</b> la décision.</span>
+            </div>
+            <div class="spacer"></div>
+            <button class="cta fantome" type="button">Annuler ma demande</button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>L'examen</b>une fourchette, jamais un compte à rebours</p>
+      </div>
+
+      <!-- Coche obtenue -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar"><h3>Profil</h3></div>
+          <div class="body flush">
+            <div class="hero">
+              <div class="av">M</div>
+              <div class="nom">Marie Kouassi <svg class="badge" style="width:20px;height:20px"><use href="#b-coche"/></svg></div>
+              <div class="sous">@marie_k · 0042 8817</div>
+            </div>
+            <div class="plus soft">
+              <span class="k">Alanya Plus · Annuel</span>
+              <h4>Identité vérifiée, coche active</h4>
+              <p>Elle suit votre abonnement : <b>jusqu'au 10 octobre 2027</b>, renouvellement automatique activé.</p>
+            </div>
+            <div class="body" style="flex:none;padding-top:10px">
+              <div class="info warn">
+                <svg><use href="#i-alerte"/></svg>
+                <span>Changer de nom retire la coche jusqu'à un nouvel examen de votre dossier.</span>
+              </div>
+            </div>
+            <div class="tiles" style="margin-top:0">
+              <div class="tile"><span class="ic"><svg><use href="#i-user"/></svg></span><span class="t">Mon compte</span><svg class="chev"><use href="#i-chev"/></svg></div>
+              <div class="tile"><span class="ic"><svg><use href="#i-abo"/></svg></span><span class="t">Mon abonnement</span><svg class="chev"><use href="#i-chev"/></svg></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>La coche</b>indigo, festonnée, liée à l'échéance</p>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <p class="note"><b>La coche est le sceau du volet 1, en indigo.</b> Rosace à douze lobes,
+        glyphe réduit au creux du feston : rien dans un nom d'affichage ne peut l'imiter, et elle
+        ne se confond ni avec un avatar ni avec une pastille de comptage.</p>
+      <p class="note"><b>Le selfie remplace la preuve de notoriété du volet 5.</b> La coche n'est
+        plus réservée aux personnalités publiques : elle atteste une identité, pour tout abonné.</p>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span>Maquette de conception — aucun code applicatif</span>
+    <span>Jetons : app_colors.dart</span>
+    <span>Scénario : activation 10/09/2026 · grâce jusqu'au 10/10/2026</span>
+    <span>Source : docs/architecture/maquettes/abonnement.html</span>
+  </footer>
+
+</div>
+</div>
+
+<script>
+  // Le SCEAU — rosace à 12 lobes, r(t) = R + A·cos(12t), comme au volet 1
+  // (liste-conversations-badges.html) et dans alanya-conception.sty.
+  (function () {
+    const R = 10.6, A = 1.25, LOBES = 12, PAS = 288;
+    let d = '';
+    for (let i = 0; i < PAS; i++) {
+      const t = (i / PAS) * Math.PI * 2;
+      const r = R + A * Math.cos(LOBES * t);
+      d += (i ? 'L' : 'M') + (12 + r * Math.cos(t)).toFixed(2) + ' ' + (12 + r * Math.sin(t)).toFixed(2);
+    }
+    document.getElementById('sceau-d').setAttribute('d', d + 'Z');
+  })();
+</script>

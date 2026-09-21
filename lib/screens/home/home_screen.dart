@@ -13,6 +13,7 @@ import '../../core/services/local_cache_repository.dart';
 import '../../core/services/realtime_sync_service.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/call/call_history_rules.dart';
+import '../../core/services/call/call_terminal_guards.dart';
 import '../../core/services/call/ended_call_registry.dart';
 import '../../core/services/callkit_service.dart';
 import '../../core/services/local_notification_helper.dart';
@@ -32,6 +33,8 @@ import '../../widgets/trips/trip_banner.dart';
 import 'glass_nav_bar.dart';
 import '../../core/services/trip_repository.dart';
 import '../trips/trip_live_screen.dart';
+import '../../core/services/billing/entitlement_service.dart';
+import '../billing/subscription_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.initialTab = 0});
@@ -72,6 +75,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   StreamSubscription<NotificationAction>? _notifActionSub;
   Timer? _resumeSyncDebounce;
+
+  /// Dernier état de cycle de vie reçu.
+  ///
+  /// Flutter rejoue les états intermédiaires : `hidden` est traversé aussi bien
+  /// en partant qu'en revenant. Sans savoir d'où l'on vient, on ne peut pas les
+  /// distinguer — voir `isBackgroundDeparture`.
+  AppLifecycleState? _dernierEtatCycleDeVie;
 
   static const _kCallsVisitKey = 'nav_calls_last_visit_ms';
   DateTime? _callsLastVisit;
@@ -177,25 +187,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final precedent = _dernierEtatCycleDeVie;
+    _dernierEtatCycleDeVie = state;
+
     if (state == AppLifecycleState.resumed) {
       _onForegroundResumed();
-    } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden ||
-        state == AppLifecycleState.detached) {
-      // Ne pas traiter `inactive` (ombre de notifs, transition iOS) comme
-      // background : sinon la suppression push est levée alors que le chat
-      // est encore ouvert → notif pour la conversation active.
-      Provider.of<ChatProvider>(context, listen: false)
-          .repository
-          .syncPushSuppressionForLifecycle(false);
-      _syncPushDeviceState(foreground: false);
-      // Entrant qui sonne au premier plan : basculer sur CallKit pour rester
-      // décrochable en arrière-plan et ne pas laisser la sonnerie Dart tourner.
-      unawaited(
-        Provider.of<CallService>(context, listen: false)
-            .handleForegroundIncomingBackgrounded(),
-      );
+      return;
     }
+    // Ne pas traiter `inactive` (ombre de notifs, transition iOS) comme
+    // background : sinon la suppression push est levée alors que le chat est
+    // encore ouvert → notif pour la conversation active.
+    //
+    // Et surtout ne pas traiter le `hidden` du RETOUR comme un départ : c'est
+    // lui qui rebasculait l'appel entrant vers CallKit à l'instant du
+    // décrochage, faisant perdre l'appel des deux côtés. Voir
+    // `isBackgroundDeparture`.
+    if (!isBackgroundDeparture(
+      stateName: state.name,
+      previousStateName: precedent?.name,
+    )) {
+      return;
+    }
+
+    Provider.of<ChatProvider>(context, listen: false)
+        .repository
+        .syncPushSuppressionForLifecycle(false);
+    _syncPushDeviceState(foreground: false);
+    // Entrant qui sonne au premier plan : basculer sur CallKit pour rester
+    // décrochable en arrière-plan et ne pas laisser la sonnerie Dart tourner.
+    unawaited(
+      Provider.of<CallService>(context, listen: false)
+          .handleForegroundIncomingBackgrounded(),
+    );
   }
 
   void _syncPushDeviceState({required bool foreground}) {
@@ -315,6 +338,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (action.fromTap) _switchToTab(_tabStatuses);
     } else if (type.startsWith('trip_')) {
       unawaited(_handleTripNotification(action));
+    } else if (type == 'verification_update') {
+      // La coche a changé (abonnement ou révocation admin) : relire les droits.
+      // Plus d'écran de dossier — un appui mène à « Mon abonnement ».
+      final droits = EntitlementService.maybeInstance;
+      if (droits != null) unawaited(droits.refresh());
+      if (action.fromTap) {
+        unawaited(Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+        ));
+      }
+    } else if (type.startsWith('billing_') || type.startsWith('payment_')) {
+      // Relance, échéance ou paiement : les droits d'abord, puis « Mon
+      // abonnement » si l'utilisateur a touché la notification.
+      final droits = EntitlementService.maybeInstance;
+      if (droits != null) unawaited(droits.refresh());
+      if (action.fromTap) {
+        unawaited(Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+        ));
+      }
     } else if (type == 'broadcast') {
       if (action.fromTap) {
         unawaited(_handleBroadcastTap(action.data));
