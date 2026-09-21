@@ -5,7 +5,7 @@ abstract final class LegalUrls {
   static const String termsOfService = '$baseHost/legal/terms';
   static const String privacyPolicy = '$baseHost/legal/privacy';
   static const String openSourceLicenses = '$baseHost/legal/licenses';
-  static const String supportEmail = 'support@alanya237.com';
+  static const String supportEmail = 'alanyapro64@gmail.com';
   static Uri get supportMailto => Uri(
         scheme: 'mailto',
         path: supportEmail,
