@@ -487,6 +487,77 @@ extension CallSignaling on CallService {
       _showTransientMessage(LocaleController.instance.l10n.theOtherPartyIsBusy);
     });
 
+    // Le répondeur du correspondant est actif : le serveur n'a RIEN armé — pas
+    // de `ringing`, pas d'`incoming_call`, pas de push. Rien n'a sonné chez
+    // lui, et rien ne sonnera. On démonte le sortant et on propose de laisser
+    // un message.
+    //
+    // L'ordre des six étapes ci-dessous n'est pas négociable :
+    //
+    //  1. la garde, avant tout — `acceptsOutgoingTerminalEvent` accepte
+    //     justement parce qu'aucun `call_ringing` n'a été émis et que
+    //     `_currentCallId` est donc encore l'horodatage fabriqué localement.
+    //     C'est le cas que son paramètre `currentCallIdIsLocal` couvre ;
+    //  2. le filet local de 50 s doit être désarmé TOUT DE SUITE. Un message
+    //     d'une minute le laisserait expirer par-dessus la feuille
+    //     d'enregistrement et afficher « Pas de réponse » sur un appel qui
+    //     n'attendait aucune réponse ;
+    //  3. adopter l'identifiant serveur, seul moyen de rapprocher l'appel du
+    //     `call_log_updated` qui arrive en même temps ;
+    //  4. marquer les DEUX identités comme terminales. Celle de CallKit, que
+    //     l'adoption vient de remplacer, resterait sinon orpheline dans le
+    //     registre, et un `call_ended` tardif venu de l'isolate FCM tomberait
+    //     sur une clé que personne n'a écrite ;
+    //  5. `_terminateCall()` — et non `endCall()` : le serveur n'a ouvert
+    //     aucun appel, un `end_call` y chercherait quelque chose qui n'existe
+    //     pas. C'est lui qui coupe la sonnerie de retour, rend CallKit, ferme
+    //     la connexion pair-à-pair et RELÂCHE LA SESSION AUDIO ;
+    //  6. la feuille en dernier, pour la raison du point 5 : l'enregistreur
+    //     démarré sur une session encore en catégorie `call` produit un
+    //     fichier en bande téléphonique sur Android et rien sur iOS.
+    _apiClient.onSocketEvent(SocketEvents.callVoicemail, (data) async {
+      debugPrint('[CallService] 📼 call_voicemail reçu: $data');
+      final map = data is Map ? data : const {};
+      final serverCallId = map['callId']?.toString();
+
+      if (!acceptsOutgoingTerminalEvent(
+        callStatusName: _status.name,
+        eventCallId: serverCallId,
+        currentCallId: _currentCallId,
+        currentCallIdIsLocal: !_serverCallIdKnown,
+      )) {
+        debugPrint('[CallService] 🛡 call_voicemail ignoré: status=$_status');
+        return;
+      }
+
+      _cancelOutgoingTimeout();
+
+      final idCallKit = _callKitCallId;
+      final idLocal = _currentCallId;
+      if (serverCallId != null && serverCallId.isNotEmpty) {
+        _adoptServerCallId(serverCallId);
+        _markTerminalCallId(serverCallId);
+      }
+      _markTerminalCallId(idLocal);
+      _markTerminalCallId(idCallKit);
+
+      // Retenus avant `_terminateCall`, qui remet l'identité distante à zéro.
+      final peerId = _remoteUserId;
+      final peerName = _remoteUserName ?? '';
+      final conversationID = map['conversationID'] is int
+          ? map['conversationID'] as int
+          : int.tryParse(map['conversationID']?.toString() ?? '');
+
+      await _terminateCall();
+
+      if (peerId == null) return;
+      unawaited(showVoicemailSheet(
+        peerUserId: peerId,
+        peerName: peerName,
+        conversationID: conversationID,
+      ));
+    });
+
     // Pas de réponse (timeout serveur sur un appel resté en sonnerie).
     _apiClient.onSocketEvent(SocketEvents.callNoAnswer, (data) async {
       debugPrint('[CallService] 📴 call_no_answer reçu: $data');
