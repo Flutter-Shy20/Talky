@@ -2039,6 +2039,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voicemailDisabled => 'Voicemail turned off';
 
   @override
+  String get voicemailScheduleTitle => 'Voicemail';
+
+  @override
+  String get voicemailEnabled => 'Scheduled voicemail';
+
+  @override
+  String get voicemailEnabledSubtitle =>
+      'During these hours your phone stays silent and callers can leave a message';
+
+  @override
+  String voicemailTimezoneHint(String timezone) {
+    return 'Hours evaluated in $timezone';
+  }
+
+  @override
+  String get voicemailBypassTitle => 'Can still reach me';
+
+  @override
+  String get voicemailBypassTile => 'Allowed list';
+
+  @override
+  String get voicemailBypassNobody => 'Nobody';
+
+  @override
+  String get voicemailBypassHint =>
+      'Members of this list will ring your phone despite the voicemail.';
+
+  @override
   String get voicemailCallStatus => 'Voicemail';
 
   @override

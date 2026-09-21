@@ -3790,6 +3790,54 @@ abstract class AppLocalizations {
   /// **'Répondeur désactivé'**
   String get voicemailDisabled;
 
+  /// No description provided for @voicemailScheduleTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur'**
+  String get voicemailScheduleTitle;
+
+  /// No description provided for @voicemailEnabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur planifié'**
+  String get voicemailEnabled;
+
+  /// No description provided for @voicemailEnabledSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur ces créneaux, votre téléphone ne sonne pas et l\'appelant peut laisser un message'**
+  String get voicemailEnabledSubtitle;
+
+  /// Sous les jours de la semaine : le fuseau réellement utilisé par le serveur, pour qu'un compte rattaché au mauvais pays se voie tout de suite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Heures évaluées à {timezone}'**
+  String voicemailTimezoneHint(String timezone);
+
+  /// No description provided for @voicemailBypassTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Peuvent me joindre quand même'**
+  String get voicemailBypassTitle;
+
+  /// No description provided for @voicemailBypassTile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Liste autorisée'**
+  String get voicemailBypassTile;
+
+  /// No description provided for @voicemailBypassNobody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne'**
+  String get voicemailBypassNobody;
+
+  /// No description provided for @voicemailBypassHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.'**
+  String get voicemailBypassHint;
+
   /// Journal d'appels, statut 4 : l'appel a été renvoyé au répondeur et le téléphone n'a jamais sonné. Distinct de « Manqué ».
   ///
   /// In fr, this message translates to:

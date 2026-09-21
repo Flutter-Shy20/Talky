@@ -2058,6 +2058,34 @@ class AppLocalizationsFr extends AppLocalizations {
   String get voicemailDisabled => 'Répondeur désactivé';
 
   @override
+  String get voicemailScheduleTitle => 'Répondeur';
+
+  @override
+  String get voicemailEnabled => 'Répondeur planifié';
+
+  @override
+  String get voicemailEnabledSubtitle =>
+      'Sur ces créneaux, votre téléphone ne sonne pas et l\'appelant peut laisser un message';
+
+  @override
+  String voicemailTimezoneHint(String timezone) {
+    return 'Heures évaluées à $timezone';
+  }
+
+  @override
+  String get voicemailBypassTitle => 'Peuvent me joindre quand même';
+
+  @override
+  String get voicemailBypassTile => 'Liste autorisée';
+
+  @override
+  String get voicemailBypassNobody => 'Personne';
+
+  @override
+  String get voicemailBypassHint =>
+      'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.';
+
+  @override
   String get voicemailCallStatus => 'Répondeur';
 
   @override

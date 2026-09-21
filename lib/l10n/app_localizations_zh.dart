@@ -1975,6 +1975,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get voicemailDisabled => '语音信箱已关闭';
 
   @override
+  String get voicemailScheduleTitle => '语音信箱';
+
+  @override
+  String get voicemailEnabled => '定时语音信箱';
+
+  @override
+  String get voicemailEnabledSubtitle => '在这些时段内手机不会响铃，来电者可以留言';
+
+  @override
+  String voicemailTimezoneHint(String timezone) {
+    return '按 $timezone 时区计算';
+  }
+
+  @override
+  String get voicemailBypassTitle => '仍可联系到我';
+
+  @override
+  String get voicemailBypassTile => '允许的名单';
+
+  @override
+  String get voicemailBypassNobody => '无人';
+
+  @override
+  String get voicemailBypassHint => '该名单中的成员即使在语音信箱开启时也能让手机响铃。';
+
+  @override
   String get voicemailCallStatus => '语音信箱';
 
   @override

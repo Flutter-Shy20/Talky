@@ -7,6 +7,8 @@ import '../../core/services/notifications/notification_prefs_cache.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'dnd_schedule_screen.dart';
+import 'voicemail_schedule_screen.dart';
+import '../../core/services/call/voicemail_provider.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -290,9 +292,66 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     },
                   ),
                 ),
+                AppSpacing.vGapXxl,
+                // Voisin du DND, et c'est le bon endroit : c'est ici qu'on
+                // cherche « faire taire mon téléphone ». Mais réglage distinct,
+                // parce que le DND ne coupe que les notifications quand le
+                // répondeur, lui, empêche la sonnerie et détourne l'appel.
+                _Group(
+                  title: l10n.voicemailScheduleTitle,
+                  child: Consumer<VoicemailProvider>(
+                    builder: (context, vm, _) => ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl,
+                        vertical: AppSpacing.sm,
+                      ),
+                      leading: Icon(Icons.voicemail_outlined,
+                          color: context.colors.onSurfaceVariant),
+                      title: Text(
+                        l10n.voicemailScheduleTitle,
+                        style: context.text.bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.w500),
+                      ),
+                      subtitle: Text(
+                        _voicemailSubtitle(vm),
+                        style: context.text.bodySmall?.copyWith(
+                          color: vm.isActive
+                              ? context.colors.primary
+                              : context.colors.onSurfaceVariant,
+                        ),
+                      ),
+                      trailing: Icon(Icons.chevron_right,
+                          color: context.colors.outlineVariant),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VoicemailScheduleScreen(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
     );
+  }
+
+  /// Le sous-titre dit d'abord si ça tourne MAINTENANT — c'est la seule chose
+  /// qu'on veut savoir d'un coup d'œil. Pas besoin de relire au retour de
+  /// l'écran : le provider notifie déjà.
+  String _voicemailSubtitle(VoicemailProvider vm) {
+    final l10n = context.l10n;
+    if (vm.isActive) {
+      final fin = vm.deadline;
+      return fin == null
+          ? l10n.voicemailBannerActive
+          : l10n.voicemailBannerUntil(fin);
+    }
+    final s = vm.schedule;
+    if (s != null && s.enabled) {
+      return '${s.startTime} – ${s.endTime}';
+    }
+    return l10n.dndSummaryInactive;
   }
 }
 

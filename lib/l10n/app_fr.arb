@@ -1032,6 +1032,18 @@
   },
   "voicemailBannerDisable": "Désactiver",
   "voicemailDisabled": "Répondeur désactivé",
+  "voicemailScheduleTitle": "Répondeur",
+  "voicemailEnabled": "Répondeur planifié",
+  "voicemailEnabledSubtitle": "Sur ces créneaux, votre téléphone ne sonne pas et l'appelant peut laisser un message",
+  "voicemailTimezoneHint": "Heures évaluées à {timezone}",
+  "@voicemailTimezoneHint": {
+    "description": "Sous les jours de la semaine : le fuseau réellement utilisé par le serveur, pour qu'un compte rattaché au mauvais pays se voie tout de suite.",
+    "placeholders": { "timezone": { "type": "String" } }
+  },
+  "voicemailBypassTitle": "Peuvent me joindre quand même",
+  "voicemailBypassTile": "Liste autorisée",
+  "voicemailBypassNobody": "Personne",
+  "voicemailBypassHint": "Les membres de cette liste feront sonner votre téléphone malgré le répondeur.",
   "voicemailCallStatus": "Répondeur",
   "@voicemailCallStatus": {
     "description": "Journal d'appels, statut 4 : l'appel a été renvoyé au répondeur et le téléphone n'a jamais sonné. Distinct de « Manqué »."
