@@ -10,6 +10,7 @@ import '../core/theme/locale_controller.dart';
 import '../core/utils/app_log.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
+import '../core/services/video_upload_compressor.dart';
 
 class StatusProvider extends ChangeNotifier {
   final TalkyApiClient _api;
@@ -242,8 +243,12 @@ class StatusProvider extends ChangeNotifier {
     String? caption,
     int? mediaDurationMs,
   }) async {
+    // Même règle que dans les conversations : une vidéo est compressée avant
+    // de partir (voir VideoUploadCompressor).
+    final toUpload =
+        type == 2 ? await VideoUploadCompressor.instance.prepare(file) : file;
     try {
-      final upload = await _api.uploadMedia(file);
+      final upload = await _api.uploadMedia(toUpload);
       final url = upload['url'] as String?;
       if (url == null) {
         throw Exception(LocaleController.instance.l10n.invalidUploadResponse);
@@ -262,6 +267,14 @@ class StatusProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('[StatusProvider] createMedia error: $e');
       rethrow;
+    } finally {
+      // Le fichier compressé n'est qu'une copie de travail : le statut publié
+      // vit sur le serveur, et l'original reste dans la galerie.
+      if (toUpload.path != file.path) {
+        try {
+          toUpload.deleteSync();
+        } catch (_) {/* déjà supprimé — ignoré */}
+      }
     }
   }
 

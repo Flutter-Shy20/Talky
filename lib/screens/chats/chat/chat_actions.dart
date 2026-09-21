@@ -6,6 +6,14 @@ part of '../chat_detail_screen.dart';
 /// WhatsApp/Messenger pour rester dans les habitudes des utilisateurs.
 const List<String> _quickReactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
+/// Grand côté maximal d'une photo envoyée depuis la galerie, en pixels.
+///
+/// Sans lui, une photo partait en pleine résolution — souvent plusieurs Mo sur
+/// un téléphone récent — alors qu'aucun écran de téléphone n'en affiche
+/// autant. Le sélecteur redimensionne lui-même en gardant la proportion. Une
+/// photo envoyée comme *document* garde, elle, sa qualité d'origine.
+const double _kChatPhotoMaxSide = 1600;
+
 extension _ChatActions on _ChatDetailScreenState {
   /// Un message système n'est ni sélectionnable, ni transférable, ni
   /// supprimable : ce n'est pas un contenu, c'est une trace d'événement.
@@ -1169,7 +1177,12 @@ extension _ChatActions on _ChatDetailScreenState {
     final viewOnce = _pendingViewOnce;
 
     if (viewOnce) {
-      final x = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      final x = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: _kChatPhotoMaxSide,
+        maxHeight: _kChatPhotoMaxSide,
+      );
       if (x != null) {
         await _composeAndSendMedia(
           [AlbumSendItem(file: File(x.path), type: 1)],
@@ -1181,6 +1194,8 @@ extension _ChatActions on _ChatDetailScreenState {
 
     final picked = await _picker.pickMultiImage(
       imageQuality: 80,
+      maxWidth: _kChatPhotoMaxSide,
+      maxHeight: _kChatPhotoMaxSide,
       limit: ChatRepository.maxAlbumItems,
     );
     if (picked.isEmpty) return;

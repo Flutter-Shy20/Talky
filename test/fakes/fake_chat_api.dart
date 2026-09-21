@@ -18,6 +18,9 @@ class FakeChatApi implements ChatApi {
   List<dynamic> conversations = const [];
   final Map<int, List<dynamic>> messagesByConv = {};
   Map<String, dynamic> uploadResult = const {'url': 'https://cdn.test/m.jpg'};
+
+  /// Chemins des fichiers réellement envoyés, dans l'ordre.
+  final List<String> uploadedPaths = [];
   Object? uploadError;
   Object? markReadError;
   Object? markDeliveredError;
@@ -143,6 +146,7 @@ class FakeChatApi implements ChatApi {
     void Function(double progress)? onProgress,
   }) async {
     httpLog.add('uploadMedia');
+    uploadedPaths.add(file.path);
     if (uploadError != null) throw uploadError!;
     onProgress?.call(1.0);
     return Map<String, dynamic>.from(uploadResult);

@@ -19,6 +19,7 @@ import '../image_thumbnail_service.dart';
 import '../music_metadata_service.dart';
 import '../pdf_thumbnail_service.dart';
 import '../video_thumbnail_service.dart';
+import '../video_upload_compressor.dart';
 import '../../utils/audio_message_kind.dart';
 import '../../../talky_api_client.dart' show TalkyException;
 import '../../../talky_models.dart';
@@ -38,13 +39,15 @@ class MessageSender {
     required this.uploadProgress,
     required Set<String> inFlightUploads,
     MessageAckWatchdog? ackWatchdog,
+    VideoUploadCompressor? videoCompressor,
   })  : _api = api,
         _dao = dao,
         _db = db,
         _myId = myId,
         _recompute = recompute,
         _inFlightUploads = inFlightUploads,
-        _ackWatchdog = ackWatchdog;
+        _ackWatchdog = ackWatchdog,
+        _videoCompressor = videoCompressor ?? VideoUploadCompressor.instance;
 
   final ChatApi _api;
   final ChatDao _dao;
@@ -54,6 +57,7 @@ class MessageSender {
   final ValueNotifier<Map<String, double>> uploadProgress;
   final Set<String> _inFlightUploads;
   final MessageAckWatchdog? _ackWatchdog;
+  final VideoUploadCompressor _videoCompressor;
 
   static const int maxAlbumItems = 30;
 
@@ -646,11 +650,18 @@ class MessageSender {
       return;
     }
     try {
+      // Une vidéo est compressée avant de partir. Ici plutôt qu'à l'insertion :
+      // c'est le passage obligé de tous les envois (fichier seul, album,
+      // reprise après redémarrage), et il est déjà sous la garde
+      // `_inFlightUploads` — deux reprises simultanées ne compressent pas deux
+      // fois. Le fichier produit porte un suffixe qui empêche de le
+      // recompresser à la reprise suivante.
+      final toUpload = type == 2 ? await _prepareVideo(clientId, file) : file;
       var attempt429 = 0;
       while (true) {
         try {
           final res = await _api.uploadMedia(
-            file,
+            toUpload,
             onProgress: (p) => _setUploadProgress(clientId, p),
           );
           _setUploadProgress(clientId, null);
@@ -708,6 +719,29 @@ class MessageSender {
     } finally {
       _inFlightUploads.remove(clientId);
     }
+  }
+
+  /// Compresse la vidéo d'un message en attente et bascule la ligne locale sur
+  /// le fichier compressé : la reprise renverra ce fichier-là, la bulle de
+  /// l'expéditeur le lira, et le poids transmis au destinataire sera le bon.
+  Future<File> _prepareVideo(String clientId, File file) async {
+    final prepared = await _videoCompressor.prepare(file);
+    if (prepared.path == file.path) return file;
+
+    await (_db.update(_db.localMessages)..where((m) => m.clientId.equals(clientId)))
+        .write(LocalMessagesCompanion(
+      localMediaPath: Value(prepared.path),
+      pendingUploadPath: Value(prepared.path),
+      mediaSize: Value(prepared.lengthSync()),
+    ));
+    // La copie de l'outbox nous appartient : on la libère. Un fichier hors
+    // outbox (cache du sélecteur) ne nous appartient pas, on n'y touche pas.
+    if (file.path.contains('talky_outbox')) {
+      try {
+        await file.delete();
+      } catch (_) {/* déjà supprimé — ignoré */}
+    }
+    return prepared;
   }
 
   void emitPendingMessage(LocalMessage m) {

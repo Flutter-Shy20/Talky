@@ -225,6 +225,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
               source: source,
               imageQuality: 80,
               maxWidth: 1920,
+              maxHeight: 1920,
             );
       files = one == null ? const [] : [one];
     } else {
@@ -233,6 +234,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
           : await picker.pickMultiImage(
               imageQuality: 80,
               maxWidth: 1920,
+              maxHeight: 1920,
               limit: remaining,
             );
     }

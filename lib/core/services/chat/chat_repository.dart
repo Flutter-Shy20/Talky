@@ -33,6 +33,7 @@ import 'message_sender.dart';
 import 'socket_message_handlers.dart';
 import 'talky_chat_api.dart';
 import '../../theme/locale_controller.dart';
+import '../video_upload_compressor.dart';
 
 /// Facade messaging : sync, envoi, outbox, accusés, handlers socket.
 class ChatRepository {
@@ -40,6 +41,7 @@ class ChatRepository {
   final ChatDao _dao;
   final ChatApi _api;
   final MediaCacheService _mediaCache = MediaCacheService();
+  final VideoUploadCompressor? _videoCompressor;
   late final ConversationSummaryReducer _reducer;
   late final DebouncedRecompute _debouncedRecompute;
   late final MessageAckWatchdog _ackWatchdog;
@@ -130,7 +132,9 @@ class ChatRepository {
     }
   }
 
-  ChatRepository._(this._api, this._db) : _dao = ChatDao(_db) {
+  ChatRepository._(this._api, this._db, {VideoUploadCompressor? videoCompressor})
+      : _dao = ChatDao(_db),
+        _videoCompressor = videoCompressor {
     _reducer = ConversationSummaryReducer(_db, _dao);
     _debouncedRecompute = DebouncedRecompute(
       (convId) async {
@@ -179,6 +183,7 @@ class ChatRepository {
       uploadProgress: uploadProgress,
       inFlightUploads: _inFlightUploads,
       ackWatchdog: _ackWatchdog,
+      videoCompressor: _videoCompressor,
     );
     _outbox = MessageOutbox(
       api: _api,
@@ -225,8 +230,9 @@ class ChatRepository {
   factory ChatRepository.forTesting({
     required ChatApi api,
     required AppDatabase database,
+    VideoUploadCompressor? videoCompressor,
   }) {
-    return ChatRepository._(api, database);
+    return ChatRepository._(api, database, videoCompressor: videoCompressor);
   }
 
   AppDatabase get db => _db;

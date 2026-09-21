@@ -84,6 +84,7 @@ dependencies:
   flutter_cache_manager: ^3.4.1
   video_player: ^2.9.2                # Lecture vidéo inline
   chewie: ^1.8.5                      # Contrôles vidéo prêts à l'emploi
+  video_compress: ^3.1.4              # Compression 720p des vidéos avant envoi
   record: ^5.1.2                      # Enregistrement messages vocaux
   audio_waveforms: ^2.0.2             # Waveform réelle des messages vocaux
   emoji_picker_flutter: ^3.1.0        # Sélecteur d'émojis

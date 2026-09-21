@@ -40,6 +40,24 @@ import 'media_expiry_policy.dart';
 //  libellé proposé à l'utilisateur doit le dire — « libérer de l'espace » n'est
 //  plus anodin.
 class MediaCacheService {
+  MediaCacheService({http.Client? client}) : _http = client ?? _sharedHttp;
+
+  /// Un seul client HTTP pour tout le service, et pour toutes ses instances.
+  ///
+  /// Chaque téléchargement ouvrait sa propre connexion : `http.get` crée un
+  /// client puis le jette, et les téléchargements en flux fermaient le leur
+  /// dans un `finally`. Chaque média payait donc l'ouverture complète d'une
+  /// connexion TLS — environ 0,57 s mesurées depuis le Cameroun le 15/09/2026,
+  /// avant le premier octet. Un client partagé garde ses connexions ouvertes
+  /// entre deux requêtes vers le même serveur : en faisant défiler une
+  /// conversation, seul le premier média paie ce délai.
+  ///
+  /// Il n'est jamais fermé, il vit autant que l'application. L'annulation d'un
+  /// téléchargement ne passe pas par lui : elle se fait en quittant la boucle
+  /// de lecture, ce qui abandonne la réponse en cours.
+  static final http.Client _sharedHttp = http.Client();
+
+  final http.Client _http;
 
   Directory? _dir;
 
@@ -68,7 +86,7 @@ class MediaCacheService {
   Future<String?> downloadToTemp(String url) async {
     final resolved = _resolvedUrl(url);
     try {
-      final res = await http.get(Uri.parse(resolved)).timeout(const Duration(seconds: 30));
+      final res = await _http.get(Uri.parse(resolved)).timeout(const Duration(seconds: 30));
       // Un 410 signifie que le média a dépassé sa rétention côté serveur : le
       // corps porte la durée appliquée, qu'on mémorise pour pouvoir conclure
       // sans requête la prochaine fois.
@@ -100,7 +118,6 @@ class MediaCacheService {
     bool Function()? isCancelled,
   }) async {
     final resolved = _resolvedUrl(url);
-    final client = http.Client();
     File? part;
     try {
       final tmp = await getTemporaryDirectory();
@@ -113,7 +130,7 @@ class MediaCacheService {
 
       final request = http.Request('GET', Uri.parse(resolved));
       final streamed =
-          await client.send(request).timeout(const Duration(seconds: 60));
+          await _http.send(request).timeout(const Duration(seconds: 60));
       // En flux le corps n'est pas lu : le statut seul suffit à conclure que
       // le média est mort. La durée de rétention sera apprise d'une réponse
       // non streamée — elle n'est pas nécessaire pour abandonner ici.
@@ -155,8 +172,6 @@ class MediaCacheService {
       debugPrint('[MediaCache] downloadToTempWithProgress échoué $resolved: $e');
       if (part != null) await _deleteQuietly(part);
       return null;
-    } finally {
-      client.close();
     }
   }
 
@@ -187,60 +202,55 @@ class MediaCacheService {
       }
 
       final uri = Uri.parse(resolved);
-      final client = http.Client();
-      try {
-        if (maxBytes != null) {
-          try {
-            final head =
-                await client.head(uri).timeout(const Duration(seconds: 5));
-            final len = int.tryParse(head.headers['content-length'] ?? '');
-            if (len != null && len > maxBytes) {
-              debugPrint('[MediaCache] skip $resolved : taille $len > $maxBytes');
-              return null;
-            }
-          } catch (_) {}
-        }
-
-        final request = http.Request('GET', uri);
-        final streamed = await client
-            .send(request)
-            .timeout(const Duration(seconds: 60));
-        if (MediaExpiryPolicy.noteResponse(streamed.statusCode)) return null;
-        if (streamed.statusCode != 200) return null;
-
-        final int? total = streamed.contentLength;
-        final hasKnownSize = total != null && total > 0;
-        if (hasKnownSize) {
-          onProgress?.call(0.0);
-        } else {
-          onProgress?.call(null);
-        }
-
-        final tmp = File('${file.path}.part');
-        final sink = tmp.openWrite();
-        var received = 0;
-        await for (final chunk in streamed.stream) {
-          sink.add(chunk);
-          received += chunk.length;
-          if (hasKnownSize) {
-            onProgress?.call((received / total).clamp(0.0, 1.0));
+      if (maxBytes != null) {
+        try {
+          final head =
+              await _http.head(uri).timeout(const Duration(seconds: 5));
+          final len = int.tryParse(head.headers['content-length'] ?? '');
+          if (len != null && len > maxBytes) {
+            debugPrint('[MediaCache] skip $resolved : taille $len > $maxBytes');
+            return null;
           }
-        }
-        await sink.close();
-
-        if (hasKnownSize && received < total) return null;
-        if (maxBytes != null && received > maxBytes) {
-          await tmp.delete();
-          return null;
-        }
-
-        if (file.existsSync()) await file.delete();
-        await tmp.rename(file.path);
-        onProgress?.call(1.0);
-        return file.path;
-      } finally {
-        client.close();
+        } catch (_) {}
       }
+
+      final request = http.Request('GET', uri);
+      final streamed = await _http
+          .send(request)
+          .timeout(const Duration(seconds: 60));
+      if (MediaExpiryPolicy.noteResponse(streamed.statusCode)) return null;
+      if (streamed.statusCode != 200) return null;
+
+      final int? total = streamed.contentLength;
+      final hasKnownSize = total != null && total > 0;
+      if (hasKnownSize) {
+        onProgress?.call(0.0);
+      } else {
+        onProgress?.call(null);
+      }
+
+      final tmp = File('${file.path}.part');
+      final sink = tmp.openWrite();
+      var received = 0;
+      await for (final chunk in streamed.stream) {
+        sink.add(chunk);
+        received += chunk.length;
+        if (hasKnownSize) {
+          onProgress?.call((received / total).clamp(0.0, 1.0));
+        }
+      }
+      await sink.close();
+
+      if (hasKnownSize && received < total) return null;
+      if (maxBytes != null && received > maxBytes) {
+        await tmp.delete();
+        return null;
+      }
+
+      if (file.existsSync()) await file.delete();
+      await tmp.rename(file.path);
+      onProgress?.call(1.0);
+      return file.path;
     } catch (e) {
       debugPrint('[MediaCache] downloadWithProgress échoué $resolved: $e');
       return null;
@@ -274,7 +284,7 @@ class MediaCacheService {
 
       if (maxBytes != null) {
         try {
-          final head = await http.head(Uri.parse(resolved)).timeout(const Duration(seconds: 5));
+          final head = await _http.head(Uri.parse(resolved)).timeout(const Duration(seconds: 5));
           final len = int.tryParse(head.headers['content-length'] ?? '');
           if (len != null && len > maxBytes) {
             debugPrint('[MediaCache] skip $resolved : taille $len > $maxBytes');
@@ -285,7 +295,7 @@ class MediaCacheService {
         }
       }
 
-      final res = await http.get(Uri.parse(resolved)).timeout(const Duration(seconds: 30));
+      final res = await _http.get(Uri.parse(resolved)).timeout(const Duration(seconds: 30));
       if (MediaExpiryPolicy.noteResponse(res.statusCode, body: res.body)) return null;
       if (res.statusCode != 200) return null;
       await file.writeAsBytes(res.bodyBytes);

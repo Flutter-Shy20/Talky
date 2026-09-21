@@ -62,7 +62,14 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
   Future<void> _pickPhoto() async {
     final picker = ImagePicker();
-    final x = await picker.pickImage(source: ImageSource.gallery);
+    // Même réglage que l'avatar (profile_step, edit_profile_screen) : une photo
+    // de groupe ne s'affiche jamais plus grande qu'un portrait de profil.
+    final x = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
     if (x != null) setState(() => _photoFile = File(x.path));
   }
 

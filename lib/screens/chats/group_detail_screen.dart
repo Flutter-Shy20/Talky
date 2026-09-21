@@ -257,7 +257,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
   Future<void> _changeGroupPhoto() async {
     final picker = ImagePicker();
-    final x = await picker.pickImage(source: ImageSource.gallery);
+    // Même réglage que l'avatar (profile_step, edit_profile_screen) : une photo
+    // de groupe ne s'affiche jamais plus grande qu'un portrait de profil.
+    final x = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
     if (x == null || !mounted) return;
 
     final api = Provider.of<TalkyApiClient>(context, listen: false);
