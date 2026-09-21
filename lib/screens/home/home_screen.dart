@@ -637,6 +637,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Cette ligne était une copie manuelle de `Call.isMissed`, et elle
       // manquait le statut 0 — celui des appels annulés pendant la sonnerie,
       // que rien ne reclassait. Le badge sous-comptait 454 appels.
+      //
+      // Le statut 4 (renvoyé au répondeur) y entre DÉLIBÉRÉMENT : la personne
+      // a bien manqué cet appel, et le badge est ce qui la ramène vers le
+      // journal. C'est seulement la ligne du journal qui le présente
+      // autrement — voir `callWentToVoicemail`.
       return callWasNotAnswered(c.status) && c.createdAt.isAfter(since);
     }).length;
   }
