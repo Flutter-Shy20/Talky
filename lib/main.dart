@@ -66,6 +66,7 @@ import 'core/services/notifications/badge_sync_service.dart';
 import 'core/services/notifications/pending_delivery_ack_store.dart';
 import 'core/services/notifications/pending_notification_action_store.dart';
 import 'core/services/privacy_prefs_service.dart';
+import 'core/services/call/voicemail_provider.dart';
 import 'core/services/app_settings_sync_service.dart';
 import 'core/services/biometric_lock_service.dart';
 import 'core/services/storage_info_service.dart';
@@ -335,6 +336,16 @@ class _TalkyAppState extends State<TalkyApp> {
         ChangeNotifierProvider(
           create: (ctx) => PrivacyPrefsService(api: ctx.read<TalkyApiClient>())
             ..loadFromCache(),
+        ),
+        // Répondeur. `lazy: false` : le bandeau ne se construit que si un
+        // créneau court, donc personne ne lirait ce service tant qu'il est
+        // éteint — et il ne saurait jamais qu'il s'est allumé sur un autre
+        // appareil. Il doit exister dès le démarrage pour s'abonner à
+        // `voicemail_schedule_updated` et lire l'état au premier plan.
+        ChangeNotifierProvider(
+          lazy: false,
+          create: (ctx) =>
+              VoicemailProvider(api: ctx.read<TalkyApiClient>())..refresh(),
         ),
         ChangeNotifierProvider(
           create: (_) => widget.biometricLock ?? (BiometricLockService()..load()),

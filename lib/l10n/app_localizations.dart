@@ -3766,6 +3766,30 @@ abstract class AppLocalizations {
   /// **'Message envoyé'**
   String get voicemailSent;
 
+  /// No description provided for @voicemailBannerActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur actif'**
+  String get voicemailBannerActive;
+
+  /// Bandeau permanent tant qu'un créneau court. {time} est une heure locale HH:MM. La variante sans heure sert aux créneaux couvrant la journée entière.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur actif jusqu\'à {time}'**
+  String voicemailBannerUntil(String time);
+
+  /// No description provided for @voicemailBannerDisable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver'**
+  String get voicemailBannerDisable;
+
+  /// No description provided for @voicemailDisabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur désactivé'**
+  String get voicemailDisabled;
+
   /// Journal d'appels, statut 4 : l'appel a été renvoyé au répondeur et le téléphone n'a jamais sonné. Distinct de « Manqué ».
   ///
   /// In fr, this message translates to:

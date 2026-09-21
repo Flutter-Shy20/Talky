@@ -2044,6 +2044,20 @@ class AppLocalizationsFr extends AppLocalizations {
   String get voicemailSent => 'Message envoyé';
 
   @override
+  String get voicemailBannerActive => 'Répondeur actif';
+
+  @override
+  String voicemailBannerUntil(String time) {
+    return 'Répondeur actif jusqu\'à $time';
+  }
+
+  @override
+  String get voicemailBannerDisable => 'Désactiver';
+
+  @override
+  String get voicemailDisabled => 'Répondeur désactivé';
+
+  @override
   String get voicemailCallStatus => 'Répondeur';
 
   @override

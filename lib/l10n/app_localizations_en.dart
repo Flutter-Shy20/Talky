@@ -2025,6 +2025,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voicemailSent => 'Message sent';
 
   @override
+  String get voicemailBannerActive => 'Voicemail on';
+
+  @override
+  String voicemailBannerUntil(String time) {
+    return 'Voicemail on until $time';
+  }
+
+  @override
+  String get voicemailBannerDisable => 'Turn off';
+
+  @override
+  String get voicemailDisabled => 'Voicemail turned off';
+
+  @override
   String get voicemailCallStatus => 'Voicemail';
 
   @override

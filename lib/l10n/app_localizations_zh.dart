@@ -1961,6 +1961,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get voicemailSent => '留言已发送';
 
   @override
+  String get voicemailBannerActive => '语音信箱已开启';
+
+  @override
+  String voicemailBannerUntil(String time) {
+    return '语音信箱已开启，至 $time';
+  }
+
+  @override
+  String get voicemailBannerDisable => '关闭';
+
+  @override
+  String get voicemailDisabled => '语音信箱已关闭';
+
+  @override
   String get voicemailCallStatus => '语音信箱';
 
   @override

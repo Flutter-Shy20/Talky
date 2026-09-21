@@ -30,6 +30,7 @@ import '../calls/incoming_call_screen.dart';
 import '../calls/ongoing_call_screen.dart';
 import '../../widgets/common/offline_banner.dart';
 import '../../widgets/trips/trip_banner.dart';
+import '../../widgets/calls/voicemail_banner.dart';
 import 'glass_nav_bar.dart';
 import '../../core/services/trip_repository.dart';
 import '../trips/trip_live_screen.dart';
@@ -671,9 +672,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // réservé par kGlassNavBarSpace. C'est ce qui rend un trajet en cours
     // visible depuis les cinq onglets, sans en ajouter un sixième — la barre
     // est codée en dur à cinq (List.generate(5, …) dans glass_nav_bar.dart).
+    // Le répondeur s'y range pour la même raison, et au même titre : c'est un
+    // état global qu'on doit pouvoir constater depuis n'importe quel onglet.
+    // Les deux bandeaux s'effacent d'eux-mêmes quand il n'y a rien à dire.
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        const VoicemailBanner(),
         const TripBanner(),
         _buildNavBarItself(),
       ],
