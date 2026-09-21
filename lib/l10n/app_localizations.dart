@@ -3838,6 +3838,48 @@ abstract class AppLocalizations {
   /// **'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.'**
   String get voicemailBypassHint;
 
+  /// No description provided for @voicemailQuickHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez jusqu\'à quand. Toutes les options ont une fin : un répondeur qu\'on oublie est pire que pas de répondeur.'**
+  String get voicemailQuickHint;
+
+  /// No description provided for @voicemailQuickSchedule.
+  ///
+  /// In fr, this message translates to:
+  /// **'Planifier des créneaux'**
+  String get voicemailQuickSchedule;
+
+  /// No description provided for @voicemailForOneHour.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pendant 1 heure'**
+  String get voicemailForOneHour;
+
+  /// No description provided for @voicemailForFourHours.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pendant 4 heures'**
+  String get voicemailForFourHours;
+
+  /// No description provided for @voicemailUntilMorning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jusqu\'à demain matin'**
+  String get voicemailUntilMorning;
+
+  /// No description provided for @voicemailUntilCustom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jusqu\'à une date précise'**
+  String get voicemailUntilCustom;
+
+  /// No description provided for @voicemailDeadlinePast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette échéance est déjà passée'**
+  String get voicemailDeadlinePast;
+
   /// Journal d'appels, statut 4 : l'appel a été renvoyé au répondeur et le téléphone n'a jamais sonné. Distinct de « Manqué ».
   ///
   /// In fr, this message translates to:

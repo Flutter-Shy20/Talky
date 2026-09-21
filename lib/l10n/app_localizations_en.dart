@@ -2067,6 +2067,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Members of this list will ring your phone despite the voicemail.';
 
   @override
+  String get voicemailQuickHint =>
+      'Pick when it ends. Every option has an end — a voicemail you forget about is worse than none.';
+
+  @override
+  String get voicemailQuickSchedule => 'Schedule recurring hours';
+
+  @override
+  String get voicemailForOneHour => 'For 1 hour';
+
+  @override
+  String get voicemailForFourHours => 'For 4 hours';
+
+  @override
+  String get voicemailUntilMorning => 'Until tomorrow morning';
+
+  @override
+  String get voicemailUntilCustom => 'Until a specific date';
+
+  @override
+  String get voicemailDeadlinePast => 'That time has already passed';
+
+  @override
   String get voicemailCallStatus => 'Voicemail';
 
   @override

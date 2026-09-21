@@ -1044,6 +1044,13 @@
   "voicemailBypassTile": "Liste autorisée",
   "voicemailBypassNobody": "Personne",
   "voicemailBypassHint": "Les membres de cette liste feront sonner votre téléphone malgré le répondeur.",
+  "voicemailQuickHint": "Choisissez jusqu'à quand. Toutes les options ont une fin : un répondeur qu'on oublie est pire que pas de répondeur.",
+  "voicemailQuickSchedule": "Planifier des créneaux",
+  "voicemailForOneHour": "Pendant 1 heure",
+  "voicemailForFourHours": "Pendant 4 heures",
+  "voicemailUntilMorning": "Jusqu'à demain matin",
+  "voicemailUntilCustom": "Jusqu'à une date précise",
+  "voicemailDeadlinePast": "Cette échéance est déjà passée",
   "voicemailCallStatus": "Répondeur",
   "@voicemailCallStatus": {
     "description": "Journal d'appels, statut 4 : l'appel a été renvoyé au répondeur et le téléphone n'a jamais sonné. Distinct de « Manqué »."

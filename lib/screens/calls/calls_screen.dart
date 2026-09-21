@@ -15,6 +15,8 @@ import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../core/services/call/call_history_rules.dart';
+import '../../core/services/call/voicemail_provider.dart';
+import '../../widgets/calls/voicemail_quick_sheet.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'call_detail_screen.dart';
 import 'keypad_screen.dart';
@@ -307,6 +309,20 @@ class _CallsScreenState extends State<CallsScreen> {
             icon: Icon(_searchOpen ? Icons.close_rounded : Icons.search_rounded),
             tooltip: _searchOpen ? context.l10n.closeSearch : context.l10n.commonSearch,
             onPressed: _toggleSearch,
+          ),
+          // Le répondeur se commande depuis l'onglet Appels, pas seulement
+          // depuis les réglages : c'est un geste du quotidien (« je rentre en
+          // réunion »), pas une configuration. L'icône se teinte quand un
+          // créneau court, pour que l'état se voie sans ouvrir la feuille.
+          Consumer<VoicemailProvider>(
+            builder: (context, vm, _) => IconButton(
+              icon: Icon(vm.isActive
+                  ? Icons.voicemail_rounded
+                  : Icons.voicemail_outlined),
+              color: vm.isActive ? context.colors.primary : null,
+              tooltip: context.l10n.voicemailScheduleTitle,
+              onPressed: () => showVoicemailQuickSheet(context),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.add_call),

@@ -2001,6 +2001,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get voicemailBypassHint => '该名单中的成员即使在语音信箱开启时也能让手机响铃。';
 
   @override
+  String get voicemailQuickHint => '请选择结束时间。每个选项都有结束时间——忘记关闭的语音信箱比不开更糟。';
+
+  @override
+  String get voicemailQuickSchedule => '设置定时时段';
+
+  @override
+  String get voicemailForOneHour => '1 小时';
+
+  @override
+  String get voicemailForFourHours => '4 小时';
+
+  @override
+  String get voicemailUntilMorning => '到明天早上';
+
+  @override
+  String get voicemailUntilCustom => '到指定日期';
+
+  @override
+  String get voicemailDeadlinePast => '该时间已过';
+
+  @override
   String get voicemailCallStatus => '语音信箱';
 
   @override

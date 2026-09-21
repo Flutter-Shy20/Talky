@@ -2086,6 +2086,28 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.';
 
   @override
+  String get voicemailQuickHint =>
+      'Choisissez jusqu\'à quand. Toutes les options ont une fin : un répondeur qu\'on oublie est pire que pas de répondeur.';
+
+  @override
+  String get voicemailQuickSchedule => 'Planifier des créneaux';
+
+  @override
+  String get voicemailForOneHour => 'Pendant 1 heure';
+
+  @override
+  String get voicemailForFourHours => 'Pendant 4 heures';
+
+  @override
+  String get voicemailUntilMorning => 'Jusqu\'à demain matin';
+
+  @override
+  String get voicemailUntilCustom => 'Jusqu\'à une date précise';
+
+  @override
+  String get voicemailDeadlinePast => 'Cette échéance est déjà passée';
+
+  @override
   String get voicemailCallStatus => 'Répondeur';
 
   @override
