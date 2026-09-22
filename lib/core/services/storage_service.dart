@@ -28,9 +28,11 @@ class StorageService {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userKey = 'user_data';
   static const String _deviceIdKey = 'talky_device_id';
+  static const String _hardwareIdKey = 'talky_hardware_id';
 
   static const FlutterSecureStorage _defaultSecureStorage = FlutterSecureStorage(
     aOptions: kSecureStorageAndroidOptions,
+    iOptions: kSecureStorageIosOptions,
   );
 
   final FlutterSecureStorage _secureStorage;
@@ -124,6 +126,16 @@ class StorageService {
     }
     return id;
   }
+
+  /// Identifiant matériel mémorisé — voir `TalkyApiClient._currentHardwareId`,
+  /// seul appelant. Volontairement absent de [clearAll] : c'est l'appareil
+  /// qu'il désigne, pas la session, et l'oublier à la déconnexion ferait
+  /// réapparaître le téléphone comme inconnu à la reconnexion suivante.
+  Future<String?> getHardwareId() =>
+      SecureStorageGuard.readString(_secureStorage, _hardwareIdKey);
+
+  Future<void> saveHardwareId(String hardwareId) =>
+      SecureStorageGuard.writeString(_secureStorage, _hardwareIdKey, hardwareId);
 
   String _generateDeviceId() {
     final r = Random.secure();

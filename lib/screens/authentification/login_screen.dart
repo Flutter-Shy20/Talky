@@ -44,6 +44,22 @@ class _LoginScreenState extends State<LoginScreen> {
     // page racine, celle qui porte tout le cycle de vie de la session :
     // liaison de la messagerie, socket, presence, proposition de restauration.
     // Tout ce travail se poursuivait alors dans le vide.
+
+    // Seule exception : un refus d'appareil non enrole. Le mot de passe etait
+    // bon, il n'y a donc rien a corriger dans le formulaire — le QR est la
+    // seule action utile, autant y conduire. Le message d'erreur reste affiche
+    // sous le formulaire pour qui revient en arriere.
+    if (!mounted) return;
+    if (authProvider.lastErrorCode == 'DEVICE_NOT_TRUSTED') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QrLoginScreen(
+            bandeauInformatif: context.l10n.qrLoginDeviceNotTrustedNotice,
+          ),
+        ),
+      );
+    }
   }
 
   @override

@@ -3889,6 +3889,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ouvrez Alanya sur votre téléphone déjà connecté, allez dans Compte et sécurité, puis scannez ce code.';
 
   @override
+  String get qrLoginDeviceNotTrustedNotice =>
+      'Ce téléphone n\'est pas encore reconnu pour ce compte. Faites scanner ce code depuis un appareil déjà connecté. Si vous n\'y avez plus accès, réinitialisez votre mot de passe depuis l\'écran de connexion.';
+
+  @override
   String qrLoginExpiresIn(String time) {
     return 'Expire dans $time';
   }
@@ -6307,6 +6311,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errCodeDeviceNotOwner =>
       'Cet appareil n\'est pas autorisé pour cette action.';
+
+  @override
+  String get errCodeDeviceNotTrusted =>
+      'Ce téléphone n\'est pas encore reconnu pour ce compte. Connectez-vous avec un code QR depuis un appareil déjà connecté.';
 
   @override
   String get errCodeAddAlreadyUsed => 'Ce code a déjà été utilisé.';

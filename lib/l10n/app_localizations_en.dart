@@ -3853,6 +3853,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Open Alanya on the phone you are already signed in on, go to Account & security, then scan this code.';
 
   @override
+  String get qrLoginDeviceNotTrustedNotice =>
+      'This phone isn\'t recognised for this account yet. Scan this code from a device that is already signed in. If you no longer have it, reset your password from the sign-in screen.';
+
+  @override
   String qrLoginExpiresIn(String time) {
     return 'Expires in $time';
   }
@@ -6237,6 +6241,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errCodeDeviceNotOwner =>
       'This device isn\'t authorised for this action.';
+
+  @override
+  String get errCodeDeviceNotTrusted =>
+      'This phone isn\'t recognised for this account yet. Sign in with a QR code from a device that is already signed in.';
 
   @override
   String get errCodeAddAlreadyUsed => 'This code has already been used.';

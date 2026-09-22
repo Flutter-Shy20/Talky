@@ -6838,6 +6838,12 @@ abstract class AppLocalizations {
   /// **'Ouvrez Alanya sur votre téléphone déjà connecté, allez dans Compte et sécurité, puis scannez ce code.'**
   String get qrLoginExplanation;
 
+  /// No description provided for @qrLoginDeviceNotTrustedNotice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce téléphone n\'est pas encore reconnu pour ce compte. Faites scanner ce code depuis un appareil déjà connecté. Si vous n\'y avez plus accès, réinitialisez votre mot de passe depuis l\'écran de connexion.'**
+  String get qrLoginDeviceNotTrustedNotice;
+
   /// No description provided for @qrLoginExpiresIn.
   ///
   /// In fr, this message translates to:
@@ -10935,6 +10941,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Cet appareil n\'est pas autorisé pour cette action.'**
   String get errCodeDeviceNotOwner;
+
+  /// No description provided for @errCodeDeviceNotTrusted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce téléphone n\'est pas encore reconnu pour ce compte. Connectez-vous avec un code QR depuis un appareil déjà connecté.'**
+  String get errCodeDeviceNotTrusted;
 
   /// No description provided for @errCodeAddAlreadyUsed.
   ///

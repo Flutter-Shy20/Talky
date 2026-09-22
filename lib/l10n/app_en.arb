@@ -1696,6 +1696,7 @@
   "qrLoginEntryButton": "Sign in with a QR code",
   "qrLoginUsePassword": "Sign in with my password",
   "qrLoginExplanation": "Open Alanya on the phone you are already signed in on, go to Account & security, then scan this code.",
+  "qrLoginDeviceNotTrustedNotice": "This phone isn't recognised for this account yet. Scan this code from a device that is already signed in. If you no longer have it, reset your password from the sign-in screen.",
   "qrLoginExpiresIn": "Expires in {time}",
   "@qrLoginExpiresIn": {
     "placeholders": {
@@ -2917,6 +2918,7 @@
   "errCodePasswordIncorrect": "Incorrect password.",
   "errCodeQrSessionExpired": "This QR code has expired. Display a new one.",
   "errCodeDeviceNotOwner": "This device isn't authorised for this action.",
+  "errCodeDeviceNotTrusted": "This phone isn't recognised for this account yet. Sign in with a QR code from a device that is already signed in.",
   "errCodeAddAlreadyUsed": "This code has already been used.",
   "errCodeAddMePolicyDenied": "This person doesn't accept being added by code.",
   "errCodeMeetingExpired": "This meeting has expired.",
