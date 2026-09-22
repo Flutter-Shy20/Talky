@@ -2067,6 +2067,48 @@ class AppLocalizationsEn extends AppLocalizations {
       'Members of this list will ring your phone despite the voicemail.';
 
   @override
+  String get voicemailWhenNoAnswer => 'When I don\'t answer';
+
+  @override
+  String get voicemailAfterDelay => 'Voicemail after 30 seconds';
+
+  @override
+  String get voicemailAfterDelaySubtitle =>
+      'Your phone rings. If you don\'t pick up, decline, or your line is busy, the caller can leave a message.';
+
+  @override
+  String get voicemailWhenUnavailable => 'When I\'m unavailable';
+
+  @override
+  String get voicemailSlotsEnabled => 'Scheduled periods';
+
+  @override
+  String get voicemailSlotsEnabledSubtitle =>
+      'During these periods your phone doesn\'t ring at all';
+
+  @override
+  String get voicemailSlotNone => 'No period';
+
+  @override
+  String get voicemailSlotAllDay => 'All day';
+
+  @override
+  String voicemailSlotOvernight(String range) {
+    return '$range (into the next day)';
+  }
+
+  @override
+  String voicemailSlotsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count scheduled periods',
+      one: '1 scheduled period',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get voicemailQuickHint =>
       'Pick when it ends. Every option has an end — a voicemail you forget about is worse than none.';
 

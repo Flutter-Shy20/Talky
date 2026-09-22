@@ -2001,6 +2001,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get voicemailBypassHint => '该名单中的成员即使在语音信箱开启时也能让手机响铃。';
 
   @override
+  String get voicemailWhenNoAnswer => '当我没有接听时';
+
+  @override
+  String get voicemailAfterDelay => '30 秒后转语音信箱';
+
+  @override
+  String get voicemailAfterDelaySubtitle => '手机会响铃。如果你没有接听、拒接，或线路正忙，来电者可以留言。';
+
+  @override
+  String get voicemailWhenUnavailable => '当我无法接听时';
+
+  @override
+  String get voicemailSlotsEnabled => '定时时段';
+
+  @override
+  String get voicemailSlotsEnabledSubtitle => '在这些时段内手机完全不会响铃';
+
+  @override
+  String get voicemailSlotNone => '没有时段';
+
+  @override
+  String get voicemailSlotAllDay => '全天';
+
+  @override
+  String voicemailSlotOvernight(String range) {
+    return '$range（延续至次日）';
+  }
+
+  @override
+  String voicemailSlotsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个定时时段',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get voicemailQuickHint => '请选择结束时间。每个选项都有结束时间——忘记关闭的语音信箱比不开更糟。';
 
   @override

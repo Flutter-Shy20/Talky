@@ -13,18 +13,21 @@ import '../../talky_models.dart';
 import '../../widgets/profile/settings_group.dart';
 import 'pick_contact_list_sheet.dart';
 
-/// Réglage du répondeur : la règle récurrente (jours et heures) et la liste
-/// autorisée à faire sonner malgré tout.
+/// Réglage du répondeur.
 ///
-/// Même forme que `DndScheduleScreen`, dont il reprend le PATCH optimiste : on
-/// met l'écran à jour tout de suite, on envoie, et la réponse du serveur fait
-/// foi. Elle porte d'ailleurs plus que ce qu'on a écrit — `active`,
-/// `activeUntil`, `resolvedTimezone` sont calculés serveur, et c'est ce qui
-/// permet au bandeau de se mettre à jour sans que cet écran n'ait à le lui dire.
+/// L'écran est organisé autour d'une distinction que tout le reste suit : il y a
+/// ce qui se passe **quand je ne réponds pas** — le téléphone sonne, et l'appel
+/// bascule au bout du délai, sur un refus, ou si la ligne est occupée — et ce
+/// qui se passe **quand je suis indisponible** — le téléphone ne sonne pas du
+/// tout.
 ///
-/// L'activation PONCTUELLE ne se règle pas ici : elle vit dans la feuille
-/// d'activation rapide de l'onglet Appels, où l'on choisit une échéance. Cet
-/// écran affiche seulement son état et permet de l'éteindre.
+/// Le premier est un interrupteur unique, permanent, cumulable. Les seconds sont
+/// deux façons exclusives de se rendre muet : une durée, ou des plages. Le
+/// serveur tient cette exclusivité, pas cet écran : deux appareils qui règlent
+/// chacun leur mode laisseraient sinon un compte avec les deux armés.
+///
+/// L'activation par durée ne se règle pas ici mais dans la feuille rapide de
+/// l'onglet Appels. Cet écran en montre l'état et permet de l'éteindre.
 class VoicemailScheduleScreen extends StatefulWidget {
   const VoicemailScheduleScreen({super.key});
 
@@ -35,101 +38,37 @@ class VoicemailScheduleScreen extends StatefulWidget {
 
 class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
   bool _loading = true;
-  bool _enabled = false;
-  TimeOfDay _start = const TimeOfDay(hour: 22, minute: 0);
-  TimeOfDay _end = const TimeOfDay(hour: 7, minute: 0);
-  int _daysBitmask = 127;
-  int? _bypassListId;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   Future<void> _load() async {
-    final vm = context.read<VoicemailProvider>();
-    await vm.refresh();
-    if (!mounted) return;
-    setState(() {
-      final s = vm.schedule;
-      if (s != null) _apply(s);
-      _loading = false;
-    });
+    await context.read<VoicemailProvider>().refresh();
+    if (mounted) setState(() => _loading = false);
   }
 
-  void _apply(VoicemailSchedule s) {
-    _enabled = s.enabled;
-    _start = _parseTime(s.startTime, const TimeOfDay(hour: 22, minute: 0));
-    _end = _parseTime(s.endTime, const TimeOfDay(hour: 7, minute: 0));
-    _daysBitmask = s.daysBitmask;
-    _bypassListId = s.bypassListId;
-  }
-
-  TimeOfDay _parseTime(String raw, TimeOfDay fallback) {
-    final parts = raw.split(':');
-    if (parts.length < 2) return fallback;
-    final h = int.tryParse(parts[0]);
-    final m = int.tryParse(parts[1]);
-    if (h == null || m == null) return fallback;
-    return TimeOfDay(hour: h.clamp(0, 23), minute: m.clamp(0, 59));
-  }
-
-  String _formatTime(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  VoicemailSchedule get _schedule =>
+      context.read<VoicemailProvider>().schedule ?? const VoicemailSchedule();
 
   Future<void> _patch(Map<String, dynamic> patch) async {
-    final vm = context.read<VoicemailProvider>();
-    if (vm.isSaving) return;
     try {
-      final next = await vm.patch(patch);
-      if (!mounted) return;
-      setState(() => _apply(next));
+      await context.read<VoicemailProvider>().patch(patch);
     } catch (e) {
       if (!mounted) return;
       afficherErreur(context, e, domaine: ErrorDomain.appel);
     }
   }
 
-  /// Éteint tout : l'activation ponctuelle et la règle récurrente. Méthode de
-  /// l'état plutôt que fermeture posée dans le `build` — `mounted` s'y rapporte
-  /// alors au `State`, et non à un `BuildContext` capturé par une fermeture.
   Future<void> _desactiver() async {
-    final vm = context.read<VoicemailProvider>();
     try {
-      final next = await vm.disable();
-      if (!mounted) return;
-      setState(() => _apply(next));
+      await context.read<VoicemailProvider>().disable();
     } catch (e) {
       if (!mounted) return;
       afficherErreur(context, e, domaine: ErrorDomain.appel);
     }
-  }
-
-  Future<void> _pickTime({required bool isStart}) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: isStart ? _start : _end,
-    );
-    if (picked == null || !mounted) return;
-    setState(() {
-      if (isStart) {
-        _start = picked;
-      } else {
-        _end = picked;
-      }
-    });
-    await _patch(
-        isStart ? {'startTime': _formatTime(picked)} : {'endTime': _formatTime(picked)});
-  }
-
-  bool _isDayActive(int bit) => (_daysBitmask & (1 << bit)) != 0;
-
-  Future<void> _toggleDay(int bit) async {
-    final next =
-        _isDayActive(bit) ? _daysBitmask & ~(1 << bit) : _daysBitmask | (1 << bit);
-    setState(() => _daysBitmask = next);
-    await _patch({'daysBitmask': next});
   }
 
   String _dayLabel(int bit) {
@@ -140,30 +79,86 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
       2 => l10n.dndDayWed,
       3 => l10n.dndDayThu,
       4 => l10n.dndDayFri,
-      5 => l10n.dndDaySat,
+      _ when bit == 5 => l10n.dndDaySat,
       _ => l10n.dndDaySun,
     };
   }
 
-  Future<void> _pickBypassList() async {
-    final choix = await showPickContactList(context, selectedId: _bypassListId);
+  // ── Plages ────────────────────────────────────────────────────────────────
+
+  /// Écrit la liste COMPLÈTE des plages : le serveur remplace en bloc.
+  ///
+  /// Remplacement plutôt que différentiel, parce qu'un différentiel obligerait
+  /// l'écran à suivre des identifiants de lignes qu'il n'a aucune raison de
+  /// connaître.
+  Future<void> _ecrireLesPlages(List<VoicemailSlot> plages) async {
+    await _patch({'slots': plages.map((s) => s.toJson()).toList()});
+  }
+
+  Future<void> _ajouterPlage(int dayBit) async {
+    final debut = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 22, minute: 0),
+      helpText: context.l10n.dndStartTime,
+    );
+    if (debut == null || !mounted) return;
+    final fin = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 7, minute: 0),
+      helpText: context.l10n.dndEndTime,
+    );
+    if (fin == null || !mounted) return;
+
+    final suivantes = [
+      ..._schedule.slots,
+      VoicemailSlot(
+        dayBit: dayBit,
+        startTime: _fmt(debut),
+        endTime: _fmt(fin),
+      ),
+    ];
+    await _ecrireLesPlages(suivantes);
+  }
+
+  Future<void> _supprimerPlage(VoicemailSlot plage) async {
+    final suivantes = [..._schedule.slots]..remove(plage);
+    await _ecrireLesPlages(suivantes);
+  }
+
+  String _fmt(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  /// Décrit une plage, en disant clairement quand elle déborde sur le lendemain.
+  String _decrirePlage(VoicemailSlot p) {
+    final l10n = context.l10n;
+    if (p.startTime == p.endTime) return l10n.voicemailSlotAllDay;
+    final debordeeh = p.endTime.compareTo(p.startTime) < 0;
+    final base = '${p.startTime} – ${p.endTime}';
+    return debordeeh ? l10n.voicemailSlotOvernight(base) : base;
+  }
+
+  // ── Liste autorisée ───────────────────────────────────────────────────────
+
+  Future<void> _choisirLaListe() async {
+    final choix = await showPickContactList(
+      context,
+      selectedId: _schedule.bypassListId,
+    );
     // `null` = feuille refermée sans choisir. Ce n'est pas « Personne », qui
     // est un choix explicite portant `idList == null`.
     if (choix == null || !mounted) return;
-    setState(() => _bypassListId = choix.idList);
     await _patch({'bypassListId': choix.idList});
   }
 
-  /// Le nom de la liste autorisée, lu dans le cache local.
-  ///
-  /// Une liste supprimée entre-temps fait retomber la colonne à NULL côté base
-  /// (ON DELETE SET NULL) : on affiche « Personne » plutôt qu'un nom fantôme.
-  String _bypassSubtitle(List<LocalContactList> lists) {
+  String _sousTitreListe(List<LocalContactList> listes) {
     final l10n = context.l10n;
-    if (_bypassListId == null) return l10n.voicemailBypassNobody;
-    for (final l in lists) {
-      if (l.idList == _bypassListId) return l.displayName(l10n);
+    final id = _schedule.bypassListId;
+    if (id == null) return l10n.voicemailBypassNobody;
+    for (final l in listes) {
+      if (l.idList == id) return l.displayName(l10n);
     }
+    // Liste supprimée entre-temps : la colonne est retombée à NULL côté base.
+    // On affiche « Personne » plutôt qu'un nom fantôme.
     return l10n.voicemailBypassNobody;
   }
 
@@ -171,6 +166,7 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final vm = context.watch<VoicemailProvider>();
+    final s = vm.schedule ?? const VoicemailSchedule();
 
     return Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
@@ -182,138 +178,165 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
                 AppSpacing.vGapLg,
                 // L'état courant en premier : c'est la question que se pose
                 // celui qui ouvre cet écran — « est-ce que ça tourne, là ? ».
-                if (vm.isActive)
-                  Padding(
-                    padding: AppSpacing.screenH,
-                    child: Card(
-                      color: context.colors.primaryContainer,
-                      elevation: 0,
-                      child: ListTile(
-                        leading: Icon(Icons.voicemail_rounded,
-                            color: context.colors.onPrimaryContainer),
-                        title: Text(
-                          vm.deadline == null
-                              ? l10n.voicemailBannerActive
-                              : l10n.voicemailBannerUntil(vm.deadline!),
-                          style: TextStyle(
-                            color: context.colors.onPrimaryContainer,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        trailing: TextButton(
-                          onPressed: vm.isSaving ? null : _desactiver,
-                          child: Text(l10n.voicemailBannerDisable),
-                        ),
-                      ),
-                    ),
-                  ),
+                if (vm.isActive) _carteEtatCourant(vm),
                 if (vm.isActive) AppSpacing.vGapXxl,
+
                 SettingsGroup(
-                  title: l10n.voicemailScheduleTitle,
+                  title: l10n.voicemailWhenNoAnswer,
                   child: SettingsBoolTile(
-                    icon: Icons.voicemail_outlined,
-                    title: l10n.voicemailEnabled,
-                    subtitle: l10n.voicemailEnabledSubtitle,
-                    value: _enabled,
-                    onChanged: (v) {
-                      setState(() => _enabled = v);
-                      _patch({'enabled': v});
-                    },
+                    icon: Icons.phone_missed_outlined,
+                    title: l10n.voicemailAfterDelay,
+                    subtitle: l10n.voicemailAfterDelaySubtitle,
+                    value: s.noAnswerEnabled,
+                    onChanged: (v) => _patch({'noAnswerEnabled': v}),
                   ),
                 ),
                 AppSpacing.vGapXxl,
+
                 SettingsGroup(
-                  title: l10n.dndScheduleHours,
-                  child: Column(
-                    children: [
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl,
-                          vertical: AppSpacing.sm,
-                        ),
-                        title: Text(l10n.dndStartTime),
-                        trailing: Text(
-                          _formatTime(_start),
-                          style: context.text.bodyLarge?.copyWith(
-                            color: context.colors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        onTap: () => _pickTime(isStart: true),
-                      ),
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl,
-                          vertical: AppSpacing.sm,
-                        ),
-                        title: Text(l10n.dndEndTime),
-                        trailing: Text(
-                          _formatTime(_end),
-                          style: context.text.bodyLarge?.copyWith(
-                            color: context.colors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        onTap: () => _pickTime(isStart: false),
-                      ),
-                    ],
+                  title: l10n.voicemailWhenUnavailable,
+                  child: SettingsBoolTile(
+                    icon: Icons.event_busy_outlined,
+                    title: l10n.voicemailSlotsEnabled,
+                    subtitle: l10n.voicemailSlotsEnabledSubtitle,
+                    value: s.enabled,
+                    onChanged: (v) => _patch({'enabled': v}),
                   ),
                 ),
+                if (s.enabled) _editeurDePlages(s),
                 AppSpacing.vGapXxl,
-                SettingsGroup(
-                  title: l10n.dndDays,
-                  child: Padding(
-                    padding: AppSpacing.card,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
-                          children: List.generate(7, (bit) {
-                            return FilterChip(
-                              label: Text(_dayLabel(bit)),
-                              selected: _isDayActive(bit),
-                              onSelected: (_) => _toggleDay(bit),
-                            );
-                          }),
-                        ),
-                        AppSpacing.vGapSm,
-                        // Le fuseau réellement utilisé, en clair. Il se résout
-                        // par cascade côté serveur — réglage de l'appareil,
-                        // puis pays du compte — et sans cette ligne, un compte
-                        // rattaché au mauvais pays donnerait un créneau décalé
-                        // que rien n'expliquerait.
-                        Text(
-                          l10n.voicemailTimezoneHint(
-                              vm.schedule?.resolvedTimezone ?? ''),
-                          style: context.text.bodySmall?.copyWith(
-                            color: context.colors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+
+                StreamBuilder<List<LocalContactList>>(
+                  stream:
+                      context.read<LocalCacheRepository>().watchContactLists(),
+                  builder: (context, snapshot) => SettingsGroup(
+                    title: l10n.voicemailBypassTitle,
+                    child: SettingsNavTile(
+                      icon: Icons.notifications_active_outlined,
+                      title: l10n.voicemailBypassTile,
+                      subtitle: _sousTitreListe(
+                          snapshot.data ?? const <LocalContactList>[]),
+                      onTap: _choisirLaListe,
                     ),
                   ),
-                ),
-                AppSpacing.vGapXxl,
-                StreamBuilder<List<LocalContactList>>(
-                  stream: context.read<LocalCacheRepository>().watchContactLists(),
-                  builder: (context, snapshot) {
-                    final lists = snapshot.data ?? const <LocalContactList>[];
-                    return SettingsGroup(
-                      title: l10n.voicemailBypassTitle,
-                      child: SettingsNavTile(
-                        icon: Icons.notifications_active_outlined,
-                        title: l10n.voicemailBypassTile,
-                        subtitle: _bypassSubtitle(lists),
-                        onTap: _pickBypassList,
-                      ),
-                    );
-                  },
                 ),
                 AppSpacing.vGapXxl,
               ],
             ),
+    );
+  }
+
+  Widget _carteEtatCourant(VoicemailProvider vm) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: AppSpacing.screenH,
+      child: Card(
+        color: context.colors.primaryContainer,
+        elevation: 0,
+        child: ListTile(
+          leading: Icon(Icons.voicemail_rounded,
+              color: context.colors.onPrimaryContainer),
+          title: Text(
+            vm.deadline == null
+                ? l10n.voicemailBannerActive
+                : l10n.voicemailBannerUntil(vm.deadline!),
+            style: TextStyle(
+              color: context.colors.onPrimaryContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          trailing: TextButton(
+            onPressed: vm.isSaving ? null : _desactiver,
+            child: Text(l10n.voicemailBannerDisable),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _editeurDePlages(VoicemailSchedule s) {
+    final l10n = context.l10n;
+    return Column(
+      children: [
+        AppSpacing.vGapSm,
+        for (var bit = 0; bit < 7; bit++) _jour(s, bit),
+        Padding(
+          padding: AppSpacing.card,
+          child: Text(
+            // Le fuseau réellement utilisé, en clair. Il se résout par cascade
+            // côté serveur — réglage de l'appareil, puis pays du compte — et
+            // sans cette ligne, un compte rattaché au mauvais pays donnerait un
+            // créneau décalé que rien n'expliquerait.
+            l10n.voicemailTimezoneHint(s.resolvedTimezone),
+            style: context.text.bodySmall
+                ?.copyWith(color: context.colors.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _jour(VoicemailSchedule s, int bit) {
+    final plages = s.slotsForDay(bit);
+    final peutAjouter = plages.length < s.maxSlotsPerDay;
+    return Container(
+      color: context.colors.surface,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl, vertical: AppSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 52,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                _dayLabel(bit),
+                style: context.text.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (plages.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Text(
+                      context.l10n.voicemailSlotNone,
+                      style: context.text.bodySmall
+                          ?.copyWith(color: context.colors.onSurfaceVariant),
+                    ),
+                  ),
+                for (final p in plages)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(_decrirePlage(p),
+                            style: context.text.bodyMedium),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        color: context.colors.onSurfaceVariant,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => _supprimerPlage(p),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add, size: 20),
+            color: peutAjouter
+                ? context.colors.primary
+                : context.colors.outlineVariant,
+            onPressed: peutAjouter ? () => _ajouterPlage(bit) : null,
+          ),
+        ],
+      ),
     );
   }
 }

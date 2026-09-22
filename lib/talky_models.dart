@@ -515,17 +515,85 @@ class DndSchedule {
 // contente d'armer un minuteur sur `activeUntil` pour masquer son bandeau à
 // l'heure dite, sans rappeler le serveur.
 
-class VoicemailSchedule {
-  /// Règle récurrente : les jours et heures cochés.
-  final bool enabled;
+/// Une période d'indisponibilité, un jour donné.
+///
+/// `endTime` avant `startTime` veut dire que la plage FRANCHIT MINUIT et
+/// déborde sur le lendemain : (lundi, 22:00, 07:00) couvre lundi 22 h → mardi
+/// 7 h. `endTime == startTime` vaut la journée entière.
+///
+/// Le calendrier n'est pas évalué ici : c'est le serveur qui dit s'il est actif,
+/// parce que lui seul résout le fuseau. Cette classe ne sert qu'à l'affichage et
+/// à l'écriture.
+class VoicemailSlot {
+  /// 0 = lundi … 6 = dimanche.
+  final int dayBit;
   final String startTime;
   final String endTime;
-  final int daysBitmask;
 
-  /// Activation ponctuelle, en UTC. Toujours datée — il n'existe pas de mode
-  /// « actif jusqu'à nouvel ordre », précisément pour qu'on ne puisse pas
-  /// l'oublier.
+  const VoicemailSlot({
+    required this.dayBit,
+    required this.startTime,
+    required this.endTime,
+  });
+
+  factory VoicemailSlot.fromJson(Map<String, dynamic> json) => VoicemailSlot(
+        dayBit: int.tryParse(json['dayBit']?.toString() ?? '') ?? 0,
+        startTime: json['startTime']?.toString() ?? '00:00',
+        endTime: json['endTime']?.toString() ?? '00:00',
+      );
+
+  Map<String, dynamic> toJson() => {
+        'dayBit': dayBit,
+        'startTime': startTime,
+        'endTime': endTime,
+      };
+
+  VoicemailSlot copyWith({int? dayBit, String? startTime, String? endTime}) =>
+      VoicemailSlot(
+        dayBit: dayBit ?? this.dayBit,
+        startTime: startTime ?? this.startTime,
+        endTime: endTime ?? this.endTime,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is VoicemailSlot &&
+      other.dayBit == dayBit &&
+      other.startTime == startTime &&
+      other.endTime == endTime;
+
+  @override
+  int get hashCode => Object.hash(dayBit, startTime, endTime);
+}
+
+class VoicemailSchedule {
+  /// Les plages programmées s'appliquent-elles ?
+  final bool enabled;
+
+  /// Les périodes, tous jours confondus.
+  final List<VoicemailSlot> slots;
+
+  /// Activation ponctuelle, en UTC. Toujours datée, et jamais à plus de 24 h —
+  /// il n'existe pas de mode « actif jusqu'à nouvel ordre », précisément pour
+  /// qu'on ne puisse pas l'oublier. Exclusive des plages.
   final DateTime? untilAt;
+
+  /// Le filet : basculer au répondeur si l'appel n'est pas décroché à temps,
+  /// s'il est refusé, ou si la ligne est occupée.
+  ///
+  /// D'une autre nature que les deux précédents, et cumulable avec eux : ici le
+  /// téléphone SONNE. C'est pourquoi il n'« active » pas le répondeur au sens
+  /// de [active], et n'affiche aucun bandeau.
+  final bool noAnswerEnabled;
+
+  /// Annonce enregistrée par le propriétaire, jouée à l'appelant. Le nom du
+  /// fichier change à chaque enregistrement — c'est ce qui tient lieu
+  /// d'empreinte pour le cache média, qui indexe par nom et n'invalide rien.
+  final String? greetingUrl;
+  final int? greetingSeconds;
+
+  /// Plafond de plages par jour, imposé par le serveur.
+  final int maxSlotsPerDay;
 
   /// Fuseau IANA posé par l'appareil. `null` = laisser le serveur décider.
   final String? timezone;
@@ -547,10 +615,12 @@ class VoicemailSchedule {
 
   const VoicemailSchedule({
     this.enabled = false,
-    this.startTime = '22:00',
-    this.endTime = '07:00',
-    this.daysBitmask = 127,
+    this.slots = const [],
     this.untilAt,
+    this.noAnswerEnabled = false,
+    this.greetingUrl,
+    this.greetingSeconds,
+    this.maxSlotsPerDay = 3,
     this.timezone,
     this.bypassListId,
     this.active = false,
@@ -573,10 +643,16 @@ class VoicemailSchedule {
   factory VoicemailSchedule.fromJson(Map<String, dynamic> json) =>
       VoicemailSchedule(
         enabled: json['enabled'] == true || json['enabled'] == 1,
-        startTime: json['startTime']?.toString() ?? '22:00',
-        endTime: json['endTime']?.toString() ?? '07:00',
-        daysBitmask: _parseInt(json['daysBitmask']) ?? 127,
+        slots: (json['slots'] as List?)
+                ?.map((e) => VoicemailSlot.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
         untilAt: _parseUtc(json['untilAt']),
+        noAnswerEnabled:
+            json['noAnswerEnabled'] == true || json['noAnswerEnabled'] == 1,
+        greetingUrl: json['greetingUrl']?.toString(),
+        greetingSeconds: _parseInt(json['greetingSeconds']),
+        maxSlotsPerDay: _parseInt(json['maxSlotsPerDay']) ?? 3,
         timezone: json['timezone']?.toString(),
         bypassListId: _parseInt(json['bypassListId']),
         active: json['active'] == true || json['active'] == 1,
@@ -585,28 +661,48 @@ class VoicemailSchedule {
             json['resolvedTimezone']?.toString() ?? 'Africa/Douala',
       );
 
-  bool isDayEnabled(int mondayBasedIndex) {
-    if (mondayBasedIndex < 0 || mondayBasedIndex > 6) return false;
-    return (daysBitmask & (1 << mondayBasedIndex)) != 0;
-  }
+  /// Les plages d'un jour, triées par heure de début.
+  List<VoicemailSlot> slotsForDay(int dayBit) =>
+      slots.where((s) => s.dayBit == dayBit).toList()
+        ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
   @override
   bool operator ==(Object other) =>
       other is VoicemailSchedule &&
       other.enabled == enabled &&
-      other.startTime == startTime &&
-      other.endTime == endTime &&
-      other.daysBitmask == daysBitmask &&
+      _sameSlots(other.slots, slots) &&
       other.untilAt == untilAt &&
+      other.noAnswerEnabled == noAnswerEnabled &&
+      other.greetingUrl == greetingUrl &&
+      other.greetingSeconds == greetingSeconds &&
       other.timezone == timezone &&
       other.bypassListId == bypassListId &&
       other.active == active &&
       other.activeUntil == activeUntil &&
       other.resolvedTimezone == resolvedTimezone;
 
+  static bool _sameSlots(List<VoicemailSlot> a, List<VoicemailSlot> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
   @override
-  int get hashCode => Object.hash(enabled, startTime, endTime, daysBitmask,
-      untilAt, timezone, bypassListId, active, activeUntil, resolvedTimezone);
+  int get hashCode => Object.hash(
+        enabled,
+        Object.hashAll(slots),
+        untilAt,
+        noAnswerEnabled,
+        greetingUrl,
+        greetingSeconds,
+        timezone,
+        bypassListId,
+        active,
+        activeUntil,
+        resolvedTimezone,
+      );
 }
 
 // ── EXPORT JOB ───────────────────────────────────────────────────────
@@ -2029,6 +2125,10 @@ class SocketEvents {
   /// événement, le second téléphone garde un bandeau périmé jusqu'à son
   /// prochain retour au premier plan.
   static const voicemailScheduleUpdated = 'voicemail_schedule_updated';
+
+  /// L'annonce vocale du répondeur a changé depuis un autre appareil du compte :
+  /// { greetingUrl, greetingSeconds }.
+  static const voicemailGreetingUpdated = 'voicemail_greeting_updated';
 
   // Présence
   static const presenceOnline   = 'presence:online';

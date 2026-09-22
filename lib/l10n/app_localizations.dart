@@ -3838,6 +3838,66 @@ abstract class AppLocalizations {
   /// **'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.'**
   String get voicemailBypassHint;
 
+  /// No description provided for @voicemailWhenNoAnswer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quand je ne réponds pas'**
+  String get voicemailWhenNoAnswer;
+
+  /// No description provided for @voicemailAfterDelay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur après 30 secondes'**
+  String get voicemailAfterDelay;
+
+  /// No description provided for @voicemailAfterDelaySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le téléphone sonne. Si vous ne décrochez pas, si vous refusez l\'appel ou si votre ligne est occupée, l\'appelant peut laisser un message.'**
+  String get voicemailAfterDelaySubtitle;
+
+  /// No description provided for @voicemailWhenUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quand je suis indisponible'**
+  String get voicemailWhenUnavailable;
+
+  /// No description provided for @voicemailSlotsEnabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plages programmées'**
+  String get voicemailSlotsEnabled;
+
+  /// No description provided for @voicemailSlotsEnabledSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur ces périodes, votre téléphone ne sonne pas du tout'**
+  String get voicemailSlotsEnabledSubtitle;
+
+  /// No description provided for @voicemailSlotNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune plage'**
+  String get voicemailSlotNone;
+
+  /// No description provided for @voicemailSlotAllDay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toute la journée'**
+  String get voicemailSlotAllDay;
+
+  /// Une plage dont l'heure de fin précède l'heure de début franchit minuit et déborde sur le jour suivant. Il faut le dire, sinon le réglage paraît absurde.
+  ///
+  /// In fr, this message translates to:
+  /// **'{range} (jusqu\'au lendemain)'**
+  String voicemailSlotOvernight(String range);
+
+  /// Sous-titre de l'entrée Répondeur dans les réglages de notifications.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, one{1 plage programmée} other{{count} plages programmées}}'**
+  String voicemailSlotsCount(int count);
+
   /// No description provided for @voicemailQuickHint.
   ///
   /// In fr, this message translates to:

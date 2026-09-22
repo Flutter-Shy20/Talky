@@ -348,8 +348,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           : l10n.voicemailBannerUntil(fin);
     }
     final s = vm.schedule;
-    if (s != null && s.enabled) {
-      return '${s.startTime} – ${s.endTime}';
+    // Le filet « sans réponse » se dit même quand rien n'est en cours : c'est
+    // un réglage permanent, invisible autrement, et c'est justement celui qu'on
+    // oublie avoir armé.
+    if (s != null && s.noAnswerEnabled) return l10n.voicemailAfterDelay;
+    if (s != null && s.enabled && s.slots.isNotEmpty) {
+      return l10n.voicemailSlotsCount(s.slots.length);
     }
     return l10n.dndSummaryInactive;
   }

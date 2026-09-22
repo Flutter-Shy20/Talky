@@ -2086,6 +2086,48 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.';
 
   @override
+  String get voicemailWhenNoAnswer => 'Quand je ne réponds pas';
+
+  @override
+  String get voicemailAfterDelay => 'Répondeur après 30 secondes';
+
+  @override
+  String get voicemailAfterDelaySubtitle =>
+      'Le téléphone sonne. Si vous ne décrochez pas, si vous refusez l\'appel ou si votre ligne est occupée, l\'appelant peut laisser un message.';
+
+  @override
+  String get voicemailWhenUnavailable => 'Quand je suis indisponible';
+
+  @override
+  String get voicemailSlotsEnabled => 'Plages programmées';
+
+  @override
+  String get voicemailSlotsEnabledSubtitle =>
+      'Sur ces périodes, votre téléphone ne sonne pas du tout';
+
+  @override
+  String get voicemailSlotNone => 'Aucune plage';
+
+  @override
+  String get voicemailSlotAllDay => 'Toute la journée';
+
+  @override
+  String voicemailSlotOvernight(String range) {
+    return '$range (jusqu\'au lendemain)';
+  }
+
+  @override
+  String voicemailSlotsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count plages programmées',
+      one: '1 plage programmée',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get voicemailQuickHint =>
       'Choisissez jusqu\'à quand. Toutes les options ont une fin : un répondeur qu\'on oublie est pire que pas de répondeur.';
 

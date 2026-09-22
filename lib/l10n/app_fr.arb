@@ -1044,6 +1044,24 @@
   "voicemailBypassTile": "Liste autorisée",
   "voicemailBypassNobody": "Personne",
   "voicemailBypassHint": "Les membres de cette liste feront sonner votre téléphone malgré le répondeur.",
+  "voicemailWhenNoAnswer": "Quand je ne réponds pas",
+  "voicemailAfterDelay": "Répondeur après 30 secondes",
+  "voicemailAfterDelaySubtitle": "Le téléphone sonne. Si vous ne décrochez pas, si vous refusez l'appel ou si votre ligne est occupée, l'appelant peut laisser un message.",
+  "voicemailWhenUnavailable": "Quand je suis indisponible",
+  "voicemailSlotsEnabled": "Plages programmées",
+  "voicemailSlotsEnabledSubtitle": "Sur ces périodes, votre téléphone ne sonne pas du tout",
+  "voicemailSlotNone": "Aucune plage",
+  "voicemailSlotAllDay": "Toute la journée",
+  "voicemailSlotOvernight": "{range} (jusqu'au lendemain)",
+  "@voicemailSlotOvernight": {
+    "description": "Une plage dont l'heure de fin précède l'heure de début franchit minuit et déborde sur le jour suivant. Il faut le dire, sinon le réglage paraît absurde.",
+    "placeholders": { "range": { "type": "String" } }
+  },
+  "voicemailSlotsCount": "{count, plural, one{1 plage programmée} other{{count} plages programmées}}",
+  "@voicemailSlotsCount": {
+    "description": "Sous-titre de l'entrée Répondeur dans les réglages de notifications.",
+    "placeholders": { "count": { "type": "int" } }
+  },
   "voicemailQuickHint": "Choisissez jusqu'à quand. Toutes les options ont une fin : un répondeur qu'on oublie est pire que pas de répondeur.",
   "voicemailQuickSchedule": "Planifier des créneaux",
   "voicemailForOneHour": "Pendant 1 heure",
