@@ -2067,6 +2067,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Members of this list will ring your phone despite the voicemail.';
 
   @override
+  String voicemailPeerNoAnswer(String name) {
+    return '$name didn\'t answer';
+  }
+
+  @override
+  String get voicemailGreetingPause => 'Stop the greeting';
+
+  @override
+  String get voicemailGreetingReplay => 'Play the greeting again';
+
+  @override
   String get voicemailGreetingSection => 'My greeting';
 
   @override

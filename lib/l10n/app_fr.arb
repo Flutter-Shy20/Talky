@@ -1044,6 +1044,13 @@
   "voicemailBypassTile": "Liste autorisée",
   "voicemailBypassNobody": "Personne",
   "voicemailBypassHint": "Les membres de cette liste feront sonner votre téléphone malgré le répondeur.",
+  "voicemailPeerNoAnswer": "{name} n'a pas répondu",
+  "voicemailGreetingPause": "Couper l'annonce",
+  "voicemailGreetingReplay": "Réécouter l'annonce",
+  "@voicemailPeerNoAnswer": {
+    "description": "Titre de la feuille quand le téléphone A sonné — délai écoulé ou refus. Distinct de voicemailPeerUnavailable, qui couvre les cas où il n'a pas sonné du tout.",
+    "placeholders": { "name": { "type": "String" } }
+  },
   "voicemailGreetingSection": "Mon annonce",
   "voicemailGreetingTitle": "Enregistrer votre annonce",
   "voicemailGreetingHint": "Elle sera jouée à ceux qui tombent sur votre répondeur. {max} secondes au maximum.",

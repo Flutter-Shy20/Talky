@@ -3838,6 +3838,24 @@ abstract class AppLocalizations {
   /// **'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.'**
   String get voicemailBypassHint;
 
+  /// Titre de la feuille quand le téléphone A sonné — délai écoulé ou refus. Distinct de voicemailPeerUnavailable, qui couvre les cas où il n'a pas sonné du tout.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a pas répondu'**
+  String voicemailPeerNoAnswer(String name);
+
+  /// No description provided for @voicemailGreetingPause.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couper l\'annonce'**
+  String get voicemailGreetingPause;
+
+  /// No description provided for @voicemailGreetingReplay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réécouter l\'annonce'**
+  String get voicemailGreetingReplay;
+
   /// No description provided for @voicemailGreetingSection.
   ///
   /// In fr, this message translates to:

@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart' show PlayerState;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/services/call/voicemail_greeting_player.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
@@ -35,6 +37,7 @@ Future<void> showVoicemailRecorder({
   required String peerName,
   required int peerUserId,
   int? conversationID,
+  bool didRing = false,
 }) {
   return showAppBottomSheet<void>(
     context: context,
@@ -42,6 +45,7 @@ Future<void> showVoicemailRecorder({
       peerName: peerName,
       peerUserId: peerUserId,
       conversationID: conversationID,
+      didRing: didRing,
     ),
   );
 }
@@ -51,11 +55,15 @@ class _VoicemailRecorderSheet extends StatefulWidget {
     required this.peerName,
     required this.peerUserId,
     this.conversationID,
+    this.didRing = false,
   });
 
   final String peerName;
   final int peerUserId;
   final int? conversationID;
+
+  /// Le téléphone d'en face a-t-il sonné ? Change les mots, pas le mécanisme.
+  final bool didRing;
 
   @override
   State<_VoicemailRecorderSheet> createState() =>
@@ -73,8 +81,58 @@ class _VoicemailRecorderSheetState extends State<_VoicemailRecorderSheet> {
   /// une fausse manœuvre, pas un message.
   static const int _minSeconds = 1;
 
+  /// Vrai dès qu'on sait s'il y a une annonce à jouer ou non.
+  bool _annonceResolue = false;
+  bool _aUneAnnonce = false;
+  StreamSubscription<PlayerState>? _abonnementLecture;
+
+  @override
+  void initState() {
+    super.initState();
+    // L'annonce se lance toute seule, et NE BLOQUE RIEN : le bouton
+    // d'enregistrement est actif dès maintenant. Si le réseau traîne ou si
+    // l'annonce n'arrive jamais, l'appelant parle quand même.
+    unawaited(_preparerAnnonce());
+  }
+
+  Future<void> _preparerAnnonce() async {
+    final lecteur = VoicemailGreetingPlayer.instance;
+    final chemin = await lecteur.whenReady();
+    if (!mounted) return;
+    setState(() {
+      _annonceResolue = true;
+      _aUneAnnonce = chemin != null;
+    });
+    if (chemin == null) return;
+
+    _abonnementLecture = lecteur.stateStream?.listen((_) {
+      if (mounted) setState(() {});
+    });
+    await lecteur.play();
+    if (!mounted) return;
+    // Le flux n'existe qu'une fois le lecteur construit, d'où ce second essai.
+    _abonnementLecture ??= lecteur.stateStream?.listen((_) {
+      if (mounted) setState(() {});
+    });
+    setState(() {});
+  }
+
+  /// Bascule lecture/pause de l'annonce, et la rejoue si elle est terminée.
+  Future<void> _basculerAnnonce() async {
+    final lecteur = VoicemailGreetingPlayer.instance;
+    if (lecteur.isPlaying) {
+      await lecteur.pause();
+    } else {
+      await lecteur.resume();
+    }
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    _abonnementLecture?.cancel();
+    // Le son ne doit pas survivre à l'écran.
+    unawaited(VoicemailGreetingPlayer.instance.release());
     _timer?.cancel();
     // Un enregistrement encore en cours quand la feuille se ferme : on coupe et
     // on jette. Laisser le micro ouvert bloquerait l'appel suivant.
@@ -204,7 +262,9 @@ class _VoicemailRecorderSheetState extends State<_VoicemailRecorderSheet> {
           ),
           AppSpacing.vGapLg,
           Text(
-            l10n.voicemailPeerUnavailable(widget.peerName),
+            widget.didRing
+                ? l10n.voicemailPeerNoAnswer(widget.peerName)
+                : l10n.voicemailPeerUnavailable(widget.peerName),
             style: context.text.titleMedium
                 ?.copyWith(fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
@@ -216,6 +276,24 @@ class _VoicemailRecorderSheetState extends State<_VoicemailRecorderSheet> {
                 ?.copyWith(color: colors.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
+          // L'annonce, quand il y en a une. Elle se joue déjà ; ce contrôle
+          // sert à la couper ou à la réécouter, pas à la démarrer.
+          if (_annonceResolue && _aUneAnnonce && !_isRecording) ...[
+            AppSpacing.vGapMd,
+            TextButton.icon(
+              onPressed: _basculerAnnonce,
+              icon: Icon(
+                VoicemailGreetingPlayer.instance.isPlaying
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline,
+              ),
+              label: Text(
+                VoicemailGreetingPlayer.instance.isPlaying
+                    ? l10n.voicemailGreetingPause
+                    : l10n.voicemailGreetingReplay,
+              ),
+            ),
+          ],
           AppSpacing.vGapXl,
           if (_isRecording)
             Text(

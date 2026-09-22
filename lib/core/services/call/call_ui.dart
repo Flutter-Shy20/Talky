@@ -86,6 +86,7 @@ extension CallUi on CallService {
     required int peerUserId,
     required String peerName,
     int? conversationID,
+    bool didRing = false,
   }) async {
     final navigator = appNavigator;
     if (navigator == null) return;
@@ -94,6 +95,7 @@ extension CallUi on CallService {
       peerName: peerName,
       peerUserId: peerUserId,
       conversationID: conversationID,
+      didRing: didRing,
     );
   }
 

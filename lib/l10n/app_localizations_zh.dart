@@ -2001,6 +2001,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get voicemailBypassHint => '该名单中的成员即使在语音信箱开启时也能让手机响铃。';
 
   @override
+  String voicemailPeerNoAnswer(String name) {
+    return '$name 没有接听';
+  }
+
+  @override
+  String get voicemailGreetingPause => '停止播放';
+
+  @override
+  String get voicemailGreetingReplay => '再听一次';
+
+  @override
   String get voicemailGreetingSection => '我的问候语';
 
   @override

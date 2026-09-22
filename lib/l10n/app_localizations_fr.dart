@@ -2086,6 +2086,17 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.';
 
   @override
+  String voicemailPeerNoAnswer(String name) {
+    return '$name n\'a pas répondu';
+  }
+
+  @override
+  String get voicemailGreetingPause => 'Couper l\'annonce';
+
+  @override
+  String get voicemailGreetingReplay => 'Réécouter l\'annonce';
+
+  @override
   String get voicemailGreetingSection => 'Mon annonce';
 
   @override

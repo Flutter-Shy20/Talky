@@ -532,6 +532,15 @@ extension CallSignaling on CallService {
 
       _cancelOutgoingTimeout();
 
+      // Le téléchargement de l'annonce part MAINTENANT, sans être attendu.
+      //
+      // `_terminateCall()` ci-dessous prend plusieurs centaines de
+      // millisecondes — rendre CallKit, fermer la connexion pair-à-pair,
+      // relâcher la session audio. Le transfert s'y superpose au lieu de s'y
+      // ajouter, et l'annonce est généralement prête quand la feuille s'ouvre.
+      // Au deuxième appel vers la même personne, le cache répond sans réseau.
+      VoicemailGreetingPlayer.instance.prefetch(map['greetingUrl']?.toString());
+
       final idCallKit = _callKitCallId;
       final idLocal = _currentCallId;
       if (serverCallId != null && serverCallId.isNotEmpty) {
@@ -547,6 +556,11 @@ extension CallSignaling on CallService {
       final conversationID = map['conversationID'] is int
           ? map['conversationID'] as int
           : int.tryParse(map['conversationID']?.toString() ?? '');
+      // Le téléphone d'en face a-t-il sonné ? Ce n'est pas la même situation :
+      // « n'a pas répondu » quand le délai s'est écoulé ou que l'appel a été
+      // refusé, « est indisponible » quand un créneau de silence ou une ligne
+      // occupée l'a renvoyé sans le faire sonner.
+      final didRing = map['didRing'] == true;
 
       await _terminateCall();
 
@@ -555,6 +569,7 @@ extension CallSignaling on CallService {
         peerUserId: peerId,
         peerName: peerName,
         conversationID: conversationID,
+        didRing: didRing,
       ));
     });
 
