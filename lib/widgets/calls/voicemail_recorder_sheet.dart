@@ -94,10 +94,20 @@ class _VoicemailRecorderSheetState extends State<_VoicemailRecorderSheet> {
   }
 
   Future<void> _start() async {
-    // La permission micro est déjà acquise : on vient de tenter un appel, et
-    // `CallPermissionsHelper.ensureCallMediaPermissions` l'exige. Le test reste
-    // au cas où elle aurait été révoquée entre-temps.
-    if (!await _recorder.hasPermission()) return;
+    // La permission micro est normalement déjà acquise : on vient de tenter un
+    // appel, et `CallPermissionsHelper.ensureCallMediaPermissions` l'exige.
+    //
+    // Mais « normalement » ne suffit pas, et sortir en silence sur un refus
+    // était une faute : l'utilisateur appuyait sur « Enregistrer », rien ne se
+    // passait, et rien ne lui disait pourquoi. Le chat et les statuts font la
+    // même chose — c'est un défaut que je ne reproduis pas ici.
+    if (!await _recorder.hasPermission()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.microphonePermissionDenied2)),
+      );
+      return;
+    }
     final dir = await getTemporaryDirectory();
     final path =
         '${dir.path}/voicemail_${DateTime.now().millisecondsSinceEpoch}.m4a';
@@ -222,30 +232,47 @@ class _VoicemailRecorderSheetState extends State<_VoicemailRecorderSheet> {
               padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: CircularProgressIndicator(),
             )
+          // Empilés, jamais côte à côte.
+          //
+          // Un `Row` de deux boutons « icône + libellé » tient à l'échelle de
+          // texte par défaut, et déborde dès qu'elle grandit — or `fontScale`
+          // est un réglage de l'application, appliqué globalement dans
+          // `main.dart`. Le débordement ne prévient pas : Flutter rogne la
+          // droite, et c'est « Envoyer » qui disparaît. L'utilisateur se
+          // retrouve devant un enregistrement qu'il ne peut qu'annuler.
+          //
+          // En colonne, largeur pleine, la mise en page tient à toutes les
+          // échelles, et l'action principale tombe sous le pouce.
           else if (_isRecording)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            Column(
               children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => _stop(send: true),
+                    icon: const Icon(Icons.send_rounded),
+                    label: Text(l10n.voicemailSend),
+                  ),
+                ),
+                AppSpacing.vGapSm,
                 TextButton.icon(
                   onPressed: () => _stop(send: false),
                   icon: const Icon(Icons.delete_outline),
                   label: Text(l10n.voicemailDiscard),
                   style: TextButton.styleFrom(foregroundColor: colors.error),
                 ),
-                FilledButton.icon(
-                  onPressed: () => _stop(send: true),
-                  icon: const Icon(Icons.send_rounded),
-                  label: Text(l10n.voicemailSend),
-                ),
               ],
             )
           else
             Column(
               children: [
-                FilledButton.icon(
-                  onPressed: _start,
-                  icon: const Icon(Icons.mic_rounded),
-                  label: Text(l10n.voicemailRecord),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _start,
+                    icon: const Icon(Icons.mic_rounded),
+                    label: Text(l10n.voicemailRecord),
+                  ),
                 ),
                 AppSpacing.vGapSm,
                 TextButton(
