@@ -63,6 +63,43 @@ void main() {
     });
   });
 
+  group('plafond des 24 heures', () {
+    final now = DateTime(2026, 9, 22, 14, 0);
+
+    test('une échéance dans la journée passe', () {
+      expect(isWithinMaxDuration(now.add(const Duration(hours: 4)), now: now), isTrue);
+      expect(isWithinMaxDuration(now.add(const Duration(hours: 23, minutes: 59)), now: now), isTrue);
+    });
+
+    test('exactement 24 heures passe encore', () {
+      expect(isWithinMaxDuration(now.add(const Duration(hours: 24)), now: now), isTrue);
+    });
+
+    test('au-delà, non — une durée qu\'on peut pousser redevient un oubli', () {
+      expect(isWithinMaxDuration(now.add(const Duration(hours: 25)), now: now), isFalse);
+      expect(isWithinMaxDuration(now.add(const Duration(days: 7)), now: now), isFalse);
+    });
+
+    test('une échéance déjà passée n\'activerait rien', () {
+      expect(isWithinMaxDuration(now.subtract(const Duration(minutes: 1)), now: now), isFalse);
+    });
+
+    test('les trois échéances rapides tiennent toutes dans le plafond', () {
+      // « Jusqu'à demain 8 h » réglé à 7 h du matin dépasserait 24 h si la
+      // bascule matinale visait le lendemain plutôt que la prochaine occurrence.
+      for (final heure in [0, 2, 7, 8, 14, 23]) {
+        final t = DateTime(2026, 9, 22, heure, 30);
+        for (final d in VoicemailQuickDuration.values) {
+          expect(
+            isWithinMaxDuration(quickDeadline(d, now: t), now: t),
+            isTrue,
+            reason: 'à ${heure}h30, $d',
+          );
+        }
+      }
+    });
+  });
+
   group('forme des écritures', () {
     test('l\'activation envoie une échéance en UTC', () {
       final local = DateTime(2026, 9, 21, 15, 30);

@@ -32,6 +32,23 @@ enum VoicemailQuickDuration {
 /// L'heure de la bascule matinale, en heure murale locale.
 const int voicemailMorningHour = 8;
 
+/// Plafond de l'activation ponctuelle, imposé aussi par le serveur.
+///
+/// Ce n'est pas une limite technique mais le prolongement de la règle « aucune
+/// activation sans échéance » : une durée qu'on peut pousser à une semaine
+/// redevient un réglage qu'on oublie, et son propriétaire croit son téléphone
+/// joignable. Qui veut une indisponibilité durable passe par les plages, qui
+/// s'éteignent d'elles-mêmes chaque jour.
+const Duration voicemailMaxDuration = Duration(hours: 24);
+
+/// L'échéance demandée tient-elle dans le plafond ?
+///
+/// Vérifié ici pour refuser AVANT l'aller-retour réseau, avec un message clair.
+/// Le serveur refuse de toute façon — ce n'est pas la seule garde.
+bool isWithinMaxDuration(DateTime deadlineLocal, {required DateTime now}) =>
+    !deadlineLocal.difference(now).isNegative &&
+    deadlineLocal.difference(now) <= voicemailMaxDuration;
+
 /// L'instant de fin d'une échéance rapide, en heure LOCALE.
 ///
 /// Calculé sur l'appareil, en heure murale, puis converti en UTC au moment de

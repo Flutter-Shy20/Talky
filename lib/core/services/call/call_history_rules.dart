@@ -30,15 +30,29 @@ bool callWasAnswered(int status) => status == 1;
 /// l'écran, pas dans le journal.
 bool callWasNotAnswered(int status) => !callWasAnswered(status);
 
-/// True si l'appel a été renvoyé au répondeur du destinataire (statut 4).
+/// True si l'appel a été renvoyé au répondeur du destinataire.
 ///
-/// Sous-ensemble de [callWasNotAnswered], volontairement : l'appel n'a bien
-/// pas abouti, il compte donc dans le badge d'appels manqués de l'accueil.
-/// Mais la LIGNE du journal doit le dire autrement — « Manqué » sous-entend
-/// qu'on aurait pu décrocher, alors qu'ici le téléphone n'a jamais sonné. Sans
-/// cette distinction à l'affichage, la fonctionnalité serait invisible à
-/// l'endroit précis où elle devrait le plus se voir.
-bool callWentToVoicemail(int status) => status == 4;
+/// **Deux statuts**, et l'axe qui les sépare est « le téléphone a-t-il sonné ? » :
+///
+/// - **4** — non. Créneau de silence, ou ligne déjà occupée. Le destinataire
+///   était indisponible, il n'y avait rien à rater.
+/// - **5** — oui. Le délai sans réponse s'est écoulé, ou l'appel a été refusé.
+///   Le destinataire a eu l'appel sous les yeux.
+///
+/// Sous-ensemble de [callWasNotAnswered], volontairement : l'appel n'a bien pas
+/// abouti, il compte donc dans le badge d'appels manqués de l'accueil. Mais la
+/// LIGNE du journal doit le dire autrement — « Manqué » sous-entend qu'on aurait
+/// pu décrocher. Sans cette distinction à l'affichage, la fonctionnalité serait
+/// invisible à l'endroit précis où elle devrait le plus se voir.
+bool callWentToVoicemail(int status) => status == 4 || status == 5;
+
+/// True si le téléphone du destinataire a sonné avant de basculer (statut 5).
+///
+/// Sert à choisir les mots : « n'a pas répondu » plutôt que « est
+/// indisponible ». Côté statistiques, c'est la même frontière — seul le statut
+/// 4 sort du dénominateur du taux de réussite, parce que lui seul décrit un
+/// appel qui n'avait aucune chance d'aboutir.
+bool voicemailDidRing(int status) => status == 5;
 
 /// True si le curseur `before` doit accompagner la requête.
 ///

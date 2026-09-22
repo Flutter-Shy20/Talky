@@ -121,22 +121,37 @@ void main() {
     });
   });
 
-  group('renvoi au répondeur (statut 4)', () {
-    test('seul le statut 4 désigne un renvoi', () {
+  group('renvoi au répondeur (statuts 4 et 5)', () {
+    test('les deux statuts désignent un renvoi, les autres non', () {
       expect(callWentToVoicemail(4), isTrue);
+      expect(callWentToVoicemail(5), isTrue);
       expect(callWentToVoicemail(0), isFalse);
       expect(callWentToVoicemail(1), isFalse);
       expect(callWentToVoicemail(2), isFalse);
       expect(callWentToVoicemail(3), isFalse);
     });
 
+    test('seul le statut 5 dit que le téléphone a sonné', () {
+      // L'axe qui sépare les deux. Le 4 couvre le créneau de silence et la
+      // ligne occupée : l'appel n'avait aucune chance d'aboutir. Le 5 couvre
+      // le délai sans réponse et le refus : la personne a vu l'appel.
+      expect(voicemailDidRing(5), isTrue);
+      expect(voicemailDidRing(4), isFalse);
+      expect(voicemailDidRing(3), isFalse);
+    });
+
     test('il se distingue de « manqué » à l\'affichage', () {
       // Les deux prédicats sont vrais en même temps, et c'est voulu : l'appel
       // n'a pas abouti (badge), mais la ligne ne doit pas dire « Manqué »,
-      // qui sous-entend qu'on aurait pu décrocher. Le téléphone n'a jamais
-      // sonné.
+      // qui sous-entend qu'on aurait pu décrocher.
       expect(callWasNotAnswered(4) && callWentToVoicemail(4), isTrue);
+      expect(callWasNotAnswered(5) && callWentToVoicemail(5), isTrue);
       expect(callWasNotAnswered(3) && callWentToVoicemail(3), isFalse);
+    });
+
+    test('un renvoi n\'est jamais un décrochage', () {
+      expect(callWasAnswered(4), isFalse);
+      expect(callWasAnswered(5), isFalse);
     });
   });
 

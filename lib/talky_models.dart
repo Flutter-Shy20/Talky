@@ -1259,9 +1259,14 @@ class Call {
       case 1: return LocaleController.instance.l10n.ended2;
       case 2: return LocaleController.instance.l10n.rejected;
       case 3: return LocaleController.instance.l10n.missed;
-      // 4 : renvoyé au répondeur. Ce n'est pas « manqué » — le téléphone n'a
-      // jamais sonné, il n'y avait rien à manquer.
-      case 4: return LocaleController.instance.l10n.voicemailCallStatus;
+      // 4 et 5 : renvoyé au répondeur. Ce n'est pas « manqué » — dans un cas le
+      // téléphone n'a jamais sonné, dans l'autre l'appel a trouvé son
+      // répondeur. Le journal dit la même chose des deux : ce qui les sépare
+      // intéresse les statistiques et les mots de l'appelant, pas le
+      // destinataire qui relit sa liste.
+      case 4:
+      case 5:
+        return LocaleController.instance.l10n.voicemailCallStatus;
       default: return '';
     }
   }
