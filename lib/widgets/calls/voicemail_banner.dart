@@ -6,6 +6,7 @@ import '../../core/errors/app_error.dart';
 import '../../core/services/call/voicemail_provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../screens/profile/voicemail_schedule_screen.dart';
 
 /// Bandeau du répondeur actif, posé **au-dessus** de la barre de navigation,
 /// au même endroit et pour la même raison que [TripBanner] : la barre est figée
@@ -48,33 +49,44 @@ class VoicemailBanner extends StatelessWidget {
         borderRadius: AppRadius.brSm,
         shadowColor: fond.withValues(alpha: 0.5),
         elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md, 2, AppSpacing.sm, 2),
-          child: Row(
-            children: [
-              Icon(Icons.voicemail_rounded, size: 15, color: encre),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  libelle,
-                  style: context.text.labelLarge
-                      ?.copyWith(color: encre, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
+        clipBehavior: Clip.antiAlias,
+        // Tapoter le bandeau ouvre le réglage : c'est le geste naturel quand on
+        // voit « Répondeur actif » et qu'on veut savoir pourquoi. « Désactiver »
+        // reste à portée pour qui ne veut que l'éteindre.
+        child: InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const VoicemailScheduleScreen()),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md, 2, AppSpacing.sm, 2),
+            child: Row(
+              children: [
+                Icon(Icons.voicemail_rounded, size: 15, color: encre),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    libelle,
+                    style: context.text.labelLarge
+                        ?.copyWith(color: encre, fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-              TextButton(
-                onPressed: vm.isSaving ? null : () => _desactiver(context, vm),
-                style: TextButton.styleFrom(
-                  foregroundColor: encre,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm, vertical: 0),
-                  minimumSize: const Size(0, 32),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                TextButton(
+                  onPressed:
+                      vm.isSaving ? null : () => _desactiver(context, vm),
+                  style: TextButton.styleFrom(
+                    foregroundColor: encre,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm, vertical: 0),
+                    minimumSize: const Size(0, 32),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(l10n.voicemailBannerDisable),
                 ),
-                child: Text(l10n.voicemailBannerDisable),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
