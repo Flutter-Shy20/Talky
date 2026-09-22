@@ -2086,6 +2086,38 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.';
 
   @override
+  String get voicemailGreetingSection => 'Mon annonce';
+
+  @override
+  String get voicemailGreetingTitle => 'Enregistrer votre annonce';
+
+  @override
+  String voicemailGreetingHint(int max) {
+    return 'Elle sera jouée à ceux qui tombent sur votre répondeur. $max secondes au maximum.';
+  }
+
+  @override
+  String get voicemailGreetingStop => 'Terminer';
+
+  @override
+  String get voicemailGreetingSaved => 'Annonce enregistrée';
+
+  @override
+  String get voicemailGreetingNone =>
+      'Aucune annonce — un texte s\'affichera à la place';
+
+  @override
+  String voicemailGreetingSet(int seconds) {
+    return '$seconds secondes enregistrées';
+  }
+
+  @override
+  String get voicemailGreetingDelete => 'Supprimer l\'annonce';
+
+  @override
+  String get voicemailGreetingDeleted => 'Annonce supprimée';
+
+  @override
   String get voicemailWhenNoAnswer => 'Quand je ne réponds pas';
 
   @override

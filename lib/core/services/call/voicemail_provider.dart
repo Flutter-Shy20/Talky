@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -35,6 +36,16 @@ class VoicemailProvider extends ChangeNotifier with WidgetsBindingObserver {
   VoicemailProvider({required TalkyApiClient api}) : _api = api {
     WidgetsBinding.instance.addObserver(this);
     _api.onSocketEvent(SocketEvents.voicemailScheduleUpdated, _surEvenement);
+    // L'annonce a son propre événement : elle se change depuis n'importe quel
+    // appareil du compte, et les autres doivent la voir sans rafraîchir.
+    _api.onSocketEvent(SocketEvents.voicemailGreetingUpdated, (data) {
+      if (data is! Map) return;
+      _appliquerAnnonce(
+        data['greetingUrl']?.toString(),
+        int.tryParse(data['greetingSeconds']?.toString() ?? ''),
+      );
+      notifyListeners();
+    });
   }
 
   VoicemailSchedule? get schedule => _schedule;
@@ -106,6 +117,40 @@ class VoicemailProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<VoicemailSchedule> activateUntil(DateTime deadlineLocal) =>
       patch(activatePatch(deadlineLocal));
 
+  /// Dépose une nouvelle annonce vocale, et remplace la précédente.
+  ///
+  /// Le serveur renvoie une URL au nom NOUVEAU : c'est ce qui invalide le cache
+  /// des appelants, qui indexe par nom de fichier et ne connaît aucune autre
+  /// forme d'invalidation.
+  Future<void> uploadGreeting(File file, int seconds) async {
+    _saving = true;
+    notifyListeners();
+    try {
+      final res = await _api.uploadVoicemailGreeting(file, seconds: seconds);
+      _appliquerAnnonce(
+        res['greetingUrl']?.toString(),
+        res['greetingSeconds'] is int
+            ? res['greetingSeconds'] as int
+            : int.tryParse(res['greetingSeconds']?.toString() ?? ''),
+      );
+    } finally {
+      _saving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteGreeting() async {
+    _saving = true;
+    notifyListeners();
+    try {
+      await _api.deleteVoicemailGreeting();
+      _appliquerAnnonce(null, null);
+    } finally {
+      _saving = false;
+      notifyListeners();
+    }
+  }
+
   /// Éteint tout d'un geste : l'activation ponctuelle ET la règle récurrente.
   /// N'effacer que la première laisserait le bandeau en place si un créneau
   /// récurrent est en cours, et le bouton paraîtrait cassé.
@@ -115,6 +160,28 @@ class VoicemailProvider extends ChangeNotifier with WidgetsBindingObserver {
     _schedule = next;
     _armerEcheance(next);
     notifyListeners();
+  }
+
+  /// L'annonce seule : les routes de dépôt et de suppression ne renvoient
+  /// qu'elle, pas le créneau complet. Recopier le reste évite un aller-retour
+  /// de plus juste pour rafraîchir deux champs.
+  void _appliquerAnnonce(String? url, int? seconds) {
+    final s = _schedule;
+    if (s == null) return;
+    _schedule = VoicemailSchedule(
+      enabled: s.enabled,
+      slots: s.slots,
+      untilAt: s.untilAt,
+      noAnswerEnabled: s.noAnswerEnabled,
+      greetingUrl: url,
+      greetingSeconds: seconds,
+      maxSlotsPerDay: s.maxSlotsPerDay,
+      timezone: s.timezone,
+      bypassListId: s.bypassListId,
+      active: s.active,
+      activeUntil: s.activeUntil,
+      resolvedTimezone: s.resolvedTimezone,
+    );
   }
 
   /// Un minuteur unique, visant l'échéance elle-même.

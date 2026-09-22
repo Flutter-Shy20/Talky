@@ -10,6 +10,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/contact_list_display.dart';
 import '../../talky_models.dart';
+import '../../widgets/calls/greeting_recorder_sheet.dart';
 import '../../widgets/profile/settings_group.dart';
 import 'pick_contact_list_sheet.dart';
 
@@ -65,6 +66,23 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
   Future<void> _desactiver() async {
     try {
       await context.read<VoicemailProvider>().disable();
+    } catch (e) {
+      if (!mounted) return;
+      afficherErreur(context, e, domaine: ErrorDomain.appel);
+    }
+  }
+
+  Future<void> _supprimerAnnonce() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    try {
+      await context.read<VoicemailProvider>().deleteGreeting();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.voicemailGreetingDeleted),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       afficherErreur(context, e, domaine: ErrorDomain.appel);
@@ -204,6 +222,35 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
                   ),
                 ),
                 if (s.enabled) _editeurDePlages(s),
+                AppSpacing.vGapXxl,
+
+                SettingsGroup(
+                  title: l10n.voicemailGreetingSection,
+                  child: Column(
+                    children: [
+                      SettingsNavTile(
+                        icon: Icons.graphic_eq_rounded,
+                        title: l10n.voicemailGreetingTitle,
+                        subtitle: s.greetingUrl == null
+                            ? l10n.voicemailGreetingNone
+                            : l10n.voicemailGreetingSet(s.greetingSeconds ?? 0),
+                        onTap: () => showGreetingRecorder(context),
+                      ),
+                      if (s.greetingUrl != null)
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
+                          leading: Icon(Icons.delete_outline,
+                              color: context.colors.error),
+                          title: Text(
+                            l10n.voicemailGreetingDelete,
+                            style: TextStyle(color: context.colors.error),
+                          ),
+                          onTap: vm.isSaving ? null : _supprimerAnnonce,
+                        ),
+                    ],
+                  ),
+                ),
                 AppSpacing.vGapXxl,
 
                 StreamBuilder<List<LocalContactList>>(

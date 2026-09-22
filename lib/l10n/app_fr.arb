@@ -1044,6 +1044,23 @@
   "voicemailBypassTile": "Liste autorisée",
   "voicemailBypassNobody": "Personne",
   "voicemailBypassHint": "Les membres de cette liste feront sonner votre téléphone malgré le répondeur.",
+  "voicemailGreetingSection": "Mon annonce",
+  "voicemailGreetingTitle": "Enregistrer votre annonce",
+  "voicemailGreetingHint": "Elle sera jouée à ceux qui tombent sur votre répondeur. {max} secondes au maximum.",
+  "@voicemailGreetingHint": {
+    "description": "Sous-titre de la feuille d'enregistrement de l'annonce.",
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "voicemailGreetingStop": "Terminer",
+  "voicemailGreetingSaved": "Annonce enregistrée",
+  "voicemailGreetingNone": "Aucune annonce — un texte s'affichera à la place",
+  "voicemailGreetingSet": "{seconds} secondes enregistrées",
+  "@voicemailGreetingSet": {
+    "description": "Sous-titre de la tuile quand une annonce existe.",
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "voicemailGreetingDelete": "Supprimer l'annonce",
+  "voicemailGreetingDeleted": "Annonce supprimée",
   "voicemailWhenNoAnswer": "Quand je ne réponds pas",
   "voicemailAfterDelay": "Répondeur après 30 secondes",
   "voicemailAfterDelaySubtitle": "Le téléphone sonne. Si vous ne décrochez pas, si vous refusez l'appel ou si votre ligne est occupée, l'appelant peut laisser un message.",

@@ -3838,6 +3838,60 @@ abstract class AppLocalizations {
   /// **'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.'**
   String get voicemailBypassHint;
 
+  /// No description provided for @voicemailGreetingSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon annonce'**
+  String get voicemailGreetingSection;
+
+  /// No description provided for @voicemailGreetingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer votre annonce'**
+  String get voicemailGreetingTitle;
+
+  /// Sous-titre de la feuille d'enregistrement de l'annonce.
+  ///
+  /// In fr, this message translates to:
+  /// **'Elle sera jouée à ceux qui tombent sur votre répondeur. {max} secondes au maximum.'**
+  String voicemailGreetingHint(int max);
+
+  /// No description provided for @voicemailGreetingStop.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer'**
+  String get voicemailGreetingStop;
+
+  /// No description provided for @voicemailGreetingSaved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annonce enregistrée'**
+  String get voicemailGreetingSaved;
+
+  /// No description provided for @voicemailGreetingNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune annonce — un texte s\'affichera à la place'**
+  String get voicemailGreetingNone;
+
+  /// Sous-titre de la tuile quand une annonce existe.
+  ///
+  /// In fr, this message translates to:
+  /// **'{seconds} secondes enregistrées'**
+  String voicemailGreetingSet(int seconds);
+
+  /// No description provided for @voicemailGreetingDelete.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer l\'annonce'**
+  String get voicemailGreetingDelete;
+
+  /// No description provided for @voicemailGreetingDeleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annonce supprimée'**
+  String get voicemailGreetingDeleted;
+
   /// No description provided for @voicemailWhenNoAnswer.
   ///
   /// In fr, this message translates to:

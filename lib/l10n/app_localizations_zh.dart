@@ -2001,6 +2001,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get voicemailBypassHint => '该名单中的成员即使在语音信箱开启时也能让手机响铃。';
 
   @override
+  String get voicemailGreetingSection => '我的问候语';
+
+  @override
+  String get voicemailGreetingTitle => '录制你的问候语';
+
+  @override
+  String voicemailGreetingHint(int max) {
+    return '转到语音信箱的来电者会听到它。最多 $max 秒。';
+  }
+
+  @override
+  String get voicemailGreetingStop => '完成';
+
+  @override
+  String get voicemailGreetingSaved => '问候语已保存';
+
+  @override
+  String get voicemailGreetingNone => '没有问候语——将显示一段文字';
+
+  @override
+  String voicemailGreetingSet(int seconds) {
+    return '已录制 $seconds 秒';
+  }
+
+  @override
+  String get voicemailGreetingDelete => '删除问候语';
+
+  @override
+  String get voicemailGreetingDeleted => '问候语已删除';
+
+  @override
   String get voicemailWhenNoAnswer => '当我没有接听时';
 
   @override

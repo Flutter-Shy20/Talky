@@ -2067,6 +2067,38 @@ class AppLocalizationsEn extends AppLocalizations {
       'Members of this list will ring your phone despite the voicemail.';
 
   @override
+  String get voicemailGreetingSection => 'My greeting';
+
+  @override
+  String get voicemailGreetingTitle => 'Record your greeting';
+
+  @override
+  String voicemailGreetingHint(int max) {
+    return 'Callers who reach your voicemail will hear it. $max seconds maximum.';
+  }
+
+  @override
+  String get voicemailGreetingStop => 'Finish';
+
+  @override
+  String get voicemailGreetingSaved => 'Greeting saved';
+
+  @override
+  String get voicemailGreetingNone =>
+      'No greeting — a text will be shown instead';
+
+  @override
+  String voicemailGreetingSet(int seconds) {
+    return '$seconds seconds recorded';
+  }
+
+  @override
+  String get voicemailGreetingDelete => 'Delete greeting';
+
+  @override
+  String get voicemailGreetingDeleted => 'Greeting deleted';
+
+  @override
   String get voicemailWhenNoAnswer => 'When I don\'t answer';
 
   @override
