@@ -272,6 +272,7 @@ class PlusPayment {
   const PlusPayment({
     required this.id,
     required this.status,
+    this.product = 'plus',
     this.plan,
     this.amount = 0,
     this.currency = 'XAF',
@@ -283,6 +284,9 @@ class PlusPayment {
 
   final int id;
   final PaymentStatus status;
+
+  /// `plus` (abonnement) ou `phone` (numéro choisi, sans plan).
+  final String product;
   final String? plan;
   final int amount;
   final String currency;
@@ -293,9 +297,12 @@ class PlusPayment {
   final DateTime? createdAt;
   final DateTime? confirmedAt;
 
+  bool get isPhone => product == 'phone';
+
   factory PlusPayment.fromJson(Map<String, dynamic> json) => PlusPayment(
         id: _int(json['id']),
         status: PaymentStatus.fromWire(json['status']) ?? PaymentStatus.pending,
+        product: '${json['product'] ?? 'plus'}',
         plan: json['plan'] as String?,
         amount: _int(json['amount']),
         currency: '${json['currency'] ?? 'XAF'}',
