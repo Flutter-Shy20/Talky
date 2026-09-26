@@ -187,7 +187,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ),
             );
     }
-    if (history.payments.isEmpty) {
+    // L'achat d'un numéro passe par le même paiement mais n'est pas un
+    // abonnement : il n'a rien à faire dans l'historique d'Alanya Plus.
+    final payments = [
+      for (final p in history.payments)
+        if (!p.isPhone) p,
+    ];
+    if (payments.isEmpty) {
       return _Box(
         child: Text(
           l10n.subscriptionNoPayments,
@@ -198,7 +204,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
     return _Rows(
       children: [
-        for (final p in history.payments)
+        for (final p in payments)
           Row(
             children: [
               Expanded(
