@@ -105,13 +105,13 @@ class _VoicemailRecorderSheetState extends State<_VoicemailRecorderSheet> {
     });
     if (chemin == null) return;
 
-    _abonnementLecture = lecteur.stateStream?.listen((_) {
-      if (mounted) setState(() {});
-    });
+    // L'abonnement vient APRÈS `play()`, et pas avant : le flux d'état n'existe
+    // qu'une fois le lecteur construit, ce que fait `play()`. S'y abonner avant
+    // rendait `null` et le bouton ne se rafraîchissait jamais — il restait sur
+    // « Couper l'annonce » alors que la lecture était finie.
     await lecteur.play();
     if (!mounted) return;
-    // Le flux n'existe qu'une fois le lecteur construit, d'où ce second essai.
-    _abonnementLecture ??= lecteur.stateStream?.listen((_) {
+    _abonnementLecture = lecteur.stateStream?.listen((_) {
       if (mounted) setState(() {});
     });
     setState(() {});

@@ -3898,6 +3898,12 @@ abstract class AppLocalizations {
   /// **'{seconds} secondes enregistrées'**
   String voicemailGreetingSet(int seconds);
 
+  /// No description provided for @voicemailGreetingListen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écouter l\'annonce'**
+  String get voicemailGreetingListen;
+
   /// No description provided for @voicemailGreetingDelete.
   ///
   /// In fr, this message translates to:

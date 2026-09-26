@@ -1066,6 +1066,7 @@
     "description": "Sous-titre de la tuile quand une annonce existe.",
     "placeholders": { "seconds": { "type": "int" } }
   },
+  "voicemailGreetingListen": "Écouter l'annonce",
   "voicemailGreetingDelete": "Supprimer l'annonce",
   "voicemailGreetingDeleted": "Annonce supprimée",
   "voicemailWhenNoAnswer": "Quand je ne réponds pas",

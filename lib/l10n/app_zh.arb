@@ -649,6 +649,7 @@
   "voicemailGreetingSaved": "问候语已保存",
   "voicemailGreetingNone": "没有问候语——将显示一段文字",
   "voicemailGreetingSet": "已录制 {seconds} 秒",
+  "voicemailGreetingListen": "播放问候语",
   "voicemailGreetingDelete": "删除问候语",
   "voicemailGreetingDeleted": "问候语已删除",
   "voicemailWhenNoAnswer": "当我没有接听时",

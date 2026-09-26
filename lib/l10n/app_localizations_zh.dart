@@ -2037,6 +2037,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get voicemailGreetingListen => '播放问候语';
+
+  @override
   String get voicemailGreetingDelete => '删除问候语';
 
   @override

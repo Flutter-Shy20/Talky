@@ -670,6 +670,7 @@
   "voicemailGreetingSaved": "Greeting saved",
   "voicemailGreetingNone": "No greeting — a text will be shown instead",
   "voicemailGreetingSet": "{seconds} seconds recorded",
+  "voicemailGreetingListen": "Play the greeting",
   "voicemailGreetingDelete": "Delete greeting",
   "voicemailGreetingDeleted": "Greeting deleted",
   "voicemailWhenNoAnswer": "When I don't answer",

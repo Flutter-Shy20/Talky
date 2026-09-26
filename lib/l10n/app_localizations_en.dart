@@ -2104,6 +2104,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get voicemailGreetingListen => 'Play the greeting';
+
+  @override
   String get voicemailGreetingDelete => 'Delete greeting';
 
   @override

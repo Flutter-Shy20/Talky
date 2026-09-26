@@ -32,6 +32,36 @@ class VoicemailGreetingPlayer {
     usage: AndroidAudioUsage.media,
   );
 
+  /// Session de LECTURE, posée juste avant de jouer.
+  ///
+  /// Sans elle, l'annonce sortait dans l'écouteur, l'oreille collée au
+  /// téléphone. La raison est que `_terminateCall()` désactive la session
+  /// partagée (`setActive(false)`) mais ne la RECONFIGURE pas : elle reste en
+  /// `playAndRecord` / `voiceChat`, c'est-à-dire en mode conversation, qui sur
+  /// iOS route vers l'écouteur et sur Android vers le flux de communication.
+  /// Ne rien faire ne suffisait donc pas.
+  ///
+  /// `playback` est la catégorie de lecture pure : elle sort au haut-parleur.
+  /// La reconfigurer ici est sans danger pour les appels, parce que tout appel
+  /// repose la sienne à son démarrage (`AudioHelper.configureCallAudio`).
+  ///
+  /// `duckOthers` plutôt que d'interrompre : si l'appelant écoutait de la
+  /// musique, elle baisse le temps de l'annonce et reprend après.
+  static const _sessionLecture = AudioSessionConfiguration(
+    avAudioSessionCategory: AVAudioSessionCategory.playback,
+    avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.duckOthers,
+    avAudioSessionMode: AVAudioSessionMode.defaultMode,
+    androidAudioAttributes: AndroidAudioAttributes(
+      contentType: AndroidAudioContentType.speech,
+      usage: AndroidAudioUsage.media,
+    ),
+    androidAudioFocusGainType:
+        AndroidAudioFocusGainType.gainTransientMayDuck,
+    androidWillPauseWhenDucked: false,
+  );
+
+  bool _sessionPosee = false;
+
   AudioPlayer? _player;
   final MediaCacheService _cache = MediaCacheService();
 
@@ -43,7 +73,18 @@ class VoicemailGreetingPlayer {
   Future<String?>? _enVol;
 
   Stream<PlayerState>? get stateStream => _player?.playerStateStream;
-  bool get isPlaying => _player?.playing ?? false;
+
+  /// L'annonce est-elle en train de jouer ?
+  ///
+  /// `playing` seul ne suffit pas : `just_audio` le laisse à VRAI une fois la
+  /// lecture terminée — il décrit l'intention, pas l'état du son. Le bouton
+  /// restait donc bloqué sur « Couper l'annonce » indéfiniment, alors qu'il n'y
+  /// avait plus rien à couper.
+  bool get isPlaying {
+    final p = _player;
+    if (p == null) return false;
+    return p.playing && p.processingState != ProcessingState.completed;
+  }
 
   /// Lance le téléchargement SANS l'attendre.
   ///
@@ -83,14 +124,34 @@ class VoicemailGreetingPlayer {
     return _enVol == null ? null : await _enVol;
   }
 
+  /// Pose la session de lecture, une fois par cycle d'utilisation.
+  ///
+  /// Sans elle, l'annonce hérite de la configuration laissée par l'appel —
+  /// mode conversation — et sort dans l'écouteur.
+  Future<void> _poserLaSession() async {
+    if (_sessionPosee || kIsWeb) return;
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(_sessionLecture);
+      await session.setActive(true);
+      _sessionPosee = true;
+    } catch (e) {
+      // Une session qu'on ne peut pas poser ne doit pas empêcher d'entendre
+      // quelque chose : on tente la lecture quand même.
+      debugPrint('[VoicemailGreeting] session non posée: $e');
+    }
+  }
+
   /// Joue l'annonce depuis le début. Sans effet si rien n'a pu être téléchargé.
   Future<void> play() async {
     final chemin = await whenReady();
     if (chemin == null || !File(chemin).existsSync()) return;
     try {
+      await _poserLaSession();
       _player ??= AudioPlayer(
-        // Comme `MessageSoundService` : on ne touche pas à la session audio
-        // globale, qui est partagée avec les appels.
+        // `handleAudioSessionActivation: false` : c'est NOUS qui posons la
+        // session ci-dessus, en connaissance de cause. La laisser à just_audio
+        // reviendrait à la réactiver telle qu'elle était — en mode appel.
         handleInterruptions: false,
         handleAudioSessionActivation: false,
       );
@@ -114,6 +175,7 @@ class VoicemailGreetingPlayer {
     final p = _player;
     if (p == null) return play();
     try {
+      await _poserLaSession();
       if (p.processingState == ProcessingState.completed) {
         await p.seek(Duration.zero);
       }
@@ -130,6 +192,10 @@ class VoicemailGreetingPlayer {
   }
 
   /// À la fermeture de la feuille : le son ne doit pas survivre à l'écran.
+  ///
+  /// Rend aussi le focus audio. Sans ça, la musique de l'utilisateur resterait
+  /// baissée après l'annonce — c'est exactement le défaut que `ringtone_service`
+  /// a dû corriger sur sa propre sonnerie.
   Future<void> release() async {
     _pret = null;
     _enVol = null;
@@ -139,5 +205,12 @@ class VoicemailGreetingPlayer {
       await p?.stop();
       await p?.dispose();
     } catch (_) {}
+    if (_sessionPosee) {
+      _sessionPosee = false;
+      try {
+        final session = await AudioSession.instance;
+        await session.setActive(false);
+      } catch (_) {}
+    }
   }
 }
