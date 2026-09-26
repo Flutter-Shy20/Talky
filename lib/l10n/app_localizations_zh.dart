@@ -6775,4 +6775,126 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errCodeRequestNotPending => '此申请已发生变化。请刷新页面。';
+
+  @override
+  String get phoneChangeTitle => '选择我的号码';
+
+  @override
+  String get phoneChangeProduct => 'Alanya 号码';
+
+  @override
+  String get phoneChangeCurrent => '您当前的号码';
+
+  @override
+  String phoneChangeIntro(String amount) {
+    return '选择一个更好记的 8 位号码，价格 $amount。它将替换您当前的号码，包括用于登录。';
+  }
+
+  @override
+  String get phoneChangeFieldLabel => '想要的号码';
+
+  @override
+  String get phoneChangeCheck => '查询';
+
+  @override
+  String get phoneChangeMustBe8 => '请输入 8 位数字的号码。';
+
+  @override
+  String get phoneChangeAvailable => '可用';
+
+  @override
+  String get phoneChangeReasonSame => '这已经是您的号码。';
+
+  @override
+  String get phoneChangeReasonTaken => '该号码已被使用，请换一个。';
+
+  @override
+  String get phoneChangeReasonSetAside => '该号码由 Alanya 保留，请换一个。';
+
+  @override
+  String get phoneChangeReasonHeld => '有人正在选择该号码。请几分钟后再试，或换一个。';
+
+  @override
+  String get phoneChangeReasonQuarantine => '该号码刚被其持有人释放，暂不可用，请换一个。';
+
+  @override
+  String phoneChangeReserveAndPay(String amount) {
+    return '预留并支付 $amount';
+  }
+
+  @override
+  String get phoneChangeUseCredit => '确认此号码';
+
+  @override
+  String get phoneChangeCreditBanner => '您的更换已付款，但所选号码在此期间被占用。请另选一个，无需再次付款。';
+
+  @override
+  String phoneChangeHeldUntil(String phone, String time) {
+    return '$phone 已为您预留至 $time。';
+  }
+
+  @override
+  String get phoneChangeReleaseHold => '释放此号码';
+
+  @override
+  String phoneChangePending(String phone) {
+    return '$phone 的付款正在进行中。';
+  }
+
+  @override
+  String get phoneChangeSeeWaiting => '查看付款进度';
+
+  @override
+  String get phoneChangeLoginNote =>
+      '更换后，请使用新号码登录。您的聊天、联系人和群组都会保留。您的旧号码不会立即分配给他人。';
+
+  @override
+  String get phoneChangeUnavailable => '暂时无法选择号码。';
+
+  @override
+  String phoneChangeSummaryHeld(String time) {
+    return '为您预留至 $time';
+  }
+
+  @override
+  String get phoneChangeStepApplied => '号码已更换';
+
+  @override
+  String get phoneChangeLeaveHint => '付款确认后您的号码即会更换，即使您离开此页面。';
+
+  @override
+  String get phoneChangeSuccessTitle => '这是您的新号码';
+
+  @override
+  String get phoneChangeSuccessBody => '今后请用它登录。您的聊天、联系人和群组都会保留。';
+
+  @override
+  String get phoneChangeCreditTitle => '付款已确认';
+
+  @override
+  String get phoneChangeCreditBody => '所选号码在此期间被占用。请另选一个，无需再次付款。';
+
+  @override
+  String get phoneChangeChooseAnother => '选择号码';
+
+  @override
+  String get errCodePhonePurchaseUnavailable => '暂不提供选择号码。';
+
+  @override
+  String get errCodeOfficialPhoneFixed => '此账户的号码无法更改。';
+
+  @override
+  String get errCodePhoneNotPurchasable => '只能选择 8 位数字的号码。';
+
+  @override
+  String get errCodePhoneUnavailable => '该号码已不可用，请换一个。';
+
+  @override
+  String get errCodePhoneHoldExpired => '该号码的预留已过期，请重新查询。';
+
+  @override
+  String get errCodePhoneOrderNotFound => '该预留已不存在，请重新开始。';
+
+  @override
+  String get errCodePhoneOrderPending => '已有一笔号码付款正在等待您确认。';
 }

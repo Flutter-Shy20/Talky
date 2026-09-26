@@ -12273,6 +12273,228 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce dossier a changé entre-temps. Rechargez l\'écran.'**
   String get errCodeRequestNotPending;
+
+  /// No description provided for @phoneChangeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir mon numéro'**
+  String get phoneChangeTitle;
+
+  /// No description provided for @phoneChangeProduct.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro Alanya'**
+  String get phoneChangeProduct;
+
+  /// No description provided for @phoneChangeCurrent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre numéro actuel'**
+  String get phoneChangeCurrent;
+
+  /// No description provided for @phoneChangeIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez un numéro à 8 chiffres plus facile à retenir, pour {amount}. Il remplace l\'actuel, y compris pour vous connecter.'**
+  String phoneChangeIntro(String amount);
+
+  /// No description provided for @phoneChangeFieldLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro souhaité'**
+  String get phoneChangeFieldLabel;
+
+  /// No description provided for @phoneChangeCheck.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifier'**
+  String get phoneChangeCheck;
+
+  /// No description provided for @phoneChangeMustBe8.
+  ///
+  /// In fr, this message translates to:
+  /// **'Entrez un numéro à 8 chiffres.'**
+  String get phoneChangeMustBe8;
+
+  /// No description provided for @phoneChangeAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Disponible'**
+  String get phoneChangeAvailable;
+
+  /// No description provided for @phoneChangeReasonSame.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est déjà votre numéro.'**
+  String get phoneChangeReasonSame;
+
+  /// No description provided for @phoneChangeReasonTaken.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro est déjà utilisé. Essayez-en un autre.'**
+  String get phoneChangeReasonTaken;
+
+  /// No description provided for @phoneChangeReasonSetAside.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro est réservé par Alanya. Essayez-en un autre.'**
+  String get phoneChangeReasonSetAside;
+
+  /// No description provided for @phoneChangeReasonHeld.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quelqu\'un est en train de prendre ce numéro. Réessayez dans quelques minutes, ou choisissez-en un autre.'**
+  String get phoneChangeReasonHeld;
+
+  /// No description provided for @phoneChangeReasonQuarantine.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro vient d\'être libéré par son titulaire et n\'est pas encore disponible. Essayez-en un autre.'**
+  String get phoneChangeReasonQuarantine;
+
+  /// No description provided for @phoneChangeReserveAndPay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réserver et payer {amount}'**
+  String phoneChangeReserveAndPay(String amount);
+
+  /// No description provided for @phoneChangeUseCredit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider ce numéro'**
+  String get phoneChangeUseCredit;
+
+  /// No description provided for @phoneChangeCreditBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre changement est déjà payé, mais le numéro choisi a été pris entre-temps. Choisissez-en un autre : rien ne vous sera redemandé.'**
+  String get phoneChangeCreditBanner;
+
+  /// No description provided for @phoneChangeHeldUntil.
+  ///
+  /// In fr, this message translates to:
+  /// **'{phone} est réservé pour vous jusqu\'à {time}.'**
+  String phoneChangeHeldUntil(String phone, String time);
+
+  /// No description provided for @phoneChangeReleaseHold.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libérer ce numéro'**
+  String get phoneChangeReleaseHold;
+
+  /// No description provided for @phoneChangePending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paiement en cours pour le {phone}.'**
+  String phoneChangePending(String phone);
+
+  /// No description provided for @phoneChangeSeeWaiting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivre le paiement'**
+  String get phoneChangeSeeWaiting;
+
+  /// No description provided for @phoneChangeLoginNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Après le changement, connectez-vous avec le nouveau numéro. Vos conversations, contacts et groupes vous suivent. Votre ancien numéro ne sera pas redonné tout de suite à quelqu\'un d\'autre.'**
+  String get phoneChangeLoginNote;
+
+  /// No description provided for @phoneChangeUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le choix du numéro n\'est pas disponible pour le moment.'**
+  String get phoneChangeUnavailable;
+
+  /// No description provided for @phoneChangeSummaryHeld.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réservé pour vous jusqu\'à {time}'**
+  String phoneChangeSummaryHeld(String time);
+
+  /// No description provided for @phoneChangeStepApplied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro changé'**
+  String get phoneChangeStepApplied;
+
+  /// No description provided for @phoneChangeLeaveHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre numéro changera dès la confirmation, même si vous quittez cet écran.'**
+  String get phoneChangeLeaveHint;
+
+  /// No description provided for @phoneChangeSuccessTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voici votre nouveau numéro'**
+  String get phoneChangeSuccessTitle;
+
+  /// No description provided for @phoneChangeSuccessBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est lui qui sert désormais à vous connecter. Vos conversations, contacts et groupes vous suivent.'**
+  String get phoneChangeSuccessBody;
+
+  /// No description provided for @phoneChangeCreditTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paiement confirmé'**
+  String get phoneChangeCreditTitle;
+
+  /// No description provided for @phoneChangeCreditBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le numéro choisi a été pris entre-temps. Choisissez-en un autre : rien ne vous sera redemandé.'**
+  String get phoneChangeCreditBody;
+
+  /// No description provided for @phoneChangeChooseAnother.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un numéro'**
+  String get phoneChangeChooseAnother;
+
+  /// No description provided for @errCodePhonePurchaseUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le choix du numéro n\'est pas encore proposé.'**
+  String get errCodePhonePurchaseUnavailable;
+
+  /// No description provided for @errCodeOfficialPhoneFixed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le numéro de ce compte ne peut pas changer.'**
+  String get errCodeOfficialPhoneFixed;
+
+  /// No description provided for @errCodePhoneNotPurchasable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les numéros à 8 chiffres peuvent être choisis.'**
+  String get errCodePhoneNotPurchasable;
+
+  /// No description provided for @errCodePhoneUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro n\'est plus disponible. Essayez-en un autre.'**
+  String get errCodePhoneUnavailable;
+
+  /// No description provided for @errCodePhoneHoldExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'La réservation de ce numéro a expiré. Vérifiez-le à nouveau.'**
+  String get errCodePhoneHoldExpired;
+
+  /// No description provided for @errCodePhoneOrderNotFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette réservation n\'existe plus. Recommencez.'**
+  String get errCodePhoneOrderNotFound;
+
+  /// No description provided for @errCodePhoneOrderPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un paiement de numéro attend déjà votre confirmation.'**
+  String get errCodePhoneOrderPending;
 }
 
 class _AppLocalizationsDelegate

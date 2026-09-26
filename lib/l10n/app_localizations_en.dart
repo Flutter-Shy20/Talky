@@ -7073,4 +7073,142 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errCodeRequestNotPending =>
       'This request changed in the meantime. Reload the screen.';
+
+  @override
+  String get phoneChangeTitle => 'Choose my number';
+
+  @override
+  String get phoneChangeProduct => 'Alanya number';
+
+  @override
+  String get phoneChangeCurrent => 'Your current number';
+
+  @override
+  String phoneChangeIntro(String amount) {
+    return 'Choose an 8-digit number that\'s easier to remember, for $amount. It replaces your current one, including to sign in.';
+  }
+
+  @override
+  String get phoneChangeFieldLabel => 'Number you want';
+
+  @override
+  String get phoneChangeCheck => 'Check';
+
+  @override
+  String get phoneChangeMustBe8 => 'Enter an 8-digit number.';
+
+  @override
+  String get phoneChangeAvailable => 'Available';
+
+  @override
+  String get phoneChangeReasonSame => 'This is already your number.';
+
+  @override
+  String get phoneChangeReasonTaken =>
+      'This number is already in use. Try another one.';
+
+  @override
+  String get phoneChangeReasonSetAside =>
+      'This number is reserved by Alanya. Try another one.';
+
+  @override
+  String get phoneChangeReasonHeld =>
+      'Someone is taking this number right now. Try again in a few minutes, or choose another one.';
+
+  @override
+  String get phoneChangeReasonQuarantine =>
+      'This number was just released by its owner and isn\'t available yet. Try another one.';
+
+  @override
+  String phoneChangeReserveAndPay(String amount) {
+    return 'Reserve and pay $amount';
+  }
+
+  @override
+  String get phoneChangeUseCredit => 'Confirm this number';
+
+  @override
+  String get phoneChangeCreditBanner =>
+      'Your change is already paid for, but the number you chose was taken in the meantime. Choose another one — you won\'t be charged again.';
+
+  @override
+  String phoneChangeHeldUntil(String phone, String time) {
+    return '$phone is reserved for you until $time.';
+  }
+
+  @override
+  String get phoneChangeReleaseHold => 'Release this number';
+
+  @override
+  String phoneChangePending(String phone) {
+    return 'Payment in progress for $phone.';
+  }
+
+  @override
+  String get phoneChangeSeeWaiting => 'Follow the payment';
+
+  @override
+  String get phoneChangeLoginNote =>
+      'After the change, sign in with your new number. Your chats, contacts and groups come with you. Your old number won\'t be given to anyone else right away.';
+
+  @override
+  String get phoneChangeUnavailable =>
+      'Choosing a number isn\'t available right now.';
+
+  @override
+  String phoneChangeSummaryHeld(String time) {
+    return 'Reserved for you until $time';
+  }
+
+  @override
+  String get phoneChangeStepApplied => 'Number changed';
+
+  @override
+  String get phoneChangeLeaveHint =>
+      'Your number will change as soon as the payment is confirmed, even if you leave this screen.';
+
+  @override
+  String get phoneChangeSuccessTitle => 'Here\'s your new number';
+
+  @override
+  String get phoneChangeSuccessBody =>
+      'It\'s now the one you sign in with. Your chats, contacts and groups come with you.';
+
+  @override
+  String get phoneChangeCreditTitle => 'Payment confirmed';
+
+  @override
+  String get phoneChangeCreditBody =>
+      'The number you chose was taken in the meantime. Choose another one — you won\'t be charged again.';
+
+  @override
+  String get phoneChangeChooseAnother => 'Choose a number';
+
+  @override
+  String get errCodePhonePurchaseUnavailable =>
+      'Choosing a number isn\'t offered yet.';
+
+  @override
+  String get errCodeOfficialPhoneFixed =>
+      'This account\'s number can\'t change.';
+
+  @override
+  String get errCodePhoneNotPurchasable =>
+      'Only 8-digit numbers can be chosen.';
+
+  @override
+  String get errCodePhoneUnavailable =>
+      'This number is no longer available. Try another one.';
+
+  @override
+  String get errCodePhoneHoldExpired =>
+      'Your reservation for this number has expired. Check it again.';
+
+  @override
+  String get errCodePhoneOrderNotFound =>
+      'This reservation no longer exists. Start again.';
+
+  @override
+  String get errCodePhoneOrderPending =>
+      'A number payment is already waiting for your confirmation.';
 }
