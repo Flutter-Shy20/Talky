@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart' show PlayerState;
 import 'package:provider/provider.dart';
 
 import '../../core/db/app_database.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/services/call/voicemail_greeting_player.dart';
 import '../../core/services/call/voicemail_provider.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_dimens.dart';
@@ -51,6 +55,15 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
     if (mounted) setState(() => _loading = false);
   }
 
+  @override
+  void dispose() {
+    _abonnementAnnonce?.cancel();
+    // Le son ne doit pas survivre à l'écran, et le focus audio doit être rendu :
+    // sinon la musique de l'utilisateur resterait baissée après coup.
+    unawaited(VoicemailGreetingPlayer.instance.release());
+    super.dispose();
+  }
+
   VoicemailSchedule get _schedule =>
       context.read<VoicemailProvider>().schedule ?? const VoicemailSchedule();
 
@@ -70,6 +83,43 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
       if (!mounted) return;
       afficherErreur(context, e, domaine: ErrorDomain.appel);
     }
+  }
+
+  // ── Écoute de sa propre annonce ───────────────────────────────────────────
+
+  /// Vrai tant que l'annonce joue. Rafraîchi par l'abonnement à l'état du
+  /// lecteur, qui signale aussi la fin de lecture — sinon le bouton resterait
+  /// bloqué sur « Couper ».
+  bool _annonceJoue = false;
+  StreamSubscription<PlayerState>? _abonnementAnnonce;
+  String? _urlPrechargee;
+
+  Future<void> _ecouterAnnonce(String url) async {
+    final lecteur = VoicemailGreetingPlayer.instance;
+    if (lecteur.isPlaying) {
+      await lecteur.pause();
+      if (mounted) setState(() => _annonceJoue = false);
+      return;
+    }
+
+    // Un seul préchargement par URL : réécouter ne retélécharge pas, et
+    // réenregistrer change l'URL, donc l'ancienne lecture ne peut pas être
+    // servie à la place de la nouvelle.
+    if (_urlPrechargee != url) {
+      lecteur.prefetch(url);
+      _urlPrechargee = url;
+      await _abonnementAnnonce?.cancel();
+      _abonnementAnnonce = null;
+    }
+
+    await lecteur.play();
+    if (!mounted) return;
+    // Après `play()`, pas avant : le flux d'état n'existe qu'une fois le
+    // lecteur construit.
+    _abonnementAnnonce ??= lecteur.stateStream?.listen((_) {
+      if (mounted) setState(() => _annonceJoue = lecteur.isPlaying);
+    });
+    setState(() => _annonceJoue = lecteur.isPlaying);
   }
 
   Future<void> _supprimerAnnonce() async {
@@ -236,6 +286,27 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
                             : l10n.voicemailGreetingSet(s.greetingSeconds ?? 0),
                         onTap: () => showGreetingRecorder(context),
                       ),
+                      // Écouter ce qu'on a enregistré : sans ça, on ne sait pas
+                      // ce que les appelants entendent, et on ne peut que
+                      // réenregistrer à l'aveugle pour vérifier.
+                      if (s.greetingUrl != null)
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
+                          leading: Icon(
+                            _annonceJoue
+                                ? Icons.pause_circle_outline
+                                : Icons.play_circle_outline,
+                            color: context.colors.primary,
+                          ),
+                          title: Text(
+                            _annonceJoue
+                                ? l10n.voicemailGreetingPause
+                                : l10n.voicemailGreetingListen,
+                            style: TextStyle(color: context.colors.primary),
+                          ),
+                          onTap: () => _ecouterAnnonce(s.greetingUrl!),
+                        ),
                       if (s.greetingUrl != null)
                         ListTile(
                           contentPadding: const EdgeInsets.symmetric(

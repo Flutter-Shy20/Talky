@@ -2123,6 +2123,9 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get voicemailGreetingListen => 'Écouter l\'annonce';
+
+  @override
   String get voicemailGreetingDelete => 'Supprimer l\'annonce';
 
   @override
