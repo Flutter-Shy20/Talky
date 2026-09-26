@@ -12495,6 +12495,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Un paiement de numéro attend déjà votre confirmation.'**
   String get errCodePhoneOrderPending;
+
+  /// No description provided for @accountSecurityPhoneSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer pour un numéro plus facile à retenir · {amount}'**
+  String accountSecurityPhoneSubtitle(String amount);
+
+  /// No description provided for @accountSecurityPhonePending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changement en cours vers le {phone}'**
+  String accountSecurityPhonePending(String phone);
+
+  /// No description provided for @accountSecurityPhoneCredit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changement payé : choisissez votre numéro'**
+  String get accountSecurityPhoneCredit;
 }
 
 class _AppLocalizationsDelegate

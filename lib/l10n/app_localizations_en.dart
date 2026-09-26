@@ -7211,4 +7211,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errCodePhoneOrderPending =>
       'A number payment is already waiting for your confirmation.';
+
+  @override
+  String accountSecurityPhoneSubtitle(String amount) {
+    return 'Switch to an easier-to-remember number · $amount';
+  }
+
+  @override
+  String accountSecurityPhonePending(String phone) {
+    return 'Change to $phone in progress';
+  }
+
+  @override
+  String get accountSecurityPhoneCredit => 'Change paid: choose your number';
 }

@@ -3964,5 +3964,10 @@
   "errCodePhoneUnavailable": "Ce numéro n'est plus disponible. Essayez-en un autre.",
   "errCodePhoneHoldExpired": "La réservation de ce numéro a expiré. Vérifiez-le à nouveau.",
   "errCodePhoneOrderNotFound": "Cette réservation n'existe plus. Recommencez.",
-  "errCodePhoneOrderPending": "Un paiement de numéro attend déjà votre confirmation."
+  "errCodePhoneOrderPending": "Un paiement de numéro attend déjà votre confirmation.",
+  "accountSecurityPhoneSubtitle": "Changer pour un numéro plus facile à retenir · {amount}",
+  "@accountSecurityPhoneSubtitle": {"placeholders": {"amount": {"type": "String"}}},
+  "accountSecurityPhonePending": "Changement en cours vers le {phone}",
+  "@accountSecurityPhonePending": {"placeholders": {"phone": {"type": "String"}}},
+  "accountSecurityPhoneCredit": "Changement payé : choisissez votre numéro"
 }

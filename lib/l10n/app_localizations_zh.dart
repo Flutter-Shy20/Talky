@@ -6897,4 +6897,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errCodePhoneOrderPending => '已有一笔号码付款正在等待您确认。';
+
+  @override
+  String accountSecurityPhoneSubtitle(String amount) {
+    return '更换为更好记的号码 · $amount';
+  }
+
+  @override
+  String accountSecurityPhonePending(String phone) {
+    return '正在更换为 $phone';
+  }
+
+  @override
+  String get accountSecurityPhoneCredit => '更换已付款：请选择您的号码';
 }

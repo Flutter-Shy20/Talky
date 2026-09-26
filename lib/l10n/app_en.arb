@@ -3177,5 +3177,8 @@
   "errCodePhoneUnavailable": "This number is no longer available. Try another one.",
   "errCodePhoneHoldExpired": "Your reservation for this number has expired. Check it again.",
   "errCodePhoneOrderNotFound": "This reservation no longer exists. Start again.",
-  "errCodePhoneOrderPending": "A number payment is already waiting for your confirmation."
+  "errCodePhoneOrderPending": "A number payment is already waiting for your confirmation.",
+  "accountSecurityPhoneSubtitle": "Switch to an easier-to-remember number · {amount}",
+  "accountSecurityPhonePending": "Change to {phone} in progress",
+  "accountSecurityPhoneCredit": "Change paid: choose your number"
 }

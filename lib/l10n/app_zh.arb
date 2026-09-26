@@ -2117,5 +2117,8 @@
   "errCodePhoneUnavailable": "该号码已不可用，请换一个。",
   "errCodePhoneHoldExpired": "该号码的预留已过期，请重新查询。",
   "errCodePhoneOrderNotFound": "该预留已不存在，请重新开始。",
-  "errCodePhoneOrderPending": "已有一笔号码付款正在等待您确认。"
+  "errCodePhoneOrderPending": "已有一笔号码付款正在等待您确认。",
+  "accountSecurityPhoneSubtitle": "更换为更好记的号码 · {amount}",
+  "accountSecurityPhonePending": "正在更换为 {phone}",
+  "accountSecurityPhoneCredit": "更换已付款：请选择您的号码"
 }

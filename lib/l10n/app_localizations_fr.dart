@@ -7297,4 +7297,18 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errCodePhoneOrderPending =>
       'Un paiement de numéro attend déjà votre confirmation.';
+
+  @override
+  String accountSecurityPhoneSubtitle(String amount) {
+    return 'Changer pour un numéro plus facile à retenir · $amount';
+  }
+
+  @override
+  String accountSecurityPhonePending(String phone) {
+    return 'Changement en cours vers le $phone';
+  }
+
+  @override
+  String get accountSecurityPhoneCredit =>
+      'Changement payé : choisissez votre numéro';
 }
