@@ -119,8 +119,11 @@ class _ChangeAlanyaPhoneScreenState extends State<ChangeAlanyaPhoneScreen> {
       final r = PhoneHoldResult.fromJson(await _api.holdAlanyaPhone(phone));
       if (!mounted) return;
       if (r.applied) {
-        await context.read<AuthProvider>().refreshProfile();
-        if (mounted) setState(() => _appliedPhone = r.phone);
+        // Le numéro est posé côté serveur : une relecture ratée du profil ne
+        // doit pas le faire passer pour un échec.
+        final auth = context.read<AuthProvider>();
+        unawaited(auth.refreshProfile().catchError((Object _) {}));
+        setState(() => _appliedPhone = r.phone);
         return;
       }
       final order = r.order;
@@ -171,6 +174,9 @@ class _ChangeAlanyaPhoneScreenState extends State<ChangeAlanyaPhoneScreen> {
     final api = _api;
     final auth = context.read<AuthProvider>();
     final amount = formatPlusAmount(context, offer.price);
+    // Numéro posé ou crédit : c'est le serveur qui le dit, relu après la
+    // confirmation — pas le profil local, qui a pu ne pas se rafraîchir.
+    var credit = false;
 
     final done = await Navigator.push<bool>(
       context,
@@ -195,9 +201,16 @@ class _ChangeAlanyaPhoneScreenState extends State<ChangeAlanyaPhoneScreen> {
           activatedStep: l10n.phoneChangeStepApplied,
           leaveHint: l10n.phoneChangeLeaveHint,
           // Le serveur a changé le numéro dans la transaction du paiement :
-          // le profil relu le porte déjà, ou pas (crédit).
-          onSucceeded: (_) => auth.refreshProfile(),
-          succeeded: (context, _) => _PhoneSucceeded(expected: order.phone),
+          // le profil relu le porte déjà — sauf crédit, que l'offre signale.
+          onSucceeded: (_) async {
+            try {
+              credit = PhoneOffer.fromJson(await api.getPhoneOffer()).credit;
+            } catch (_) {}
+            await auth.refreshProfile();
+          },
+          succeeded: (context, _) => credit
+              ? const _PhoneCreditOutcome()
+              : _PhoneAppliedOutcome(phone: order.phone),
           // Après un échec la commande est abandonnée : on revient choisir,
           // le numéro toujours saisi.
           onRetry: () => Navigator.pop(context),
@@ -607,18 +620,14 @@ class _PhoneSummary extends StatelessWidget {
   }
 }
 
-/// Fin du paiement : le numéro est posé — ou, rare, il a été pris dans
-/// l'intervalle et le paiement devient un crédit.
-class _PhoneSucceeded extends StatelessWidget {
-  const _PhoneSucceeded({required this.expected});
-
-  final String expected;
+/// Paiement confirmé, mais le numéro a été pris dans l'intervalle (course
+/// rarissime) : le paiement devient un crédit, on choisit un autre numéro.
+class _PhoneCreditOutcome extends StatelessWidget {
+  const _PhoneCreditOutcome();
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final current = context.watch<AuthProvider>().currentUser?.alanyaPhone;
-    if (current == expected) return _PhoneAppliedOutcome(phone: expected);
     return CheckoutOutcome(
       icon: Icons.info_outline_rounded,
       iconColor: context.semantic.info,

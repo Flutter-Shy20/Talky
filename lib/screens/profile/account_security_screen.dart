@@ -63,7 +63,12 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     );
     if (!mounted) return;
     await _loadPhoneOffer();
-    if (mounted) await context.read<AuthProvider>().refreshProfile();
+    if (!mounted) return;
+    try {
+      await context.read<AuthProvider>().refreshProfile();
+    } catch (e, st) {
+      AppLog.w('AccountSecurity', 'Profil après le choix du numéro', e, st);
+    }
   }
 
   String _phoneSubtitle(PhoneOffer offer) {

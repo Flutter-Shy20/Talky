@@ -11,6 +11,7 @@ import '../../core/services/billing/billing_models.dart';
 import '../../core/services/billing/entitlement_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/app_log.dart';
 import '../../talky_api_client.dart';
 import 'plus_visuals.dart';
 
@@ -229,7 +230,13 @@ class _MobileMoneyCheckoutState extends State<MobileMoneyCheckout> {
   Future<void> _finish(PlusPayment payment) async {
     _stopWaiting();
     if (payment.status == PaymentStatus.succeeded) {
-      await widget.onSucceeded?.call(payment);
+      // La confirmation est acquise : une relecture qui échoue (réseau) ne
+      // doit pas laisser l'écran figé sur l'attente, les minuteurs arrêtés.
+      try {
+        await widget.onSucceeded?.call(payment);
+      } catch (e, st) {
+        AppLog.w('Paiement', 'Relecture après confirmation', e, st);
+      }
     }
     if (!mounted) return;
     setState(() {
