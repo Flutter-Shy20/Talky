@@ -29,7 +29,20 @@ class AuthProvider extends ChangeNotifier {
 
   AuthProvider({TalkyApiClient? apiClient, StorageService? storage})
       : _apiClient = apiClient ?? TalkyApiClient(),
-        _storage = storage ?? StorageService();
+        _storage = storage ?? StorageService() {
+    // Enregistré une fois : le client le rattache à chaque nouvelle socket.
+    _apiClient.onSocketEvent(SocketEvents.accountPhoneChanged, _onPhoneChanged);
+  }
+
+  /// Le numéro a changé, sur cet appareil ou un autre du compte. Le profil
+  /// affiché ne doit pas garder l'ancien jusqu'au prochain retour au premier
+  /// plan : c'est avec le nouveau qu'on se connectera.
+  void _onPhoneChanged(dynamic _) {
+    if (_currentUser == null) return;
+    refreshProfile().catchError((Object e) {
+      debugPrint('[AuthProvider] profil après changement de numéro : $e');
+    });
+  }
 
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;

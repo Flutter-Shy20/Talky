@@ -2124,6 +2124,11 @@ class SocketEvents {
   /// `GET /billing/me`.
   static const entitlementsUpdated = 'entitlements:updated';
 
+  /// Le numéro Alanya du compte vient de changer (numéro choisi, payé) :
+  /// { phone }. Chaque appareil relit son profil — le numéro affiché, le code
+  /// QR, et ce qu'il faudra taper à la prochaine connexion.
+  static const accountPhoneChanged = 'account:phone_changed';
+
   /// La planification du répondeur a changé depuis un autre appareil du même
   /// compte : le créneau complet, au format de `GET /auth/voicemail-schedule`.
   /// Le réglage est par compte, le bandeau est par appareil — sans cet
