@@ -1246,6 +1246,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
           debugPrint('[AuthWrapper] PresenceService.detach échoué: $e');
         }
         try {
+          MessageTranslationService.maybeInstance?.unbind();
           Provider.of<ChatProvider>(context, listen: false).unbind();
           Provider.of<ChatProvider>(context, listen: false).onSocketReadyHook = null;
         } catch (e) {
@@ -1283,6 +1284,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     if (_boundUserId != null && _boundUserId != myId) {
       _clearCallLogBindings();
       try {
+        MessageTranslationService.maybeInstance?.unbind();
         Provider.of<ChatProvider>(context, listen: false).unbind();
         Provider.of<StatusProvider>(context, listen: false).unbind();
         // Repart d'un état de présence vierge pour le nouveau compte.
@@ -1320,6 +1322,9 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     if (await _shouldOfferRestore(apiClient)) return;
 
     try {
+      // Avant le bind du chat : les premiers messages synchronisés doivent déjà
+      // savoir si le pair de leur conversation ouvre la traduction.
+      MessageTranslationService.maybeInstance?.bind(myId);
       await chatProvider.bind(myId);
       if (mounted) {
         final cache = Provider.of<LocalCacheRepository>(context, listen: false);
