@@ -6601,7 +6601,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentStatusPending => '处理中';
 
   @override
-  String get plusLockedTranslation => '翻译为 Alanya Plus 专享功能。';
+  String get plusLockedTranslation => '未订阅时，翻译仅适用于与 Alanya Plus 联系人的对话。';
 
   @override
   String get plusLockedBackup => '新的备份为 Alanya Plus 专享功能。您现有的备份仍可恢复。';

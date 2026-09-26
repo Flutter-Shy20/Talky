@@ -6875,7 +6875,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentStatusPending => 'Pending';
 
   @override
-  String get plusLockedTranslation => 'Translation is part of Alanya Plus.';
+  String get plusLockedTranslation =>
+      'Without a subscription, translation only applies to your conversations with an Alanya Plus contact.';
 
   @override
   String get plusLockedBackup =>

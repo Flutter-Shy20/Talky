@@ -6958,7 +6958,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get plusLockedTranslation =>
-      'La traduction est réservée à Alanya Plus.';
+      'Sans abonnement, la traduction ne s\'applique qu\'à vos conversations avec un contact Alanya Plus.';
 
   @override
   String get plusLockedBackup =>

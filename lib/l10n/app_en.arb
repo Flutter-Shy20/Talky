@@ -3085,7 +3085,7 @@
   "paymentStatusExpired": "Expired",
   "paymentStatusRefunded": "Refunded",
   "paymentStatusPending": "Pending",
-  "plusLockedTranslation": "Translation is part of Alanya Plus.",
+  "plusLockedTranslation": "Without a subscription, translation only applies to your conversations with an Alanya Plus contact.",
   "plusLockedBackup": "New backups are part of Alanya Plus. Your existing backups can still be restored.",
   "plusLockedRingtones": "List ringtones are part of Alanya Plus. Your settings are kept and will come back when you subscribe.",
   "plusLockedTrips": "New trips and SOS outside a trip are part of Alanya Plus. A trip already under way keeps its SOS until it ends.",

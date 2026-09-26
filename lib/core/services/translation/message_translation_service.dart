@@ -7,6 +7,7 @@ import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
+import '../../utils/conversation_display.dart';
 import '../billing/entitlement_service.dart';
 import '../billing/entitlements.dart';
 import 'translatable_content.dart';
@@ -80,6 +81,11 @@ class MessageTranslationService {
   final Set<int> _pendingScans = <int>{};
   Timer? _scanTimer;
 
+  /// Compte connecté : sans lui, impossible de désigner le pair d'une
+  /// conversation. Posé à l'ouverture de session, remis à zéro à la fermeture
+  /// pour qu'un compte n'hérite pas du droit ouvert au précédent.
+  int _myId = 0;
+
   LanguageIdentifier? _identifier;
   bool _draining = false;
   bool _paused = false;
@@ -104,6 +110,19 @@ class MessageTranslationService {
   void resume() {
     _paused = false;
     _drain();
+  }
+
+  /// Ouverture de session : le service saura qui est « l'autre » dans chaque
+  /// conversation, donc si ce contact ouvre la traduction.
+  void bind(int myId) {
+    if (myId == _myId) return;
+    _myId = myId;
+    _convEnabledMemo.clear();
+  }
+
+  void unbind() {
+    _myId = 0;
+    _convEnabledMemo.clear();
   }
 
   Future<void> dispose() async {
@@ -363,14 +382,27 @@ class MessageTranslationService {
 
   // ── Filtres ─────────────────────────────────────────────────────────
 
+  /// Le droit de traduire cette conversation : le sien, ou celui du pair.
+  ///
+  /// Un contact abonné ouvre la traduction des messages échangés avec lui,
+  /// même pour qui ne l'est pas — la règle ne vaut que pour cette
+  /// conversation-là, jamais pour les autres.
+  Future<bool> _allowedFor(int conversationID) async {
+    if (EntitlementService.allows(PlusFeature.translation)) return true;
+    if (_myId == 0) return false;
+    final conv = await _dao.getConversation(conversationID);
+    return conv != null && conversationPeerHasPlus(conv, _myId);
+  }
+
   /// La traduction est-elle active pour cette conversation ?
   ///
   /// L'override de conversation prime sur le réglage global : `1` force la
   /// traduction même si le global est à off, `0` l'interdit même s'il est à on.
   Future<bool> _isEnabledFor(int conversationID) async {
-    // Hors du mémo : l'abonnement peut prendre fin (ou reprendre) pendant que
-    // la conversation est ouverte, le réglage de l'utilisateur, lui, reste.
-    if (!EntitlementService.allows(PlusFeature.translation)) return false;
+    // Hors du mémo : l'abonnement — le sien ou celui du pair — peut prendre fin
+    // (ou reprendre) pendant que la conversation est ouverte, le réglage de
+    // l'utilisateur, lui, reste.
+    if (!await _allowedFor(conversationID)) return false;
     final memo = _convEnabledMemo[conversationID];
     if (memo != null) return memo;
 
