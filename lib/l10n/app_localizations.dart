@@ -11941,7 +11941,7 @@ abstract class AppLocalizations {
   /// No description provided for @plusLockedTranslation.
   ///
   /// In fr, this message translates to:
-  /// **'La traduction est réservée à Alanya Plus.'**
+  /// **'Sans abonnement, la traduction ne s\'applique qu\'à vos conversations avec un contact Alanya Plus.'**
   String get plusLockedTranslation;
 
   /// No description provided for @plusLockedBackup.
