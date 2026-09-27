@@ -1938,6 +1938,177 @@ class AppLocalizationsZh extends AppLocalizations {
   String get missed => '未接';
 
   @override
+  String voicemailPeerUnavailable(String name) {
+    return '$name 暂时无法接听';
+  }
+
+  @override
+  String get voicemailLeaveMessage => '留下语音留言，对方会在你们的对话中收到。';
+
+  @override
+  String get voicemailRecord => '录音';
+
+  @override
+  String get voicemailSend => '发送';
+
+  @override
+  String get voicemailDiscard => '取消';
+
+  @override
+  String get voicemailNotNow => '暂不留言';
+
+  @override
+  String get voicemailSent => '留言已发送';
+
+  @override
+  String get voicemailBannerActive => '语音信箱已开启';
+
+  @override
+  String voicemailBannerUntil(String time) {
+    return '语音信箱已开启，至 $time';
+  }
+
+  @override
+  String get voicemailBannerDisable => '关闭';
+
+  @override
+  String get voicemailDisabled => '语音信箱已关闭';
+
+  @override
+  String get voicemailScheduleTitle => '语音信箱';
+
+  @override
+  String get voicemailEnabled => '定时语音信箱';
+
+  @override
+  String get voicemailEnabledSubtitle => '在这些时段内手机不会响铃，来电者可以留言';
+
+  @override
+  String voicemailTimezoneHint(String timezone) {
+    return '按 $timezone 时区计算';
+  }
+
+  @override
+  String get voicemailBypassTitle => '仍可联系到我';
+
+  @override
+  String get voicemailBypassTile => '允许的名单';
+
+  @override
+  String get voicemailBypassNobody => '无人';
+
+  @override
+  String get voicemailBypassHint => '该名单中的成员即使在语音信箱开启时也能让手机响铃。';
+
+  @override
+  String voicemailPeerNoAnswer(String name) {
+    return '$name 没有接听';
+  }
+
+  @override
+  String get voicemailGreetingPause => '停止播放';
+
+  @override
+  String get voicemailGreetingReplay => '再听一次';
+
+  @override
+  String get voicemailGreetingSection => '我的问候语';
+
+  @override
+  String get voicemailGreetingTitle => '录制你的问候语';
+
+  @override
+  String voicemailGreetingHint(int max) {
+    return '转到语音信箱的来电者会听到它。最多 $max 秒。';
+  }
+
+  @override
+  String get voicemailGreetingStop => '完成';
+
+  @override
+  String get voicemailGreetingSaved => '问候语已保存';
+
+  @override
+  String get voicemailGreetingNone => '没有问候语——将显示一段文字';
+
+  @override
+  String voicemailGreetingSet(int seconds) {
+    return '已录制 $seconds 秒';
+  }
+
+  @override
+  String get voicemailGreetingListen => '播放问候语';
+
+  @override
+  String get voicemailGreetingDelete => '删除问候语';
+
+  @override
+  String get voicemailGreetingDeleted => '问候语已删除';
+
+  @override
+  String get voicemailWhenNoAnswer => '当我没有接听时';
+
+  @override
+  String get voicemailAfterDelay => '30 秒后转语音信箱';
+
+  @override
+  String get voicemailAfterDelaySubtitle => '手机会响铃。如果你没有接听、拒接，或线路正忙，来电者可以留言。';
+
+  @override
+  String get voicemailWhenUnavailable => '当我无法接听时';
+
+  @override
+  String get voicemailSlotsEnabled => '定时时段';
+
+  @override
+  String get voicemailSlotsEnabledSubtitle => '在这些时段内手机完全不会响铃';
+
+  @override
+  String get voicemailSlotNone => '没有时段';
+
+  @override
+  String get voicemailSlotAllDay => '全天';
+
+  @override
+  String voicemailSlotOvernight(String range) {
+    return '$range（延续至次日）';
+  }
+
+  @override
+  String voicemailSlotsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个定时时段',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get voicemailQuickHint => '请选择结束时间。每个选项都有结束时间——忘记关闭的语音信箱比不开更糟。';
+
+  @override
+  String get voicemailQuickSchedule => '设置定时时段';
+
+  @override
+  String get voicemailForOneHour => '1 小时';
+
+  @override
+  String get voicemailForFourHours => '4 小时';
+
+  @override
+  String get voicemailUntilMorning => '到明天早上';
+
+  @override
+  String get voicemailUntilCustom => '到指定日期';
+
+  @override
+  String get voicemailDeadlinePast => '该时间已过';
+
+  @override
+  String get voicemailCallStatus => '语音信箱';
+
+  @override
   String get rejected => '已拒接';
 
   @override
@@ -3654,6 +3825,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get qrLoginExplanation => '在已登录的手机上打开 Alanya，进入「账号与安全」，然后扫描此码。';
+
+  @override
+  String get qrLoginDeviceNotTrustedNotice =>
+      '此账户尚未识别这部手机。请用已登录的设备扫描此码。如果无法再使用该设备，请在登录页重置密码。';
 
   @override
   String qrLoginExpiresIn(String time) {
@@ -5918,6 +6093,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errCodeDeviceNotOwner => '此设备无权执行该操作。';
 
   @override
+  String get errCodeDeviceNotTrusted => '此账户尚未识别这部手机。请在已登录的设备上使用二维码登录。';
+
+  @override
   String get errCodeAddAlreadyUsed => '此代码已被使用。';
 
   @override
@@ -6423,7 +6601,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentStatusPending => '处理中';
 
   @override
-  String get plusLockedTranslation => '翻译为 Alanya Plus 专享功能。';
+  String get plusLockedTranslation => '未订阅时，翻译仅适用于与 Alanya Plus 联系人的对话。';
 
   @override
   String get plusLockedBackup => '新的备份为 Alanya Plus 专享功能。您现有的备份仍可恢复。';
@@ -6600,4 +6778,139 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errCodeRequestNotPending => '此申请已发生变化。请刷新页面。';
+
+  @override
+  String get phoneChangeTitle => '选择我的号码';
+
+  @override
+  String get phoneChangeProduct => 'Alanya 号码';
+
+  @override
+  String get phoneChangeCurrent => '您当前的号码';
+
+  @override
+  String phoneChangeIntro(String amount) {
+    return '选择一个更好记的 8 位号码，价格 $amount。它将替换您当前的号码，包括用于登录。';
+  }
+
+  @override
+  String get phoneChangeFieldLabel => '想要的号码';
+
+  @override
+  String get phoneChangeCheck => '查询';
+
+  @override
+  String get phoneChangeMustBe8 => '请输入 8 位数字的号码。';
+
+  @override
+  String get phoneChangeAvailable => '可用';
+
+  @override
+  String get phoneChangeReasonSame => '这已经是您的号码。';
+
+  @override
+  String get phoneChangeReasonTaken => '该号码已被使用，请换一个。';
+
+  @override
+  String get phoneChangeReasonSetAside => '该号码由 Alanya 保留，请换一个。';
+
+  @override
+  String get phoneChangeReasonHeld => '有人正在选择该号码。请几分钟后再试，或换一个。';
+
+  @override
+  String get phoneChangeReasonQuarantine => '该号码刚被其持有人释放，暂不可用，请换一个。';
+
+  @override
+  String phoneChangeReserveAndPay(String amount) {
+    return '预留并支付 $amount';
+  }
+
+  @override
+  String get phoneChangeUseCredit => '确认此号码';
+
+  @override
+  String get phoneChangeCreditBanner => '您的更换已付款，但所选号码在此期间被占用。请另选一个，无需再次付款。';
+
+  @override
+  String phoneChangeHeldUntil(String phone, String time) {
+    return '$phone 已为您预留至 $time。';
+  }
+
+  @override
+  String get phoneChangeReleaseHold => '释放此号码';
+
+  @override
+  String phoneChangePending(String phone) {
+    return '$phone 的付款正在进行中。';
+  }
+
+  @override
+  String get phoneChangeSeeWaiting => '查看付款进度';
+
+  @override
+  String get phoneChangeLoginNote =>
+      '更换后，请使用新号码登录。您的聊天、联系人和群组都会保留。您的旧号码不会立即分配给他人。';
+
+  @override
+  String get phoneChangeUnavailable => '暂时无法选择号码。';
+
+  @override
+  String phoneChangeSummaryHeld(String time) {
+    return '为您预留至 $time';
+  }
+
+  @override
+  String get phoneChangeStepApplied => '号码已更换';
+
+  @override
+  String get phoneChangeLeaveHint => '付款确认后您的号码即会更换，即使您离开此页面。';
+
+  @override
+  String get phoneChangeSuccessTitle => '这是您的新号码';
+
+  @override
+  String get phoneChangeSuccessBody => '今后请用它登录。您的聊天、联系人和群组都会保留。';
+
+  @override
+  String get phoneChangeCreditTitle => '付款已确认';
+
+  @override
+  String get phoneChangeCreditBody => '所选号码在此期间被占用。请另选一个，无需再次付款。';
+
+  @override
+  String get phoneChangeChooseAnother => '选择号码';
+
+  @override
+  String get errCodePhonePurchaseUnavailable => '暂不提供选择号码。';
+
+  @override
+  String get errCodeOfficialPhoneFixed => '此账户的号码无法更改。';
+
+  @override
+  String get errCodePhoneNotPurchasable => '只能选择 8 位数字的号码。';
+
+  @override
+  String get errCodePhoneUnavailable => '该号码已不可用，请换一个。';
+
+  @override
+  String get errCodePhoneHoldExpired => '该号码的预留已过期，请重新查询。';
+
+  @override
+  String get errCodePhoneOrderNotFound => '该预留已不存在，请重新开始。';
+
+  @override
+  String get errCodePhoneOrderPending => '已有一笔号码付款正在等待您确认。';
+
+  @override
+  String accountSecurityPhoneSubtitle(String amount) {
+    return '更换为更好记的号码 · $amount';
+  }
+
+  @override
+  String accountSecurityPhonePending(String phone) {
+    return '正在更换为 $phone';
+  }
+
+  @override
+  String get accountSecurityPhoneCredit => '更换已付款：请选择您的号码';
 }

@@ -3724,6 +3724,306 @@ abstract class AppLocalizations {
   /// **'Manqué'**
   String get missed;
 
+  /// Titre de la feuille de répondeur, côté appelant. L'annonce est générique et composée par le client : le serveur n'envoie aucun texte.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est indisponible'**
+  String voicemailPeerUnavailable(String name);
+
+  /// No description provided for @voicemailLeaveMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Laissez un message vocal, il le recevra dans votre conversation.'**
+  String get voicemailLeaveMessage;
+
+  /// No description provided for @voicemailRecord.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get voicemailRecord;
+
+  /// No description provided for @voicemailSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer'**
+  String get voicemailSend;
+
+  /// No description provided for @voicemailDiscard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get voicemailDiscard;
+
+  /// No description provided for @voicemailNotNow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas maintenant'**
+  String get voicemailNotNow;
+
+  /// No description provided for @voicemailSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Message envoyé'**
+  String get voicemailSent;
+
+  /// No description provided for @voicemailBannerActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur actif'**
+  String get voicemailBannerActive;
+
+  /// Bandeau permanent tant qu'un créneau court. {time} est une heure locale HH:MM. La variante sans heure sert aux créneaux couvrant la journée entière.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur actif jusqu\'à {time}'**
+  String voicemailBannerUntil(String time);
+
+  /// No description provided for @voicemailBannerDisable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver'**
+  String get voicemailBannerDisable;
+
+  /// No description provided for @voicemailDisabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur désactivé'**
+  String get voicemailDisabled;
+
+  /// No description provided for @voicemailScheduleTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur'**
+  String get voicemailScheduleTitle;
+
+  /// No description provided for @voicemailEnabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur planifié'**
+  String get voicemailEnabled;
+
+  /// No description provided for @voicemailEnabledSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur ces créneaux, votre téléphone ne sonne pas et l\'appelant peut laisser un message'**
+  String get voicemailEnabledSubtitle;
+
+  /// Sous les jours de la semaine : le fuseau réellement utilisé par le serveur, pour qu'un compte rattaché au mauvais pays se voie tout de suite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Heures évaluées à {timezone}'**
+  String voicemailTimezoneHint(String timezone);
+
+  /// No description provided for @voicemailBypassTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Peuvent me joindre quand même'**
+  String get voicemailBypassTitle;
+
+  /// No description provided for @voicemailBypassTile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Liste autorisée'**
+  String get voicemailBypassTile;
+
+  /// No description provided for @voicemailBypassNobody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne'**
+  String get voicemailBypassNobody;
+
+  /// No description provided for @voicemailBypassHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.'**
+  String get voicemailBypassHint;
+
+  /// Titre de la feuille quand le téléphone A sonné — délai écoulé ou refus. Distinct de voicemailPeerUnavailable, qui couvre les cas où il n'a pas sonné du tout.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a pas répondu'**
+  String voicemailPeerNoAnswer(String name);
+
+  /// No description provided for @voicemailGreetingPause.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couper l\'annonce'**
+  String get voicemailGreetingPause;
+
+  /// No description provided for @voicemailGreetingReplay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réécouter l\'annonce'**
+  String get voicemailGreetingReplay;
+
+  /// No description provided for @voicemailGreetingSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon annonce'**
+  String get voicemailGreetingSection;
+
+  /// No description provided for @voicemailGreetingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer votre annonce'**
+  String get voicemailGreetingTitle;
+
+  /// Sous-titre de la feuille d'enregistrement de l'annonce.
+  ///
+  /// In fr, this message translates to:
+  /// **'Elle sera jouée à ceux qui tombent sur votre répondeur. {max} secondes au maximum.'**
+  String voicemailGreetingHint(int max);
+
+  /// No description provided for @voicemailGreetingStop.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer'**
+  String get voicemailGreetingStop;
+
+  /// No description provided for @voicemailGreetingSaved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annonce enregistrée'**
+  String get voicemailGreetingSaved;
+
+  /// No description provided for @voicemailGreetingNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune annonce — un texte s\'affichera à la place'**
+  String get voicemailGreetingNone;
+
+  /// Sous-titre de la tuile quand une annonce existe.
+  ///
+  /// In fr, this message translates to:
+  /// **'{seconds} secondes enregistrées'**
+  String voicemailGreetingSet(int seconds);
+
+  /// No description provided for @voicemailGreetingListen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écouter l\'annonce'**
+  String get voicemailGreetingListen;
+
+  /// No description provided for @voicemailGreetingDelete.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer l\'annonce'**
+  String get voicemailGreetingDelete;
+
+  /// No description provided for @voicemailGreetingDeleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annonce supprimée'**
+  String get voicemailGreetingDeleted;
+
+  /// No description provided for @voicemailWhenNoAnswer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quand je ne réponds pas'**
+  String get voicemailWhenNoAnswer;
+
+  /// No description provided for @voicemailAfterDelay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur après 30 secondes'**
+  String get voicemailAfterDelay;
+
+  /// No description provided for @voicemailAfterDelaySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le téléphone sonne. Si vous ne décrochez pas, si vous refusez l\'appel ou si votre ligne est occupée, l\'appelant peut laisser un message.'**
+  String get voicemailAfterDelaySubtitle;
+
+  /// No description provided for @voicemailWhenUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quand je suis indisponible'**
+  String get voicemailWhenUnavailable;
+
+  /// No description provided for @voicemailSlotsEnabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plages programmées'**
+  String get voicemailSlotsEnabled;
+
+  /// No description provided for @voicemailSlotsEnabledSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur ces périodes, votre téléphone ne sonne pas du tout'**
+  String get voicemailSlotsEnabledSubtitle;
+
+  /// No description provided for @voicemailSlotNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune plage'**
+  String get voicemailSlotNone;
+
+  /// No description provided for @voicemailSlotAllDay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toute la journée'**
+  String get voicemailSlotAllDay;
+
+  /// Une plage dont l'heure de fin précède l'heure de début franchit minuit et déborde sur le jour suivant. Il faut le dire, sinon le réglage paraît absurde.
+  ///
+  /// In fr, this message translates to:
+  /// **'{range} (jusqu\'au lendemain)'**
+  String voicemailSlotOvernight(String range);
+
+  /// Sous-titre de l'entrée Répondeur dans les réglages de notifications.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, one{1 plage programmée} other{{count} plages programmées}}'**
+  String voicemailSlotsCount(int count);
+
+  /// No description provided for @voicemailQuickHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez jusqu\'à quand. Toutes les options ont une fin : un répondeur qu\'on oublie est pire que pas de répondeur.'**
+  String get voicemailQuickHint;
+
+  /// No description provided for @voicemailQuickSchedule.
+  ///
+  /// In fr, this message translates to:
+  /// **'Planifier des créneaux'**
+  String get voicemailQuickSchedule;
+
+  /// No description provided for @voicemailForOneHour.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pendant 1 heure'**
+  String get voicemailForOneHour;
+
+  /// No description provided for @voicemailForFourHours.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pendant 4 heures'**
+  String get voicemailForFourHours;
+
+  /// No description provided for @voicemailUntilMorning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jusqu\'à demain matin'**
+  String get voicemailUntilMorning;
+
+  /// No description provided for @voicemailUntilCustom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jusqu\'à une date précise'**
+  String get voicemailUntilCustom;
+
+  /// No description provided for @voicemailDeadlinePast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette échéance est déjà passée'**
+  String get voicemailDeadlinePast;
+
+  /// Journal d'appels, statut 4 : l'appel a été renvoyé au répondeur et le téléphone n'a jamais sonné. Distinct de « Manqué ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur'**
+  String get voicemailCallStatus;
+
   /// No description provided for @rejected.
   ///
   /// In fr, this message translates to:
@@ -6675,6 +6975,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ouvrez Alanya sur votre téléphone déjà connecté, allez dans Compte et sécurité, puis scannez ce code.'**
   String get qrLoginExplanation;
+
+  /// No description provided for @qrLoginDeviceNotTrustedNotice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce téléphone n\'est pas encore reconnu pour ce compte. Faites scanner ce code depuis un appareil déjà connecté. Si vous n\'y avez plus accès, réinitialisez votre mot de passe depuis l\'écran de connexion.'**
+  String get qrLoginDeviceNotTrustedNotice;
 
   /// No description provided for @qrLoginExpiresIn.
   ///
@@ -10774,6 +11080,12 @@ abstract class AppLocalizations {
   /// **'Cet appareil n\'est pas autorisé pour cette action.'**
   String get errCodeDeviceNotOwner;
 
+  /// No description provided for @errCodeDeviceNotTrusted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce téléphone n\'est pas encore reconnu pour ce compte. Connectez-vous avec un code QR depuis un appareil déjà connecté.'**
+  String get errCodeDeviceNotTrusted;
+
   /// No description provided for @errCodeAddAlreadyUsed.
   ///
   /// In fr, this message translates to:
@@ -11635,7 +11947,7 @@ abstract class AppLocalizations {
   /// No description provided for @plusLockedTranslation.
   ///
   /// In fr, this message translates to:
-  /// **'La traduction est réservée à Alanya Plus.'**
+  /// **'Sans abonnement, la traduction ne s\'applique qu\'à vos conversations avec un contact Alanya Plus.'**
   String get plusLockedTranslation;
 
   /// No description provided for @plusLockedBackup.
@@ -11967,6 +12279,246 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce dossier a changé entre-temps. Rechargez l\'écran.'**
   String get errCodeRequestNotPending;
+
+  /// No description provided for @phoneChangeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir mon numéro'**
+  String get phoneChangeTitle;
+
+  /// No description provided for @phoneChangeProduct.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro Alanya'**
+  String get phoneChangeProduct;
+
+  /// No description provided for @phoneChangeCurrent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre numéro actuel'**
+  String get phoneChangeCurrent;
+
+  /// No description provided for @phoneChangeIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez un numéro à 8 chiffres plus facile à retenir, pour {amount}. Il remplace l\'actuel, y compris pour vous connecter.'**
+  String phoneChangeIntro(String amount);
+
+  /// No description provided for @phoneChangeFieldLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro souhaité'**
+  String get phoneChangeFieldLabel;
+
+  /// No description provided for @phoneChangeCheck.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifier'**
+  String get phoneChangeCheck;
+
+  /// No description provided for @phoneChangeMustBe8.
+  ///
+  /// In fr, this message translates to:
+  /// **'Entrez un numéro à 8 chiffres.'**
+  String get phoneChangeMustBe8;
+
+  /// No description provided for @phoneChangeAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Disponible'**
+  String get phoneChangeAvailable;
+
+  /// No description provided for @phoneChangeReasonSame.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est déjà votre numéro.'**
+  String get phoneChangeReasonSame;
+
+  /// No description provided for @phoneChangeReasonTaken.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro est déjà utilisé. Essayez-en un autre.'**
+  String get phoneChangeReasonTaken;
+
+  /// No description provided for @phoneChangeReasonSetAside.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro est réservé par Alanya. Essayez-en un autre.'**
+  String get phoneChangeReasonSetAside;
+
+  /// No description provided for @phoneChangeReasonHeld.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quelqu\'un est en train de prendre ce numéro. Réessayez dans quelques minutes, ou choisissez-en un autre.'**
+  String get phoneChangeReasonHeld;
+
+  /// No description provided for @phoneChangeReasonQuarantine.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro vient d\'être libéré par son titulaire et n\'est pas encore disponible. Essayez-en un autre.'**
+  String get phoneChangeReasonQuarantine;
+
+  /// No description provided for @phoneChangeReserveAndPay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réserver et payer {amount}'**
+  String phoneChangeReserveAndPay(String amount);
+
+  /// No description provided for @phoneChangeUseCredit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider ce numéro'**
+  String get phoneChangeUseCredit;
+
+  /// No description provided for @phoneChangeCreditBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre changement est déjà payé, mais le numéro choisi a été pris entre-temps. Choisissez-en un autre : rien ne vous sera redemandé.'**
+  String get phoneChangeCreditBanner;
+
+  /// No description provided for @phoneChangeHeldUntil.
+  ///
+  /// In fr, this message translates to:
+  /// **'{phone} est réservé pour vous jusqu\'à {time}.'**
+  String phoneChangeHeldUntil(String phone, String time);
+
+  /// No description provided for @phoneChangeReleaseHold.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libérer ce numéro'**
+  String get phoneChangeReleaseHold;
+
+  /// No description provided for @phoneChangePending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paiement en cours pour le {phone}.'**
+  String phoneChangePending(String phone);
+
+  /// No description provided for @phoneChangeSeeWaiting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivre le paiement'**
+  String get phoneChangeSeeWaiting;
+
+  /// No description provided for @phoneChangeLoginNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Après le changement, connectez-vous avec le nouveau numéro. Vos conversations, contacts et groupes vous suivent. Votre ancien numéro ne sera pas redonné tout de suite à quelqu\'un d\'autre.'**
+  String get phoneChangeLoginNote;
+
+  /// No description provided for @phoneChangeUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le choix du numéro n\'est pas disponible pour le moment.'**
+  String get phoneChangeUnavailable;
+
+  /// No description provided for @phoneChangeSummaryHeld.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réservé pour vous jusqu\'à {time}'**
+  String phoneChangeSummaryHeld(String time);
+
+  /// No description provided for @phoneChangeStepApplied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro changé'**
+  String get phoneChangeStepApplied;
+
+  /// No description provided for @phoneChangeLeaveHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre numéro changera dès la confirmation, même si vous quittez cet écran.'**
+  String get phoneChangeLeaveHint;
+
+  /// No description provided for @phoneChangeSuccessTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voici votre nouveau numéro'**
+  String get phoneChangeSuccessTitle;
+
+  /// No description provided for @phoneChangeSuccessBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est lui qui sert désormais à vous connecter. Vos conversations, contacts et groupes vous suivent.'**
+  String get phoneChangeSuccessBody;
+
+  /// No description provided for @phoneChangeCreditTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paiement confirmé'**
+  String get phoneChangeCreditTitle;
+
+  /// No description provided for @phoneChangeCreditBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le numéro choisi a été pris entre-temps. Choisissez-en un autre : rien ne vous sera redemandé.'**
+  String get phoneChangeCreditBody;
+
+  /// No description provided for @phoneChangeChooseAnother.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un numéro'**
+  String get phoneChangeChooseAnother;
+
+  /// No description provided for @errCodePhonePurchaseUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le choix du numéro n\'est pas encore proposé.'**
+  String get errCodePhonePurchaseUnavailable;
+
+  /// No description provided for @errCodeOfficialPhoneFixed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le numéro de ce compte ne peut pas changer.'**
+  String get errCodeOfficialPhoneFixed;
+
+  /// No description provided for @errCodePhoneNotPurchasable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les numéros à 8 chiffres peuvent être choisis.'**
+  String get errCodePhoneNotPurchasable;
+
+  /// No description provided for @errCodePhoneUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce numéro n\'est plus disponible. Essayez-en un autre.'**
+  String get errCodePhoneUnavailable;
+
+  /// No description provided for @errCodePhoneHoldExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'La réservation de ce numéro a expiré. Vérifiez-le à nouveau.'**
+  String get errCodePhoneHoldExpired;
+
+  /// No description provided for @errCodePhoneOrderNotFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette réservation n\'existe plus. Recommencez.'**
+  String get errCodePhoneOrderNotFound;
+
+  /// No description provided for @errCodePhoneOrderPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un paiement de numéro attend déjà votre confirmation.'**
+  String get errCodePhoneOrderPending;
+
+  /// No description provided for @accountSecurityPhoneSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer pour un numéro plus facile à retenir · {amount}'**
+  String accountSecurityPhoneSubtitle(String amount);
+
+  /// No description provided for @accountSecurityPhonePending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changement en cours vers le {phone}'**
+  String accountSecurityPhonePending(String phone);
+
+  /// No description provided for @accountSecurityPhoneCredit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changement payé : choisissez votre numéro'**
+  String get accountSecurityPhoneCredit;
 }
 
 class _AppLocalizationsDelegate

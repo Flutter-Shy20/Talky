@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/billing/phone_models.dart';
 import '../../core/services/biometric_lock_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/utils/app_log.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/account/warning_banner.dart';
+import '../../widgets/billing/plus_visuals.dart';
 import '../../widgets/profile/settings_group.dart';
+import 'change_alanya_phone_screen.dart';
 import 'change_email_screen.dart';
 import 'change_password_screen.dart';
 import 'connected_devices_screen.dart';
@@ -17,7 +21,7 @@ import 'recovery_code_screen.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 
-/// Hub Compte et sécurité : email, mot de passe, appareils, biométrie.
+/// Hub Compte et sécurité : numéro, email, mot de passe, appareils, biométrie.
 class AccountSecurityScreen extends StatefulWidget {
   const AccountSecurityScreen({super.key});
 
@@ -26,12 +30,58 @@ class AccountSecurityScreen extends StatefulWidget {
 }
 
 class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
+  /// L'offre du numéro choisi. Absente tant qu'elle n'est pas lue, ou si le
+  /// serveur ne la propose pas à ce compte : la section ne s'affiche pas.
+  PhoneOffer? _phoneOffer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<BiometricLockService>().refreshAvailability();
+      _loadPhoneOffer();
     });
+  }
+
+  Future<void> _loadPhoneOffer() async {
+    try {
+      final offer = PhoneOffer.fromJson(
+          await context.read<TalkyApiClient>().getPhoneOffer());
+      if (mounted) setState(() => _phoneOffer = offer);
+    } catch (e, st) {
+      // Sans l'offre, rien n'est proposé : l'écran reste utilisable.
+      AppLog.w('AccountSecurity', 'Offre du numéro illisible', e, st);
+    }
+  }
+
+  Future<void> _openPhoneChange(PhoneOffer offer) async {
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChangeAlanyaPhoneScreen(initialOffer: offer),
+      ),
+    );
+    if (!mounted) return;
+    await _loadPhoneOffer();
+    if (!mounted) return;
+    try {
+      await context.read<AuthProvider>().refreshProfile();
+    } catch (e, st) {
+      AppLog.w('AccountSecurity', 'Profil après le choix du numéro', e, st);
+    }
+  }
+
+  String _phoneSubtitle(PhoneOffer offer) {
+    final l10n = context.l10n;
+    final order = offer.order;
+    if (order != null &&
+        (order.status == PhoneOrderStatus.paying ||
+            (order.heldUntil?.isAfter(DateTime.now()) ?? false))) {
+      return l10n.accountSecurityPhonePending(
+          AlanyaPhoneFormatter.formatDisplay(order.phone));
+    }
+    if (offer.credit) return l10n.accountSecurityPhoneCredit;
+    return l10n.accountSecurityPhoneSubtitle(formatPlusAmount(context, offer.price));
   }
 
   Future<void> _logoutAllDevices(BuildContext context) async {
@@ -85,6 +135,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     final email = user?.email.trim() ?? '';
     final hasEmail = email.isNotEmpty;
     final l10n = context.l10n;
+    final phoneOffer = _phoneOffer;
 
     return Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
@@ -95,6 +146,19 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       body: ListView(
         children: [
           AppSpacing.vGapLg,
+          // Le numéro est l'identifiant de connexion : il passe en tête.
+          if (phoneOffer != null && phoneOffer.purchasable) ...[
+            SettingsGroup(
+              title: l10n.phoneChangeProduct,
+              child: SettingsNavTile(
+                icon: Icons.dialpad_rounded,
+                title: AlanyaPhoneFormatter.formatDisplay(user?.alanyaPhone),
+                subtitle: _phoneSubtitle(phoneOffer),
+                onTap: () => _openPhoneChange(phoneOffer),
+              ),
+            ),
+            AppSpacing.vGapXxl,
+          ],
           if (!hasEmail) ...[
             Padding(
               padding: AppSpacing.screenH,

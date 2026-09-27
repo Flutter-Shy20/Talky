@@ -483,7 +483,18 @@ extension _ChatActions on _ChatDetailScreenState {
                 title: Text(context.l10n.translate),
                 onTap: () async {
                   Navigator.pop(context);
-                  if (!guardPlus(context, PlusFeature.translation)) return;
+                  // Un contact abonné ouvre la traduction des messages échangés
+                  // avec lui : le panneau payant ne s'affiche que si ni l'un ni
+                  // l'autre n'y a droit.
+                  final peerHasPlus = resolveAccountBadge(
+                        _peerAccountType,
+                        _peerVerificationStatus,
+                      ) ==
+                      AccountBadge.cocheVerifiee;
+                  if (!peerHasPlus &&
+                      !guardPlus(context, PlusFeature.translation)) {
+                    return;
+                  }
                   final service = MessageTranslationService.maybeInstance;
                   if (service == null) return;
                   var outcome = await service.translateNow(msg);

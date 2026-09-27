@@ -2020,6 +2020,185 @@ class AppLocalizationsFr extends AppLocalizations {
   String get missed => 'Manqué';
 
   @override
+  String voicemailPeerUnavailable(String name) {
+    return '$name est indisponible';
+  }
+
+  @override
+  String get voicemailLeaveMessage =>
+      'Laissez un message vocal, il le recevra dans votre conversation.';
+
+  @override
+  String get voicemailRecord => 'Enregistrer';
+
+  @override
+  String get voicemailSend => 'Envoyer';
+
+  @override
+  String get voicemailDiscard => 'Annuler';
+
+  @override
+  String get voicemailNotNow => 'Pas maintenant';
+
+  @override
+  String get voicemailSent => 'Message envoyé';
+
+  @override
+  String get voicemailBannerActive => 'Répondeur actif';
+
+  @override
+  String voicemailBannerUntil(String time) {
+    return 'Répondeur actif jusqu\'à $time';
+  }
+
+  @override
+  String get voicemailBannerDisable => 'Désactiver';
+
+  @override
+  String get voicemailDisabled => 'Répondeur désactivé';
+
+  @override
+  String get voicemailScheduleTitle => 'Répondeur';
+
+  @override
+  String get voicemailEnabled => 'Répondeur planifié';
+
+  @override
+  String get voicemailEnabledSubtitle =>
+      'Sur ces créneaux, votre téléphone ne sonne pas et l\'appelant peut laisser un message';
+
+  @override
+  String voicemailTimezoneHint(String timezone) {
+    return 'Heures évaluées à $timezone';
+  }
+
+  @override
+  String get voicemailBypassTitle => 'Peuvent me joindre quand même';
+
+  @override
+  String get voicemailBypassTile => 'Liste autorisée';
+
+  @override
+  String get voicemailBypassNobody => 'Personne';
+
+  @override
+  String get voicemailBypassHint =>
+      'Les membres de cette liste feront sonner votre téléphone malgré le répondeur.';
+
+  @override
+  String voicemailPeerNoAnswer(String name) {
+    return '$name n\'a pas répondu';
+  }
+
+  @override
+  String get voicemailGreetingPause => 'Couper l\'annonce';
+
+  @override
+  String get voicemailGreetingReplay => 'Réécouter l\'annonce';
+
+  @override
+  String get voicemailGreetingSection => 'Mon annonce';
+
+  @override
+  String get voicemailGreetingTitle => 'Enregistrer votre annonce';
+
+  @override
+  String voicemailGreetingHint(int max) {
+    return 'Elle sera jouée à ceux qui tombent sur votre répondeur. $max secondes au maximum.';
+  }
+
+  @override
+  String get voicemailGreetingStop => 'Terminer';
+
+  @override
+  String get voicemailGreetingSaved => 'Annonce enregistrée';
+
+  @override
+  String get voicemailGreetingNone =>
+      'Aucune annonce — un texte s\'affichera à la place';
+
+  @override
+  String voicemailGreetingSet(int seconds) {
+    return '$seconds secondes enregistrées';
+  }
+
+  @override
+  String get voicemailGreetingListen => 'Écouter l\'annonce';
+
+  @override
+  String get voicemailGreetingDelete => 'Supprimer l\'annonce';
+
+  @override
+  String get voicemailGreetingDeleted => 'Annonce supprimée';
+
+  @override
+  String get voicemailWhenNoAnswer => 'Quand je ne réponds pas';
+
+  @override
+  String get voicemailAfterDelay => 'Répondeur après 30 secondes';
+
+  @override
+  String get voicemailAfterDelaySubtitle =>
+      'Le téléphone sonne. Si vous ne décrochez pas, si vous refusez l\'appel ou si votre ligne est occupée, l\'appelant peut laisser un message.';
+
+  @override
+  String get voicemailWhenUnavailable => 'Quand je suis indisponible';
+
+  @override
+  String get voicemailSlotsEnabled => 'Plages programmées';
+
+  @override
+  String get voicemailSlotsEnabledSubtitle =>
+      'Sur ces périodes, votre téléphone ne sonne pas du tout';
+
+  @override
+  String get voicemailSlotNone => 'Aucune plage';
+
+  @override
+  String get voicemailSlotAllDay => 'Toute la journée';
+
+  @override
+  String voicemailSlotOvernight(String range) {
+    return '$range (jusqu\'au lendemain)';
+  }
+
+  @override
+  String voicemailSlotsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count plages programmées',
+      one: '1 plage programmée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get voicemailQuickHint =>
+      'Choisissez jusqu\'à quand. Toutes les options ont une fin : un répondeur qu\'on oublie est pire que pas de répondeur.';
+
+  @override
+  String get voicemailQuickSchedule => 'Planifier des créneaux';
+
+  @override
+  String get voicemailForOneHour => 'Pendant 1 heure';
+
+  @override
+  String get voicemailForFourHours => 'Pendant 4 heures';
+
+  @override
+  String get voicemailUntilMorning => 'Jusqu\'à demain matin';
+
+  @override
+  String get voicemailUntilCustom => 'Jusqu\'à une date précise';
+
+  @override
+  String get voicemailDeadlinePast => 'Cette échéance est déjà passée';
+
+  @override
+  String get voicemailCallStatus => 'Répondeur';
+
+  @override
   String get rejected => 'Rejeté';
 
   @override
@@ -3796,6 +3975,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get qrLoginExplanation =>
       'Ouvrez Alanya sur votre téléphone déjà connecté, allez dans Compte et sécurité, puis scannez ce code.';
+
+  @override
+  String get qrLoginDeviceNotTrustedNotice =>
+      'Ce téléphone n\'est pas encore reconnu pour ce compte. Faites scanner ce code depuis un appareil déjà connecté. Si vous n\'y avez plus accès, réinitialisez votre mot de passe depuis l\'écran de connexion.';
 
   @override
   String qrLoginExpiresIn(String time) {
@@ -6218,6 +6401,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Cet appareil n\'est pas autorisé pour cette action.';
 
   @override
+  String get errCodeDeviceNotTrusted =>
+      'Ce téléphone n\'est pas encore reconnu pour ce compte. Connectez-vous avec un code QR depuis un appareil déjà connecté.';
+
+  @override
   String get errCodeAddAlreadyUsed => 'Ce code a déjà été utilisé.';
 
   @override
@@ -6771,7 +6958,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get plusLockedTranslation =>
-      'La traduction est réservée à Alanya Plus.';
+      'Sans abonnement, la traduction ne s\'applique qu\'à vos conversations avec un contact Alanya Plus.';
 
   @override
   String get plusLockedBackup =>
@@ -6975,4 +7162,156 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errCodeRequestNotPending =>
       'Ce dossier a changé entre-temps. Rechargez l\'écran.';
+
+  @override
+  String get phoneChangeTitle => 'Choisir mon numéro';
+
+  @override
+  String get phoneChangeProduct => 'Numéro Alanya';
+
+  @override
+  String get phoneChangeCurrent => 'Votre numéro actuel';
+
+  @override
+  String phoneChangeIntro(String amount) {
+    return 'Choisissez un numéro à 8 chiffres plus facile à retenir, pour $amount. Il remplace l\'actuel, y compris pour vous connecter.';
+  }
+
+  @override
+  String get phoneChangeFieldLabel => 'Numéro souhaité';
+
+  @override
+  String get phoneChangeCheck => 'Vérifier';
+
+  @override
+  String get phoneChangeMustBe8 => 'Entrez un numéro à 8 chiffres.';
+
+  @override
+  String get phoneChangeAvailable => 'Disponible';
+
+  @override
+  String get phoneChangeReasonSame => 'C\'est déjà votre numéro.';
+
+  @override
+  String get phoneChangeReasonTaken =>
+      'Ce numéro est déjà utilisé. Essayez-en un autre.';
+
+  @override
+  String get phoneChangeReasonSetAside =>
+      'Ce numéro est réservé par Alanya. Essayez-en un autre.';
+
+  @override
+  String get phoneChangeReasonHeld =>
+      'Quelqu\'un est en train de prendre ce numéro. Réessayez dans quelques minutes, ou choisissez-en un autre.';
+
+  @override
+  String get phoneChangeReasonQuarantine =>
+      'Ce numéro vient d\'être libéré par son titulaire et n\'est pas encore disponible. Essayez-en un autre.';
+
+  @override
+  String phoneChangeReserveAndPay(String amount) {
+    return 'Réserver et payer $amount';
+  }
+
+  @override
+  String get phoneChangeUseCredit => 'Valider ce numéro';
+
+  @override
+  String get phoneChangeCreditBanner =>
+      'Votre changement est déjà payé, mais le numéro choisi a été pris entre-temps. Choisissez-en un autre : rien ne vous sera redemandé.';
+
+  @override
+  String phoneChangeHeldUntil(String phone, String time) {
+    return '$phone est réservé pour vous jusqu\'à $time.';
+  }
+
+  @override
+  String get phoneChangeReleaseHold => 'Libérer ce numéro';
+
+  @override
+  String phoneChangePending(String phone) {
+    return 'Paiement en cours pour le $phone.';
+  }
+
+  @override
+  String get phoneChangeSeeWaiting => 'Suivre le paiement';
+
+  @override
+  String get phoneChangeLoginNote =>
+      'Après le changement, connectez-vous avec le nouveau numéro. Vos conversations, contacts et groupes vous suivent. Votre ancien numéro ne sera pas redonné tout de suite à quelqu\'un d\'autre.';
+
+  @override
+  String get phoneChangeUnavailable =>
+      'Le choix du numéro n\'est pas disponible pour le moment.';
+
+  @override
+  String phoneChangeSummaryHeld(String time) {
+    return 'Réservé pour vous jusqu\'à $time';
+  }
+
+  @override
+  String get phoneChangeStepApplied => 'Numéro changé';
+
+  @override
+  String get phoneChangeLeaveHint =>
+      'Votre numéro changera dès la confirmation, même si vous quittez cet écran.';
+
+  @override
+  String get phoneChangeSuccessTitle => 'Voici votre nouveau numéro';
+
+  @override
+  String get phoneChangeSuccessBody =>
+      'C\'est lui qui sert désormais à vous connecter. Vos conversations, contacts et groupes vous suivent.';
+
+  @override
+  String get phoneChangeCreditTitle => 'Paiement confirmé';
+
+  @override
+  String get phoneChangeCreditBody =>
+      'Le numéro choisi a été pris entre-temps. Choisissez-en un autre : rien ne vous sera redemandé.';
+
+  @override
+  String get phoneChangeChooseAnother => 'Choisir un numéro';
+
+  @override
+  String get errCodePhonePurchaseUnavailable =>
+      'Le choix du numéro n\'est pas encore proposé.';
+
+  @override
+  String get errCodeOfficialPhoneFixed =>
+      'Le numéro de ce compte ne peut pas changer.';
+
+  @override
+  String get errCodePhoneNotPurchasable =>
+      'Seuls les numéros à 8 chiffres peuvent être choisis.';
+
+  @override
+  String get errCodePhoneUnavailable =>
+      'Ce numéro n\'est plus disponible. Essayez-en un autre.';
+
+  @override
+  String get errCodePhoneHoldExpired =>
+      'La réservation de ce numéro a expiré. Vérifiez-le à nouveau.';
+
+  @override
+  String get errCodePhoneOrderNotFound =>
+      'Cette réservation n\'existe plus. Recommencez.';
+
+  @override
+  String get errCodePhoneOrderPending =>
+      'Un paiement de numéro attend déjà votre confirmation.';
+
+  @override
+  String accountSecurityPhoneSubtitle(String amount) {
+    return 'Changer pour un numéro plus facile à retenir · $amount';
+  }
+
+  @override
+  String accountSecurityPhonePending(String phone) {
+    return 'Changement en cours vers le $phone';
+  }
+
+  @override
+  String get accountSecurityPhoneCredit =>
+      'Changement payé : choisissez votre numéro';
 }

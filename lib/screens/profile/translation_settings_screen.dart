@@ -136,7 +136,10 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
       body: Consumer2<TranslationSettings, EntitlementService>(
         builder: (_, settings, plus, __) {
           // Le réglage de l'utilisateur est conservé ; seul l'effet s'arrête
-          // tant que l'abonnement manque.
+          // tant que l'abonnement manque. Sans abonnement propre, l'effet
+          // reprend quand même dans les conversations avec un contact abonné :
+          // l'interrupteur reste donc ouvert à tous, c'est le service qui
+          // tranche conversation par conversation.
           final allowed = plus.has(PlusFeature.translation);
           return ListView(
             padding: const EdgeInsets.fromLTRB(
@@ -157,13 +160,8 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
                 contentPadding: EdgeInsets.zero,
                 title: Text(l10n.autoTranslate),
                 subtitle: Text(l10n.autoTranslateDescription),
-                value: allowed && settings.auto,
-                onChanged: (v) {
-                  if (v && !guardPlus(context, PlusFeature.translation)) {
-                    return;
-                  }
-                  _toggleAuto(settings, v);
-                },
+                value: settings.auto,
+                onChanged: (v) => _toggleAuto(settings, v),
               ),
               const SizedBox(height: AppSpacing.md),
 

@@ -116,16 +116,38 @@ extension AuthApi on TalkyApiClient {
   }
 
   /// Étape 3: Compléter le reset password avec le reset token
+  ///
+  /// [hardwareId] fait de la réinitialisation un point d'enrôlement : c'est la
+  /// seule voie de retour quand le téléphone déjà connu est perdu ou cassé. Le
+  /// serveur répond alors avec une session complète (`accessToken`,
+  /// `refreshToken`, `user`) et révoque les autres appareils.
+  ///
+  /// Les tokens ne sont volontairement PAS posés sur ce client : l'écran qui
+  /// appelle cette méthode instancie son propre [TalkyApiClient], distinct de
+  /// celui d'`AuthProvider`. Les y écrire donnerait une session invisible du
+  /// reste de l'application. C'est à l'appelant de les passer à
+  /// `AuthProvider.loginWithQrTokens`.
   Future<Map<String, dynamic>> completePasswordReset(
     String resetToken,
-    String newPassword,
-  ) async {
+    String newPassword, {
+    String? hardwareId,
+  }) async {
+    final enrole = hardwareId != null && hardwareId.isNotEmpty;
+    // Libellé et plateforme accompagnent l'enrôlement, comme pour `login` et
+    // `register` : sans eux, l'appareil de secours apparaîtrait sans nom et en
+    // plateforme « unknown » dans « Appareils connectés », c'est-à-dire
+    // impossible à reconnaître au moment précis — après un vol — où l'écran
+    // sert à décider quoi révoquer.
+    final deviceModel = enrole ? await TalkyApiClient._currentDeviceModel() : null;
     final response = await _client.post(
       Uri.parse('${TalkyApiClient.baseUrl}/auth/reset-password-confirm'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'resetToken': resetToken,
         'newPassword': newPassword,
+        if (enrole) 'hardware_id': hardwareId,
+        if (enrole) 'device_model': deviceModel,
+        if (enrole) 'os_system': TalkyApiClient._currentOs(),
       }),
     );
     return _parseResponse(response);
@@ -381,6 +403,38 @@ extension AuthApi on TalkyApiClient {
       ),
     );
     return DndSchedule.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  /// Planification du répondeur. Distincte du « Ne pas déranger » ci-dessus :
+  /// celui-ci ne coupe que les notifications, celle-là empêche le téléphone de
+  /// sonner.
+  Future<VoicemailSchedule> getVoicemailSchedule() async {
+    final data = await _handleRequest(
+      () => _client.get(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/voicemail-schedule'),
+        headers: _headers,
+      ),
+    );
+    return VoicemailSchedule.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  /// Mise à jour partielle. `null` explicite et clé absente ne disent pas la
+  /// même chose : `{'untilAt': null}` éteint l'activation ponctuelle, une clé
+  /// omise la laisse telle quelle.
+  ///
+  /// Les dates partent en UTC : l'échéance est calculée sur l'appareil, en
+  /// heure murale locale, et le serveur ne la re-dérive jamais.
+  Future<VoicemailSchedule> patchVoicemailSchedule(
+    Map<String, dynamic> patch,
+  ) async {
+    final data = await _handleRequest(
+      () => _client.patch(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/voicemail-schedule'),
+        headers: _headers,
+        body: jsonEncode(patch),
+      ),
+    );
+    return VoicemailSchedule.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   Future<AccountDeletionSchedule> deleteAccount(String password) async {

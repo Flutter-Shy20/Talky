@@ -2001,6 +2001,185 @@ class AppLocalizationsEn extends AppLocalizations {
   String get missed => 'Missed';
 
   @override
+  String voicemailPeerUnavailable(String name) {
+    return '$name is unavailable';
+  }
+
+  @override
+  String get voicemailLeaveMessage =>
+      'Leave a voice message — it will land in your conversation.';
+
+  @override
+  String get voicemailRecord => 'Record';
+
+  @override
+  String get voicemailSend => 'Send';
+
+  @override
+  String get voicemailDiscard => 'Discard';
+
+  @override
+  String get voicemailNotNow => 'Not now';
+
+  @override
+  String get voicemailSent => 'Message sent';
+
+  @override
+  String get voicemailBannerActive => 'Voicemail on';
+
+  @override
+  String voicemailBannerUntil(String time) {
+    return 'Voicemail on until $time';
+  }
+
+  @override
+  String get voicemailBannerDisable => 'Turn off';
+
+  @override
+  String get voicemailDisabled => 'Voicemail turned off';
+
+  @override
+  String get voicemailScheduleTitle => 'Voicemail';
+
+  @override
+  String get voicemailEnabled => 'Scheduled voicemail';
+
+  @override
+  String get voicemailEnabledSubtitle =>
+      'During these hours your phone stays silent and callers can leave a message';
+
+  @override
+  String voicemailTimezoneHint(String timezone) {
+    return 'Hours evaluated in $timezone';
+  }
+
+  @override
+  String get voicemailBypassTitle => 'Can still reach me';
+
+  @override
+  String get voicemailBypassTile => 'Allowed list';
+
+  @override
+  String get voicemailBypassNobody => 'Nobody';
+
+  @override
+  String get voicemailBypassHint =>
+      'Members of this list will ring your phone despite the voicemail.';
+
+  @override
+  String voicemailPeerNoAnswer(String name) {
+    return '$name didn\'t answer';
+  }
+
+  @override
+  String get voicemailGreetingPause => 'Stop the greeting';
+
+  @override
+  String get voicemailGreetingReplay => 'Play the greeting again';
+
+  @override
+  String get voicemailGreetingSection => 'My greeting';
+
+  @override
+  String get voicemailGreetingTitle => 'Record your greeting';
+
+  @override
+  String voicemailGreetingHint(int max) {
+    return 'Callers who reach your voicemail will hear it. $max seconds maximum.';
+  }
+
+  @override
+  String get voicemailGreetingStop => 'Finish';
+
+  @override
+  String get voicemailGreetingSaved => 'Greeting saved';
+
+  @override
+  String get voicemailGreetingNone =>
+      'No greeting — a text will be shown instead';
+
+  @override
+  String voicemailGreetingSet(int seconds) {
+    return '$seconds seconds recorded';
+  }
+
+  @override
+  String get voicemailGreetingListen => 'Play the greeting';
+
+  @override
+  String get voicemailGreetingDelete => 'Delete greeting';
+
+  @override
+  String get voicemailGreetingDeleted => 'Greeting deleted';
+
+  @override
+  String get voicemailWhenNoAnswer => 'When I don\'t answer';
+
+  @override
+  String get voicemailAfterDelay => 'Voicemail after 30 seconds';
+
+  @override
+  String get voicemailAfterDelaySubtitle =>
+      'Your phone rings. If you don\'t pick up, decline, or your line is busy, the caller can leave a message.';
+
+  @override
+  String get voicemailWhenUnavailable => 'When I\'m unavailable';
+
+  @override
+  String get voicemailSlotsEnabled => 'Scheduled periods';
+
+  @override
+  String get voicemailSlotsEnabledSubtitle =>
+      'During these periods your phone doesn\'t ring at all';
+
+  @override
+  String get voicemailSlotNone => 'No period';
+
+  @override
+  String get voicemailSlotAllDay => 'All day';
+
+  @override
+  String voicemailSlotOvernight(String range) {
+    return '$range (into the next day)';
+  }
+
+  @override
+  String voicemailSlotsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count scheduled periods',
+      one: '1 scheduled period',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get voicemailQuickHint =>
+      'Pick when it ends. Every option has an end — a voicemail you forget about is worse than none.';
+
+  @override
+  String get voicemailQuickSchedule => 'Schedule recurring hours';
+
+  @override
+  String get voicemailForOneHour => 'For 1 hour';
+
+  @override
+  String get voicemailForFourHours => 'For 4 hours';
+
+  @override
+  String get voicemailUntilMorning => 'Until tomorrow morning';
+
+  @override
+  String get voicemailUntilCustom => 'Until a specific date';
+
+  @override
+  String get voicemailDeadlinePast => 'That time has already passed';
+
+  @override
+  String get voicemailCallStatus => 'Voicemail';
+
+  @override
   String get rejected => 'Rejected';
 
   @override
@@ -3760,6 +3939,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get qrLoginExplanation =>
       'Open Alanya on the phone you are already signed in on, go to Account & security, then scan this code.';
+
+  @override
+  String get qrLoginDeviceNotTrustedNotice =>
+      'This phone isn\'t recognised for this account yet. Scan this code from a device that is already signed in. If you no longer have it, reset your password from the sign-in screen.';
 
   @override
   String qrLoginExpiresIn(String time) {
@@ -6148,6 +6331,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This device isn\'t authorised for this action.';
 
   @override
+  String get errCodeDeviceNotTrusted =>
+      'This phone isn\'t recognised for this account yet. Sign in with a QR code from a device that is already signed in.';
+
+  @override
   String get errCodeAddAlreadyUsed => 'This code has already been used.';
 
   @override
@@ -6688,7 +6875,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentStatusPending => 'Pending';
 
   @override
-  String get plusLockedTranslation => 'Translation is part of Alanya Plus.';
+  String get plusLockedTranslation =>
+      'Without a subscription, translation only applies to your conversations with an Alanya Plus contact.';
 
   @override
   String get plusLockedBackup =>
@@ -6889,4 +7077,155 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errCodeRequestNotPending =>
       'This request changed in the meantime. Reload the screen.';
+
+  @override
+  String get phoneChangeTitle => 'Choose my number';
+
+  @override
+  String get phoneChangeProduct => 'Alanya number';
+
+  @override
+  String get phoneChangeCurrent => 'Your current number';
+
+  @override
+  String phoneChangeIntro(String amount) {
+    return 'Choose an 8-digit number that\'s easier to remember, for $amount. It replaces your current one, including to sign in.';
+  }
+
+  @override
+  String get phoneChangeFieldLabel => 'Number you want';
+
+  @override
+  String get phoneChangeCheck => 'Check';
+
+  @override
+  String get phoneChangeMustBe8 => 'Enter an 8-digit number.';
+
+  @override
+  String get phoneChangeAvailable => 'Available';
+
+  @override
+  String get phoneChangeReasonSame => 'This is already your number.';
+
+  @override
+  String get phoneChangeReasonTaken =>
+      'This number is already in use. Try another one.';
+
+  @override
+  String get phoneChangeReasonSetAside =>
+      'This number is reserved by Alanya. Try another one.';
+
+  @override
+  String get phoneChangeReasonHeld =>
+      'Someone is taking this number right now. Try again in a few minutes, or choose another one.';
+
+  @override
+  String get phoneChangeReasonQuarantine =>
+      'This number was just released by its owner and isn\'t available yet. Try another one.';
+
+  @override
+  String phoneChangeReserveAndPay(String amount) {
+    return 'Reserve and pay $amount';
+  }
+
+  @override
+  String get phoneChangeUseCredit => 'Confirm this number';
+
+  @override
+  String get phoneChangeCreditBanner =>
+      'Your change is already paid for, but the number you chose was taken in the meantime. Choose another one — you won\'t be charged again.';
+
+  @override
+  String phoneChangeHeldUntil(String phone, String time) {
+    return '$phone is reserved for you until $time.';
+  }
+
+  @override
+  String get phoneChangeReleaseHold => 'Release this number';
+
+  @override
+  String phoneChangePending(String phone) {
+    return 'Payment in progress for $phone.';
+  }
+
+  @override
+  String get phoneChangeSeeWaiting => 'Follow the payment';
+
+  @override
+  String get phoneChangeLoginNote =>
+      'After the change, sign in with your new number. Your chats, contacts and groups come with you. Your old number won\'t be given to anyone else right away.';
+
+  @override
+  String get phoneChangeUnavailable =>
+      'Choosing a number isn\'t available right now.';
+
+  @override
+  String phoneChangeSummaryHeld(String time) {
+    return 'Reserved for you until $time';
+  }
+
+  @override
+  String get phoneChangeStepApplied => 'Number changed';
+
+  @override
+  String get phoneChangeLeaveHint =>
+      'Your number will change as soon as the payment is confirmed, even if you leave this screen.';
+
+  @override
+  String get phoneChangeSuccessTitle => 'Here\'s your new number';
+
+  @override
+  String get phoneChangeSuccessBody =>
+      'It\'s now the one you sign in with. Your chats, contacts and groups come with you.';
+
+  @override
+  String get phoneChangeCreditTitle => 'Payment confirmed';
+
+  @override
+  String get phoneChangeCreditBody =>
+      'The number you chose was taken in the meantime. Choose another one — you won\'t be charged again.';
+
+  @override
+  String get phoneChangeChooseAnother => 'Choose a number';
+
+  @override
+  String get errCodePhonePurchaseUnavailable =>
+      'Choosing a number isn\'t offered yet.';
+
+  @override
+  String get errCodeOfficialPhoneFixed =>
+      'This account\'s number can\'t change.';
+
+  @override
+  String get errCodePhoneNotPurchasable =>
+      'Only 8-digit numbers can be chosen.';
+
+  @override
+  String get errCodePhoneUnavailable =>
+      'This number is no longer available. Try another one.';
+
+  @override
+  String get errCodePhoneHoldExpired =>
+      'Your reservation for this number has expired. Check it again.';
+
+  @override
+  String get errCodePhoneOrderNotFound =>
+      'This reservation no longer exists. Start again.';
+
+  @override
+  String get errCodePhoneOrderPending =>
+      'A number payment is already waiting for your confirmation.';
+
+  @override
+  String accountSecurityPhoneSubtitle(String amount) {
+    return 'Switch to an easier-to-remember number · $amount';
+  }
+
+  @override
+  String accountSecurityPhonePending(String phone) {
+    return 'Change to $phone in progress';
+  }
+
+  @override
+  String get accountSecurityPhoneCredit => 'Change paid: choose your number';
 }

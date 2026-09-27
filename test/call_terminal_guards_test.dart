@@ -158,6 +158,38 @@ void main() {
       );
     });
 
+    test('call_voicemail passe par la même porte, sans garde dédiée', () {
+      // Cas du répondeur : aucun `call_ringing` n'a été émis — le serveur n'a
+      // rien armé du tout — donc l'appelant en est toujours à son horodatage
+      // local quand arrive l'identifiant serveur. C'est exactement ce que
+      // `currentCallIdIsLocal` couvre, et c'est pourquoi le répondeur n'a pas
+      // eu besoin d'un helper de plus dans ce fichier : chaque garde ajoutée
+      // ici est une garde de plus à tenir cohérente avec les autres.
+      expect(
+        acceptsOutgoingTerminalEvent(
+          callStatusName: 'connecting',
+          eventCallId: '4242',
+          currentCallId: '1788535682198',
+          currentCallIdIsLocal: true,
+        ),
+        isTrue,
+      );
+      // Et un call_voicemail en retard, arrivé après que l'utilisateur a lancé
+      // un autre appel et décroché, ne doit pas démonter celui-là.
+      for (final status in ['connected', 'idle', 'incoming']) {
+        expect(
+          acceptsOutgoingTerminalEvent(
+            callStatusName: status,
+            eventCallId: '4242',
+            currentCallId: '1788535682198',
+            currentCallIdIsLocal: true,
+          ),
+          isFalse,
+          reason: 'statut $status',
+        );
+      }
+    });
+
     test('identifiant local : le statut reste souverain', () {
       for (final status in ['connected', 'idle', 'incoming', 'joining']) {
         expect(

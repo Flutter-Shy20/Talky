@@ -15,6 +15,8 @@ import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../core/services/call/call_history_rules.dart';
+import '../../core/services/call/voicemail_provider.dart';
+import '../../widgets/calls/voicemail_quick_sheet.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'call_detail_screen.dart';
 import 'keypad_screen.dart';
@@ -308,6 +310,20 @@ class _CallsScreenState extends State<CallsScreen> {
             tooltip: _searchOpen ? context.l10n.closeSearch : context.l10n.commonSearch,
             onPressed: _toggleSearch,
           ),
+          // Le répondeur se commande depuis l'onglet Appels, pas seulement
+          // depuis les réglages : c'est un geste du quotidien (« je rentre en
+          // réunion »), pas une configuration. L'icône se teinte quand un
+          // créneau court, pour que l'état se voie sans ouvrir la feuille.
+          Consumer<VoicemailProvider>(
+            builder: (context, vm, _) => IconButton(
+              icon: Icon(vm.isActive
+                  ? Icons.voicemail_rounded
+                  : Icons.voicemail_outlined),
+              color: vm.isActive ? context.colors.primary : null,
+              tooltip: context.l10n.voicemailScheduleTitle,
+              onPressed: () => showVoicemailQuickSheet(context),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.add_call),
             tooltip: context.l10n.newCall,
@@ -423,10 +439,20 @@ class _CallsScreenState extends State<CallsScreen> {
           final otherUser = isIncoming ? call.caller : call.receiver;
           final isMissed = call.isMissed;
           final isVideo = call.isVideo;
+          // Renvoyé au répondeur : c'est bien un appel non abouti, il compte
+          // donc dans le badge d'appels manqués. Mais la LIGNE ne doit pas dire
+          // « manqué » ni s'afficher en rouge — le téléphone n'a jamais sonné,
+          // il n'y avait rien à manquer, et rien ne va mal. Sans cette
+          // distinction, la fonctionnalité serait invisible à l'endroit précis
+          // où elle devrait le plus se voir.
+          final isVoicemail = callWentToVoicemail(call.status);
           final direction = callDirection(
             isMissed: isMissed,
             isIncoming: isIncoming,
           );
+          final teinte = isVoicemail
+              ? colors.primary
+              : (isMissed ? colors.error : context.semantic.success);
 
           return ListTile(
             contentPadding: const EdgeInsets.symmetric(
@@ -445,7 +471,9 @@ class _CallsScreenState extends State<CallsScreen> {
             title: Text(
               otherUser?.nom ?? context.l10n.unknownSender,
               style: context.text.titleMedium?.copyWith(
-                color: isMissed ? colors.error : colors.onSurface,
+                color: isVoicemail
+                    ? colors.onSurface
+                    : (isMissed ? colors.error : colors.onSurface),
               ),
             ),
             subtitle: Padding(
@@ -453,18 +481,20 @@ class _CallsScreenState extends State<CallsScreen> {
               child: Row(
                 children: [
                   Icon(
-                    switch (direction) {
-                      CallDirection.missed => Icons.call_missed,
-                      CallDirection.incoming => Icons.call_received,
-                      CallDirection.outgoing => Icons.call_made,
-                    },
+                    isVoicemail
+                        ? Icons.voicemail_rounded
+                        : switch (direction) {
+                            CallDirection.missed => Icons.call_missed,
+                            CallDirection.incoming => Icons.call_received,
+                            CallDirection.outgoing => Icons.call_made,
+                          },
                     size: 16,
-                    color: isMissed ? colors.error : context.semantic.success,
+                    color: teinte,
                   ),
                   AppSpacing.hGapXs,
                   Flexible(
                     child: Text(
-                      '${_formatDate(call.createdAt)} • ${isVideo ? context.l10n.video2 : context.l10n.audio2}'
+                      '${_formatDate(call.createdAt)} • ${isVoicemail ? context.l10n.voicemailCallStatus : (isVideo ? context.l10n.video2 : context.l10n.audio2)}'
                       '${call.hasDuration ? " • ${call.formattedDuration}" : ""}',
                       style: context.text.bodyMedium,
                       overflow: TextOverflow.ellipsis,

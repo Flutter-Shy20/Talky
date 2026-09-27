@@ -1004,10 +1004,18 @@ extension _ChatBubbles on _ChatDetailScreenState {
         ? colors.primaryContainer.withAlpha(190)
         : context.semantic.surfaceMuted;
 
-    final dirIcon = !answered
-        ? (outgoing ? Icons.call_missed_outgoing : Icons.call_missed)
-        : (outgoing ? Icons.call_made : Icons.call_received);
-    final dirColor = answered ? context.semantic.success : colors.error;
+    // Renvoyé au répondeur : troisième cas, à côté de « décroché » et
+    // « manqué ». Le téléphone d'en face n'a jamais sonné — ni flèche de
+    // manqué, ni rouge, qui diraient tous deux qu'on a raté quelque chose.
+    final voicemail = callWentToVoicemail(status);
+    final dirIcon = voicemail
+        ? Icons.voicemail_rounded
+        : (!answered
+            ? (outgoing ? Icons.call_missed_outgoing : Icons.call_missed)
+            : (outgoing ? Icons.call_made : Icons.call_received));
+    final dirColor = voicemail
+        ? colors.primary
+        : (answered ? context.semantic.success : colors.error);
 
     final l10n = context.l10n;
     final label = isVideo
@@ -1016,9 +1024,16 @@ extension _ChatBubbles on _ChatDetailScreenState {
     // Le « sans réponse » ne se lisait que sur le statut 0 : les appels soldés
     // par le timeout, qui portent le statut 3, tombaient dans un libellé de
     // repli. Les deux statuts disent la même chose — voir callWasNotAnswered.
-    final statusLabel = answered
-        ? l10n.answered
-        : (rejected ? l10n.rejected : l10n.noAnswer2);
+    //
+    // Le répondeur passe AVANT le repli « sans réponse » : sans lui, un appel
+    // intercepté s'affichait « Sans réponse » dans le fil alors que le journal
+    // d'appels disait « Répondeur ». Deux écrans, deux vérités sur le même
+    // appel — et c'est le fil qui mentait, puisque personne n'a laissé sonner.
+    final statusLabel = voicemail
+        ? l10n.voicemailCallStatus
+        : (answered
+            ? l10n.answered
+            : (rejected ? l10n.rejected : l10n.noAnswer2));
 
     final t = call.createdAt.toLocal();
     two(int n) => n.toString().padLeft(2, '0');

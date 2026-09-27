@@ -10,6 +10,7 @@ import '../../core/utils/app_log.dart';
 import '../../models/qr_models.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
+import '../../widgets/account/warning_banner.dart';
 import '../../widgets/alanya_qr_view.dart';
 
 /// Étapes vues par l'appareil qui AFFICHE le code, c'est-à-dire celui qui n'est
@@ -28,7 +29,13 @@ enum _EtatQr {
 /// déjà connecté doit scanner puis confirmer. Aucune socket ici — le statut se
 /// lit par interrogation REST, décision produit assumée pour la v1 mobile.
 class QrLoginScreen extends StatefulWidget {
-  const QrLoginScreen({super.key});
+  const QrLoginScreen({super.key, this.bandeauInformatif});
+
+  /// Message affiché au-dessus du code, quand l'écran n'a pas été ouvert
+  /// spontanément mais imposé par un refus de connexion : sans lui,
+  /// l'utilisateur verrait un QR surgir sans comprendre pourquoi son mot de
+  /// passe, pourtant correct, ne suffit plus.
+  final String? bandeauInformatif;
 
   @override
   State<QrLoginScreen> createState() => _QrLoginScreenState();
@@ -276,6 +283,13 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (widget.bandeauInformatif != null) ...[
+                WarningBanner(
+                  variant: WarningBannerVariant.info,
+                  message: widget.bandeauInformatif!,
+                ),
+                AppSpacing.vGapLg,
+              ],
               Text(
                 context.l10n.qrLoginExplanation,
                 textAlign: TextAlign.center,

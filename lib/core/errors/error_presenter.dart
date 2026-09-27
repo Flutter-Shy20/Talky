@@ -91,6 +91,8 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.errCodeQrSessionExpired;
     case 'DEVICE_NOT_OWNER':
       return l10n.errCodeDeviceNotOwner;
+    case 'DEVICE_NOT_TRUSTED':
+      return l10n.errCodeDeviceNotTrusted;
     case 'ADD_ALREADY_USED':
       return l10n.errCodeAddAlreadyUsed;
     case 'ADD_ME_POLICY_DENIED':
@@ -170,6 +172,23 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.errCodePlanNotFound;
     case 'PAYMENT_PROVIDER_ERROR':
       return l10n.errCodePaymentProviderError;
+
+    // Numéro Alanya choisi. `PHONE_UNAVAILABLE` porte sa raison : l'écran du
+    // numéro l'affiche sous le champ, ce texte n'est que le repli.
+    case 'PHONE_PURCHASE_UNAVAILABLE':
+      return l10n.errCodePhonePurchaseUnavailable;
+    case 'OFFICIAL_PHONE_FIXED':
+      return l10n.errCodeOfficialPhoneFixed;
+    case 'PHONE_NOT_PURCHASABLE':
+      return l10n.errCodePhoneNotPurchasable;
+    case 'PHONE_UNAVAILABLE':
+      return l10n.errCodePhoneUnavailable;
+    case 'PHONE_HOLD_EXPIRED':
+      return l10n.errCodePhoneHoldExpired;
+    case 'PHONE_ORDER_NOT_FOUND':
+      return l10n.errCodePhoneOrderNotFound;
+    case 'PHONE_ORDER_PENDING':
+      return l10n.errCodePhoneOrderPending;
 
     // Vérification d'identité
     case 'VERIFICATION_UNAVAILABLE':

@@ -242,6 +242,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   Widget _buildCallInfo() {
     final c = widget.call;
     final missed = c.isMissed;
+    final voicemail = callWentToVoicemail(c.status);
     // Même défaut que dans le journal : la flèche « sortant » s'affichait pour
     // tout appel non manqué, reçu compris.
     final myId = context.read<AuthProvider>().currentUser?.alanyaID;
@@ -269,12 +270,19 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
           Text(context.l10n.lastCall, style: context.text.titleMedium),
           AppSpacing.vGapMd,
           _infoRow(
-            icon: switch (direction) {
-              CallDirection.missed => Icons.call_missed,
-              CallDirection.incoming => Icons.call_received,
-              CallDirection.outgoing => Icons.call_made,
-            },
-            iconColor: missed ? context.colors.error : context.semantic.online,
+            // Renvoyé au répondeur : ni la flèche ni le rouge du « manqué ».
+            // L'appel n'a pas abouti, mais rien n'a échoué — le téléphone
+            // n'était pas censé sonner. `statusLabel` dit déjà « Répondeur ».
+            icon: voicemail
+                ? Icons.voicemail_rounded
+                : switch (direction) {
+                    CallDirection.missed => Icons.call_missed,
+                    CallDirection.incoming => Icons.call_received,
+                    CallDirection.outgoing => Icons.call_made,
+                  },
+            iconColor: voicemail
+                ? context.colors.primary
+                : (missed ? context.colors.error : context.semantic.online),
             label: c.statusLabel,
           ),
           AppSpacing.vGapSm,

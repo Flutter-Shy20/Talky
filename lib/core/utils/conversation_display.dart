@@ -1,4 +1,5 @@
 import '../../l10n/app_localizations.dart';
+import '../../widgets/common/account_badge.dart';
 import '../db/app_database.dart';
 import '../db/chat_dao.dart';
 import '../services/chat/conversation_merge.dart';
@@ -28,6 +29,24 @@ Map<String, dynamic>? otherParticipant(LocalConversation conv, int myId) {
     if (myId != 0 && id != 0 && id != myId) return p;
   }
   return null;
+}
+
+/// L'interlocuteur d'une conversation 1-1 porte-t-il la coche indigo ?
+///
+/// Depuis la migration 082 du serveur, la coche d'un compte personnel suit
+/// l'abonnement : c'est le seul signal d'« Alanya Plus actif » qui voyage déjà
+/// jusqu'au téléphone, avec les participants. Passer par [resolveAccountBadge]
+/// garde une règle unique — un panier vérifié ou un sceau officiel n'est pas
+/// un abonnement.
+bool conversationPeerHasPlus(LocalConversation conv, int myId) {
+  if (conv.isGroup) return false;
+  final other = otherParticipant(conv, myId);
+  if (other == null) return false;
+  return resolveAccountBadge(
+        participantJsonInt(other, 'account_type'),
+        participantJsonInt(other, 'verification_status'),
+      ) ==
+      AccountBadge.cocheVerifiee;
 }
 
 /// Le participant « moi » d'une conversation avec soi-même, ou null.

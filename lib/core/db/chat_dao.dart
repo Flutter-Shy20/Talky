@@ -45,6 +45,14 @@ class ChatDao {
         .watchSingleOrNull();
   }
 
+  /// Lecture ponctuelle d'une conversation, pour les appelants hors interface
+  /// qui n'ont pas de flux à tenir ouvert.
+  Future<LocalConversation?> getConversation(int conversID) {
+    return (db.select(db.localConversations)
+          ..where((c) => c.conversID.equals(conversID)))
+        .getSingleOrNull();
+  }
+
   Future<void> upsertConversation(LocalConversationsCompanion conv) {
     return db.into(db.localConversations).insertOnConflictUpdate(conv);
   }

@@ -500,6 +500,211 @@ class DndSchedule {
       );
 }
 
+// ── RÉPONDEUR ────────────────────────────────────────────────────────
+// Table: user_voicemail_schedule (migration 086)
+//
+// Réglage DISTINCT du « Ne pas déranger » ci-dessus, et il faut s'en souvenir :
+// le DND ne coupe que les notifications de messages, le répondeur empêche le
+// téléphone de sonner. Les confondre reviendrait à détourner les appels de
+// tous ceux qui ont déjà réglé un créneau DND.
+//
+// `active`, `activeUntil` et `resolvedTimezone` sont CALCULÉS PAR LE SERVEUR et
+// en lecture seule. C'est délibéré : le fuseau se résout par une cascade
+// (réglage → pays du compte → serveur) que le téléphone ne connaît pas, et
+// deux implémentations du même calcul finiraient par diverger. Le client se
+// contente d'armer un minuteur sur `activeUntil` pour masquer son bandeau à
+// l'heure dite, sans rappeler le serveur.
+
+/// Une période d'indisponibilité, un jour donné.
+///
+/// `endTime` avant `startTime` veut dire que la plage FRANCHIT MINUIT et
+/// déborde sur le lendemain : (lundi, 22:00, 07:00) couvre lundi 22 h → mardi
+/// 7 h. `endTime == startTime` vaut la journée entière.
+///
+/// Le calendrier n'est pas évalué ici : c'est le serveur qui dit s'il est actif,
+/// parce que lui seul résout le fuseau. Cette classe ne sert qu'à l'affichage et
+/// à l'écriture.
+class VoicemailSlot {
+  /// 0 = lundi … 6 = dimanche.
+  final int dayBit;
+  final String startTime;
+  final String endTime;
+
+  const VoicemailSlot({
+    required this.dayBit,
+    required this.startTime,
+    required this.endTime,
+  });
+
+  factory VoicemailSlot.fromJson(Map<String, dynamic> json) => VoicemailSlot(
+        dayBit: int.tryParse(json['dayBit']?.toString() ?? '') ?? 0,
+        startTime: json['startTime']?.toString() ?? '00:00',
+        endTime: json['endTime']?.toString() ?? '00:00',
+      );
+
+  Map<String, dynamic> toJson() => {
+        'dayBit': dayBit,
+        'startTime': startTime,
+        'endTime': endTime,
+      };
+
+  VoicemailSlot copyWith({int? dayBit, String? startTime, String? endTime}) =>
+      VoicemailSlot(
+        dayBit: dayBit ?? this.dayBit,
+        startTime: startTime ?? this.startTime,
+        endTime: endTime ?? this.endTime,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is VoicemailSlot &&
+      other.dayBit == dayBit &&
+      other.startTime == startTime &&
+      other.endTime == endTime;
+
+  @override
+  int get hashCode => Object.hash(dayBit, startTime, endTime);
+}
+
+class VoicemailSchedule {
+  /// Les plages programmées s'appliquent-elles ?
+  final bool enabled;
+
+  /// Les périodes, tous jours confondus.
+  final List<VoicemailSlot> slots;
+
+  /// Activation ponctuelle, en UTC. Toujours datée, et jamais à plus de 24 h —
+  /// il n'existe pas de mode « actif jusqu'à nouvel ordre », précisément pour
+  /// qu'on ne puisse pas l'oublier. Exclusive des plages.
+  final DateTime? untilAt;
+
+  /// Le filet : basculer au répondeur si l'appel n'est pas décroché à temps,
+  /// s'il est refusé, ou si la ligne est occupée.
+  ///
+  /// D'une autre nature que les deux précédents, et cumulable avec eux : ici le
+  /// téléphone SONNE. C'est pourquoi il n'« active » pas le répondeur au sens
+  /// de [active], et n'affiche aucun bandeau.
+  final bool noAnswerEnabled;
+
+  /// Annonce enregistrée par le propriétaire, jouée à l'appelant. Le nom du
+  /// fichier change à chaque enregistrement — c'est ce qui tient lieu
+  /// d'empreinte pour le cache média, qui indexe par nom et n'invalide rien.
+  final String? greetingUrl;
+  final int? greetingSeconds;
+
+  /// Plafond de plages par jour, imposé par le serveur.
+  final int maxSlotsPerDay;
+
+  /// Fuseau IANA posé par l'appareil. `null` = laisser le serveur décider.
+  final String? timezone;
+
+  /// Liste de contacts autorisée à faire sonner malgré tout. `null` = personne.
+  final int? bypassListId;
+
+  /// Calculé serveur : le répondeur intercepte-t-il en ce moment ?
+  final bool active;
+
+  /// Calculé serveur. `null` alors que [active] est vrai = créneau couvrant la
+  /// journée entière : on n'affiche alors aucune heure de fin plutôt qu'une
+  /// heure inventée.
+  final DateTime? activeUntil;
+
+  /// Calculé serveur : le fuseau réellement utilisé, montré dans l'écran de
+  /// réglage pour que l'utilisateur voie s'il est rattaché au bon pays.
+  final String resolvedTimezone;
+
+  const VoicemailSchedule({
+    this.enabled = false,
+    this.slots = const [],
+    this.untilAt,
+    this.noAnswerEnabled = false,
+    this.greetingUrl,
+    this.greetingSeconds,
+    this.maxSlotsPerDay = 3,
+    this.timezone,
+    this.bypassListId,
+    this.active = false,
+    this.activeUntil,
+    this.resolvedTimezone = 'Africa/Douala',
+  });
+
+  static DateTime? _parseUtc(dynamic value) {
+    final raw = value?.toString();
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toUtc();
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
+  }
+
+  factory VoicemailSchedule.fromJson(Map<String, dynamic> json) =>
+      VoicemailSchedule(
+        enabled: json['enabled'] == true || json['enabled'] == 1,
+        slots: (json['slots'] as List?)
+                ?.map((e) => VoicemailSlot.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
+        untilAt: _parseUtc(json['untilAt']),
+        noAnswerEnabled:
+            json['noAnswerEnabled'] == true || json['noAnswerEnabled'] == 1,
+        greetingUrl: json['greetingUrl']?.toString(),
+        greetingSeconds: _parseInt(json['greetingSeconds']),
+        maxSlotsPerDay: _parseInt(json['maxSlotsPerDay']) ?? 3,
+        timezone: json['timezone']?.toString(),
+        bypassListId: _parseInt(json['bypassListId']),
+        active: json['active'] == true || json['active'] == 1,
+        activeUntil: _parseUtc(json['activeUntil']),
+        resolvedTimezone:
+            json['resolvedTimezone']?.toString() ?? 'Africa/Douala',
+      );
+
+  /// Les plages d'un jour, triées par heure de début.
+  List<VoicemailSlot> slotsForDay(int dayBit) =>
+      slots.where((s) => s.dayBit == dayBit).toList()
+        ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+  @override
+  bool operator ==(Object other) =>
+      other is VoicemailSchedule &&
+      other.enabled == enabled &&
+      _sameSlots(other.slots, slots) &&
+      other.untilAt == untilAt &&
+      other.noAnswerEnabled == noAnswerEnabled &&
+      other.greetingUrl == greetingUrl &&
+      other.greetingSeconds == greetingSeconds &&
+      other.timezone == timezone &&
+      other.bypassListId == bypassListId &&
+      other.active == active &&
+      other.activeUntil == activeUntil &&
+      other.resolvedTimezone == resolvedTimezone;
+
+  static bool _sameSlots(List<VoicemailSlot> a, List<VoicemailSlot> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        enabled,
+        Object.hashAll(slots),
+        untilAt,
+        noAnswerEnabled,
+        greetingUrl,
+        greetingSeconds,
+        timezone,
+        bypassListId,
+        active,
+        activeUntil,
+        resolvedTimezone,
+      );
+}
+
 // ── EXPORT JOB ───────────────────────────────────────────────────────
 // Table: user_export_jobs (migration 034)
 
@@ -1054,6 +1259,14 @@ class Call {
       case 1: return LocaleController.instance.l10n.ended2;
       case 2: return LocaleController.instance.l10n.rejected;
       case 3: return LocaleController.instance.l10n.missed;
+      // 4 et 5 : renvoyé au répondeur. Ce n'est pas « manqué » — dans un cas le
+      // téléphone n'a jamais sonné, dans l'autre l'appel a trouvé son
+      // répondeur. Le journal dit la même chose des deux : ce qui les sépare
+      // intéresse les statistiques et les mots de l'appelant, pas le
+      // destinataire qui relit sa liste.
+      case 4:
+      case 5:
+        return LocaleController.instance.l10n.voicemailCallStatus;
       default: return '';
     }
   }
@@ -1911,6 +2124,22 @@ class SocketEvents {
   /// `GET /billing/me`.
   static const entitlementsUpdated = 'entitlements:updated';
 
+  /// Le numéro Alanya du compte vient de changer (numéro choisi, payé) :
+  /// { phone }. Chaque appareil relit son profil — le numéro affiché, le code
+  /// QR, et ce qu'il faudra taper à la prochaine connexion.
+  static const accountPhoneChanged = 'account:phone_changed';
+
+  /// La planification du répondeur a changé depuis un autre appareil du même
+  /// compte : le créneau complet, au format de `GET /auth/voicemail-schedule`.
+  /// Le réglage est par compte, le bandeau est par appareil — sans cet
+  /// événement, le second téléphone garde un bandeau périmé jusqu'à son
+  /// prochain retour au premier plan.
+  static const voicemailScheduleUpdated = 'voicemail_schedule_updated';
+
+  /// L'annonce vocale du répondeur a changé depuis un autre appareil du compte :
+  /// { greetingUrl, greetingSeconds }.
+  static const voicemailGreetingUpdated = 'voicemail_greeting_updated';
+
   // Présence
   static const presenceOnline   = 'presence:online';
   static const presenceOffline  = 'presence:offline';
@@ -1982,6 +2211,12 @@ class SocketEvents {
   static const callError     = 'call_error';
   static const callFailed    = 'call_failed';
   static const callBusy      = 'call_busy';       // cible occupée (ringing/in_call)
+  /// Le répondeur du destinataire est actif : { callId, targetId, reason,
+  /// isVideo, conversationID }. Émis à la seule socket de l'appelant, EN LIEU
+  /// ET PLACE de `call_ringing` — rien n'a sonné et rien n'a été armé côté
+  /// serveur. L'appelant démonte son sortant et se voit proposer de laisser un
+  /// message vocal dans la conversation transmise.
+  static const callVoicemail = 'call_voicemail';
   static const callNoAnswer  = 'call_no_answer';  // timeout serveur sans réponse
   static const callResume    = 'call_resume';
   static const callRejoinOffer = 'call_rejoin_offer';

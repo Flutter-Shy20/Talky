@@ -33,6 +33,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: any
+  # Nom IANA du fuseau de l'appareil (Africa/Douala, Europe/Paris…), en tête de
+  # la cascade du répondeur. `intl` ne le donne pas, et
+  # DateTime.now().timeZoneName rend des abréviations (WAT, GMT+01:00)
+  # inexploitables pour une recherche IANA. Sans lui, le créneau récurrent
+  # retombe sur le pays du compte — correct pour qui ne voyage pas.
+  flutter_timezone: ^4.1.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

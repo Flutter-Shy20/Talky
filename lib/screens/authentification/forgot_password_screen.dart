@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -7,6 +8,7 @@ import '../../core/utils/validators.dart';
 import '../../l10n/app_localizations.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
+import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/account/warning_banner.dart';
 import '../../widgets/alanya_phone_field.dart';
@@ -115,14 +117,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _resetPassword() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     await _run(() async {
-      await _apiClient.completePasswordReset(
+      final reponse = await _apiClient.completePasswordReset(
         _resetToken!,
         _passwordController.text,
+        // Enrôle ce téléphone au passage : quand l'appareil connu est perdu,
+        // c'est la seule porte d'entrée qui reste, et renvoyer l'utilisateur
+        // vers le formulaire de connexion le ferait refuser aussitôt.
+        hardwareId: await TalkyApiClient.currentHardwareId(),
       );
       if (!mounted) return;
+
+      // Le mot de passe est changé quoi qu'il arrive ensuite : la confirmation
+      // part avant toute tentative d'ouverture de session. Le ScaffoldMessenger
+      // est celui de l'application, il survit au dépilement de cet écran.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.passwordResetSuccessfully)),
       );
+
+      final accessToken = reponse['accessToken']?.toString() ?? '';
+      final refreshToken = reponse['refreshToken']?.toString() ?? '';
+      // Tokens absents : le serveur n'a pas enrôlé l'appareil (instance
+      // antérieure à ce contrat). On garde alors le retour vers l'écran de
+      // connexion, exactement comme avant.
+      if (accessToken.isNotEmpty && refreshToken.isNotEmpty) {
+        final auth = context.read<AuthProvider>();
+        await auth.loginWithQrTokens(
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+        );
+        if (!mounted) return;
+        if (auth.isLoggedIn) {
+          // Cet écran est empilé par-dessus l'`AuthWrapper`, qui affiche déjà
+          // l'accueil dès que la session existe : tout dépiler suffit, et
+          // évite de détruire la page racine qui porte le cycle de session.
+          Navigator.popUntil(context, (route) => route.isFirst);
+          return;
+        }
+        // Session non ouverte malgré les tokens (réseau coupé entre les deux
+        // appels) : on retombe sur le formulaire de connexion, où le nouveau
+        // mot de passe fonctionne depuis cet appareil désormais enrôlé.
+      }
+
       Navigator.pop(context);
     });
   }

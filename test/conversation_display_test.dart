@@ -343,4 +343,78 @@ void main() {
       );
     });
   });
+
+  group('conversationPeerHasPlus', () {
+    Map<String, dynamic> badged(int id,
+            {int accountType = 0, int status = 0}) =>
+        {
+          'alanyaID': id,
+          'nom': 'Pair $id',
+          'account_type': accountType,
+          'verification_status': status,
+        };
+
+    LocalConversation with1to1(Map<String, dynamic> peer) =>
+        conv(participants: [part(me, 'Chris'), peer]);
+
+    test('compte personnel avec la coche → droit ouvert', () {
+      expect(
+        conversationPeerHasPlus(with1to1(badged(2, status: 2)), me),
+        isTrue,
+      );
+    });
+
+    test('compte personnel sans la coche → rien', () {
+      for (final status in [0, 1, 3, 4, 5]) {
+        expect(
+          conversationPeerHasPlus(with1to1(badged(2, status: status)), me),
+          isFalse,
+          reason: 'verification_status=$status',
+        );
+      }
+    });
+
+    // Un panier vérifié atteste d'un commerce, pas d'un abonnement : il ne doit
+    // pas ouvrir la traduction.
+    test('panier vérifié (business) → rien', () {
+      expect(
+        conversationPeerHasPlus(
+          with1to1(badged(2, accountType: 1, status: 2)),
+          me,
+        ),
+        isFalse,
+      );
+    });
+
+    test('sceau officiel → rien', () {
+      expect(
+        conversationPeerHasPlus(
+          with1to1(badged(2, accountType: 2, status: 2)),
+          me,
+        ),
+        isFalse,
+      );
+    });
+
+    test('groupe → rien, même avec un membre abonné', () {
+      final group = conv(
+        isGroup: true,
+        groupName: 'Équipe',
+        participants: [part(me, 'Chris'), badged(2, status: 2)],
+      );
+      expect(conversationPeerHasPlus(group, me), isFalse);
+    });
+
+    test('conversation avec soi-même → rien', () {
+      final self = conv(
+        groupName: kSelfChatMarker,
+        participants: [part(me, 'Chris')],
+      );
+      expect(conversationPeerHasPlus(self, me), isFalse);
+    });
+
+    test('participants absents → rien plutôt qu\'une erreur', () {
+      expect(conversationPeerHasPlus(conv(), me), isFalse);
+    });
+  });
 }

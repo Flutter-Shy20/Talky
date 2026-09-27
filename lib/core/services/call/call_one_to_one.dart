@@ -121,6 +121,26 @@ extension CallOneToOne on CallService {
         await persistOutgoingSnapshot(phase: 'connecting');
       }
 
+      // Un état terminal a pu arriver PENDANT les `await` ci-dessus.
+      //
+      // `_acquireCallSession` monte CallKit et le service de premier plan :
+      // cent à trois cents millisecondes sur Android. Le serveur, lui, répond
+      // parfois bien plus vite — `call_voicemail` en particulier, qui n'a
+      // personne à faire sonner et ne fait qu'écrire une ligne d'historique.
+      // Son gestionnaire démontait alors l'appel, puis cette fonction
+      // reprenait ici et démarrait une sonnerie de retour sur un appel déjà
+      // mort. `startOutgoingRingback` ne vérifie aucun état, et le filet des
+      // 50 secondes ci-dessous teste un statut qui n'est plus actif : plus
+      // rien n'arrêtait le son. L'appelant entendait la sonnerie tourner sous
+      // l'écran d'enregistrement, jusqu'à ce qu'il tue l'application.
+      //
+      // Vaut pour tous les états terminaux rapides — `call_busy`,
+      // `call_failed`, `call_rejected` — pas seulement pour le répondeur.
+      if (_status != CallStatus.outgoing && _status != CallStatus.connecting) {
+        debugPrint('[CallService] 🛡 initiateCall: appel déjà terminé pendant la mise en place');
+        return;
+      }
+
       // Ringback côté appelant
       _ringtone.startOutgoingRingback();
 

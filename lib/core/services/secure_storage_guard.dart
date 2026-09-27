@@ -20,6 +20,27 @@ const AndroidOptions kSecureStorageAndroidOptions = AndroidOptions(
   resetOnError: true,
 );
 
+/// Options iOS communes : un secret écrit ici ne quitte jamais ce téléphone.
+///
+/// Le suffixe `this_device` est le point important. Sans lui, restaurer la
+/// sauvegarde chiffrée d'un iPhone sur un autre y recopie le contenu du
+/// Keychain — donc l'identifiant matériel du premier appareil, que la table
+/// `appareils` reconnaîtrait alors sur un téléphone qui n'a jamais été enrôlé.
+///
+/// `first_unlock` plutôt que le défaut `unlocked` : la clé redevient lisible
+/// dès le premier déverrouillage après un redémarrage, et non uniquement quand
+/// l'écran est déverrouillé. C'est strictement plus permissif que le défaut —
+/// aucun accès possible aujourd'hui ne devient impossible — et cela évite qu'un
+/// traitement en arrière-plan réveillé avant tout déverrouillage ne lise `null`.
+///
+/// Sans effet sur les clés déjà écrites : le plugin ne met `kSecAttrAccessible`
+/// que dans les requêtes d'écriture, jamais dans celles de lecture. Les
+/// anciennes entrées restent donc lisibles et adoptent l'attribut à leur
+/// prochaine écriture.
+const IOSOptions kSecureStorageIosOptions = IOSOptions(
+  accessibility: KeychainAccessibility.first_unlock_this_device,
+);
+
 /// Lectures et écritures tolérantes au magasin chiffré devenu illisible.
 ///
 /// Le cas nominal est traité côté natif, avant le démarrage de Flutter
