@@ -206,6 +206,80 @@ extension MediaApi on TalkyApiClient {
     throw uploadHttpException(response);
   }
 
+  /// Dépose une sonnerie importée, choisie pour une liste, pour que les autres
+  /// appareils du compte la retrouvent (ticket `ringtone`, puis envoi direct).
+  ///
+  /// [sha256] est l'empreinte que la liste synchronise déjà : le serveur en
+  /// tire l'adresse du fichier, et répond « déjà là » si ce contenu a déjà
+  /// été déposé par ce compte.
+  ///
+  /// Renvoie l'adresse du fichier, ou `null` quand le serveur ne garde pas
+  /// (encore) ces fichiers : route inconnue, ancien serveur, stockage objet
+  /// éteint. La sonnerie reste alors sur le téléphone, comme avant. Lève pour
+  /// un échec réseau, ou un refus (`SUBSCRIPTION_REQUIRED`).
+  Future<String?> uploadListRingtone(
+    File file, {
+    required String sha256,
+  }) async {
+    final response = await _client
+        .post(
+          Uri.parse('${TalkyApiClient.baseUrl}/upload/ticket'),
+          headers: {
+            'Authorization': 'Bearer $_accessToken',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'kind': 'ringtone',
+            'sha256': sha256,
+            'mimetype': mimeTypeForPath(file.path).mimeType,
+            'size': await file.length(),
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+    // Route inconnue (404) ou type de ticket inconnu (400) : serveur antérieur.
+    if (response.statusCode == 404) return null;
+    if (response.statusCode == 400) {
+      final e = uploadHttpException(response);
+      if (e.code == 'VALIDATION_FAILED') return null;
+      throw e;
+    }
+    if (response.statusCode != 200) throw uploadHttpException(response);
+    final body = jsonDecode(response.body);
+    if (body is! Map<String, dynamic>) return null;
+    switch (body['mode']) {
+      case 'exists':
+        return body['url'] as String?;
+      case 'direct':
+        await _putDirect(file, body, timeout: const Duration(seconds: 120));
+        return body['url'] as String?;
+      default:
+        return null;
+    }
+  }
+
+  /// Télécharge le fichier d'une sonnerie de liste déposée par un autre
+  /// appareil du compte. `null` si le fichier manque (jamais déposé) ou
+  /// dépasse la taille d'une sonnerie.
+  ///
+  /// Aucun jeton n'est joint : l'adresse est celle d'un bucket public, ou du
+  /// serveur qui redirige vers le stockage.
+  Future<({List<int> bytes, String? contentType})?> downloadListRingtone(
+    String url, {
+    int maxBytes = 5 * 1024 * 1024,
+  }) async {
+    final response = await _client
+        .get(Uri.parse(url))
+        .timeout(const Duration(seconds: 60));
+    if (response.statusCode != 200) return null;
+    if (response.bodyBytes.isEmpty || response.bodyBytes.length > maxBytes) {
+      return null;
+    }
+    return (
+      bytes: response.bodyBytes,
+      contentType: response.headers['content-type'],
+    );
+  }
+
   Future<void> deleteVoicemailGreeting() async {
     final response = await _client
         .delete(

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,13 +22,15 @@ import 'ringtone_preferences.dart';
 ///  - **fourni avec l'app** (`builtin`) — l'identifiant (`notif_pop`,
 ///    `bundled_son3`, `__system_default__`) suffit : le fichier existe sur tous
 ///    les appareils.
-///  - **importé par l'utilisateur** (`custom`) — le fichier audio reste LOCAL,
-///    il n'est jamais envoyé au serveur. Ce qui se synchronise est son
-///    identité : le SHA-256 de son contenu. Un appareil qui possède un fichier
-///    de même empreinte rejoue exactement le même son ; sinon il retombe sur
-///    son son de remplacement habituel, **sans que la préférence soit
-///    effacée** — elle se rebranchera toute seule le jour où le fichier sera
-///    importé ici aussi (voir [rebindCustomSounds]).
+///  - **importé par l'utilisateur** (`custom`) — ce qui se synchronise est
+///    son identité : le SHA-256 de son contenu. Un appareil qui possède un
+///    fichier de même empreinte rejoue exactement le même son. Le fichier
+///    lui-même est déposé à part par l'appareil qui l'a importé
+///    ([_uploadLocalCustomSounds]), et récupéré par les autres grâce à
+///    l'adresse qui accompagne la liste ([_fetchMissingSounds]). Tant qu'il
+///    manque, l'appareil retombe sur son son de remplacement habituel, **sans
+///    que la préférence soit effacée** — elle se rebranche toute seule dès que
+///    le fichier arrive (voir [rebindCustomSounds]).
 ///
 /// Chaque réglage porte donc DEUX choses par évènement :
 ///  - `*RingtoneId` : l'identifiant d'option valide **sur cet appareil**. C'est
@@ -78,8 +81,25 @@ class ListRingtonePreferences extends ChangeNotifier {
   static ListRingtonePreferences? _bound;
 
   final TalkyApiClient? _api;
+  final SyncedRingtoneImporter _importer;
 
-  ListRingtonePreferences({TalkyApiClient? api}) : _api = api {
+  /// Empreintes déjà déposées (ou trouvées déjà là) pendant cette session, et
+  /// empreintes dont le téléchargement a déjà été tenté : une tentative par
+  /// session, jamais une boucle. En mémoire seulement : un autre compte
+  /// connecté ensuite sur l'appareil repart de zéro.
+  static final Set<String> _deposees = {};
+  static final Set<String> _telechargementsTentes = {};
+  static bool _depotEnCours = false;
+  static bool _telechargementEnCours = false;
+
+  /// Dernière synchronisation de fichiers lancée en arrière-plan (tests).
+  static Future<void> _fichiersEnCours = Future.value();
+
+  ListRingtonePreferences({
+    TalkyApiClient? api,
+    SyncedRingtoneImporter? importer,
+  })  : _api = api,
+        _importer = importer ?? RingtonePreferences.importSynced {
     _bound = this;
     // Un import (ou une suppression) de sonnerie change ce qui est disponible
     // ici : on rebranche aussitôt les listes concernées.
@@ -134,6 +154,8 @@ class ListRingtonePreferences extends ChangeNotifier {
   /// (le repousser ferait renaître ce que la purge vient d'effacer). Les
   /// appartenances restent : elles décrivent les listes, pas l'abonnement.
   static Future<void> purgeLocal() async {
+    _deposees.clear();
+    _telechargementsTentes.clear();
     _settings = {};
     _priority = [];
     _pending = {};
@@ -158,6 +180,11 @@ class ListRingtonePreferences extends ChangeNotifier {
   @visibleForTesting
   static void resetForTesting() {
     _bound = null;
+    _deposees.clear();
+    _telechargementsTentes.clear();
+    _depotEnCours = false;
+    _telechargementEnCours = false;
+    _fichiersEnCours = Future.value();
     _loaded = false;
     _settings = {};
     _priority = [];
@@ -190,6 +217,7 @@ class ListRingtonePreferences extends ChangeNotifier {
     await _adoptLegacyLocalChoices();
     await rebindCustomSounds();
     await _flushPending();
+    _lancerFichiers(_uploadLocalCustomSounds());
   }
 
   ListRingtoneSetting settingFor(int listId) =>
@@ -226,6 +254,7 @@ class ListRingtonePreferences extends ChangeNotifier {
     await _persist();
     notifyListeners();
     await _flushPending();
+    _lancerFichiers(_uploadLocalCustomSounds());
   }
 
   /// Traduit un identifiant d'option choisi dans l'interface en couple
@@ -370,6 +399,112 @@ class ListRingtonePreferences extends ChangeNotifier {
       notifyListeners();
     }
     await _flushPending(lists: lists);
+
+    // Les fichiers voyagent en arrière-plan : quelques mégaoctets ne doivent
+    // pas retarder la synchronisation des listes.
+    _lancerFichiers(_fetchMissingSounds(lists));
+    _lancerFichiers(_uploadLocalCustomSounds());
+  }
+
+  // ── FICHIERS DES SONS IMPORTÉS ─────────────────────────────────────
+
+  static void _lancerFichiers(Future<void> tache) {
+    final precedente = _fichiersEnCours;
+    _fichiersEnCours = Future.wait([precedente, tache]).then((_) {});
+  }
+
+  /// Attend la fin des dépôts et téléchargements lancés en arrière-plan.
+  @visibleForTesting
+  static Future<void> get pendingFileSync => _fichiersEnCours;
+
+  /// Dépose, pour les autres appareils du compte, les sonneries importées ICI
+  /// et choisies pour une liste. Silencieux : un échec réessaie à la
+  /// synchronisation suivante, un refus (hors Alanya Plus, serveur qui ne
+  /// garde pas ces fichiers) arrête la tentative.
+  Future<void> _uploadLocalCustomSounds() async {
+    final api = _api;
+    if (api == null || _depotEnCours) return;
+    _depotEnCours = true;
+    try {
+      final aDeposer = <String, RingtoneOption>{};
+      for (final setting in _settings.values) {
+        for (final sound in [setting.messageSound, setting.callSound]) {
+          if (sound == null || sound.type != ListSoundType.custom) continue;
+          if (_deposees.contains(sound.id)) continue;
+          final local = RingtonePreferences.customByContentHash(sound.id);
+          if (local?.filePath != null) aDeposer[sound.id] = local!;
+        }
+      }
+      for (final entry in aDeposer.entries) {
+        try {
+          final url = await api.uploadListRingtone(
+            File(entry.value.filePath!),
+            sha256: entry.key,
+          );
+          if (url == null) return; // le serveur ne garde pas ces fichiers
+          _deposees.add(entry.key);
+        } on TalkyException catch (e) {
+          if (e.code == 'SUBSCRIPTION_REQUIRED') return;
+          debugPrint('[ListRingtone] sonnerie non déposée: $e');
+        } catch (e) {
+          debugPrint('[ListRingtone] sonnerie non déposée: $e');
+        }
+      }
+    } finally {
+      _depotEnCours = false;
+    }
+  }
+
+  /// Récupère les sonneries importées ailleurs, choisies pour une liste et
+  /// absentes ici, à partir de l'adresse qui accompagne la liste. Le contenu
+  /// est vérifié contre l'empreinte avant d'être enregistré.
+  Future<void> _fetchMissingSounds(List<ContactList> lists) async {
+    final api = _api;
+    if (api == null || _telechargementEnCours) return;
+    _telechargementEnCours = true;
+    try {
+      var recu = false;
+      for (final list in lists) {
+        for (final son in [
+          (type: list.messageSoundType, id: list.messageSoundId,
+              name: list.messageSoundName, url: list.messageSoundUrl),
+          (type: list.callSoundType, id: list.callSoundId,
+              name: list.callSoundName, url: list.callSoundUrl),
+        ]) {
+          final id = son.id;
+          final url = son.url;
+          if (son.type != ListSoundType.custom.wire || id == null || url == null) {
+            continue;
+          }
+          if (RingtonePreferences.customByContentHash(id) != null) continue;
+          if (!_telechargementsTentes.add(id)) continue;
+          try {
+            final fichier = await api.downloadListRingtone(
+              url,
+              maxBytes: kMaxRingtoneFileSizeBytes,
+            );
+            if (fichier == null) continue;
+            final ext = RingtonePreferences.extensionForSynced(
+              contentType: fichier.contentType,
+              name: son.name,
+            );
+            if (ext == null) continue;
+            final option = await _importer(
+              bytes: fichier.bytes,
+              extension: ext,
+              label: son.name ?? 'Sonnerie',
+              expectedHash: id,
+            );
+            if (option != null) recu = true;
+          } catch (e) {
+            debugPrint('[ListRingtone] sonnerie non récupérée: $e');
+          }
+        }
+      }
+      if (recu) await rebindCustomSounds();
+    } finally {
+      _telechargementEnCours = false;
+    }
   }
 
   /// Identifiant d'option utilisable **sur cet appareil** pour une identité
@@ -745,3 +880,12 @@ class ListRingtoneSetting {
         callSound,
       );
 }
+
+/// Enregistre une sonnerie reçue d'un autre appareil : [RingtonePreferences.importSynced]
+/// en service, remplaçable dans les tests.
+typedef SyncedRingtoneImporter = Future<RingtoneOption?> Function({
+  required List<int> bytes,
+  required String extension,
+  required String label,
+  required String expectedHash,
+});

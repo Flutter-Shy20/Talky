@@ -91,6 +91,7 @@ class Entitlements {
     this.purgedAt,
     this.verificationStatus,
     this.verifiedUntil,
+    this.mediaRetentionDays,
   });
 
   /// Serveur antérieur à l'abonnement, ou droits indisponibles : tout est
@@ -129,6 +130,13 @@ class Entitlements {
   /// tient. Nulle avec un serveur antérieur : le profil fait alors foi.
   final int? verificationStatus;
   final DateTime? verifiedUntil;
+
+  /// Durée pendant laquelle CE compte peut télécharger un média de discussion
+  /// depuis le serveur : 30 jours, ou 365 pour un abonné Alanya Plus. Le
+  /// fichier peut vivre plus longtemps, gardé par un autre membre abonné de
+  /// la discussion ; c'est à l'app de s'arrêter à cette durée. Nulle avec un
+  /// serveur antérieur.
+  final int? mediaRetentionDays;
 
   /// La coche s'affiche.
   bool get isVerified => verificationStatus == 2;
@@ -170,6 +178,7 @@ class Entitlements {
       purgedAt: _date(json['purgedAt']),
       verificationStatus: (verification?['status'] as num?)?.toInt(),
       verifiedUntil: _date(verification?['until']),
+      mediaRetentionDays: (json['mediaRetentionDays'] as num?)?.toInt(),
     );
   }
 
@@ -185,6 +194,7 @@ class Entitlements {
         'lapsedAt': lapsedAt?.toUtc().toIso8601String(),
         'purgeAfter': purgeAfter?.toUtc().toIso8601String(),
         'purgedAt': purgedAt?.toUtc().toIso8601String(),
+        if (mediaRetentionDays != null) 'mediaRetentionDays': mediaRetentionDays,
         if (verificationStatus != null)
           'verification': {
             'status': verificationStatus,

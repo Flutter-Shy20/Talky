@@ -3,9 +3,12 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talky_flutter/core/services/list_ringtone_preferences.dart';
 import 'package:talky_flutter/core/services/ringtone_preferences.dart';
+import 'package:talky_flutter/talky_api_client.dart';
 import 'package:talky_flutter/talky_models.dart';
 
 /// Synchronisation des sonneries de liste entre les appareils d'un compte.
@@ -326,6 +329,193 @@ void main() {
       expect(apres.messageSound?.type, ListSoundType.custom);
       expect(apres.messageSound?.id, file.hash);
       expect(apres.messageSound?.name, 'perso.mp3');
+    });
+  });
+
+  // ── Fichiers des sons importés ─────────────────────────────────────
+  // L'identité voyage avec la liste ; le fichier, lui, est déposé par
+  // l'appareil qui l'a importé et récupéré par les autres.
+  group('fichier du son importé', () {
+    late List<http.Request> requetes;
+
+    TalkyApiClient apiAvec(
+      Future<http.Response> Function(http.Request req) repondre,
+    ) =>
+        TalkyApiClient(client: MockClient((req) async {
+          requetes.add(req);
+          return repondre(req);
+        }));
+
+    ContactList listeImportee(int idList, String hash, {String? url}) =>
+        ContactList(
+          idList: idList,
+          name: 'Liste $idList',
+          messageSoundType: 'custom',
+          messageSoundId: hash,
+          messageSoundName: 'MaSonnerie.mp3',
+          messageSoundUrl: url,
+          soundSyncSupported: true,
+        );
+
+    setUp(() => requetes = []);
+
+    Future<({String path, String hash})> sonnerieLocale() async {
+      final f = await writeRingtoneFile('MaSonnerie.mp3', 'des-octets-A');
+      await seedCustomRingtones([
+        {
+          'id': 'custom_1',
+          'label': 'MaSonnerie.mp3',
+          'filePath': f.path,
+          'contentHash': f.hash,
+        },
+      ]);
+      return f;
+    }
+
+    test('importé ici : déposé une fois, par ticket puis envoi direct', () async {
+      final f = await sonnerieLocale();
+      final api = apiAvec((req) async {
+        if (req.url.path.endsWith('/upload/ticket')) {
+          return http.Response(
+            jsonEncode({
+              'mode': 'direct',
+              'method': 'PUT',
+              'uploadUrl': 'https://profilemedia.s3.example/ringtones/12/jeton?sig=1',
+              'headers': {'Content-Type': 'audio/mpeg'},
+              'url': 'https://profilemedia.s3.example/ringtones/12/jeton',
+            }),
+            200,
+          );
+        }
+        if (req.method == 'PUT') return http.Response('', 200);
+        return http.Response('inattendu', 500);
+      });
+      final prefs = ListRingtonePreferences(api: api);
+
+      await prefs.applyFromServer([listeImportee(1, f.hash)]);
+      await ListRingtonePreferences.pendingFileSync;
+
+      final ticket = requetes.firstWhere((r) => r.url.path.endsWith('/upload/ticket'));
+      expect(jsonDecode(ticket.body), {
+        'kind': 'ringtone',
+        'sha256': f.hash,
+        'mimetype': 'audio/mpeg',
+        'size': 'des-octets-A'.length,
+      });
+      final envoi = requetes.singleWhere((r) => r.method == 'PUT');
+      expect(envoi.bodyBytes, utf8.encode('des-octets-A'));
+      expect(envoi.headers['Content-Type'], 'audio/mpeg');
+
+      // Synchronisation suivante : déjà déposé, aucune nouvelle requête.
+      requetes.clear();
+      await prefs.applyFromServer([listeImportee(1, f.hash)]);
+      await ListRingtonePreferences.pendingFileSync;
+      expect(requetes.where((r) => r.url.path.endsWith('/upload/ticket')), isEmpty);
+    });
+
+    test('déjà sur le serveur, ou serveur qui ne les garde pas : rien n’est envoyé', () async {
+      final f = await sonnerieLocale();
+      for (final mode in ['exists', 'unavailable']) {
+        ListRingtonePreferences.resetForTesting();
+        await ListRingtonePreferences.preload();
+        requetes.clear();
+        final api = apiAvec((req) async => http.Response(
+              jsonEncode({'mode': mode, 'url': 'https://profilemedia.s3.example/r'}),
+              200,
+            ));
+        final prefs = ListRingtonePreferences(api: api);
+        await prefs.applyFromServer([listeImportee(1, f.hash)]);
+        await ListRingtonePreferences.pendingFileSync;
+        expect(requetes.where((r) => r.method == 'PUT'), isEmpty, reason: mode);
+      }
+    });
+
+    test('absent ici : téléchargé, vérifié, puis la liste se rebranche', () async {
+      final attendu = await writeRingtoneFile('MaSonnerie.mp3', 'des-octets-B');
+      const url = 'https://profilemedia.s3.example/ringtones/12/jeton';
+      final api = apiAvec((req) async {
+        if (req.method == 'GET' && req.url.toString() == url) {
+          return http.Response.bytes(
+            utf8.encode('des-octets-B'),
+            200,
+            headers: {'content-type': 'audio/mpeg'},
+          );
+        }
+        return http.Response('', 404);
+      });
+      final importes = <Map<String, Object>>[];
+      final prefs = ListRingtonePreferences(
+        api: api,
+        importer: ({
+          required List<int> bytes,
+          required String extension,
+          required String label,
+          required String expectedHash,
+        }) async {
+          importes.add({
+            'bytes': utf8.decode(bytes),
+            'extension': extension,
+            'label': label,
+            'hash': expectedHash,
+          });
+          // Ce que ferait l'import réel : la sonnerie existe désormais ici.
+          await seedCustomRingtones([
+            {
+              'id': 'custom_recue',
+              'label': label,
+              'filePath': attendu.path,
+              'contentHash': expectedHash,
+            },
+          ]);
+          return RingtonePreferences.customByContentHash(expectedHash);
+        },
+      );
+
+      await prefs.applyFromServer([listeImportee(1, attendu.hash, url: url)]);
+      expect(prefs.settingFor(1).messageSoundMissing, isTrue);
+      await ListRingtonePreferences.pendingFileSync;
+
+      expect(importes, [
+        {
+          'bytes': 'des-octets-B',
+          'extension': 'mp3',
+          'label': 'MaSonnerie.mp3',
+          'hash': attendu.hash,
+        },
+      ]);
+      expect(prefs.settingFor(1).messageRingtoneId, 'custom_recue');
+      expect(prefs.settingFor(1).messageSoundMissing, isFalse);
+    });
+
+    test('fichier introuvable : une seule tentative par session', () async {
+      const url = 'https://profilemedia.s3.example/ringtones/12/absent';
+      final api = apiAvec((req) async => http.Response('', 404));
+      final prefs = ListRingtonePreferences(api: api);
+
+      await prefs.applyFromServer([listeImportee(1, 'c' * 64, url: url)]);
+      await ListRingtonePreferences.pendingFileSync;
+      await prefs.applyFromServer([listeImportee(1, 'c' * 64, url: url)]);
+      await ListRingtonePreferences.pendingFileSync;
+
+      expect(requetes.where((r) => r.method == 'GET'), hasLength(1));
+      expect(prefs.settingFor(1).messageSoundMissing, isTrue);
+    });
+
+    test('contenu qui ne correspond pas à l’empreinte : refusé', () async {
+      final option = await RingtonePreferences.importSynced(
+        bytes: utf8.encode('autre-chose'),
+        extension: 'mp3',
+        label: 'MaSonnerie.mp3',
+        expectedHash: sha256.convert(utf8.encode('des-octets-A')).toString(),
+      );
+      expect(option, isNull);
+    });
+
+    test('extension : d’après le type annoncé, sinon le nom', () {
+      expect(RingtonePreferences.extensionForSynced(contentType: 'audio/mpeg'), 'mp3');
+      expect(RingtonePreferences.extensionForSynced(contentType: 'audio/mp4; x=1'), 'm4a');
+      expect(RingtonePreferences.extensionForSynced(contentType: 'application/octet-stream', name: 'a.ogg'), 'ogg');
+      expect(RingtonePreferences.extensionForSynced(contentType: 'image/png', name: 'a.flac'), isNull);
     });
   });
 }

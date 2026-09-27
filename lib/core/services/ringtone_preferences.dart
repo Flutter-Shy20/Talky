@@ -391,6 +391,70 @@ class RingtonePreferences extends ChangeNotifier {
     return sha256.convert(bytes).toString();
   }
 
+  /// Enregistre une sonnerie reçue d'un autre appareil du compte (choisie
+  /// là-bas pour une liste), comme si l'utilisateur l'avait importée ici.
+  ///
+  /// Refusée (`null`) si le contenu ne correspond pas à [expectedHash] : un
+  /// fichier tronqué ou altéré ne doit pas se faire passer pour le son choisi.
+  /// Déjà présente : renvoyée telle quelle, sans doublon. Lève
+  /// [RingtoneImportException] comme un import manuel (limite atteinte,
+  /// format refusé).
+  static Future<RingtoneOption?> importSynced({
+    required List<int> bytes,
+    required String extension,
+    required String label,
+    required String expectedHash,
+  }) async {
+    if (sha256.convert(bytes).toString() != expectedHash) return null;
+    final existing = customByContentHash(expectedHash);
+    if (existing != null) return existing;
+    final prefs = _bound;
+    if (prefs == null) return null;
+    final tmpDir = await getTemporaryDirectory();
+    final tmp = File(
+      '${tmpDir.path}/ringtone_sync_${DateTime.now().microsecondsSinceEpoch}.$extension',
+    );
+    await tmp.writeAsBytes(bytes, flush: true);
+    try {
+      return await prefs.addCustomRingtone(sourcePath: tmp.path, label: label);
+    } finally {
+      try {
+        await tmp.delete();
+      } catch (_) {
+        // Fichier temporaire : le système finira par le nettoyer.
+      }
+    }
+  }
+
+  /// Extension à donner à une sonnerie reçue : d'après le type annoncé par
+  /// le stockage, sinon d'après son nom. `null` si le format n'est pas l'un de
+  /// ceux que l'app sait jouer ([kSupportedRingtoneExtensions]).
+  static String? extensionForSynced({String? contentType, String? name}) {
+    final type = (contentType ?? '').split(';').first.trim().toLowerCase();
+    const parType = {
+      'audio/mpeg': 'mp3',
+      'audio/mp3': 'mp3',
+      'audio/mp4': 'm4a',
+      'audio/x-m4a': 'm4a',
+      'audio/m4a': 'm4a',
+      'video/mp4': 'm4a',
+      'audio/aac': 'aac',
+      'audio/ogg': 'ogg',
+      'audio/vorbis': 'ogg',
+      'audio/wav': 'wav',
+      'audio/x-wav': 'wav',
+      'audio/wave': 'wav',
+      'audio/vnd.wave': 'wav',
+    };
+    final ext = parType[type];
+    if (ext != null) return ext;
+    final nom = (name ?? '').toLowerCase();
+    final point = nom.lastIndexOf('.');
+    if (point < 0) return null;
+    final parNom = nom.substring(point + 1);
+    return kSupportedRingtoneExtensions.contains(parNom) ? parNom : null;
+  }
+
   /// Sonnerie importée présente sur CET appareil dont le contenu correspond à
   /// [hash], ou null. Seul le contenu compte : deux fichiers homonymes de
   /// contenu différent ne s'apparient pas, et le même fichier importé sous un

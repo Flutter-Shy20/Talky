@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talky_flutter/core/services/billing/entitlement_service.dart';
 import 'package:talky_flutter/core/services/billing/entitlements.dart';
+import 'package:talky_flutter/core/services/media_expiry_policy.dart';
 import 'package:talky_flutter/talky_api_client.dart';
 
 /// Charge utile telle que la rend le serveur (rules.js, decideEntitlements).
@@ -119,6 +120,52 @@ void main() {
       final c = EntitlementService(api: TalkyApiClient());
       await c.loadFromCache();
       expect(c.current.known, isFalse);
+    });
+  });
+
+  // Durée pendant laquelle CE compte peut télécharger un média de discussion :
+  // c'est elle que l'app applique pour afficher « Média expiré ».
+  group('conservation des médias', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      MediaExpiryPolicy.resetForTests();
+    });
+
+    test('lue dans les droits, gardée par le cache', () {
+      final e = Entitlements.fromJson({..._payload(), 'mediaRetentionDays': 365});
+      expect(e.mediaRetentionDays, 365);
+      expect(Entitlements.fromJson(e.toJson()).mediaRetentionDays, 365);
+      expect(Entitlements.fromJson(_payload()).mediaRetentionDays, isNull, reason: 'serveur antérieur');
+    });
+
+    test('appliquée à la politique d’expiration, oubliée à la déconnexion', () async {
+      // Le 410 annonce le plafond du serveur (un abonné garde 365 jours)…
+      MediaExpiryPolicy.resetForTests(retentionDays: 365);
+      final s = EntitlementService(api: TalkyApiClient());
+      // … mais ce compte, standard, s'arrête à 30.
+      await s.applyFromProfile({
+        'entitlements': {..._payload(), 'mediaRetentionDays': 30},
+      });
+      expect(MediaExpiryPolicy.retentionDays, 30);
+
+      const url = 'https://www.alanya237.com/uploads/media/2026-08-01/images/a.jpg';
+      expect(MediaExpiryPolicy.isExpired(url, now: DateTime.utc(2026, 9, 15)), isTrue);
+
+      await s.clear();
+      expect(MediaExpiryPolicy.retentionDays, 365, reason: 'retour à la durée apprise');
+      expect(MediaExpiryPolicy.isExpired(url, now: DateTime.utc(2026, 9, 15)), isFalse);
+    });
+
+    test('rechargée depuis le cache au démarrage', () async {
+      final a = EntitlementService(api: TalkyApiClient());
+      await a.applyFromProfile({
+        'entitlements': {..._payload(), 'mediaRetentionDays': 365},
+      });
+      MediaExpiryPolicy.resetForTests();
+
+      final b = EntitlementService(api: TalkyApiClient());
+      await b.loadFromCache();
+      expect(MediaExpiryPolicy.retentionDays, 365);
     });
   });
 }

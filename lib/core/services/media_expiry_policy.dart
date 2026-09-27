@@ -35,10 +35,23 @@ class MediaExpiryPolicy {
   static const _kRetentionDaysKey = 'media_retention_days_learned';
 
   static int? _retentionDays;
+  static int? _accountRetentionDays;
   static bool _charge = false;
 
-  /// Rétention connue, ou `null` si le serveur ne l'a pas encore annoncée.
-  static int? get retentionDays => _retentionDays;
+  /// Rétention qui s'applique à CE compte, ou `null` si rien n'est connu.
+  ///
+  /// La durée du compte, portée par ses droits (`mediaRetentionDays`), passe
+  /// avant celle apprise d'un `410` : depuis Alanya Plus, le serveur garde un
+  /// média 30 ou 365 jours selon les membres de la discussion, et son `410`
+  /// n'annonce que la plus longue. Un compte standard doit s'arrêter à 30
+  /// jours même si le fichier existe encore pour un abonné.
+  static int? get retentionDays => _accountRetentionDays ?? _retentionDays;
+
+  /// Durée du compte, lue dans ses droits. `null` à la déconnexion, ou avec
+  /// un serveur qui ne l'annonce pas : on retombe alors sur la durée apprise.
+  static void setAccountRetentionDays(int? jours) {
+    _accountRetentionDays = (jours != null && jours > 0) ? jours : null;
+  }
 
   /// À appeler dans `main()`, comme [MediaDownloadPreferences.preload].
   static Future<void> preload() async {
@@ -59,6 +72,7 @@ class MediaExpiryPolicy {
   /// l'information sera réapprise à la prochaine réponse du serveur.
   static Future<void> remember(int jours) async {
     if (jours <= 0 || jours == _retentionDays) return;
+    // Appris d'un `410` : c'est le plafond du serveur, pas la durée du compte.
     _retentionDays = jours;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -95,12 +109,13 @@ class MediaExpiryPolicy {
   /// pas encore apprise. Un faux négatif coûte une requête ; un faux positif
   /// masquerait un média que l'utilisateur pourrait encore voir.
   static bool isExpired(String? url, {DateTime? now}) =>
-      isMediaExpired(url, retentionDays: _retentionDays, now: now);
+      isMediaExpired(url, retentionDays: retentionDays, now: now);
 
   /// Réinitialise l'état mémoire. Réservé aux tests.
   @visibleForTesting
-  static void resetForTests({int? retentionDays}) {
+  static void resetForTests({int? retentionDays, int? accountRetentionDays}) {
     _retentionDays = retentionDays;
+    _accountRetentionDays = accountRetentionDays;
     _charge = true;
   }
 }

@@ -1623,6 +1623,13 @@ class ContactList {
   final String? callSoundId;
   final String? callSoundName;
 
+  /// Adresse du fichier d'une sonnerie importée (type `custom`), déposé par
+  /// l'appareil qui l'a choisie. Permet à un autre appareil du compte de la
+  /// récupérer. Null pour un son fourni avec l'app, ou avec un serveur qui ne
+  /// garde pas encore ces fichiers. Le fichier peut manquer (jamais déposé).
+  final String? messageSoundUrl;
+  final String? callSoundUrl;
+
   /// Rang de la liste quand un contact appartient à plusieurs listes : la
   /// première l'emporte. Null = jamais ordonnée (passe après les autres).
   final int? soundPriority;
@@ -1648,6 +1655,8 @@ class ContactList {
     this.callSoundType,
     this.callSoundId,
     this.callSoundName,
+    this.messageSoundUrl,
+    this.callSoundUrl,
     this.soundPriority,
     this.soundSyncSupported = false,
   });
@@ -1667,6 +1676,8 @@ class ContactList {
         callSoundType: _nonEmpty(json['callSoundType']),
         callSoundId: _nonEmpty(json['callSoundId']),
         callSoundName: _nonEmpty(json['callSoundName']),
+        messageSoundUrl: _nonEmpty(json['messageSoundUrl']),
+        callSoundUrl: _nonEmpty(json['callSoundUrl']),
         soundPriority: (json['soundPriority'] as num?)?.toInt(),
         soundSyncSupported: json.containsKey('messageSoundType') ||
             json.containsKey('callSoundType') ||
@@ -1686,6 +1697,8 @@ class ContactList {
         'callSoundType': callSoundType,
         'callSoundId': callSoundId,
         'callSoundName': callSoundName,
+        'messageSoundUrl': messageSoundUrl,
+        'callSoundUrl': callSoundUrl,
         'soundPriority': soundPriority,
       };
 }

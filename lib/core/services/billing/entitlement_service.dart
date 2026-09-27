@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../talky_api_client.dart';
 import '../../../talky_models.dart';
 import '../list_ringtone_preferences.dart';
+import '../media_expiry_policy.dart';
 import '../translation/message_translation_service.dart';
 import 'billing_models.dart';
 import 'entitlements.dart';
@@ -94,6 +95,7 @@ class EntitlementService extends ChangeNotifier {
         _current = Entitlements.fromJson(
           Map<String, dynamic>.from(jsonDecode(raw) as Map),
         );
+        _syncMediaRetention();
       }
       if (rawOffer != null) {
         _offer = PlusOffer.fromJson(
@@ -146,6 +148,7 @@ class EntitlementService extends ChangeNotifier {
     _current = raw is Map
         ? Entitlements.fromJson(Map<String, dynamic>.from(raw))
         : Entitlements.unrestricted;
+    _syncMediaRetention();
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -162,6 +165,14 @@ class EntitlementService extends ChangeNotifier {
     } catch (e) {
       debugPrint('[Entitlements] cache non écrit : $e');
     }
+  }
+
+  /// Durée de conservation des médias propre au compte : c'est elle que l'app
+  /// applique pour afficher « Média expiré » (voir [MediaExpiryPolicy]).
+  void _syncMediaRetention() {
+    MediaExpiryPolicy.setAccountRetentionDays(
+      _current.known ? _current.mediaRetentionDays : null,
+    );
   }
 
   /// Le serveur a effacé les données payantes du compte : le téléphone efface
@@ -203,6 +214,7 @@ class EntitlementService extends ChangeNotifier {
   /// À la déconnexion : les droits d'un compte ne passent pas au suivant.
   Future<void> clear() async {
     _current = Entitlements.unrestricted;
+    _syncMediaRetention();
     _offer = null;
     notifyListeners();
     try {
