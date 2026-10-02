@@ -113,8 +113,15 @@ class CallSessionGuard with WidgetsBindingObserver {
   /// terminer un appel pendant une réunion ne fermerait rien et laisserait la
   /// réunion sans service au premier plan.
   Future<void> Function()? _onHangUp;
-  bool _hangUpBound = false;
+  bool _nativeBound = false;
   bool _mediaFgsStarted = false;
+
+  /// Instant de connexion de l'appel, en millisecondes epoch.
+  ///
+  /// Retenu parce que relancer le service réécrit sa notification : sans lui,
+  /// chaque relance remettrait le chronomètre à zéro et l'appel paraîtrait
+  /// recommencer.
+  int _startedAtMs = 0;
 
   /// Le Picture-in-Picture système est ouvert (renseigné par le pont natif).
   ///
@@ -128,13 +135,23 @@ class CallSessionGuard with WidgetsBindingObserver {
   /// de tout changement de cycle de vie.
   bool _appBackgrounded = false;
 
+  /// Le service au premier plan porte-t-il le type `microphone` ?
+  ///
+  /// C'est ce type, et lui seul, qui donne le droit de capturer quand Alanya
+  /// n'est plus à l'écran. Renseigné par le natif après chaque
+  /// `startForeground` — voir `CallMediaBridge.notifyMediaTypes`. Faux par
+  /// défaut : tant que rien n'a confirmé la capture, on ne la suppose pas.
+  bool _micFgsCovered = false;
+  bool _cameraFgsCovered = false;
+
   /// True quand la plateforme autorise la capture caméra en arrière-plan.
   ///
-  /// Android l'accorde tant qu'un service de premier plan de type `camera`
-  /// tourne — d'où la lecture de `_mediaFgsStarted` plutôt qu'un simple test
-  /// de plateforme : sans le service, l'autorisation n'existe pas. iOS le
-  /// refuse tant que `multitasking-camera-access` n'est pas accordée.
-  bool get _cameraAllowedInBackground => _isAndroid && _mediaFgsStarted;
+  /// Android l'accorde au seul service de premier plan de type `camera` — d'où
+  /// la lecture du type réellement obtenu, et non du simple fait qu'un service
+  /// tourne : il a longtemps tourné en `phoneCall`, qui ne donne ni la caméra
+  /// ni le micro. iOS le refuse tant que `multitasking-camera-access` n'est pas
+  /// accordée, et n'a pas de service de premier plan pour le dire.
+  bool get _cameraAllowedInBackground => _isAndroid && _cameraFgsCovered;
 
   MediaStream? Function()? _getLocalStream;
   bool Function()? _isVideoOn;
@@ -209,9 +226,18 @@ class CallSessionGuard with WidgetsBindingObserver {
     _displayName = displayName;
     _videoPausedByLifecycle = false;
     _audioTrackEnded = false;
+    _micFgsCovered = false;
+    _cameraFgsCovered = false;
+    _startedAtMs = 0;
+    // Pas `false` en dur : un appel décroché depuis une notification acquiert la
+    // session alors qu'Alanya n'est pas encore à l'écran, et la politique
+    // caméra comme la relance du service se décident là-dessus.
+    _appBackgrounded =
+        WidgetsBinding.instance.lifecycleState != null &&
+            WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed;
 
     WidgetsBinding.instance.addObserver(this);
-    _bindHangUp();
+    _bindNative();
 
     await AudioHelper.configureCallAudio(isVideo: mode == SessionMode.video);
 
@@ -243,24 +269,40 @@ class CallSessionGuard with WidgetsBindingObserver {
     // La notification est posée à l'acquisition, quand l'appel sonne encore.
     // On la réécrit ici pour y lancer le chronomètre : relancer le service ne
     // le duplique pas, il redessine sa notification sous le même identifiant.
+    _startedAtMs = DateTime.now().millisecondsSinceEpoch;
     await _startMediaForegroundService(
       isVideo: _mode == SessionMode.video,
       displayName: _displayName,
-      startedAt: DateTime.now().millisecondsSinceEpoch,
+      startedAt: _startedAtMs,
     );
   }
 
   /// Ouvre l'oreille du pont natif, une fois pour toutes.
   ///
   /// Le canal ne descendait que dans un sens ; le bouton « Raccrocher » de la
-  /// notification a besoin qu'il remonte.
-  void _bindHangUp() {
-    if (_hangUpBound || !_isAndroid) return;
-    _hangUpBound = true;
+  /// notification a besoin qu'il remonte, et le service de ce qu'il a obtenu.
+  void _bindNative() {
+    if (_nativeBound || !_isAndroid) return;
+    _nativeBound = true;
     _callMediaChannel.setMethodCallHandler((call) async {
-      if (call.method != 'onHangUpRequested') return null;
-      debugPrint('[CallSessionGuard] raccrochage demandé depuis la notification');
-      await _onHangUp?.call();
+      switch (call.method) {
+        case 'onHangUpRequested':
+          debugPrint(
+            '[CallSessionGuard] raccrochage demandé depuis la notification',
+          );
+          await _onHangUp?.call();
+        case 'onMediaTypes':
+          final args = call.arguments as Map? ?? const {};
+          _micFgsCovered = args['microphone'] == true;
+          _cameraFgsCovered = args['camera'] == true;
+          debugPrint(
+            '[CallSessionGuard] FGS obtenu micro=$_micFgsCovered '
+            'caméra=$_cameraFgsCovered',
+          );
+          // La caméra vient peut-être de gagner ou de perdre le droit de
+          // tourner en arrière-plan : la politique se rejoue sur-le-champ.
+          if (_refCount > 0) _applyLocalVideoPolicy();
+      }
       return null;
     });
   }
@@ -331,6 +373,9 @@ class CallSessionGuard with WidgetsBindingObserver {
     _audioTrackEnded = false;
     _systemPipActive = false;
     _appBackgrounded = false;
+    _micFgsCovered = false;
+    _cameraFgsCovered = false;
+    _startedAtMs = 0;
 
     debugPrint('[CallSessionGuard] Session relâchée');
   }
@@ -339,7 +384,12 @@ class CallSessionGuard with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (kIsWeb || _refCount == 0) return;
 
-    debugPrint('[CallSessionGuard] lifecycle=$state mode=$_mode');
+    // La couverture micro est journalisée ici parce que c'est à ce moment
+    // qu'elle compte : un `paused` avec micro=false, c'est la conversation qui
+    // devient muette pour le correspondant.
+    debugPrint(
+      '[CallSessionGuard] lifecycle=$state mode=$_mode micro=$_micFgsCovered',
+    );
 
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
@@ -352,6 +402,7 @@ class CallSessionGuard with WidgetsBindingObserver {
       AudioHelper.reactivateCallAudio();
       _ensureAudioTrackActive();
       _maybeReplaceAudioIfNeeded();
+      _promoteMediaServiceIfNeeded();
       _applyLocalVideoPolicy();
       // Rebranche ce qu'un passage par `detached` aurait coupé. Sans effet
       // quand rien n'a été détaché : `syncMain` ignore ce qui n'a pas changé.
@@ -381,6 +432,30 @@ class CallSessionGuard with WidgetsBindingObserver {
     debugPrint('[CallSessionGuard] PiP système=$active');
     if (_refCount == 0) return;
     _applyLocalVideoPolicy();
+  }
+
+  /// Relance le service au premier plan quand il n'a pas obtenu le micro.
+  ///
+  /// Le type `microphone` ne s'obtient pas depuis l'arrière-plan : Android y
+  /// refuse `startForeground`, et c'est exactement le décrochage depuis une
+  /// notification. Le service démarre alors en `phoneCall` seul — l'appel tient,
+  /// mais la capture s'arrêterait au prochain passage en arrière-plan, sans que
+  /// rien ne le signale sinon le silence du correspondant.
+  ///
+  /// Le relancer d'ici, Alanya à l'écran, repose la demande dans les conditions
+  /// où le système l'accorde — et c'est le seul moment où il l'accorde. Rien
+  /// n'est dupliqué : `onStartCommand` est simplement rappelé, et la
+  /// notification se réécrit sous le même identifiant, chronomètre compris.
+  void _promoteMediaServiceIfNeeded() {
+    if (!_mediaFgsStarted || _micFgsCovered) return;
+    debugPrint(
+      '[CallSessionGuard] micro non couvert par le FGS — relance du service',
+    );
+    _startMediaForegroundService(
+      isVideo: _mode == SessionMode.video,
+      displayName: _displayName,
+      startedAt: _startedAtMs,
+    );
   }
 
   /// Coupe ou rétablit la caméra locale selon [localVideoShouldPause].

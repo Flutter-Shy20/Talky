@@ -15,7 +15,10 @@ library;
 ///
 /// [cameraAllowedInBackground] ensuite, qui n'est pas une préférence mais un
 /// fait de plateforme. Android l'autorise tant qu'un service de premier plan de
-/// type `camera` tourne — c'est le cas de `CallMediaForegroundService`. iOS le
+/// type `camera` tourne — ce que `CallMediaForegroundService` demande, et
+/// n'obtient pas toujours : le type se négocie au démarrage du service, et un
+/// appel décroché depuis l'arrière-plan n'y a pas droit. D'où un fait transmis
+/// plutôt que supposé, voir `CallMediaBridge.notifyMediaTypes`. iOS le
 /// refuse sans l'autorisation `multitasking-camera-access`, et suspendra la
 /// capture de lui-même : autant relâcher la piste proprement plutôt que de la
 /// laisser dans un état que le système a déjà tranché.
