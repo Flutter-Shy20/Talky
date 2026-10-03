@@ -26,6 +26,10 @@ import '../../widgets/status_ringed_avatar.dart';
 import '../../providers/status_provider.dart';
 import '../status/status_viewer_screen.dart';
 import '../profile/contact_lists_screen.dart';
+import '../profile/voicemail_schedule_screen.dart';
+import '../profile/translation_settings_screen.dart';
+import '../profile/profile_screen.dart';
+import '../profile/settings_screen.dart';
 import '../../widgets/typing_indicator.dart';
 import '../../widgets/chat/message_status_icon.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
@@ -36,7 +40,15 @@ import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 
 /// Entrées du menu ⋮ de l'écran des discussions.
-enum _ChatsMenuAction { contactLists, newGroup, markAllRead }
+enum _ChatsMenuAction {
+  contactLists,
+  newGroup,
+  markAllRead,
+  voicemail,
+  translation,
+  profile,
+  settings,
+}
 
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
@@ -236,6 +248,28 @@ class _ChatsScreenState extends State<ChatsScreen> {
         );
       case _ChatsMenuAction.markAllRead:
         await _markAllAsRead();
+      case _ChatsMenuAction.voicemail:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const VoicemailScheduleScreen()),
+        );
+      case _ChatsMenuAction.translation:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const TranslationSettingsScreen(),
+          ),
+        );
+      case _ChatsMenuAction.profile:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+        );
+      case _ChatsMenuAction.settings:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        );
     }
   }
 
@@ -391,6 +425,43 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.done_all_rounded),
                     title: Text(context.l10n.markAllAsRead),
+                  ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: _ChatsMenuAction.voicemail,
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.voicemail_outlined),
+                    title: Text(context.l10n.voicemailScheduleTitle),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _ChatsMenuAction.translation,
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.translate),
+                    title: Text(context.l10n.settingsMessageTranslation),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _ChatsMenuAction.profile,
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.person_outline),
+                    title: Text(context.l10n.viewProfile),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _ChatsMenuAction.settings,
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.settings_outlined),
+                    title: Text(context.l10n.settingsTitle),
                   ),
                 ),
               ],
