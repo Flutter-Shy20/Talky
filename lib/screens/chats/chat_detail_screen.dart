@@ -71,6 +71,7 @@ import '../../widgets/chat/message_status_icon.dart';
 import '../../widgets/chat/reaction_chips.dart';
 import '../calls/group_participants_picker_screen.dart';
 import 'contact_detail_screen.dart';
+import 'conversation_media_screen.dart';
 import 'group_detail_screen.dart';
 import 'forward_message_screen.dart';
 import 'album_media_list_screen.dart';
@@ -1405,14 +1406,112 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       actions: [
         if (!_callsDisabled && !widget.isGroup) ...[
           IconButton(
-            icon: const Icon(Icons.videocam_rounded),
+            icon: const Icon(Icons.translate),
             color: context.colors.primary,
-            onPressed: () => _initiateCall(isVideo: true),
+            tooltip: context.l10n.settingsMessageTranslation,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const TranslationSettingsScreen(),
+              ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.call_rounded),
-            color: context.colors.primary,
-            onPressed: () => _initiateCall(isVideo: false),
+          PopupMenuButton<bool>(
+            icon: Icon(Icons.add_call, color: context.colors.primary),
+            tooltip: context.l10n.audioCall,
+            offset: const Offset(0, 48),
+            onSelected: (isVideo) => _initiateCall(isVideo: isVideo),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: false,
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.call),
+                  title: Text(context.l10n.audioCall),
+                ),
+              ),
+              PopupMenuItem(
+                value: true,
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.videocam),
+                  title: Text(context.l10n.videoCall),
+                ),
+              ),
+            ],
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
+            tooltip: context.l10n.optionsAction,
+            offset: const Offset(0, 48),
+            onSelected: (value) {
+              switch (value) {
+                case 'contact':
+                  if (widget.userId != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ContactDetailScreen(
+                          userId: widget.userId!,
+                          conversationId: _convId,
+                          initialName: _chatTitle(context),
+                          initialAvatar: widget.avatarUrl ?? '',
+                        ),
+                      ),
+                    );
+                  }
+                case 'media':
+                  if (_convId != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ConversationMediaScreen(
+                          conversationId: _convId!,
+                          conversationName: widget.userName,
+                        ),
+                      ),
+                    );
+                  }
+                case 'translation':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TranslationSettingsScreen(),
+                    ),
+                  );
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'contact',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.person),
+                  title: Text(context.l10n.viewProfile),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'media',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: Text(context.l10n.mediaLinksAndDocs),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'translation',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.translate),
+                  title: Text(context.l10n.settingsMessageTranslation),
+                ),
+              ),
+            ],
           ),
           AppSpacing.hGapSm,
         ],
