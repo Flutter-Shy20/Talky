@@ -49,7 +49,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   bool _rechercheIndisponible = false;
   int _rechercheId = 0;
 
-  LatLng _center = const LatLng(48.8566, 2.3522); // Paris fallback
+  LatLng _center = const LatLng(3.8624, 11.5001); // ENSP Yaoundé, repli sans GPS
   bool _hasFix = false;
   bool _loadingGps = false;
   bool _sending = false;
