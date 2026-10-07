@@ -4904,6 +4904,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreGoogleEmpty => '此 Google 账号中没有备份';
 
   @override
+  String get restoreFromDrive => '从 Google 云端硬盘恢复';
+
+  @override
+  String restoreDriveAccount(String account) {
+    return '请使用账号 $account 登录。';
+  }
+
+  @override
+  String get restoreNothingOnDevice => '此手机上没有备份。请连接 Google 云端硬盘，或选择备份文件。';
+
+  @override
   String get restorePickFile => '选择备份文件';
 
   @override

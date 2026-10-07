@@ -5067,6 +5067,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restoreGoogleEmpty => 'No backup in this Google account';
 
   @override
+  String get restoreFromDrive => 'Restore from Google Drive';
+
+  @override
+  String restoreDriveAccount(String account) {
+    return 'Sign in with the account $account.';
+  }
+
+  @override
+  String get restoreNothingOnDevice =>
+      'No backup on this phone. Connect to Google Drive, or choose the backup file.';
+
+  @override
   String get restorePickFile => 'Choose a backup file';
 
   @override

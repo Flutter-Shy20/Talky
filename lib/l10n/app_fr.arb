@@ -2979,6 +2979,16 @@
   "restoreConnectGoogle": "Se connecter à Google Drive",
   "restoreGoogleRefused": "Connexion à Google annulée",
   "restoreGoogleEmpty": "Aucune sauvegarde dans ce compte Google",
+  "restoreFromDrive": "Restaurer depuis Google Drive",
+  "restoreDriveAccount": "Connectez-vous avec le compte {account}.",
+  "@restoreDriveAccount": {
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreNothingOnDevice": "Aucune sauvegarde sur ce téléphone. Connectez-vous à Google Drive, ou choisissez le fichier de sauvegarde.",
   "restorePickFile": "Choisir un fichier de sauvegarde",
   "restorePickHint": "Si votre sauvegarde ne s'affiche pas — après une réinstallation, par exemple — désignez le fichier .enc dans Téléchargements › Alanya › Sauvegardes.",
   "restorePickCancelled": "Aucun fichier choisi",

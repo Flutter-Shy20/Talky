@@ -32,6 +32,13 @@ class BackupAnnouncement {
   /// « aucune sauvegarde trouvée » indiscernable d'une absence réelle.
   final String? accountHint;
 
+  /// La dernière sauvegarde déclarée est-elle sur Google Drive ?
+  ///
+  /// L'adresse n'est envoyée au serveur que pour un dépôt Drive réussi : sa
+  /// présence suffit, sans colonne ni migration de plus. Son absence, elle,
+  /// ne prouve rien — les sauvegardes antérieures à cet envoi n'en ont pas.
+  bool get onDrive => accountHint != null;
+
   const BackupAnnouncement({
     required this.lastAt,
     required this.bytes,
@@ -112,7 +119,19 @@ class _RestoreScreenState extends State<RestoreScreen> {
   /// fichiers dans `Download`.
   BackupTarget? _picked;
 
+  /// Rien trouvé sur l'appareil : le cas ordinaire d'un téléphone neuf.
+  bool _nothingOnDevice = false;
+
   BackupTarget get _target => _picked ?? widget.target;
+
+  /// Google Drive passe-t-il en tête ?
+  ///
+  /// Sur un téléphone neuf, le choix « Drive » n'est pas encore restauré — il
+  /// est justement dans la sauvegarde. La destination lue par défaut est donc
+  /// l'appareil, et un « Restaurer » cherchant là ne trouverait rien. On met
+  /// Drive en avant dès que le serveur le désigne, ou dès que l'appareil s'est
+  /// révélé vide.
+  bool get _driveFirst => widget.announcement.onDrive || _nothingOnDevice;
 
   Future<void> _restore() async {
     final l10n = context.l10n;
@@ -124,7 +143,18 @@ class _RestoreScreenState extends State<RestoreScreen> {
     try {
       final archives = await _candidates(_target);
       if (archives.isEmpty) {
-        throw const BackupFormatInvalid('aucune archive à la destination');
+        final target = _target;
+        if (target is DriveBackupTarget) {
+          _fail(l10n.restoreGoogleEmpty);
+          return;
+        }
+        if (target is PickedArchiveTarget) {
+          throw const BackupFormatInvalid('aucune archive à la destination');
+        }
+        // Pas une panne : dire où chercher plutôt qu'un échec générique.
+        _nothingOnDevice = true;
+        _fail(l10n.restoreNothingOnDevice);
+        return;
       }
 
       final work = Directory(
@@ -320,7 +350,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
                 if (a.accountHint != null) ...[
                   AppSpacing.vGapSm,
                   Text(
-                    a.accountHint!,
+                    l10n.restoreDriveAccount(a.accountHint!),
                     style: context.text.labelMedium
                         ?.copyWith(color: context.colors.primary),
                   ),
@@ -344,20 +374,37 @@ class _RestoreScreenState extends State<RestoreScreen> {
                   ] else
                     SizedBox(
                       width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _restore,
-                        child: Text(l10n.restoreAction),
+                      child: _driveFirst
+                          ? FilledButton.icon(
+                              icon: const Icon(Icons.cloud_outlined, size: 18),
+                              label: Text(l10n.restoreFromDrive),
+                              // Drive déjà connecté (ou relancé après un échec
+                              // de déchiffrement) : inutile de rouvrir le
+                              // sélecteur de compte Google.
+                              onPressed: _target is DriveBackupTarget
+                                  ? _restore
+                                  : _connectDrive,
+                            )
+                          : FilledButton(
+                              onPressed: _restore,
+                              child: Text(l10n.restoreAction),
+                            ),
+                    ),
+                  // Drive en tête : chercher sur l'appareil ne servirait à
+                  // rien, le bouton disparaît. Sinon Drive reste proposé, car
+                  // les sauvegardes antérieures à l'envoi de l'adresse ne
+                  // disent pas où elles sont.
+                  if (!_driveFirst) ...[
+                    AppSpacing.vGapSm,
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.cloud_outlined, size: 18),
+                        label: Text(l10n.restoreConnectGoogle),
+                        onPressed: _running ? null : _connectDrive,
                       ),
                     ),
-                  AppSpacing.vGapSm,
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.cloud_outlined, size: 18),
-                      label: Text(l10n.restoreConnectGoogle),
-                      onPressed: _running ? null : _connectDrive,
-                    ),
-                  ),
+                  ],
                   AppSpacing.vGapXs,
                   SizedBox(
                     width: double.infinity,

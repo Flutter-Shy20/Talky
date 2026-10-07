@@ -495,6 +495,14 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   AuthProvider? _authProvider;
   int? _boundUserId;
 
+  /// L'écran de restauration est affiché, ou sur le point de l'être.
+  ///
+  /// Tant qu'il l'est, la messagerie attend sa réponse. Chaque notification
+  /// d'`AuthProvider` repasse pourtant par `_syncSessionBindings`, y trouve la
+  /// messagerie non liée et la question toujours ouverte : sans ce drapeau,
+  /// elle empilait un second écran par-dessus le premier.
+  bool _restorePending = false;
+
 
   /// Sérialise logout → login : évite qu'un re-login rapide (même compte)
   /// soit ignoré pendant que le vidage local est encore en cours.
@@ -591,12 +599,17 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   ///
   /// `fullscreenDialog` et l'absence de bouton retour font le reste : l'inscrit
   /// tranche, il ne contourne pas.
-  void _offerRestore(BackupAnnouncement announcement) {
+  ///
+  /// Retourne `false` si l'écran ne peut pas être empilé : l'appelant lie
+  /// alors la messagerie normalement, et la question se reposera au prochain
+  /// démarrage.
+  bool _offerRestore(BackupAnnouncement announcement) {
     final navigator = navigatorKey.currentState;
     if (navigator == null) {
       debugPrint('[Restore] ** aucun navigateur disponible → écran non empilé');
-      return;
+      return false;
     }
+    _restorePending = true;
     // Après la trame en cours : `LoginScreen` vient de faire un
     // `pushAndRemoveUntil`, et empiler pendant qu'une transition de route est
     // en vol peut se perdre sans le moindre message.
@@ -604,20 +617,35 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       debugPrint('[Restore] empilement de l\'écran de restauration');
       _pushRestore(navigator, announcement);
     });
+    // Un rappel de fin de trame ne programme pas de trame à lui seul : sur
+    // une application au repos, il attendrait — et la messagerie avec lui.
+    WidgetsBinding.instance.ensureVisualUpdate();
+    return true;
   }
 
   void _pushRestore(NavigatorState navigator, BackupAnnouncement announcement) {
-    navigator.push(MaterialPageRoute(
-      fullscreenDialog: true,
-      builder: (routeContext) => _restoreScreenFor(
-        routeContext,
-        announcement,
-        onSettled: () {
-          if (navigator.canPop()) navigator.pop();
-          _onRestoreSettled();
-        },
-      ),
-    ));
+    var settled = false;
+    navigator
+        .push(MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (routeContext) => _restoreScreenFor(
+            routeContext,
+            announcement,
+            onSettled: () {
+              settled = true;
+              if (navigator.canPop()) navigator.pop();
+              _onRestoreSettled();
+            },
+          ),
+        ))
+        .then((_) {
+      // Retiré de la pile sans réponse — un `popUntil` du parcours de
+      // connexion, par exemple : `PopScope` n'arrête que le bouton Retour. On
+      // reprend la liaison, qui reposera la question puisqu'elle reste
+      // ouverte, plutôt que de laisser la messagerie attendre une réponse qui
+      // ne viendra plus.
+      if (!settled) _onRestoreSettled();
+    });
   }
 
   /// Écran bloquant de restauration.
@@ -688,6 +716,13 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       // de « le serveur ne connaît pas de sauvegarde », et on ne peut que
       // deviner lequel des deux maillons casse.
       debugPrint('[Restore] réponse du serveur : $json');
+      if (json['hasBackup'] != true) {
+        // Rien à restaurer : la question est close pour cette installation.
+        // Restée ouverte, elle se reposait à chaque démarrage, et la première
+        // sauvegarde faite par CE téléphone lui était alors proposée.
+        await const RestoreStateStore().markNotNeeded();
+        return false;
+      }
       final announcement = BackupAnnouncement.fromJson(json);
       if (announcement == null) return false;
 
@@ -695,8 +730,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       // l'`AuthWrapper`. L'empilement passe par la clé de navigation globale,
       // et l'écran lit ses fournisseurs depuis le contexte de sa propre route.
       // Un abandon silencieux ici serait indiagnosticable.
-      _offerRestore(announcement);
-      return true;
+      return _offerRestore(announcement);
     } catch (e) {
       debugPrint('[AuthWrapper] proposition de restauration ignorée: $e');
       return false;
@@ -712,6 +746,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     // coquille. Il aboutit parce que cet état est toujours monté — ce qui n'est
     // vrai que depuis la suppression des `pushAndRemoveUntil((route) => false)`
     // du chemin de connexion.
+    _restorePending = false;
     if (!mounted) return;
 
     _sessionBindingsChain =
@@ -749,10 +784,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
               : null;
           return jsonEncode(await api.fetchBackupKey(kid: kid));
         }),
-        onSucceeded: (meta) => api.publishBackupMeta(
+        onSucceeded: (meta, driveAccount) => api.publishBackupMeta(
           bytes: meta.bytes,
           kid: meta.kid,
           messageCount: meta.messageCount,
+          accountEmail: driveAccount,
         ),
       ).maybeRun(alanyaID: myId);
     } catch (e) {
@@ -1268,6 +1304,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       return;
     }
 
+    // L'écran de restauration attend une réponse : la liaison reprendra
+    // après, par `_onRestoreSettled`.
+    if (_restorePending) return;
+
     // Déjà bind sur le même utilisateur, rien à faire — sauf si le chat a été
     // débindé entre-temps (logout/re-login rapide pendant le vidage local).
     if (myId == _boundUserId) {
@@ -1445,6 +1485,13 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       await PushService.onSessionEnded();
     } catch (e) {
       debugPrint('[AuthWrapper] clear notification session échoué: $e');
+    }
+    // La base repart vide : à la prochaine connexion, pour ce compte ou un
+    // autre, une restauration redevient utile.
+    try {
+      await const RestoreStateStore().reopenAfterWipe();
+    } catch (e) {
+      debugPrint('[AuthWrapper] réouverture de la restauration échouée: $e');
     }
   }
 

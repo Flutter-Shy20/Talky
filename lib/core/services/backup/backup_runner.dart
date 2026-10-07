@@ -18,6 +18,7 @@ import 'backup_target.dart';
 import 'downloads_mirror_target.dart';
 import 'drive_backup_target.dart';
 import 'local_folder_target.dart';
+import 'restore_state.dart';
 
 /// Déclenche les sauvegardes automatiques au retour de l'application au
 /// premier plan.
@@ -82,7 +83,14 @@ class BackupRunner {
 
   /// Déclare la sauvegarde au serveur. Sans elle, l'écran de restauration d'un
   /// futur téléphone ne saurait pas qu'une sauvegarde existe.
-  final Future<void> Function(BackupMeta meta)? onSucceeded;
+  ///
+  /// [driveAccount] est l'adresse du compte Google quand l'archive est sur
+  /// Drive, nulle quand elle est sur le téléphone. C'est elle qui permet à
+  /// l'écran de restauration de proposer d'emblée Google Drive : sur un
+  /// téléphone neuf, le choix de destination n'est pas encore restauré, et
+  /// chercher sur l'appareil ne trouverait rien.
+  final Future<void> Function(BackupMeta meta, String? driveAccount)?
+      onSucceeded;
 
   /// Destination imposée. Réservée aux tests : en usage réel elle est nulle,
   /// et c'est le choix stocké de l'inscrit qui décide.
@@ -225,7 +233,11 @@ class BackupRunner {
         prefs: collectBackedUpPrefs(prefs.get),
         workDir: work,
         now: at,
-        onSucceeded: onSucceeded,
+        onSucceeded: announcerFor(
+          onSucceeded,
+          resolved.target,
+          isFallback: resolved.isFallback,
+        ),
       );
 
       late final BackupRunResult result;
@@ -241,6 +253,7 @@ class BackupRunner {
         next = state.afterSuccess(at);
       }
       await _store.saveState(next);
+      if (outcome.succeeded) await _closeRestoreQuestion();
       return BackupAttempt(result, outcome.meta, next);
     } catch (_) {
       // Une sauvegarde automatique ne doit jamais remonter jusqu'à l'écran :
@@ -252,6 +265,37 @@ class BackupRunner {
     } finally {
       _running = false;
     }
+  }
+
+  /// Ce téléphone a désormais sa propre sauvegarde : lui proposer au démarrage
+  /// suivant de la restaurer n'aurait aucun sens. Couvre le cas où le serveur
+  /// était injoignable à la connexion, et la question restée ouverte.
+  ///
+  /// Un échec ici ne change rien à la sauvegarde, bel et bien déposée : il
+  /// ne doit pas la faire déclarer perdue.
+  Future<void> _closeRestoreQuestion() async {
+    try {
+      await const RestoreStateStore().markNotNeeded();
+    } catch (_) {}
+  }
+
+  /// Ce que le serveur apprend d'une sauvegarde réussie, ou `null` s'il ne
+  /// doit rien en apprendre.
+  ///
+  /// Un repli n'est **pas** déclaré. Il est sur ce téléphone, qu'un téléphone
+  /// neuf n'atteindra jamais ; le déclarer effacerait l'adresse Google côté
+  /// serveur, et l'écran de restauration enverrait chercher sur l'appareil une
+  /// sauvegarde qui n'y est pas. Le serveur continue donc d'annoncer la
+  /// dernière sauvegarde Drive — la seule qu'une restauration ailleurs lira.
+  @visibleForTesting
+  static Future<void> Function(BackupMeta meta)? announcerFor(
+    Future<void> Function(BackupMeta meta, String? driveAccount)? announce,
+    BackupTarget target, {
+    required bool isFallback,
+  }) {
+    if (announce == null || isFallback) return null;
+    final account = target is DriveBackupTarget ? target.accountEmail : null;
+    return (meta) => announce(meta, account);
   }
 
   /// Choisit où déposer, en disant si c'est un pis-aller.

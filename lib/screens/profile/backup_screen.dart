@@ -162,10 +162,11 @@ class _BackupScreenState extends State<BackupScreen> {
       // Sans cette déclaration, l'écran de restauration d'un futur téléphone
       // ne saurait pas qu'une sauvegarde existe — et devrait réclamer un
       // compte Google à l'aveugle au tout premier démarrage.
-      onSucceeded: (meta) => api.publishBackupMeta(
+      onSucceeded: (meta, driveAccount) => api.publishBackupMeta(
         bytes: meta.bytes,
         kid: meta.kid,
         messageCount: meta.messageCount,
+        accountEmail: driveAccount,
       ),
     ).runNow(alanyaID: chat.repository.myId);
 

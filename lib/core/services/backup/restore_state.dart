@@ -27,7 +27,15 @@ enum RestoreStage {
   done,
 
   /// L'inscrit a refusé. On ne repropose plus au démarrage.
-  skipped;
+  skipped,
+
+  /// Rien à proposer sur cet appareil : le serveur ne connaissait aucune
+  /// sauvegarde à la connexion, ou ce téléphone a fait la sienne depuis.
+  ///
+  /// Sans cet état, la question restait ouverte et se reposait à chaque
+  /// démarrage — si bien que la première sauvegarde faite par CE téléphone
+  /// lui était proposée au démarrage suivant, comme si elle venait d'un autre.
+  notNeeded;
 
   static RestoreStage parse(String? raw) => RestoreStage.values
       .firstWhere((s) => s.name == raw, orElse: () => RestoreStage.unknown);
@@ -90,5 +98,29 @@ class RestoreStateStore {
   Future<bool> shouldOffer() async {
     final current = await stage();
     return current == RestoreStage.unknown || current == RestoreStage.offered;
+  }
+
+  /// Clôt la question quand il n'y a rien à restaurer.
+  ///
+  /// Sans effet si elle est déjà tranchée, ou si une restauration est en
+  /// cours ou en attente de mise en place : une sauvegarde qui passe ne doit
+  /// jamais effacer cet état-là.
+  Future<void> markNotNeeded() async {
+    if (await shouldOffer()) await setStage(RestoreStage.notNeeded);
+  }
+
+  /// Rouvre la question après l'effacement des données locales.
+  ///
+  /// Déconnexion explicite, révocation, changement de compte : la base repart
+  /// vide, comme sur un téléphone neuf, et une restauration redevient utile.
+  /// Une restauration en cours ou en attente n'est pas touchée — le
+  /// démarrage s'en charge.
+  Future<void> reopenAfterWipe() async {
+    final current = await stage();
+    if (current == RestoreStage.notNeeded ||
+        current == RestoreStage.skipped ||
+        current == RestoreStage.done) {
+      await setStage(RestoreStage.unknown);
+    }
   }
 }

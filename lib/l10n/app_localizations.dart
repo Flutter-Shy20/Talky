@@ -8998,6 +8998,24 @@ abstract class AppLocalizations {
   /// **'Aucune sauvegarde dans ce compte Google'**
   String get restoreGoogleEmpty;
 
+  /// No description provided for @restoreFromDrive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restaurer depuis Google Drive'**
+  String get restoreFromDrive;
+
+  /// No description provided for @restoreDriveAccount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connectez-vous avec le compte {account}.'**
+  String restoreDriveAccount(String account);
+
+  /// No description provided for @restoreNothingOnDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune sauvegarde sur ce téléphone. Connectez-vous à Google Drive, ou choisissez le fichier de sauvegarde.'**
+  String get restoreNothingOnDevice;
+
   /// No description provided for @restorePickFile.
   ///
   /// In fr, this message translates to:

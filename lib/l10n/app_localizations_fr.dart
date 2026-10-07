@@ -5119,6 +5119,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get restoreGoogleEmpty => 'Aucune sauvegarde dans ce compte Google';
 
   @override
+  String get restoreFromDrive => 'Restaurer depuis Google Drive';
+
+  @override
+  String restoreDriveAccount(String account) {
+    return 'Connectez-vous avec le compte $account.';
+  }
+
+  @override
+  String get restoreNothingOnDevice =>
+      'Aucune sauvegarde sur ce téléphone. Connectez-vous à Google Drive, ou choisissez le fichier de sauvegarde.';
+
+  @override
   String get restorePickFile => 'Choisir un fichier de sauvegarde';
 
   @override
