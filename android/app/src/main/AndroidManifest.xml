@@ -165,17 +165,18 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
-        <!-- Appel VoIP en cours. Type `phoneCall` et non `microphone|camera` :
-             ces deux-là sont soumis aux restrictions « while-in-use » et
-             `startForeground` lève depuis Android 14 quand l'application est en
-             arrière-plan — c'est-à-dire au décrochage depuis une notification,
-             application fermée. `phoneCall` en est exempté et ne demande que
-             MANAGE_OWN_CALLS, déjà déclarée. L'accès micro en arrière-plan
-             repose sur les API Telecom, que le plugin utilise depuis la 3.1.5. -->
+        <!-- Appel VoIP en cours. Les trois types sont déclarés parce que le
+             service les demande en escalier à l'exécution (voir
+             CallMediaFgsTypes) : `microphone` est le seul qui donne le micro
+             quand Alanya n'est plus à l'écran, `camera` le seul qui donne la
+             caméra, et `phoneCall` le seul qui démarre encore depuis
+             l'arrière-plan — c'est-à-dire au décrochage depuis une
+             notification. Un type non déclaré ici fait lever startForeground,
+             d'où les trois, dont un seul servira à la fois. -->
         <service
             android:name=".CallMediaForegroundService"
             android:exported="false"
-            android:foregroundServiceType="phoneCall" />
+            android:foregroundServiceType="phoneCall|microphone|camera" />
         <!-- Maintient la localisation active pendant un trajet de confiance.
              Sans lui, Android 10+ coupe les mises à jour dès le passage en
              arrière-plan — c'est-à-dire au moment où le suivi sert. -->

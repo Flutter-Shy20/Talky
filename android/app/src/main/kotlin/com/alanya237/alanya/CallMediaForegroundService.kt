@@ -7,7 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -17,21 +17,15 @@ import androidx.core.content.ContextCompat
 /**
  * Service au premier plan pendant un appel VoIP.
  *
- * Déclarait `microphone` et, en vidéo, `camera`. Ces deux types sont soumis aux
- * restrictions « while-in-use » : depuis Android 14, `startForeground` lève une
- * `SecurityException` si l'application est en arrière-plan. C'est exactement le
- * décrochage depuis une notification, application fermée — le cas qui compte le
- * plus.
+ * Il a déclaré `microphone`, qui donne le micro en arrière-plan mais empêchait
+ * le service de démarrer depuis l'arrière-plan ; puis `phoneCall` seul, qui
+ * démarre toujours mais coupait le micro dès qu'Alanya quittait l'écran — en
+ * pleine conversation. Les deux types ne s'excluent pas : voir
+ * [CallMediaFgsTypes] pour l'escalier qui les réconcilie.
  *
- * `phoneCall` en est exempté. Il ne demande aucune permission d'exécution,
- * seulement `MANAGE_OWN_CALLS` au manifeste, déjà déclarée. Tout le calcul de
- * type, la vérification de la permission caméra et le repli « micro seul »
- * disparaissent avec.
- *
- * L'exemption d'accès au micro en arrière-plan vaut pour les applications VoIP
- * **qui utilisent les API Telecom**. C'est le cas depuis la montée du plugin en
- * 3.1.5 : il enregistre un `PhoneAccount` auto-géré et déclare chaque appel à
- * Telecom, entrant comme sortant.
+ * La connexion Telecom n'y change rien, contrairement à ce qui était supposé
+ * ici : elle possède la route audio, pas le droit de capturer. Ce droit se lit
+ * au seul type du service au premier plan.
  */
 class CallMediaForegroundService : Service() {
 
@@ -171,18 +165,62 @@ class CallMediaForegroundService : Service() {
         super.onDestroy()
     }
 
+    /**
+     * Pose le service au premier plan avec le meilleur type que le système
+     * accepte, et dit lequel.
+     *
+     * L'escalier vient de [CallMediaFgsTypes] : chaque masque refusé laisse la
+     * place au suivant, et le dernier — `phoneCall` seul — ne peut pas échouer.
+     * Ce qui a été obtenu remonte à Dart, qui en tire deux décisions : relancer
+     * ce service au retour à l'écran quand le micro manque, et savoir si la
+     * caméra a le droit de continuer en arrière-plan.
+     */
     private fun startAsForeground(notification: Notification, isVideo: Boolean) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            // Avant Android 10, les types n'existent pas et ne conditionnent
+            // donc aucune capture : le service au premier plan suffit.
             startForeground(NOTIFICATION_ID, notification)
+            CallMediaBridge.notifyMediaTypes(microphone = true, camera = true)
             return
         }
-        Log.i(TAG, "startForeground(phoneCall) isVideo=$isVideo")
-        startForeground(
-            NOTIFICATION_ID,
-            notification,
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL,
+
+        val candidats = CallMediaFgsTypes.typesCandidats(
+            isVideo = isVideo,
+            micAccorde = permissionAccordee(android.Manifest.permission.RECORD_AUDIO),
+            cameraAccordee = permissionAccordee(android.Manifest.permission.CAMERA),
         )
+
+        var derniere: Exception? = null
+        for (type in candidats) {
+            try {
+                startForeground(NOTIFICATION_ID, notification, type)
+                Log.i(
+                    TAG,
+                    "startForeground(${CallMediaFgsTypes.decrire(type)}) isVideo=$isVideo",
+                )
+                CallMediaBridge.notifyMediaTypes(
+                    microphone = CallMediaFgsTypes.porteLeMicro(type),
+                    camera = CallMediaFgsTypes.porteLaCamera(type),
+                )
+                return
+            } catch (e: Exception) {
+                derniere = e
+                Log.w(
+                    TAG,
+                    "startForeground(${CallMediaFgsTypes.decrire(type)}) refusé : ${e.message}",
+                )
+            }
+        }
+
+        // Même `phoneCall` a été refusé : il ne reste rien à tenter, et
+        // `onStartCommand` arrêtera le service plutôt que de le laisser sans
+        // notification — Android le tuerait de lui-même cinq secondes plus tard.
+        throw derniere ?: IllegalStateException("aucun type de service accepté")
     }
+
+    private fun permissionAccordee(permission: String): Boolean =
+        ContextCompat.checkSelfPermission(this, permission) ==
+            PackageManager.PERMISSION_GRANTED
 
     private fun ensureChannel(channelName: String?) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return

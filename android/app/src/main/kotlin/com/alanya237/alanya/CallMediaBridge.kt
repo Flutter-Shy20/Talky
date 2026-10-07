@@ -82,4 +82,29 @@ object CallMediaBridge {
             }
         }
     }
+
+    /**
+     * Ce que le service au premier plan a obtenu : le micro, la caméra.
+     *
+     * Dart ne peut pas le déduire de son côté. L'appel `start` revient bien
+     * avant que le service n'ait appelé `startForeground`, et le type accordé
+     * dépend de l'état de l'application au moment précis où il le fait —
+     * demandé en arrière-plan, le micro est refusé sans que la permission
+     * `RECORD_AUDIO` ne bouge. Sans ce retour, un micro muet pour le reste de
+     * l'appel ne se distinguerait d'un micro vivant que par le silence du
+     * correspondant.
+     */
+    fun notifyMediaTypes(microphone: Boolean, camera: Boolean) {
+        val canal = channel ?: return
+        Handler(Looper.getMainLooper()).post {
+            try {
+                canal.invokeMethod(
+                    "onMediaTypes",
+                    mapOf("microphone" to microphone, "camera" to camera),
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "notifyMediaTypes: ${e.message}")
+            }
+        }
+    }
 }

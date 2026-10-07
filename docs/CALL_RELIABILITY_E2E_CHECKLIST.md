@@ -16,9 +16,13 @@
 ///
 /// ## Audio / veille
 /// - [ ] Lockscreen 2 min audio : micro audible côté pair
+/// - [ ] Accueil (app en arrière-plan) 2 min audio : micro audible côté pair
 /// - [ ] Mute + lockscreen : reste muet
-/// - [ ] Appel audio : FGS types MICROPHONE seul (logcat CallMediaFGS)
-/// - [ ] Appel vidéo : FGS MICROPHONE|CAMERA ; iOS vidéo figée OK si audio continue
+/// - [ ] Appel audio : `startForeground(phoneCall+micro)` (logcat CallMediaFGS)
+/// - [ ] Appel vidéo : `phoneCall+micro+caméra` ; iOS vidéo figée OK si audio continue
+/// - [ ] Décroché depuis la notification, app fermée : repli `phoneCall` au
+///       démarrage, puis « micro non couvert par le FGS — relance du service »
+///       au premier plan, et `phoneCall+micro` obtenu ensuite
 ///
 /// ## Groupe / transfert
 /// - [ ] Mesh 3 : perte seul lien A↔C → B↔C continue ; A ne leave pas C
