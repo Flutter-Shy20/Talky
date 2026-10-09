@@ -196,6 +196,57 @@ void main() {
     );
   });
 
+  test('gros fichiers : un seul envoi à la fois ; un petit fichier n’attend pas', () async {
+    File file(String name, int bytes) =>
+        File(p.join(tmp.path, name))..writeAsBytesSync(List<int>.filled(bytes, 7));
+    final gate = Completer<void>();
+    final puts = <String>[];
+    final api = apiWith((req) async {
+      if (req.url.path.endsWith('/upload/ticket')) {
+        final name = jsonDecode(req.body)['fileName'] as String;
+        return http.Response(
+          jsonEncode({..._ticketDirect(), 'uploadUrl': 'https://b2.test/$name'}), 200);
+      }
+      puts.add(req.url.pathSegments.last);
+      if (req.url.pathSegments.last == 'gros1.mp4') await gate.future;
+      return http.Response('', 200);
+    })
+      ..heavyUploadThresholdBytes = 1000;
+
+    final first = api.uploadMedia(file('gros1.mp4', 4096));
+    final second = api.uploadMedia(file('gros2.mp4', 4096));
+    final light = api.uploadMedia(file('petit.jpg', 100));
+    await light;
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(puts, containsAll(['gros1.mp4', 'petit.jpg']));
+    expect(puts, isNot(contains('gros2.mp4')), reason: 'le second gros fichier attend son tour');
+
+    gate.complete();
+    await Future.wait([first, second]);
+    expect(puts.indexOf('gros2.mp4'), greaterThan(puts.indexOf('gros1.mp4')));
+  });
+
+  test('un gros envoi qui échoue ne bloque pas le suivant', () async {
+    File file(String name) =>
+        File(p.join(tmp.path, name))..writeAsBytesSync(List<int>.filled(4096, 7));
+    final api = apiWith((req) async {
+      if (req.url.path.endsWith('/upload/ticket')) {
+        final name = jsonDecode(req.body)['fileName'] as String;
+        if (name == 'refuse.mp4') {
+          return http.Response(jsonEncode({'error': 'trop lourd', 'code': 'FILE_TOO_LARGE'}), 413);
+        }
+        return http.Response(jsonEncode(_ticketDirect()), 200);
+      }
+      return http.Response('', 200);
+    })
+      ..heavyUploadThresholdBytes = 1000;
+
+    final refused = api.uploadMedia(file('refuse.mp4'));
+    final next = api.uploadMedia(file('suivant.mp4'));
+    await expectLater(refused, throwsA(isA<TalkyException>()));
+    expect((await next)['url'], isNotNull);
+  });
+
   test('avatar : ticket de type avatar, repli sur /upload/avatar', () async {
     final photo = File(p.join(tmp.path, 'me.jpg'))..writeAsBytesSync([1, 2, 3]);
     final api = apiWith((req) async {

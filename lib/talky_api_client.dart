@@ -23,6 +23,7 @@ import 'core/theme/locale_controller.dart';
 import 'core/services/call/call_history_rules.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/app_log.dart';
+import 'core/utils/media_upload_limits.dart';
 import 'core/utils/upload_stall_guard.dart';
 import 'api/socket_auth_recovery.dart';
 
@@ -60,6 +61,15 @@ class TalkyApiClient {
   /// Modifiable par les tests seulement.
   @visibleForTesting
   Duration uploadStallTimeout = kUploadStallTimeout;
+
+  /// Seuil au-delà duquel un envoi de média attend son tour (voir
+  /// [kHeavyUploadBytes]). Modifiable par les tests seulement.
+  @visibleForTesting
+  int heavyUploadThresholdBytes = kHeavyUploadBytes;
+
+  /// File des envois lourds : un seul à la fois, pour toute l'app
+  /// (discussions, albums, statuts).
+  Future<void> _heavyUploads = Future<void>.value();
 
   // Callbacks Socket globaux (pour CallService, MeetingService)
   final Map<String, List<void Function(dynamic)>> _socketListeners = {};

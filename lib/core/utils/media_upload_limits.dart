@@ -16,6 +16,13 @@ const int kMaxAlbumItems = 30;
 /// doit pouvoir recevoir ce qu'un abonné lui envoie.
 const int kMaxReceivedMediaBytes = 200 * 1024 * 1024;
 
+/// Au-delà de ce poids, un fichier attend que l'envoi lourd précédent soit
+/// fini avant de partir. Plusieurs vidéos envoyées en même temps saturaient la
+/// connexion, au point de couper la liaison temps réel avec le serveur : les
+/// messages restaient en attente, puis passaient en « échec ». Les photos et
+/// les vocaux, bien plus légers, partent sans attendre.
+const int kHeavyUploadBytes = 5 * 1024 * 1024;
+
 /// Plafonds d'envoi de CE compte.
 ///
 /// Le serveur les annonce avec les droits du compte (`limits`) : 100 Mo et 30

@@ -31,16 +31,25 @@ extension MediaApi on TalkyApiClient {
   /// Aucune durée totale n'est imposée : un gros fichier sur une connexion
   /// lente peut prendre plusieurs minutes. L'envoi n'est abandonné que s'il
   /// cesse d'avancer (voir [UploadStallGuard]).
+  ///
+  /// Un fichier lourd ([kHeavyUploadBytes] et plus) attend que le précédent
+  /// soit parti : un seul envoi lourd à la fois, pour ne pas saturer la
+  /// connexion. Un fichier léger part tout de suite.
   Future<Map<String, dynamic>> uploadMedia(
     File file, {
     void Function(double progress)? onProgress,
-  }) =>
-      _uploadFile(
-        file,
-        kind: 'media',
-        multipartPath: '/upload/media',
-        onProgress: onProgress,
-      );
+  }) async {
+    Future<Map<String, dynamic>> send() => _uploadFile(
+          file,
+          kind: 'media',
+          multipartPath: '/upload/media',
+          onProgress: onProgress,
+        );
+    if (await file.length() < heavyUploadThresholdBytes) return send();
+    final run = _heavyUploads.then((_) => send());
+    _heavyUploads = run.then((_) {}, onError: (_) {});
+    return run;
+  }
 
   Future<Map<String, dynamic>> _uploadFile(
     File file, {
