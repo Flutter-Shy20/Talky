@@ -21,7 +21,13 @@ class FakeChatApi implements ChatApi {
 
   /// Chemins des fichiers réellement envoyés, dans l'ordre.
   final List<String> uploadedPaths = [];
+
+  /// Destinations de chaque transfert côté serveur (`batchForward`).
+  final List<List<int>> forwardedTargets = [];
   Object? uploadError;
+
+  /// Retient l'upload tant qu'il n'est pas complété : simule un envoi long.
+  Completer<void>? uploadGate;
   Object? markReadError;
   Object? markDeliveredError;
   Object? editError;
@@ -147,6 +153,8 @@ class FakeChatApi implements ChatApi {
   }) async {
     httpLog.add('uploadMedia');
     uploadedPaths.add(file.path);
+    final gate = uploadGate;
+    if (gate != null) await gate.future;
     if (uploadError != null) throw uploadError!;
     onProgress?.call(1.0);
     return Map<String, dynamic>.from(uploadResult);
@@ -184,6 +192,7 @@ class FakeChatApi implements ChatApi {
     String? caption,
   }) async {
     httpLog.add('batchForward');
+    forwardedTargets.add(List<int>.of(targetConversationIDs));
     return {'ok': true};
   }
 

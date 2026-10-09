@@ -9,6 +9,7 @@ import '../../../talky_models.dart';
 import '../list_ringtone_preferences.dart';
 import '../media_expiry_policy.dart';
 import '../translation/message_translation_service.dart';
+import '../../utils/media_upload_limits.dart';
 import 'billing_models.dart';
 import 'entitlements.dart';
 
@@ -95,7 +96,7 @@ class EntitlementService extends ChangeNotifier {
         _current = Entitlements.fromJson(
           Map<String, dynamic>.from(jsonDecode(raw) as Map),
         );
-        _syncMediaRetention();
+        _syncMediaRules();
       }
       if (rawOffer != null) {
         _offer = PlusOffer.fromJson(
@@ -148,7 +149,7 @@ class EntitlementService extends ChangeNotifier {
     _current = raw is Map
         ? Entitlements.fromJson(Map<String, dynamic>.from(raw))
         : Entitlements.unrestricted;
-    _syncMediaRetention();
+    _syncMediaRules();
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -167,11 +168,18 @@ class EntitlementService extends ChangeNotifier {
     }
   }
 
-  /// Durée de conservation des médias propre au compte : c'est elle que l'app
-  /// applique pour afficher « Média expiré » (voir [MediaExpiryPolicy]).
-  void _syncMediaRetention() {
+  /// Règles médias propres au compte, portées par ses droits :
+  /// - la durée de conservation, que l'app applique pour afficher « Média
+  ///   expiré » (voir [MediaExpiryPolicy]) ;
+  /// - les plafonds d'envoi (taille d'un fichier, médias par album), que l'app
+  ///   applique dès le choix du fichier (voir [MediaUploadLimits]).
+  void _syncMediaRules() {
     MediaExpiryPolicy.setAccountRetentionDays(
       _current.known ? _current.mediaRetentionDays : null,
+    );
+    MediaUploadLimits.apply(
+      maxBytes: _current.known ? _current.maxUploadBytes : null,
+      maxAlbumItems: _current.known ? _current.maxAlbumItems : null,
     );
   }
 
@@ -214,7 +222,7 @@ class EntitlementService extends ChangeNotifier {
   /// À la déconnexion : les droits d'un compte ne passent pas au suivant.
   Future<void> clear() async {
     _current = Entitlements.unrestricted;
-    _syncMediaRetention();
+    _syncMediaRules();
     _offer = null;
     notifyListeners();
     try {

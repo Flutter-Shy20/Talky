@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -5,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:path/path.dart' as p;
+import 'package:talky_flutter/core/utils/upload_errors.dart';
 import 'package:talky_flutter/talky_api_client.dart';
 
 const _cacheImmuable = 'public, max-age=31536000, immutable';
@@ -24,6 +26,9 @@ Map<String, dynamic> _ticketDirect() => {
     };
 
 void main() {
+  // Le message d'un envoi abandonné est traduit : il lui faut la locale.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late Directory tmp;
   late File video;
   late List<http.Request> requests;
@@ -153,6 +158,42 @@ void main() {
     );
     expect(requests.where((r) => r.url.path.endsWith('/upload/ticket')), hasLength(2));
     expect(requests.where((r) => r.method == 'PUT'), hasLength(2));
+  });
+
+  test('stockage qui ne reçoit plus rien : envoi abandonné, erreur passagère', () async {
+    final api = apiWith((req) {
+      if (req.url.path.endsWith('/upload/ticket')) {
+        return Future.value(http.Response(jsonEncode(_ticketDirect()), 200));
+      }
+      return Completer<http.Response>().future; // le PUT ne se termine jamais
+    })
+      ..uploadStallTimeout = const Duration(milliseconds: 100);
+
+    Object? error;
+    try {
+      await api.uploadMedia(video).timeout(const Duration(seconds: 5));
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error, isA<TalkyException>().having((e) => e.statusCode, 'statusCode', 0));
+    // Passagère : le message reste en attente et repartira plus tard.
+    expect(isTransientUploadError(error!), isTrue);
+  });
+
+  test('formulaire bloqué : même abandon, même erreur passagère', () async {
+    final api = apiWith((req) {
+      if (req.url.path.endsWith('/upload/ticket')) {
+        return Future.value(http.Response(jsonEncode({'mode': 'multipart'}), 200));
+      }
+      return Completer<http.Response>().future;
+    })
+      ..uploadStallTimeout = const Duration(milliseconds: 100);
+
+    await expectLater(
+      api.uploadMedia(video).timeout(const Duration(seconds: 5)),
+      throwsA(isA<TalkyException>().having((e) => e.statusCode, 'statusCode', 0)),
+    );
   });
 
   test('avatar : ticket de type avatar, repli sur /upload/avatar', () async {

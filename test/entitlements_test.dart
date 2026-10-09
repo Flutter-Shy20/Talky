@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talky_flutter/core/services/billing/entitlement_service.dart';
 import 'package:talky_flutter/core/services/billing/entitlements.dart';
 import 'package:talky_flutter/core/services/media_expiry_policy.dart';
+import 'package:talky_flutter/core/utils/media_upload_limits.dart';
 import 'package:talky_flutter/talky_api_client.dart';
 
 /// Charge utile telle que la rend le serveur (rules.js, decideEntitlements).
@@ -29,6 +30,8 @@ Map<String, dynamic> _payload({
           },
       'validUntil': validUntil,
     };
+
+const int _mo = 1024 * 1024;
 
 void main() {
   group('Entitlements', () {
@@ -166,6 +169,66 @@ void main() {
       final b = EntitlementService(api: TalkyApiClient());
       await b.loadFromCache();
       expect(MediaExpiryPolicy.retentionDays, 365);
+    });
+  });
+
+  // Plafonds d'envoi de CE compte : l'app les applique dès le choix du fichier.
+  group('plafonds d’envoi', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      MediaUploadLimits.apply();
+    });
+
+    Map<String, dynamic> withLimits(int bytes, int album, String tier) => {
+          ..._payload(),
+          'limits': {'maxUploadBytes': bytes, 'maxAlbumItems': album, 'tier': tier},
+        };
+
+    test('lus dans les droits, gardés par le cache', () {
+      final e = Entitlements.fromJson(withLimits(200 * _mo, 100, 'paid'));
+      expect(e.maxUploadBytes, 200 * _mo);
+      expect(e.maxAlbumItems, 100);
+      final relu = Entitlements.fromJson(e.toJson());
+      expect(relu.maxUploadBytes, 200 * _mo);
+      expect(relu.maxAlbumItems, 100);
+      expect(Entitlements.fromJson(_payload()).maxUploadBytes, isNull, reason: 'serveur antérieur');
+    });
+
+    test('sans rien d’annoncé : palier standard', () {
+      expect(MediaUploadLimits.maxBytes, kMaxMediaUploadBytes);
+      expect(MediaUploadLimits.maxMegabytes, 100);
+      expect(MediaUploadLimits.maxAlbumItems, kMaxAlbumItems);
+    });
+
+    test('appliqués à l’app, oubliés à la déconnexion', () async {
+      final s = EntitlementService(api: TalkyApiClient());
+      await s.applyFromProfile({'entitlements': withLimits(200 * _mo, 100, 'paid')});
+      expect(MediaUploadLimits.maxBytes, 200 * _mo);
+      expect(MediaUploadLimits.maxMegabytes, 200);
+      expect(MediaUploadLimits.maxAlbumItems, 100);
+
+      await s.clear();
+      expect(MediaUploadLimits.maxBytes, kMaxMediaUploadBytes,
+          reason: 'le compte suivant ne garde pas les plafonds de l’abonné');
+      expect(MediaUploadLimits.maxAlbumItems, kMaxAlbumItems);
+    });
+
+    test('serveur antérieur, sans plafonds : palier standard', () async {
+      final s = EntitlementService(api: TalkyApiClient());
+      await s.applyFromProfile({'entitlements': _payload()});
+      expect(MediaUploadLimits.maxBytes, kMaxMediaUploadBytes);
+      expect(MediaUploadLimits.maxAlbumItems, kMaxAlbumItems);
+    });
+
+    test('rechargés depuis le cache au démarrage', () async {
+      final a = EntitlementService(api: TalkyApiClient());
+      await a.applyFromProfile({'entitlements': withLimits(200 * _mo, 100, 'paid')});
+      MediaUploadLimits.apply();
+
+      final b = EntitlementService(api: TalkyApiClient());
+      await b.loadFromCache();
+      expect(MediaUploadLimits.maxBytes, 200 * _mo);
+      expect(MediaUploadLimits.maxAlbumItems, 100);
     });
   });
 }

@@ -16,9 +16,11 @@ import '../../utils/media_staging.dart';
 import '../../utils/upload_errors.dart';
 import '../../utils/document_file_style.dart';
 import '../image_thumbnail_service.dart';
+import '../image_upload_compressor.dart';
 import '../music_metadata_service.dart';
 import '../pdf_thumbnail_service.dart';
 import '../video_thumbnail_service.dart';
+import '../video_codec_policy.dart';
 import '../video_upload_compressor.dart';
 import '../../utils/audio_message_kind.dart';
 import '../../../talky_api_client.dart' show TalkyException;
@@ -37,9 +39,12 @@ class MessageSender {
     required int Function() myId,
     required Future<void> Function(int conversationID) recompute,
     required this.uploadProgress,
+    ValueNotifier<Map<String, double>>? compressionProgress,
+    Future<bool> Function(int conversationID)? hevcAllowed,
     required Set<String> inFlightUploads,
     MessageAckWatchdog? ackWatchdog,
     VideoUploadCompressor? videoCompressor,
+    ImageUploadCompressor? imageCompressor,
   })  : _api = api,
         _dao = dao,
         _db = db,
@@ -47,7 +52,11 @@ class MessageSender {
         _recompute = recompute,
         _inFlightUploads = inFlightUploads,
         _ackWatchdog = ackWatchdog,
-        _videoCompressor = videoCompressor ?? VideoUploadCompressor.instance;
+        _videoCompressor = videoCompressor ?? VideoUploadCompressor.instance,
+        _imageCompressor = imageCompressor ?? ImageUploadCompressor.instance,
+        compressionProgress =
+            compressionProgress ?? ValueNotifier<Map<String, double>>({}),
+        _hevcAllowed = hevcAllowed ?? hevcAllowedFor;
 
   final ChatApi _api;
   final ChatDao _dao;
@@ -55,11 +64,38 @@ class MessageSender {
   final int Function() _myId;
   final Future<void> Function(int conversationID) _recompute;
   final ValueNotifier<Map<String, double>> uploadProgress;
+
+  /// Avancement de la compression d'une vidéo, par `clientId` (0 à 1). La
+  /// bulle affiche « Compression… x % » tant qu'il est présent.
+  final ValueNotifier<Map<String, double>> compressionProgress;
+
+  /// La discussion lit-elle le HEVC, et ce téléphone sait-il l'encoder ?
+  final Future<bool> Function(int conversationID) _hevcAllowed;
   final Set<String> _inFlightUploads;
+
+  /// Fin du dernier upload réussi, par `clientId` : le message vient seulement
+  /// de partir, l'horloge des messages coincés repart de là.
+  final Map<String, DateTime> _uploadedAt = {};
+
+  /// `true` tant que le média de [clientId] est en cours de compression ou
+  /// d'envoi, ou qu'il vient d'être envoyé (moins de [grace]). Une vidéo de
+  /// quelques minutes passe largement plus de 2 min entre la compression et
+  /// la fin de l'upload : l'horloge des messages coincés, qui compte depuis
+  /// `sendAt`, ne doit pas la déclarer en échec pendant ce temps.
+  bool isUploadBusyOrRecent(
+    String clientId, {
+    Duration grace = const Duration(minutes: 2),
+  }) {
+    if (_inFlightUploads.contains(clientId)) return true;
+    final at = _uploadedAt[clientId];
+    if (at == null) return false;
+    if (DateTime.now().difference(at) < grace) return true;
+    _uploadedAt.remove(clientId);
+    return false;
+  }
   final MessageAckWatchdog? _ackWatchdog;
   final VideoUploadCompressor _videoCompressor;
-
-  static const int maxAlbumItems = 30;
+  final ImageUploadCompressor _imageCompressor;
 
   Future<void> sendText({
     required int conversationID,
@@ -599,6 +635,16 @@ class MessageSender {
     });
   }
 
+  void _setCompressionProgress(String clientId, double? progress) {
+    final next = Map<String, double>.from(compressionProgress.value);
+    if (progress == null) {
+      next.remove(clientId);
+    } else {
+      next[clientId] = progress.clamp(0.0, 1.0);
+    }
+    compressionProgress.value = next;
+  }
+
   void _setUploadProgress(String clientId, double? progress) {
     final next = Map<String, double>.from(uploadProgress.value);
     if (progress == null) {
@@ -650,13 +696,14 @@ class MessageSender {
       return;
     }
     try {
-      // Une vidéo est compressée avant de partir. Ici plutôt qu'à l'insertion :
-      // c'est le passage obligé de tous les envois (fichier seul, album,
-      // reprise après redémarrage), et il est déjà sous la garde
-      // `_inFlightUploads` — deux reprises simultanées ne compressent pas deux
-      // fois. Le fichier produit porte un suffixe qui empêche de le
+      // Une photo ou une vidéo est compressée avant de partir. Ici plutôt qu'à
+      // l'insertion : c'est le passage obligé de tous les envois (fichier seul,
+      // album, partage, reprise après redémarrage), et il est déjà sous la
+      // garde `_inFlightUploads` — deux reprises simultanées ne compressent pas
+      // deux fois. Le fichier produit porte un suffixe qui empêche de le
       // recompresser à la reprise suivante.
-      final toUpload = type == 2 ? await _prepareVideo(clientId, file) : file;
+      final toUpload =
+          await _prepareMedia(clientId, file, type, conversationID);
       var attempt429 = 0;
       while (true) {
         try {
@@ -665,6 +712,7 @@ class MessageSender {
             onProgress: (p) => _setUploadProgress(clientId, p),
           );
           _setUploadProgress(clientId, null);
+          _uploadedAt[clientId] = DateTime.now();
           final url = res['url'] as String?;
           if (url == null) {
             throw Exception(LocaleController.instance.l10n.invalidUploadResponse);
@@ -721,11 +769,36 @@ class MessageSender {
     }
   }
 
-  /// Compresse la vidéo d'un message en attente et bascule la ligne locale sur
-  /// le fichier compressé : la reprise renverra ce fichier-là, la bulle de
-  /// l'expéditeur le lira, et le poids transmis au destinataire sera le bon.
-  Future<File> _prepareVideo(String clientId, File file) async {
-    final prepared = await _videoCompressor.prepare(file);
+  /// Compresse la photo (1) ou la vidéo (2) d'un message en attente et bascule
+  /// la ligne locale sur le fichier compressé : la reprise renverra ce
+  /// fichier-là, la bulle de l'expéditeur le lira, et le poids transmis au
+  /// destinataire sera le bon. Les autres types partent tels quels.
+  ///
+  /// Une vidéo part en HEVC quand la discussion le permet (voir
+  /// `VideoCodecPolicy`), en H.264 sinon.
+  Future<File> _prepareMedia(
+    String clientId,
+    File file,
+    int type,
+    int conversationID,
+  ) async {
+    final File prepared;
+    switch (type) {
+      case 1:
+        prepared = await _imageCompressor.prepare(file);
+      case 2:
+        try {
+          prepared = await _videoCompressor.prepare(
+            file,
+            allowHevc: await _hevcAllowed(conversationID),
+            onProgress: (p) => _setCompressionProgress(clientId, p),
+          );
+        } finally {
+          _setCompressionProgress(clientId, null);
+        }
+      default:
+        return file;
+    }
     if (prepared.path == file.path) return file;
 
     await (_db.update(_db.localMessages)..where((m) => m.clientId.equals(clientId)))

@@ -197,6 +197,7 @@ class MainActivity : FlutterFragmentActivity() {
         PipBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         TripLocationBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         SecureStorageBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
+        VideoTranscodeBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
 
         notificationOpenChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,

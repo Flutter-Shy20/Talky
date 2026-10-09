@@ -6,13 +6,14 @@ part of '../chat_detail_screen.dart';
 /// WhatsApp/Messenger pour rester dans les habitudes des utilisateurs.
 const List<String> _quickReactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
-/// Grand côté maximal d'une photo envoyée depuis la galerie, en pixels.
+/// Grand côté maximal d'une photo choisie dans la galerie, en pixels.
 ///
-/// Sans lui, une photo partait en pleine résolution — souvent plusieurs Mo sur
-/// un téléphone récent — alors qu'aucun écran de téléphone n'en affiche
-/// autant. Le sélecteur redimensionne lui-même en gardant la proportion. Une
-/// photo envoyée comme *document* garde, elle, sa qualité d'origine.
-const double _kChatPhotoMaxSide = 1600;
+/// Le sélecteur réduit la photo lui-même, en gardant la proportion, mais sans
+/// la recompresser (aucune `imageQuality`) : l'encodage final, en WebP, revient
+/// à ImageUploadCompressor au moment de l'envoi. Deux compressions successives
+/// dégraderaient l'image pour rien. Une photo envoyée comme *document* garde,
+/// elle, sa qualité d'origine.
+final double _kChatPhotoMaxSide = kCompressedImageLongSide.toDouble();
 
 extension _ChatActions on _ChatDetailScreenState {
   /// Un message système n'est ni sélectionnable, ni transférable, ni
@@ -1191,7 +1192,6 @@ extension _ChatActions on _ChatDetailScreenState {
     if (viewOnce) {
       final x = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 80,
         maxWidth: _kChatPhotoMaxSide,
         maxHeight: _kChatPhotoMaxSide,
       );
@@ -1205,7 +1205,6 @@ extension _ChatActions on _ChatDetailScreenState {
     }
 
     final picked = await _picker.pickMultiImage(
-      imageQuality: 80,
       maxWidth: _kChatPhotoMaxSide,
       maxHeight: _kChatPhotoMaxSide,
       limit: ChatRepository.maxAlbumItems,
@@ -1300,12 +1299,16 @@ extension _ChatActions on _ChatDetailScreenState {
     final items = <AlbumSendItem>[];
     for (final x in limited) {
       final file = File(x.path);
-      final size = file.existsSync() ? file.lengthSync() : 0;
-      if (size > _maxMediaBytes) {
+      // C'est la vidéo compressée qui partira : on juge sur son poids estimé,
+      // pas sur celui du fichier filmé.
+      final size = await estimateMediaUploadBytes(file, type: 2);
+      if (size > MediaUploadLimits.maxBytes) {
         if (mounted) {
           final mb = (size / (1024 * 1024)).toStringAsFixed(1);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(context.l10n.videoTooLarge('$mb')),
+            content: Text(
+              context.l10n.videoTooLarge(mb, MediaUploadLimits.maxMegabytes),
+            ),
             backgroundColor: AppColors.error,
           ));
         }
@@ -1388,7 +1391,7 @@ extension _ChatActions on _ChatDetailScreenState {
   }) async {
     if (picked == null || picked.isEmpty || _myId == null) return;
 
-    const max = ChatRepository.maxAlbumItems;
+    final max = ChatRepository.maxAlbumItems;
     if (picked.length > max && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1407,7 +1410,7 @@ extension _ChatActions on _ChatDetailScreenState {
 
       final local = File(path);
       final size = local.existsSync() ? local.lengthSync() : 0;
-      if (size > _maxMediaBytes) {
+      if (size > MediaUploadLimits.maxBytes) {
         skipped++;
         continue;
       }
@@ -1426,7 +1429,9 @@ extension _ChatActions on _ChatDetailScreenState {
     if (!mounted) return;
     if (skipped > 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(context.l10n.filesSkippedTooLarge(skipped)),
+        content: Text(
+          context.l10n.filesSkippedTooLarge(skipped, MediaUploadLimits.maxMegabytes),
+        ),
         backgroundColor: AppColors.error,
       ));
     }
@@ -1452,13 +1457,16 @@ extension _ChatActions on _ChatDetailScreenState {
   }) async {
     if (_myId == null) return;
 
-    // Vérif de taille (locale, instantanée) AVANT le son : pas de son si rejeté.
-    final size = file.existsSync() ? file.lengthSync() : 0;
-    if (size > _maxMediaBytes) {
+    // Vérif de taille (locale) AVANT le son : pas de son si rejeté. Pour une
+    // vidéo, c'est le poids estimé après compression qui compte.
+    final size = await estimateMediaUploadBytes(file, type: type);
+    if (size > MediaUploadLimits.maxBytes) {
       if (!mounted) return;
       final mb = (size / (1024 * 1024)).toStringAsFixed(1);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(context.l10n.fileTooLarge(mb)),
+        content: Text(type == 2
+            ? context.l10n.videoTooLarge(mb, MediaUploadLimits.maxMegabytes)
+            : context.l10n.fileTooLarge(mb, MediaUploadLimits.maxMegabytes)),
         backgroundColor: AppColors.error,
       ));
       return;
@@ -1487,7 +1495,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (!await _recorder.hasPermission()) return;
     final dir = await getTemporaryDirectory();
     final path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+    await _recorder.start(kVoiceRecordConfig, path: path);
     if (!mounted) return;
     rebuild(() {
       _isRecording = true;

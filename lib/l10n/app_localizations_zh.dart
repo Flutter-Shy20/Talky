@@ -420,13 +420,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String videoTooLarge(String mb) {
-    return '已跳过该视频（$mb MB）。上限：50 MB。';
+  String videoTooLarge(String mb, int limit) {
+    return '视频即使压缩后仍过大（约 $mb MB）。上限：$limit MB。';
   }
 
   @override
-  String fileTooLarge(String mb) {
-    return '文件过大（$mb MB）。上限：50 MB。';
+  String fileTooLarge(String mb, int limit) {
+    return '文件过大（$mb MB）。上限：$limit MB。';
   }
 
   @override
@@ -2432,8 +2432,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String filesSkippedTooLarge(int count) {
-    return '已跳过 $count 个文件：超出 50 MB 上限。';
+  String get videoUnreadableOnDevice => '此手机无法播放该视频。';
+
+  @override
+  String compressingVideo(int percent) {
+    return '正在压缩… $percent%';
+  }
+
+  @override
+  String filesSkippedTooLarge(int count, int limit) {
+    return '已跳过 $count 个文件：超出 $limit MB 上限。';
   }
 
   @override

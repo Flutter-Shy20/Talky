@@ -8,6 +8,7 @@ import 'voice_asset_resolver.dart';
 import 'voice_waveform_store.dart';
 import '../theme/locale_controller.dart';
 import '../utils/audio_message_kind.dart';
+import '../utils/media_upload_limits.dart';
 
 enum VoiceUiPhase {
   resolving,
@@ -189,10 +190,11 @@ class VoiceMessageCoordinator extends ChangeNotifier {
       final path = await _repository.downloadVoiceMessage(
         msgID: ref.serverMsgId,
         mediaUrl: url,
-        // Un morceau pèse couramment plus que le plafond vocal de 15 Mo,
-        // alors que l'app en autorise l'envoi jusqu'à 50 Mo.
+        // Un morceau pèse couramment plus que le plafond vocal de 15 Mo. Le
+        // plafond retenu est le plus haut des paliers d'envoi : un compte
+        // standard doit pouvoir écouter ce qu'un abonné lui envoie.
         maxBytes: ref.kind == AudioMessageKind.music
-            ? 50 * 1024 * 1024
+            ? kMaxReceivedMediaBytes
             : 15 * 1024 * 1024,
         onProgress: (p) {
           onProgress?.call(p);

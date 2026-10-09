@@ -1822,13 +1822,20 @@ extension _ChatBubbles on _ChatDetailScreenState {
   String _formatBytes(int bytes) => formatBytes(bytes, context.l10n);
 
   /// Overlay spinner ou barre de progression pendant l'envoi d'un média.
+  /// Une vidéo passe d'abord par la compression (« Compression… x % »), puis
+  /// par l'envoi (« x % »).
   Widget _buildUploadProgressOverlay(LocalMessage msg) {
     if (msg.status != 0) return const SizedBox.shrink();
 
-    return ValueListenableBuilder<Map<String, double>>(
-      valueListenable: _chat.repository.uploadProgress,
-      builder: (context, progressMap, _) {
-        final progress = progressMap[msg.clientId];
+    final repo = _chat.repository;
+    return ListenableBuilder(
+      listenable: Listenable.merge([repo.compressionProgress, repo.uploadProgress]),
+      builder: (context, _) {
+        final compressing = repo.compressionProgress.value[msg.clientId];
+        final progress = compressing ?? repo.uploadProgress.value[msg.clientId];
+        final label = compressing != null
+            ? context.l10n.compressingVideo((compressing * 100).round())
+            : '${((progress ?? 0) * 100).round()} %';
         return Container(
           color: AppColors.black.withValues(alpha: 0.26),
           alignment: Alignment.center,
@@ -1849,7 +1856,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        '${(progress * 100).round()} %',
+                        label,
                         style: context.text.labelSmall?.copyWith(
                           color: AppColors.white,
                         ),

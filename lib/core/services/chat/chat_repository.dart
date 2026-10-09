@@ -8,6 +8,7 @@ import '../../db/chat_dao.dart';
 import '../../utils/forward_message.dart';
 import '../../utils/conversation_display.dart';
 import '../../utils/backend_url.dart';
+import '../../utils/media_upload_limits.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
@@ -33,6 +34,8 @@ import 'message_sender.dart';
 import 'socket_message_handlers.dart';
 import 'talky_chat_api.dart';
 import '../../theme/locale_controller.dart';
+import '../image_upload_compressor.dart';
+import '../video_codec_policy.dart';
 import '../video_upload_compressor.dart';
 
 /// Facade messaging : sync, envoi, outbox, accusés, handlers socket.
@@ -42,6 +45,7 @@ class ChatRepository {
   final ChatApi _api;
   final MediaCacheService _mediaCache = MediaCacheService();
   final VideoUploadCompressor? _videoCompressor;
+  final ImageUploadCompressor? _imageCompressor;
   late final ConversationSummaryReducer _reducer;
   late final DebouncedRecompute _debouncedRecompute;
   late final MessageAckWatchdog _ackWatchdog;
@@ -54,6 +58,17 @@ class ChatRepository {
   /// Progression d'upload éphémère par [clientId] (0.0–1.0).
   final ValueNotifier<Map<String, double>> uploadProgress =
       ValueNotifier<Map<String, double>>({});
+
+  /// Progression de la compression d'une vidéo par [clientId] (0.0–1.0),
+  /// avant son upload.
+  final ValueNotifier<Map<String, double>> compressionProgress =
+      ValueNotifier<Map<String, double>>({});
+
+  /// La discussion lit-elle le HEVC ? (voir `VideoCodecPolicy`)
+  final Future<bool> Function(int conversationID) _hevcAllowed;
+
+  /// Ce fichier vidéo est-il en HEVC ?
+  final Future<bool> Function(String path) _isHevc;
 
   /// Uploads en cours par [clientId] — évite les uploads parallèles du même message.
   final Set<String> _inFlightUploads = {};
@@ -132,9 +147,19 @@ class ChatRepository {
     }
   }
 
-  ChatRepository._(this._api, this._db, {VideoUploadCompressor? videoCompressor})
-      : _dao = ChatDao(_db),
-        _videoCompressor = videoCompressor {
+  ChatRepository._(
+    this._api,
+    this._db, {
+    VideoUploadCompressor? videoCompressor,
+    ImageUploadCompressor? imageCompressor,
+    Future<bool> Function(int conversationID)? hevcAllowed,
+    Future<bool> Function(String path)? isHevc,
+  })  : _dao = ChatDao(_db),
+        _videoCompressor = videoCompressor,
+        _imageCompressor = imageCompressor,
+        _hevcAllowed = hevcAllowed ?? hevcAllowedFor,
+        _isHevc = isHevc ??
+            (videoCompressor ?? VideoUploadCompressor.instance).isHevc {
     _reducer = ConversationSummaryReducer(_db, _dao);
     _debouncedRecompute = DebouncedRecompute(
       (convId) async {
@@ -181,9 +206,12 @@ class ChatRepository {
       myId: () => _myId,
       recompute: scheduleRecompute,
       uploadProgress: uploadProgress,
+      compressionProgress: compressionProgress,
+      hevcAllowed: _hevcAllowed,
       inFlightUploads: _inFlightUploads,
       ackWatchdog: _ackWatchdog,
       videoCompressor: _videoCompressor,
+      imageCompressor: _imageCompressor,
     );
     _outbox = MessageOutbox(
       api: _api,
@@ -231,8 +259,18 @@ class ChatRepository {
     required ChatApi api,
     required AppDatabase database,
     VideoUploadCompressor? videoCompressor,
+    ImageUploadCompressor? imageCompressor,
+    Future<bool> Function(int conversationID)? hevcAllowed,
+    Future<bool> Function(String path)? isHevc,
   }) {
-    return ChatRepository._(api, database, videoCompressor: videoCompressor);
+    return ChatRepository._(
+      api,
+      database,
+      videoCompressor: videoCompressor,
+      imageCompressor: imageCompressor,
+      hevcAllowed: hevcAllowed,
+      isHevc: isHevc,
+    );
   }
 
   AppDatabase get db => _db;
@@ -524,7 +562,9 @@ class ChatRepository {
   }
 
 
-  static const int maxAlbumItems = MessageSender.maxAlbumItems;
+  /// Nombre maximal de médias d'un album pour CE compte : annoncé par le
+  /// serveur avec ses droits (30, ou 100 pour un abonné).
+  static int get maxAlbumItems => MediaUploadLimits.maxAlbumItems;
 
   Future<void> sendText({
     required int conversationID,
@@ -677,31 +717,34 @@ class ChatRepository {
       return const ForwardResult(succeeded: 0, failed: 0);
     }
 
-    if (canBatchForwardOnServer(sourceItems)) {
+    final hevc = await _hevcVideoClientIds(sourceItems);
+    final split = await _splitForHevc(targetConversationIDs, hevc);
+    var direct = split.direct;
+    var succeeded = 0;
+    var failed = 0;
+
+    if (direct.isNotEmpty && canBatchForwardOnServer(sourceItems)) {
       try {
         final sorted = _sortAlbumItems(sourceItems);
         final sourceMsgIDs = sorted.map((m) => m.msgID).toList();
         await _api.batchForward(
           sourceMsgIDs: sourceMsgIDs,
-          targetConversationIDs: targetConversationIDs,
+          targetConversationIDs: direct,
         );
-        return ForwardResult(
-          succeeded: targetConversationIDs.length,
-          failed: 0,
-        );
+        succeeded += direct.length;
+        direct = const [];
       } catch (e) {
         debugPrint('[ChatRepo] batch forward album échoué, fallback client: $e');
       }
     }
 
-    var succeeded = 0;
-    var failed = 0;
-
-    for (final convId in targetConversationIDs) {
+    for (final convId in [...direct, ...split.reencode]) {
       try {
         await _forwardAlbumToConversation(
           sourceItems: sourceItems,
           conversationID: convId,
+          reencodeClientIds:
+              split.reencode.contains(convId) ? hevc : const <String>{},
         );
         succeeded++;
       } catch (e) {
@@ -711,6 +754,39 @@ class ChatRepository {
     }
 
     return ForwardResult(succeeded: succeeded, failed: failed);
+  }
+
+  /// Vidéos HEVC parmi [sources] dont le fichier est sur ce téléphone, par
+  /// `clientId`. Elles seules peuvent être reconverties en H.264 pour une
+  /// discussion qui ne lit pas le HEVC ; sans fichier local, le transfert
+  /// habituel s'applique.
+  Future<Set<String>> _hevcVideoClientIds(List<LocalMessage> sources) async {
+    final ids = <String>{};
+    for (final m in sources) {
+      if (m.type != 2) continue;
+      final file = localMediaFileForForward(m);
+      if (file == null || !file.existsSync()) continue;
+      if (await _isHevc(file.path)) ids.add(m.clientId);
+    }
+    return ids;
+  }
+
+  /// Sépare les destinations d'un transfert qui contient du HEVC : celles qui
+  /// le lisent reçoivent le transfert habituel (copie côté serveur), les
+  /// autres une copie reconvertie en H.264, envoyée depuis ce téléphone.
+  Future<({List<int> direct, List<int> reencode})> _splitForHevc(
+    List<int> targets,
+    Set<String> hevcClientIds,
+  ) async {
+    if (hevcClientIds.isEmpty) {
+      return (direct: targets, reencode: const <int>[]);
+    }
+    final direct = <int>[];
+    final reencode = <int>[];
+    for (final id in targets) {
+      (await _hevcAllowed(id) ? direct : reencode).add(id);
+    }
+    return (direct: direct, reencode: reencode);
   }
 
   List<LocalMessage> _sortAlbumItems(List<LocalMessage> sourceItems) {
@@ -726,11 +802,16 @@ class ChatRepository {
   Future<void> _forwardAlbumToConversation({
     required List<LocalMessage> sourceItems,
     required int conversationID,
+    Set<String> reencodeClientIds = const {},
   }) async {
     final sorted = _sortAlbumItems(sourceItems);
 
     if (sorted.length == 1) {
-      await _forwardToConversation(source: sorted.first, conversationID: conversationID);
+      await _forwardToConversation(
+        source: sorted.first,
+        conversationID: conversationID,
+        reencodeClientIds: reencodeClientIds,
+      );
       return;
     }
 
@@ -751,7 +832,9 @@ class ChatRepository {
       );
 
       final url = source.mediaUrl;
-      if (url != null && url.isNotEmpty) {
+      if (url != null &&
+          url.isNotEmpty &&
+          !reencodeClientIds.contains(source.clientId)) {
         await sendMedia(
           conversationID: conversationID,
           type: source.type,
@@ -768,6 +851,8 @@ class ChatRepository {
         continue;
       }
 
+      // Vidéo HEVC vers une discussion qui ne le lit pas : renvoyée depuis le
+      // fichier local, l'envoi la convertit en H.264.
       final file = localMediaFileForForward(source);
       if (file == null) {
         throw StateError(LocaleController.instance.l10n.mediaUnavailableForTransfer);
@@ -827,27 +912,30 @@ class ChatRepository {
       );
     }
 
-    if (canBatchForwardOnServer(sources)) {
+    final hevc = await _hevcVideoClientIds(sources);
+    final split = await _splitForHevc(targetConversationIDs, hevc);
+    var direct = split.direct;
+    var succeeded = 0;
+    var failed = 0;
+
+    if (direct.isNotEmpty && canBatchForwardOnServer(sources)) {
       try {
         final sourceMsgIDs = _sortForwardSources(sources).map((m) => m.msgID).toList();
         await _api.batchForward(
           sourceMsgIDs: sourceMsgIDs,
-          targetConversationIDs: targetConversationIDs,
+          targetConversationIDs: direct,
           caption: caption,
         );
-        return ForwardResult(
-          succeeded: targetConversationIDs.length,
-          failed: 0,
-        );
+        succeeded += direct.length;
+        direct = const [];
       } catch (e) {
         debugPrint('[ChatRepo] batch forward échoué, fallback client: $e');
       }
     }
 
-    var succeeded = 0;
-    var failed = 0;
-
-    for (final convId in targetConversationIDs) {
+    for (final convId in [...direct, ...split.reencode]) {
+      final reencode =
+          split.reencode.contains(convId) ? hevc : const <String>{};
       try {
         for (var i = 0; i < sources.length; i++) {
           final source = sources[i];
@@ -855,6 +943,7 @@ class ChatRepository {
             source: source,
             conversationID: convId,
             caption: i == 0 ? caption : null,
+            reencodeClientIds: reencode,
           );
         }
         succeeded++;
@@ -877,6 +966,7 @@ class ChatRepository {
     required LocalMessage source,
     required int conversationID,
     String? caption,
+    Set<String> reencodeClientIds = const {},
   }) async {
     final effectiveCaption = resolveForwardCaption(source, caption);
 
@@ -916,7 +1006,9 @@ class ChatRepository {
     }
 
     final url = source.mediaUrl;
-    if (url != null && url.isNotEmpty) {
+    if (url != null &&
+        url.isNotEmpty &&
+        !reencodeClientIds.contains(source.clientId)) {
       await sendMedia(
         conversationID: conversationID,
         type: source.type,
@@ -933,6 +1025,8 @@ class ChatRepository {
       return;
     }
 
+    // Vidéo HEVC vers une discussion qui ne le lit pas : renvoyée depuis le
+    // fichier local, l'envoi la convertit en H.264.
     final file = localMediaFileForForward(source);
     if (file == null) {
       throw StateError(LocaleController.instance.l10n.mediaUnavailableForTransfer);

@@ -428,13 +428,13 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String videoTooLarge(String mb) {
-    return 'Vidéo ignorée ($mb Mo). Limite : 50 Mo.';
+  String videoTooLarge(String mb, int limit) {
+    return 'Vidéo trop lourde, même compressée (≈ $mb Mo). Limite : $limit Mo.';
   }
 
   @override
-  String fileTooLarge(String mb) {
-    return 'Fichier trop volumineux ($mb Mo). Limite : 50 Mo.';
+  String fileTooLarge(String mb, int limit) {
+    return 'Fichier trop volumineux ($mb Mo). Limite : $limit Mo.';
   }
 
   @override
@@ -2530,8 +2530,17 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String filesSkippedTooLarge(int count) {
-    return '$count fichier(s) ignoré(s) : limite 50 Mo.';
+  String get videoUnreadableOnDevice =>
+      'Impossible de lire cette vidéo sur ce téléphone.';
+
+  @override
+  String compressingVideo(int percent) {
+    return 'Compression… $percent %';
+  }
+
+  @override
+  String filesSkippedTooLarge(int count, int limit) {
+    return '$count fichier(s) ignoré(s) : limite $limit Mo.';
   }
 
   @override

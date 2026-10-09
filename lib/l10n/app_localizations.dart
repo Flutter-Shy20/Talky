@@ -865,14 +865,14 @@ abstract class AppLocalizations {
   /// No description provided for @videoTooLarge.
   ///
   /// In fr, this message translates to:
-  /// **'Vidéo ignorée ({mb} Mo). Limite : 50 Mo.'**
-  String videoTooLarge(String mb);
+  /// **'Vidéo trop lourde, même compressée (≈ {mb} Mo). Limite : {limit} Mo.'**
+  String videoTooLarge(String mb, int limit);
 
   /// No description provided for @fileTooLarge.
   ///
   /// In fr, this message translates to:
-  /// **'Fichier trop volumineux ({mb} Mo). Limite : 50 Mo.'**
-  String fileTooLarge(String mb);
+  /// **'Fichier trop volumineux ({mb} Mo). Limite : {limit} Mo.'**
+  String fileTooLarge(String mb, int limit);
 
   /// No description provided for @minutesShort.
   ///
@@ -4642,11 +4642,23 @@ abstract class AppLocalizations {
   /// **'Maximum {count} fichiers.'**
   String maxFiles(int count);
 
+  /// No description provided for @videoUnreadableOnDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lire cette vidéo sur ce téléphone.'**
+  String get videoUnreadableOnDevice;
+
+  /// No description provided for @compressingVideo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compression… {percent} %'**
+  String compressingVideo(int percent);
+
   /// No description provided for @filesSkippedTooLarge.
   ///
   /// In fr, this message translates to:
-  /// **'{count} fichier(s) ignoré(s) : limite 50 Mo.'**
-  String filesSkippedTooLarge(int count);
+  /// **'{count} fichier(s) ignoré(s) : limite {limit} Mo.'**
+  String filesSkippedTooLarge(int count, int limit);
 
   /// No description provided for @maxMedias.
   ///

@@ -92,6 +92,8 @@ class Entitlements {
     this.verificationStatus,
     this.verifiedUntil,
     this.mediaRetentionDays,
+    this.maxUploadBytes,
+    this.maxAlbumItems,
   });
 
   /// Serveur antérieur à l'abonnement, ou droits indisponibles : tout est
@@ -138,6 +140,13 @@ class Entitlements {
   /// serveur antérieur.
   final int? mediaRetentionDays;
 
+  /// Plafonds d'envoi de CE compte (`limits`) : 100 Mo et 30 médias par album
+  /// au palier standard, 200 Mo et 100 médias pour un abonné. Nuls avec un
+  /// serveur antérieur : l'app applique alors le palier standard (voir
+  /// `MediaUploadLimits`).
+  final int? maxUploadBytes;
+  final int? maxAlbumItems;
+
   /// La coche s'affiche.
   bool get isVerified => verificationStatus == 2;
 
@@ -164,6 +173,7 @@ class Entitlements {
     final period = map(json['period']);
     final upcoming = map(json['upcoming']);
     final verification = map(json['verification']);
+    final limits = map(json['limits']);
     return Entitlements(
       known: true,
       phase: _phase(json['phase']),
@@ -179,6 +189,8 @@ class Entitlements {
       verificationStatus: (verification?['status'] as num?)?.toInt(),
       verifiedUntil: _date(verification?['until']),
       mediaRetentionDays: (json['mediaRetentionDays'] as num?)?.toInt(),
+      maxUploadBytes: (limits?['maxUploadBytes'] as num?)?.toInt(),
+      maxAlbumItems: (limits?['maxAlbumItems'] as num?)?.toInt(),
     );
   }
 
@@ -195,6 +207,11 @@ class Entitlements {
         'purgeAfter': purgeAfter?.toUtc().toIso8601String(),
         'purgedAt': purgedAt?.toUtc().toIso8601String(),
         if (mediaRetentionDays != null) 'mediaRetentionDays': mediaRetentionDays,
+        if (maxUploadBytes != null || maxAlbumItems != null)
+          'limits': {
+            'maxUploadBytes': maxUploadBytes,
+            'maxAlbumItems': maxAlbumItems,
+          },
         if (verificationStatus != null)
           'verification': {
             'status': verificationStatus,

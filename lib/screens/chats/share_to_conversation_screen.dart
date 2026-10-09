@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/db/app_database.dart';
+import '../../core/services/video_upload_compressor.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -13,15 +14,13 @@ import '../../core/utils/conversation_display.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/incoming_share_payload.dart';
 import '../../core/utils/media_album.dart';
+import '../../core/utils/media_upload_limits.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import 'new_chat_screen.dart';
-
-/// Limite alignée sur multer (50 Mo) côté backend.
-const int _maxMediaBytes = 50 * 1024 * 1024;
 
 /// Choisit une ou plusieurs conversations pour envoyer un contenu partagé
 /// depuis une autre app (Galerie, Fichiers, navigateur…).
@@ -152,7 +151,7 @@ class _ShareToConversationScreenState extends State<ShareToConversationScreen> {
       throw StateError('empty payload');
     }
 
-    _assertMediaSizes(media);
+    await _assertMediaSizes(media);
 
     final effectiveCaption = caption ??
         (media.length == 1 && payload.text?.trim().isNotEmpty == true
@@ -201,13 +200,14 @@ class _ShareToConversationScreenState extends State<ShareToConversationScreen> {
     }
   }
 
-  void _assertMediaSizes(List<IncomingShareMediaItem> media) {
+  /// Pour une vidéo, c'est le poids estimé après compression qui compte.
+  Future<void> _assertMediaSizes(List<IncomingShareMediaItem> media) async {
     for (final m in media) {
       if (!m.file.existsSync()) {
         throw StateError('missing file');
       }
-      final size = m.file.lengthSync();
-      if (size > _maxMediaBytes) {
+      final size = await estimateMediaUploadBytes(m.file, type: m.type);
+      if (size > MediaUploadLimits.maxBytes) {
         throw StateError('file too large');
       }
     }

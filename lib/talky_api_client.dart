@@ -23,6 +23,7 @@ import 'core/theme/locale_controller.dart';
 import 'core/services/call/call_history_rules.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/app_log.dart';
+import 'core/utils/upload_stall_guard.dart';
 import 'api/socket_auth_recovery.dart';
 
 part 'api/auth_api.dart';
@@ -54,6 +55,11 @@ class TalkyApiClient {
   String? _refreshToken;
   io.Socket? _socket;
   final http.Client _client;
+
+  /// Délai d'inactivité des envois de fichiers (voir [UploadStallGuard]).
+  /// Modifiable par les tests seulement.
+  @visibleForTesting
+  Duration uploadStallTimeout = kUploadStallTimeout;
 
   // Callbacks Socket globaux (pour CallService, MeetingService)
   final Map<String, List<void Function(dynamic)>> _socketListeners = {};
@@ -575,12 +581,6 @@ class TalkyApiClient {
       default:
         return 'application/octet-stream';
     }
-  }
-
-  Duration uploadTimeoutForFileSize(int bytes) {
-    final mb = bytes / (1024 * 1024);
-    final seconds = (30 + mb * 2).ceil();
-    return Duration(seconds: seconds.clamp(30, 600));
   }
 
   TalkyException uploadHttpException(http.Response response) {

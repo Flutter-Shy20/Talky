@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/services/media_cache_service.dart';
+import '../../core/services/voice_record_config.dart';
 import '../../core/utils/status_reply_payload.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
@@ -17,6 +18,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/locale_controller.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/utils/avatar_utils.dart';
+import '../../core/utils/media_upload_limits.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../providers/status_provider.dart';
@@ -68,7 +70,6 @@ class StatusViewerScreen extends StatefulWidget {
 class _StatusViewerScreenState extends State<StatusViewerScreen>
     with SingleTickerProviderStateMixin {
   static const Duration _textImageDuration = Duration(seconds: 5);
-  static const int _maxMediaBytes = 50 * 1024 * 1024;
 
   late int _contactIndex;
   late int _itemIndex;
@@ -508,10 +509,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     final dir = await getTemporaryDirectory();
     final path =
         '${dir.path}/status_reply_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    await _recorder.start(
-      const RecordConfig(encoder: AudioEncoder.aacLc),
-      path: path,
-    );
+    await _recorder.start(kVoiceRecordConfig, path: path);
     if (!mounted) return;
     setState(() {
       _isRecording = true;
@@ -546,11 +544,11 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     if (author == 0) return;
 
     final size = file.existsSync() ? file.lengthSync() : 0;
-    if (size > _maxMediaBytes) {
+    if (size > MediaUploadLimits.maxBytes) {
       final mb = (size / (1024 * 1024)).toStringAsFixed(1);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(context.l10n.fileTooLarge(mb)),
+          content: Text(context.l10n.fileTooLarge(mb, MediaUploadLimits.maxMegabytes)),
           backgroundColor: context.colors.error,
         ));
       }

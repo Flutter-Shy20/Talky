@@ -40,6 +40,7 @@ import 'core/services/chat/message_sound_service.dart';
 import 'core/services/incoming_share_service.dart';
 import 'core/services/media_download_preferences.dart';
 import 'core/services/media_expiry_policy.dart';
+import 'core/services/video_codec_policy.dart';
 import 'core/services/playback_speed_preferences.dart';
 import 'core/services/ringtone_preferences.dart';
 import 'core/services/list_ringtone_preferences.dart';
@@ -298,6 +299,9 @@ class _TalkyAppState extends State<TalkyApp> {
     // conversation. Seul le dépôt de chat sait retrouver la ligne et relancer le
     // recalcul de l'aperçu ; le service socket lui délègue.
     _tripSocket.bindCardWriter(_chatProvider.repository.updateTripCard);
+    // HEVC par discussion : l'envoi d'une vidéo le consulte par son instance
+    // statique, sans contexte ; il doit donc exister avant le premier envoi.
+    VideoCodecPolicy.forApi(_apiClient);
   }
 
   @override

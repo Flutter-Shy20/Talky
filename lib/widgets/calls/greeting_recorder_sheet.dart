@@ -9,6 +9,7 @@ import 'package:record/record.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/services/call/voicemail_provider.dart';
+import '../../core/services/voice_record_config.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../common/app_bottom_sheet.dart';
@@ -16,19 +17,6 @@ import '../common/app_bottom_sheet.dart';
 /// Durée maximale de l'annonce. « Quelques secondes », pas un monologue.
 const int kMaxGreetingSeconds = 10;
 
-/// Encodage bridé, et c'est voulu.
-///
-/// Les quatre autres enregistreurs du dépôt utilisent `RecordConfig` nu, donc
-/// le débit par défaut. Ici le fichier sera téléchargé par CHAQUE appelant au
-/// moment précis où il attend — dix secondes en mono à 32 kbit/s font une
-/// quarantaine de kilooctets, contre plusieurs centaines autrement. La qualité
-/// suffit largement pour une voix.
-const RecordConfig kGreetingRecordConfig = RecordConfig(
-  encoder: AudioEncoder.aacLc,
-  bitRate: 32000,
-  numChannels: 1,
-  sampleRate: 22050,
-);
 
 /// Enregistrer ou remplacer l'annonce vocale de son répondeur.
 Future<void> showGreetingRecorder(BuildContext context) {
@@ -80,7 +68,10 @@ class _GreetingRecorderSheetState extends State<_GreetingRecorderSheet> {
     }
     final dir = await getTemporaryDirectory();
     final path = '${dir.path}/greeting_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    await _recorder.start(kGreetingRecordConfig, path: path);
+    // Réglages communs de la voix : le fichier est téléchargé par CHAQUE
+    // appelant au moment précis où il attend, dix secondes y font une
+    // quarantaine de kilooctets.
+    await _recorder.start(kVoiceRecordConfig, path: path);
     if (!mounted) return;
     setState(() {
       _isRecording = true;

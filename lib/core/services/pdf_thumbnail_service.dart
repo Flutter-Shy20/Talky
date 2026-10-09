@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:pdfx/pdfx.dart';
 
+import 'image_thumbnail_service.dart';
 import 'media_cache_service.dart';
 import 'media_download_preferences.dart';
 
@@ -31,7 +32,14 @@ class PdfThumbnailService {
   }) async {
     try {
       if (!File(path).existsSync()) return null;
-      final bytes = await _renderPage(path, maxWidth: maxWidth);
+      // Vignette envoyée avec le message : JPEG plutôt que PNG, plusieurs fois
+      // plus léger. Une page a un fond blanc, la transparence ne manque pas.
+      final bytes = await _renderPage(
+        path,
+        maxWidth: maxWidth,
+        format: PdfPageImageFormat.jpeg,
+        quality: kThumbnailQuality,
+      );
       if (bytes == null || bytes.isEmpty) return null;
       return base64Encode(bytes);
     } catch (e) {
@@ -102,6 +110,8 @@ class PdfThumbnailService {
   static Future<Uint8List?> _renderPage(
     String path, {
     required double maxWidth,
+    PdfPageImageFormat format = PdfPageImageFormat.png,
+    int quality = 100,
   }) async {
     final document = await PdfDocument.openFile(path);
     try {
@@ -111,7 +121,8 @@ class PdfThumbnailService {
         final image = await page.render(
           width: maxWidth,
           height: page.height * scale,
-          format: PdfPageImageFormat.png,
+          format: format,
+          quality: quality,
           backgroundColor: '#FFFFFF',
         );
         return image?.bytes;

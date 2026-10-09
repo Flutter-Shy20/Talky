@@ -11,7 +11,9 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/services/image_upload_compressor.dart';
 import '../../core/services/video_thumbnail_service.dart';
+import '../../core/services/voice_record_config.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
@@ -62,6 +64,11 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   /// Plafond par publication — au-delà, l'enchaînement des uploads devient
   /// interminable et la story illisible.
   static const int _maxMedias = 30;
+
+  /// Grand côté maximal d'une photo de statut : la même règle que dans les
+  /// discussions (voir ImageUploadCompressor).
+  static final double _kStatusPhotoMaxSide =
+      kCompressedImageLongSide.toDouble();
 
   _StatusType _type = _StatusType.text;
   final _textCtrl = TextEditingController();
@@ -223,18 +230,18 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
           ? await picker.pickVideo(source: source)
           : await picker.pickImage(
               source: source,
-              imageQuality: 80,
-              maxWidth: 1920,
-              maxHeight: 1920,
+              // Réduction seule, sans recompression : l'encodage final revient
+              // à ImageUploadCompressor, à l'envoi du statut.
+              maxWidth: _kStatusPhotoMaxSide,
+              maxHeight: _kStatusPhotoMaxSide,
             );
       files = one == null ? const [] : [one];
     } else {
       files = video
           ? await picker.pickMultiVideo(limit: remaining)
           : await picker.pickMultiImage(
-              imageQuality: 80,
-              maxWidth: 1920,
-              maxHeight: 1920,
+              maxWidth: _kStatusPhotoMaxSide,
+              maxHeight: _kStatusPhotoMaxSide,
               limit: remaining,
             );
     }
@@ -261,10 +268,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     final dir = await getTemporaryDirectory();
     final path =
         '${dir.path}/status_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    await _recorder.start(
-      const RecordConfig(encoder: AudioEncoder.aacLc),
-      path: path,
-    );
+    await _recorder.start(kVoiceRecordConfig, path: path);
     if (!mounted) return;
     _pulseCtrl.repeat(reverse: true);
     setState(() {

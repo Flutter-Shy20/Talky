@@ -56,6 +56,11 @@ class MessageOutbox {
 
   static const Duration _stalePendingBeforeReconnect = Duration(seconds: 25);
 
+  /// Média dont le fichier n'est pas encore parti : le flush le renvoie lui-même.
+  static bool _awaitsUpload(LocalMessage m) =>
+      (m.pendingUploadPath?.isNotEmpty ?? false) &&
+      (m.mediaUrl == null || m.mediaUrl!.isEmpty);
+
   Future<void> flushOutbox() async {
     if (_flushInFlight) return;
     _flushInFlight = true;
@@ -122,8 +127,17 @@ class MessageOutbox {
 
     // Horloge coincée : pending depuis > 2 min (âge sendAt) → failed.
     // Indépendant de lastEmittedAt pour ne pas être annulé par le flush périodique.
+    //
+    // Sauf un média dont l'envoi est en cours, vient de finir, ou reste à
+    // faire : son sort se joue à l'upload (réussi, refusé, ou rejoué au
+    // prochain flush), pas à l'horloge. Une vidéo de quelques minutes passe
+    // plus de 2 min entre compression et envoi : la marquer « échec » faisait
+    // relancer l'envoi à la main, et partir la vidéo deux fois.
     final stuck = await _dao.stuckPendingMessages();
     for (final m in stuck) {
+      if (_sender.isUploadBusyOrRecent(m.clientId) || _awaitsUpload(m)) {
+        continue;
+      }
       debugPrint('[MessageOutbox] stuck pending → failed ${m.clientId}');
       await _dao.markFailed(m.clientId);
     }

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talky_flutter/core/db/app_database.dart';
 import 'package:talky_flutter/core/db/chat_dao.dart';
 import 'package:talky_flutter/core/services/chat/chat_repository.dart';
+import 'package:talky_flutter/core/services/image_upload_compressor.dart';
 import 'package:talky_flutter/core/services/video_upload_compressor.dart';
 
 import 'fake_chat_api.dart';
@@ -25,6 +26,8 @@ class ChatTestHarness {
     bool autoAckSend = true,
     FakeChatApi? api,
     VideoUploadCompressor? videoCompressor,
+    ImageUploadCompressor? imageCompressor,
+    Future<bool> Function(int conversationID)? hevcAllowed,
   }) async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
@@ -35,6 +38,8 @@ class ChatTestHarness {
       api: this.api,
       database: db,
       videoCompressor: videoCompressor,
+      imageCompressor: imageCompressor,
+      hevcAllowed: hevcAllowed,
     );
     await repo.bind(myId);
     await _seedConversation();

@@ -230,19 +230,25 @@
       }
     }
   },
-  "videoTooLarge": "Vidéo ignorée ({mb} Mo). Limite : 50 Mo.",
+  "videoTooLarge": "Vidéo trop lourde, même compressée (≈ {mb} Mo). Limite : {limit} Mo.",
   "@videoTooLarge": {
     "placeholders": {
       "mb": {
         "type": "String"
+      },
+      "limit": {
+        "type": "int"
       }
     }
   },
-  "fileTooLarge": "Fichier trop volumineux ({mb} Mo). Limite : 50 Mo.",
+  "fileTooLarge": "Fichier trop volumineux ({mb} Mo). Limite : {limit} Mo.",
   "@fileTooLarge": {
     "placeholders": {
       "mb": {
         "type": "String"
+      },
+      "limit": {
+        "type": "int"
       }
     }
   },
@@ -1256,10 +1262,22 @@
       }
     }
   },
-  "filesSkippedTooLarge": "{count} fichier(s) ignoré(s) : limite 50 Mo.",
+  "videoUnreadableOnDevice": "Impossible de lire cette vidéo sur ce téléphone.",
+  "compressingVideo": "Compression… {percent} %",
+  "@compressingVideo": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "filesSkippedTooLarge": "{count} fichier(s) ignoré(s) : limite {limit} Mo.",
   "@filesSkippedTooLarge": {
     "placeholders": {
       "count": {
+        "type": "int"
+      },
+      "limit": {
         "type": "int"
       }
     }

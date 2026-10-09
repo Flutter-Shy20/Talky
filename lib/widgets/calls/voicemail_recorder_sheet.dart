@@ -10,6 +10,7 @@ import 'package:record/record.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/services/call/voicemail_greeting_player.dart';
+import '../../core/services/voice_record_config.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
@@ -169,8 +170,7 @@ class _VoicemailRecorderSheetState extends State<_VoicemailRecorderSheet> {
     final dir = await getTemporaryDirectory();
     final path =
         '${dir.path}/voicemail_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc),
-        path: path);
+    await _recorder.start(kVoiceRecordConfig, path: path);
     if (!mounted) return;
     setState(() {
       _isRecording = true;

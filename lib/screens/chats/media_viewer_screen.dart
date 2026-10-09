@@ -86,6 +86,11 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   late int _currentIndex;
   final Map<int, VideoPlayerController?> _videos = {};
   final Map<int, ChewieController?> _chewies = {};
+
+  /// Vidéos que le lecteur n'a pas pu ouvrir (format que ce téléphone ne lit
+  /// pas, fichier abîmé). Sans elles, la page restait sur un chargement sans
+  /// fin.
+  final Set<int> _videoFailed = {};
   final Map<int, VideoSpeedMemory> _speeds = {};
   final Map<int, _SaveState> _saveStates = {};
   Timer? _savedResetTimer;
@@ -144,8 +149,9 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
           playbackSpeeds: kVideoPlaybackSpeeds,
         );
       });
-    } catch (_) {
-      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('[MediaViewer] vidéo illisible: $e');
+      if (mounted) setState(() => _videoFailed.add(index));
     }
   }
 
@@ -314,6 +320,7 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   Widget _buildVideo(int index) {
     final item = widget.items[index];
     if (item.isExpired) return _buildExpiredPlaceholder();
+    if (_videoFailed.contains(index)) return _buildUnreadablePlaceholder();
     final chewie = _chewies[index];
     final video = _videos[index];
     if (chewie == null || video == null) {
@@ -348,6 +355,28 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
 
   /// Média jamais téléchargé et purgé côté serveur : ni spinner bloqué, ni
   /// icône "cassée" — un état explicite.
+  Widget _buildUnreadablePlaceholder() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.videocam_off_rounded,
+            color: AppColors.white.withValues(alpha: 0.54),
+            size: 64,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            context.l10n.videoUnreadableOnDevice,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.white.withValues(alpha: 0.7)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildExpiredPlaceholder() {
     return Column(
       mainAxisSize: MainAxisSize.min,

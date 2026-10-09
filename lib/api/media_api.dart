@@ -21,21 +21,24 @@ extension MediaApi on TalkyApiClient {
         file,
         kind: 'avatar',
         multipartPath: '/upload/avatar',
-        timeout: const Duration(seconds: 60),
       );
 
   /// Alias de [uploadImage] — préférer [uploadImage] hors contexte profil.
   Future<Map<String, dynamic>> uploadAvatar(File file) => uploadImage(file);
 
+  /// Envoie un média de discussion ou de statut.
+  ///
+  /// Aucune durée totale n'est imposée : un gros fichier sur une connexion
+  /// lente peut prendre plusieurs minutes. L'envoi n'est abandonné que s'il
+  /// cesse d'avancer (voir [UploadStallGuard]).
   Future<Map<String, dynamic>> uploadMedia(
     File file, {
     void Function(double progress)? onProgress,
-  }) async =>
+  }) =>
       _uploadFile(
         file,
         kind: 'media',
         multipartPath: '/upload/media',
-        timeout: uploadTimeoutForFileSize(await file.length()),
         onProgress: onProgress,
       );
 
@@ -43,18 +46,12 @@ extension MediaApi on TalkyApiClient {
     File file, {
     required String kind,
     required String multipartPath,
-    required Duration timeout,
     void Function(double progress)? onProgress,
   }) async {
     final ticket = await _requestUploadTicket(file, kind: kind);
     if (ticket != null) {
       try {
-        return await _putDirect(
-          file,
-          ticket,
-          timeout: timeout,
-          onProgress: onProgress,
-        );
+        return await _putDirect(file, ticket, onProgress: onProgress);
       } on TalkyException catch (e) {
         // Lien signé périmé (TTL 15 min) ou refusé par le stockage : un nouveau
         // ticket, une seule fois. Un 413 / 400 de validation ne passe pas ici —
@@ -62,23 +59,13 @@ extension MediaApi on TalkyApiClient {
         if (e.statusCode == 400 || e.statusCode == 403) {
           final retry = await _requestUploadTicket(file, kind: kind);
           if (retry != null) {
-            return _putDirect(
-              file,
-              retry,
-              timeout: timeout,
-              onProgress: onProgress,
-            );
+            return _putDirect(file, retry, onProgress: onProgress);
           }
         }
         rethrow;
       }
     }
-    return _postMultipart(
-      file,
-      multipartPath,
-      timeout: timeout,
-      onProgress: onProgress,
-    );
+    return _postMultipart(file, multipartPath, onProgress: onProgress);
   }
 
   /// Ticket d'envoi direct, ou `null` quand le serveur demande le formulaire.
@@ -124,12 +111,15 @@ extension MediaApi on TalkyApiClient {
   Future<Map<String, dynamic>> _putDirect(
     File file,
     Map<String, dynamic> ticket, {
-    required Duration timeout,
     void Function(double progress)? onProgress,
   }) async {
     final length = await file.length();
-    final request =
-        http.StreamedRequest('PUT', Uri.parse(ticket['uploadUrl'] as String));
+    final guard = UploadStallGuard(stallTimeout: uploadStallTimeout);
+    final request = http.AbortableStreamedRequest(
+      'PUT',
+      Uri.parse(ticket['uploadUrl'] as String),
+      abortTrigger: guard.abortTrigger,
+    );
     // En-têtes signés : ils doivent partir à l'identique, sinon le stockage
     // refuse l'envoi. La taille, elle aussi signée, est posée ici.
     final headers = ticket['headers'];
@@ -140,12 +130,12 @@ extension MediaApi on TalkyApiClient {
     var sent = 0;
     unawaited(file.openRead().map((chunk) {
       sent += chunk.length;
+      guard.tick();
       if (length > 0) onProgress?.call(sent / length);
       return chunk;
     }).pipe(request.sink));
 
-    final streamed = await _client.send(request).timeout(timeout);
-    final response = await http.Response.fromStream(streamed);
+    final response = await _sendGuarded(request, guard);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw uploadHttpException(response);
     }
@@ -163,21 +153,49 @@ extension MediaApi on TalkyApiClient {
   Future<Map<String, dynamic>> _postMultipart(
     File file,
     String path, {
-    required Duration timeout,
     void Function(double progress)? onProgress,
   }) async {
-    final request = http.MultipartRequest(
+    final guard = UploadStallGuard(stallTimeout: uploadStallTimeout);
+    final request = http.AbortableMultipartRequest(
       'POST',
       Uri.parse('${TalkyApiClient.baseUrl}$path'),
+      abortTrigger: guard.abortTrigger,
     );
     request.headers['Authorization'] = 'Bearer $_accessToken';
-    request.files.add(await _multipartFile('file', file, onProgress: onProgress));
+    request.files.add(await _multipartFile(
+      'file',
+      file,
+      onProgress: (p) {
+        guard.tick();
+        onProgress?.call(p);
+      },
+    ));
     // Client partagé de l'API : la connexion déjà ouverte vers le serveur sert
     // aussi à l'envoi, au lieu d'en ouvrir une neuve par fichier.
-    final streamed = await _client.send(request).timeout(timeout);
-    final response = await http.Response.fromStream(streamed);
+    final response = await _sendGuarded(request, guard);
     if (response.statusCode == 200) return jsonDecode(response.body);
     throw uploadHttpException(response);
+  }
+
+  /// Envoie [request] sous la surveillance de [guard].
+  ///
+  /// Un envoi bloqué lève une erreur réseau (statut 0) : l'appelant la traite
+  /// comme passagère et réessaie plus tard. La course avec [guard] ne dépend
+  /// pas du client : même un client qui ignore l'interruption rend la main.
+  Future<http.Response> _sendGuarded(
+    http.BaseRequest request,
+    UploadStallGuard guard,
+  ) async {
+    Future<T> stalled<T>() => guard.abortTrigger
+        .then<T>((_) => throw http.RequestAbortedException(request.url));
+    try {
+      final streamed = await Future.any([_client.send(request), stalled()]);
+      return await Future.any([http.Response.fromStream(streamed), stalled()]);
+    } on http.RequestAbortedException catch (e) {
+      throw TalkyException(resolveL10n().networkTimeout, 0, cause: e);
+    } finally {
+      guard.stop();
+    }
   }
 
   /// Dépose l'annonce vocale du répondeur, et remplace la précédente.
@@ -250,7 +268,7 @@ extension MediaApi on TalkyApiClient {
       case 'exists':
         return body['url'] as String?;
       case 'direct':
-        await _putDirect(file, body, timeout: const Duration(seconds: 120));
+        await _putDirect(file, body);
         return body['url'] as String?;
       default:
         return null;
@@ -288,5 +306,32 @@ extension MediaApi on TalkyApiClient {
         )
         .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) throw uploadHttpException(response);
+  }
+
+  /// Déclare ce que CE téléphone sait lire : le HEVC en 720p, par une puce
+  /// dédiée. Le serveur en tire, discussion par discussion, le droit d'envoyer
+  /// une vidéo en HEVC (voir [conversationAllowsHevc]).
+  Future<void> reportVideoCapabilities({required bool hevcDecode}) async {
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('${TalkyApiClient.baseUrl}/users/me/video-capabilities'),
+        headers: _headers,
+        body: jsonEncode({'hevcDecode': hevcDecode}),
+      ),
+    );
+  }
+
+  /// `true` si tous les appareils actifs des membres de la discussion lisent
+  /// le HEVC : une vidéo peut alors partir en HEVC, plus légère d'un tiers.
+  Future<bool> conversationAllowsHevc(int conversationID) async {
+    final body = await _handleRequest(
+      () => _client.get(
+        Uri.parse(
+          '${TalkyApiClient.baseUrl}/conversations/$conversationID/video-codecs',
+        ),
+        headers: _headers,
+      ),
+    );
+    return body is Map && body['hevc'] == true;
   }
 }

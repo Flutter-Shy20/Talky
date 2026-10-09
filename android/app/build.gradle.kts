@@ -85,6 +85,14 @@ dependencies {
     // déclare en `implementation` : elle n'est donc pas sur notre classpath de
     // compilation sans cette ligne.
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // Compression des vidéos avant envoi (VideoTranscodeBridge) : réduction en
+    // 720p, débit fixé, H.264 ou HEVC, HDR converti. Même version que la
+    // media3-exoplayer embarquée par video_player_android : deux versions de
+    // media3-common sur le même classpath ne cohabitent pas.
+    val media3Version = "1.9.2"
+    implementation("androidx.media3:media3-transformer:$media3Version")
+    implementation("androidx.media3:media3-effect:$media3Version")
+    implementation("androidx.media3:media3-common:$media3Version")
     // Tests JVM purs (aucun impact APK). `org.json:json` fournit la vraie
     // implémentation à la place des stubs android.jar, qui lèvent sinon
     // « not mocked » sur JSONArray/JSONObject.

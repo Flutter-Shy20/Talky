@@ -28,6 +28,9 @@ import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_playback_service.dart';
 import '../../core/services/translation/message_translation_service.dart';
+import '../../core/services/image_upload_compressor.dart';
+import '../../core/services/video_upload_compressor.dart';
+import '../../core/services/voice_record_config.dart';
 import '../../core/services/billing/entitlements.dart' show PlusFeature;
 import '../../widgets/billing/paywall_sheet.dart' show guardPlus;
 import '../../core/services/translation/translatable_content.dart';
@@ -45,6 +48,7 @@ import '../../core/utils/document_file_style.dart';
 import '../../core/utils/file_metadata.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
+import '../../core/utils/media_upload_limits.dart';
 import '../../core/utils/status_reply_payload.dart';
 import '../../core/services/alanya_media_export_service.dart';
 import '../../core/utils/media_save_feedback.dart';
@@ -114,8 +118,6 @@ part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels
 part 'chat/chat_bubbles.dart';  // rendu des bulles & médias
 part 'chat/chat_input.dart';    // barre de saisie, emoji, bandeau réponse
 
-// Limite alignée sur multer (50 Mo) côté backend.
-const int _maxMediaBytes = 50 * 1024 * 1024;
 const Duration _messageEditWindow = Duration(minutes: 30);
 const int _maxSelectionCount = 50;
 

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../core/services/billing/entitlement_service.dart';
+import '../core/services/video_codec_policy.dart';
 import '../core/services/storage_service.dart';
 import '../core/services/session_end_reason.dart';
 import '../core/services/call/pending_call_reject_store.dart';
@@ -211,10 +212,15 @@ class AuthProvider extends ChangeNotifier {
     _currentUser = User.fromJson(me);
     await _storage.saveUser(_currentUser!);
     await EntitlementService.maybeInstance?.applyFromProfile(me);
+    // Ce téléphone lit-il le HEVC ? Déclaré une fois par session : le serveur
+    // en tire, par discussion, le droit d'envoyer des vidéos plus légères.
+    final videoCodecs = VideoCodecPolicy.maybeInstance;
+    if (videoCodecs != null) unawaited(videoCodecs.reportCapabilities());
   }
 
   Future<void> _invalidateSession({required SessionEndReason reason}) async {
     currentSessionEndReason = reason;
+    VideoCodecPolicy.maybeInstance?.reset();
     _apiClient.logout();
     _currentUser = null;
     _pendingOnboardingAfterRegister = false;
@@ -503,6 +509,7 @@ class AuthProvider extends ChangeNotifier {
     await _storage.clearAll();
     // Les droits d'un compte ne passent pas au suivant.
     await EntitlementService.maybeInstance?.clear();
+    VideoCodecPolicy.maybeInstance?.reset();
     _currentUser = null;
     _pendingOnboardingAfterRegister = false;
     notifyListeners();
@@ -523,6 +530,7 @@ class AuthProvider extends ChangeNotifier {
     await _storage.clearAll();
     // Les droits d'un compte ne passent pas au suivant.
     await EntitlementService.maybeInstance?.clear();
+    VideoCodecPolicy.maybeInstance?.reset();
     _currentUser = null;
     _pendingOnboardingAfterRegister = false;
     notifyListeners();
